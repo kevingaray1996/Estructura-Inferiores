@@ -19,6 +19,19 @@ function ListaPartidos({ categoriaId, onVolver, onElegirPartido, onNuevoPartido,
     cargarPartidos()
   }, [categoriaId, refrescar])
 
+  async function handleEliminar(e, partidoId) {
+    e.stopPropagation()
+    const confirmar = window.confirm('¿Seguro que querés eliminar este partido? También se borran sus citaciones y estadísticas asociadas.')
+    if (!confirmar) return
+
+    await supabase.from('citaciones').delete().eq('partido_id', partidoId)
+    await supabase.from('estadisticas_jugador').delete().eq('partido_id', partidoId)
+    await supabase.from('videos').update({ partido_id: null }).eq('partido_id', partidoId)
+    await supabase.from('partidos').delete().eq('id', partidoId)
+
+    setPartidos((prev) => prev.filter((p) => p.id !== partidoId))
+  }
+
   return (
     <div className="p-6 md:p-10">
       <div className="max-w-xl mx-auto">
@@ -64,14 +77,23 @@ function ListaPartidos({ categoriaId, onVolver, onElegirPartido, onNuevoPartido,
                 <p className="text-base font-medium" style={{ color: '#F0F2F5' }}>
                   vs {p.rival}
                 </p>
-                {p.resultado && (
-                  <span
-                    className="text-xs font-mono px-2 py-1 rounded-full"
-                    style={{ backgroundColor: '#0F1419', color: '#8A9BB8', border: '1px solid #2A3548' }}
+                <div className="flex items-center gap-2">
+                  {p.resultado && (
+                    <span
+                      className="text-xs font-mono px-2 py-1 rounded-full"
+                      style={{ backgroundColor: '#0F1419', color: '#8A9BB8', border: '1px solid #2A3548' }}
+                    >
+                      {p.resultado}
+                    </span>
+                  )}
+                  <button
+                    onClick={(e) => handleEliminar(e, p.id)}
+                    className="text-xs px-2 py-1 rounded-full hover:opacity-80"
+                    style={{ backgroundColor: '#0F1419', color: '#F87171' }}
                   >
-                    {p.resultado}
-                  </span>
-                )}
+                    🗑
+                  </button>
+                </div>
               </div>
               <p className="text-xs mt-1" style={{ color: '#5B6B85' }}>
                 {p.fecha} {p.hora && `· ${p.hora}`} {p.lugar && `· ${p.lugar}`}
