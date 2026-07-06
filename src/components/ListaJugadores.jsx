@@ -12,7 +12,7 @@ function iniciales(nombre, apellido) {
   return `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
 }
 
-function ListaJugadores({ onSelectJugador, onNuevoJugador }) {
+function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
   const [jugadores, setJugadores] = useState([])
   const [categoriaId, setCategoriaId] = useState('')
   const [busqueda, setBusqueda] = useState('')
@@ -50,13 +50,22 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador }) {
           >
             Plantel
           </h1>
-          <button
-            onClick={onNuevoJugador}
-            className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
-            style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
-          >
-            + Nuevo jugador
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={onCargaMasiva}
+              className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
+              style={{ backgroundColor: '#1A2332', color: '#F0F2F5', border: '1px solid #2A3548' }}
+            >
+              📋 Carga masiva
+            </button>
+            <button
+              onClick={onNuevoJugador}
+              className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
+              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+            >
+              + Nuevo jugador
+            </button>
+          </div>
         </div>
 
         <CategoriaFiltro

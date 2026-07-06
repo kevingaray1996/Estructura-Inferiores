@@ -3,12 +3,14 @@ import { supabase } from '../supabaseClient'
 import ListaPartidos from './ListaPartidos'
 import ConvocarPartido from './ConvocarPartido'
 import AgregarPartido from './AgregarPartido'
+import CargarEstadisticas from './CargarEstadisticas'
+import FormacionPartido from './FormacionPartido'
 
 function PartidosSection() {
   const [categorias, setCategorias] = useState([])
   const [categoriaId, setCategoriaId] = useState('')
   const [partidoId, setPartidoId] = useState(null)
-  const [vista, setVista] = useState('categorias') // categorias | lista | agregar | convocar | aviso
+  const [vista, setVista] = useState('categorias')
   const [refrescar, setRefrescar] = useState(0)
 
   useEffect(() => {
@@ -37,32 +39,23 @@ function PartidosSection() {
     )
   }
 
-  if (vista === 'aviso') {
+  if (vista === 'estadisticas') {
     return (
-      <div className="p-6 md:p-10">
-        <div className="max-w-xl mx-auto text-center py-20">
-          <p className="text-3xl mb-3">✅</p>
-          <h1
-            className="text-xl mb-2"
-            style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
-          >
-            Convocatoria guardada
-          </h1>
-          <p className="text-sm mb-6" style={{ color: '#5B6B85' }}>
-            La pantalla para armar la formación en la cancha está en construcción.
-          </p>
-          <button
-            onClick={() => {
-              setPartidoId(null)
-              setVista('lista')
-            }}
-            className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
-            style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
-          >
-            Volver a partidos
-          </button>
-        </div>
-      </div>
+      <CargarEstadisticas
+        partidoId={partidoId}
+        categoriaId={categoriaId}
+        onVolver={() => setVista('lista')}
+      />
+    )
+  }
+
+  if (vista === 'formacion') {
+    return (
+      <FormacionPartido
+        partidoId={partidoId}
+        onVolver={() => setVista('convocar')}
+        onGuardado={() => setVista('lista')}
+      />
     )
   }
 
@@ -72,7 +65,7 @@ function PartidosSection() {
         partidoId={partidoId}
         categoriaId={categoriaId}
         onVolver={() => setVista('lista')}
-        onSiguiente={() => setVista('aviso')}
+        onSiguiente={() => setVista('formacion')}
       />
     )
   }
@@ -88,6 +81,10 @@ function PartidosSection() {
           setVista('convocar')
         }}
         onNuevoPartido={() => setVista('agregar')}
+        onVerEstadisticas={(id) => {
+          setPartidoId(id)
+          setVista('estadisticas')
+        }}
       />
     )
   }
