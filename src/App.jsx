@@ -67,6 +67,7 @@ function App() {
         <VideoSection
           jugadorInicialId={jugadorParaVideo}
           onConsumirJugadorInicial={() => setJugadorParaVideo(null)}
+          onIrABiblioteca={() => setSeccion('entrenamientos')}
         />
       )}
       {seccion === 'partidos' && <PartidosSection />}

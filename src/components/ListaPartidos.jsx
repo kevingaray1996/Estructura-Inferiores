@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { generarCitacionPDF } from '../utils/generarCitacion'
 
-function ListaPartidos({ categoriaId, onVolver, onElegirPartido, onNuevoPartido, onVerEstadisticas, onEditarPartido, refrescar }) {
+function ListaPartidos({ categoriaId, onVolver, onElegirPartido, onNuevoPartido, onGestionarEquipos, onVerEstadisticas, onEditarPartido, refrescar }) {
   const [partidos, setPartidos] = useState([])
   const [cargando, setCargando] = useState(true)
 
@@ -51,13 +51,24 @@ function ListaPartidos({ categoriaId, onVolver, onElegirPartido, onNuevoPartido,
           >
             Partidos
           </h1>
-          <button
-            onClick={onNuevoPartido}
-            className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
-            style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
-          >
-            + Nuevo partido
-          </button>
+          <div className="flex items-center gap-2">
+            {onGestionarEquipos && (
+              <button
+                onClick={onGestionarEquipos}
+                className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
+                style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+              >
+                🛡️ Equipos
+              </button>
+            )}
+            <button
+              onClick={onNuevoPartido}
+              className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
+              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+            >
+              + Nuevo partido
+            </button>
+          </div>
         </div>
 
         {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
@@ -96,6 +107,18 @@ function ListaPartidos({ categoriaId, onVolver, onElegirPartido, onNuevoPartido,
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
+                  {p.link && (
+                    <a
+                      href={p.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-xs px-2 py-1 rounded-full hover:opacity-80"
+                      style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                    >
+                      ▶
+                    </a>
+                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation()

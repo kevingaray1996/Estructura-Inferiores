@@ -41,6 +41,7 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
   const [fichasMedicas, setFichasMedicas] = useState([])
   const [videos, setVideos] = useState([])
   const [eliminando, setEliminando] = useState(false)
+  const [filtroStat, setFiltroStat] = useState(null)
 
   useEffect(() => {
     async function cargarDatos() {
@@ -53,7 +54,7 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
 
       const { data: statsData } = await supabase
         .from('estadisticas_jugador')
-        .select('*')
+        .select('*, partidos(rival, fecha, escudo_url)')
         .eq('jugador_id', jugadorId)
       setEstadisticas(statsData || [])
 
@@ -113,6 +114,34 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
     { partidos: 0, minutos: 0, goles: 0, asistencias: 0, amarillas: 0, rojas: 0 }
   )
 
+  const statConfig = {
+    partidos: {
+      titulo: 'Partidos jugados',
+      filtro: () => true,
+      valor: (e) => (e.minutos_jugados ? `${e.minutos_jugados}'` : null),
+    },
+    goles: {
+      titulo: 'Goles',
+      filtro: (e) => (e.goles || 0) > 0,
+      valor: (e) => `${e.goles} gol${e.goles > 1 ? 'es' : ''}`,
+    },
+    asistencias: {
+      titulo: 'Asistencias',
+      filtro: (e) => (e.asistencias || 0) > 0,
+      valor: (e) => `${e.asistencias} asist.`,
+    },
+    amarillas: {
+      titulo: 'Tarjetas amarillas',
+      filtro: (e) => (e.tarjetas_amarillas || 0) > 0,
+      valor: (e) => `${e.tarjetas_amarillas} amarilla${e.tarjetas_amarillas > 1 ? 's' : ''}`,
+    },
+    rojas: {
+      titulo: 'Tarjetas rojas',
+      filtro: (e) => (e.tarjetas_rojas || 0) > 0,
+      valor: (e) => `${e.tarjetas_rojas} roja${e.tarjetas_rojas > 1 ? 's' : ''}`,
+    },
+  }
+
   const ultimaFicha = fichasMedicas[0]
   const lesionesActivas = fichasMedicas.filter((f) => !f.recuperado).length
 
@@ -144,6 +173,85 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
       onClick: () => onVerVideos(jugadorId),
     },
   ]
+
+  if (filtroStat) {
+    const config = statConfig[filtroStat]
+    const partidosFiltrados = estadisticas
+      .filter(config.filtro)
+      .sort((a, b) => (b.partidos?.fecha || '').localeCompare(a.partidos?.fecha || ''))
+
+    return (
+      <div className="min-h-screen p-6 md:p-10" style={{ backgroundColor: '#0F1419' }}>
+        <div className="max-w-xl mx-auto">
+          <button
+            onClick={() => setFiltroStat(null)}
+            className="text-sm mb-6 flex items-center gap-1 hover:opacity-70 transition-opacity"
+            style={{ color: '#8A9BB8' }}
+          >
+            ← Volver al perfil
+          </button>
+
+          <h1
+            className="text-2xl md:text-3xl mb-1"
+            style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+          >
+            {config.titulo}
+          </h1>
+          <p className="text-sm mb-6" style={{ color: '#8A9BB8' }}>
+            {jugador.apellido}, {jugador.nombre}
+          </p>
+
+          {partidosFiltrados.length === 0 && (
+            <p style={{ color: '#5B6B85' }}>No hay partidos registrados todavía.</p>
+          )}
+
+          <div className="space-y-2">
+            {partidosFiltrados.map((e) => (
+              <div
+                key={e.id}
+                className="p-3.5 rounded-xl flex items-center justify-between"
+                style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+              >
+                <div className="flex items-center gap-2.5">
+                  {e.partidos?.escudo_url ? (
+                    <img
+                      src={e.partidos.escudo_url}
+                      alt={e.partidos.rival}
+                      className="w-7 h-7 rounded object-contain shrink-0"
+                      style={{ backgroundColor: '#0F1419' }}
+                    />
+                  ) : (
+                    <span
+                      className="w-7 h-7 rounded flex items-center justify-center text-xs shrink-0"
+                      style={{ backgroundColor: '#0F1419', color: '#5B6B85' }}
+                    >
+                      🛡️
+                    </span>
+                  )}
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
+                      {e.partidos ? `vs ${e.partidos.rival}` : 'Partido'}
+                    </p>
+                    <p className="text-xs" style={{ color: '#5B6B85' }}>
+                      {e.partidos?.fecha}
+                    </p>
+                  </div>
+                </div>
+                {config.valor(e) && (
+                  <span
+                    className="text-xs font-mono px-2 py-1 rounded-full shrink-0"
+                    style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                  >
+                    {config.valor(e)}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen p-6 md:p-10" style={{ backgroundColor: '#0F1419' }}>
@@ -232,17 +340,22 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
         </p>
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-8">
           {[
-            { label: 'Partidos', valor: totales.partidos },
-            { label: 'Minutos', valor: totales.minutos },
-            { label: 'Goles', valor: totales.goles },
-            { label: 'Asist.', valor: totales.asistencias },
-            { label: 'Amar.', valor: totales.amarillas },
-            { label: 'Rojas', valor: totales.rojas },
+            { label: 'Partidos', valor: totales.partidos, key: 'partidos' },
+            { label: 'Minutos', valor: totales.minutos, key: null },
+            { label: 'Goles', valor: totales.goles, key: 'goles' },
+            { label: 'Asist.', valor: totales.asistencias, key: 'asistencias' },
+            { label: 'Amar.', valor: totales.amarillas, key: 'amarillas' },
+            { label: 'Rojas', valor: totales.rojas, key: 'rojas' },
           ].map((stat) => (
             <div
               key={stat.label}
+              onClick={stat.key ? () => setFiltroStat(stat.key) : undefined}
               className="p-3 rounded-xl text-center"
-              style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+              style={{
+                backgroundColor: '#1A2332',
+                border: '1px solid #2A3548',
+                cursor: stat.key ? 'pointer' : 'default',
+              }}
             >
               <p
                 className="text-xl"

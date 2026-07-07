@@ -14,8 +14,13 @@ function iniciales(nombre, apellido) {
 function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
   const [jugadores, setJugadores] = useState([])
   const [idsConHistorial, setIdsConHistorial] = useState(new Set())
+  const [todasLasFichas, setTodasLasFichas] = useState([])
   const [categoriaId, setCategoriaId] = useState('')
   const [busqueda, setBusqueda] = useState('')
+  const [busquedaLesion, setBusquedaLesion] = useState('')
+  const [mostrarAgregar, setMostrarAgregar] = useState(false)
+  const [categoriaAgregar, setCategoriaAgregar] = useState('')
+  const [jugadorAgregarId, setJugadorAgregarId] = useState('')
   const [jugadorSeleccionado, setJugadorSeleccionado] = useState(null)
   const [fichas, setFichas] = useState([])
   const [mostrarForm, setMostrarForm] = useState(false)
@@ -37,7 +42,8 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
         .order('apellido')
       setJugadores(data || [])
 
-      const { data: historial } = await supabase.from('fichas_medicas').select('jugador_id')
+      const { data: historial } = await supabase.from('fichas_medicas').select('*')
+      setTodasLasFichas(historial || [])
       setIdsConHistorial(new Set((historial || []).map((f) => f.jugador_id)))
 
       if (jugadorInicialId) {
@@ -50,6 +56,12 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
     }
     cargar()
   }, [jugadorInicialId])
+
+  async function refrescarTodasLasFichas() {
+    const { data } = await supabase.from('fichas_medicas').select('*')
+    setTodasLasFichas(data || [])
+    setIdsConHistorial(new Set((data || []).map((f) => f.jugador_id)))
+  }
 
   async function cargarFichas(jugadorId) {
     const { data } = await supabase
@@ -146,6 +158,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
     setMostrarForm(false)
     setFichaEditando(null)
     cargarFichas(jugadorSeleccionado.id)
+    refrescarTodasLasFichas()
   }
 
   async function handleEliminarFicha(fichaId) {
@@ -168,6 +181,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
     }
 
     cargarFichas(jugadorSeleccionado.id)
+    refrescarTodasLasFichas()
   }
 
   async function handleMarcarDisponible() {
@@ -190,6 +204,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
       )
     )
     cargarFichas(jugadorSeleccionado.id)
+    refrescarTodasLasFichas()
   }
 
   const filtrados = jugadores.filter((j) => {
@@ -201,6 +216,33 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
 
   const lesionados = filtrados.filter((j) => j.estado === 'lesionado')
   const recuperados = filtrados.filter((j) => j.estado !== 'lesionado' && idsConHistorial.has(j.id))
+
+  const categoriasDisponibles = [
+    ...new Map(
+      jugadores.filter((j) => j.categoria_id).map((j) => [j.categoria_id, j.categorias?.nombre])
+    ),
+  ].sort((a, b) => (a[1] || '').localeCompare(b[1] || ''))
+
+  const jugadoresParaAgregar = jugadores
+    .filter((j) => !categoriaAgregar || j.categoria_id === categoriaAgregar)
+    .sort((a, b) => (a.apellido || '').localeCompare(b.apellido || ''))
+
+  const resultadosLesion = busquedaLesion
+    ? todasLasFichas
+        .filter((f) => (f.descripcion || '').toLowerCase().includes(busquedaLesion.toLowerCase()))
+        .map((f) => ({ ficha: f, jugador: jugadores.find((j) => j.id === f.jugador_id) }))
+        .filter((r) => r.jugador)
+        .sort((a, b) => (b.ficha.fecha || '').localeCompare(a.ficha.fecha || ''))
+    : []
+
+  function irAAgregar() {
+    const jugador = jugadores.find((j) => j.id === jugadorAgregarId)
+    if (!jugador) return
+    abrirJugador(jugador)
+    setMostrarAgregar(false)
+    setCategoriaAgregar('')
+    setJugadorAgregarId('')
+  }
 
   const inputStyle = {
     backgroundColor: '#1A2332',
@@ -403,12 +445,64 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
   return (
     <div className="p-6 md:p-10">
       <div className="max-w-2xl mx-auto">
-        <h1
-          className="text-3xl md:text-4xl mb-6 flex items-center gap-3"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
-        >
-          <span>🩺</span> Médicos
-        </h1>
+        <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+          <h1
+            className="text-3xl md:text-4xl flex items-center gap-3"
+            style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+          >
+            <span>🩺</span> Médicos
+          </h1>
+          <button
+            onClick={() => setMostrarAgregar((v) => !v)}
+            className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 shrink-0"
+            style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+          >
+            {mostrarAgregar ? 'Cancelar' : '+ Agregar jugador'}
+          </button>
+        </div>
+
+        {mostrarAgregar && (
+          <div className="p-4 rounded-xl mb-6 space-y-3" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
+            <p className="text-xs uppercase tracking-wide" style={{ color: '#5B6B85' }}>
+              Elegí categoría y jugador para abrir su ficha médica
+            </p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <select
+                value={categoriaAgregar}
+                onChange={(e) => {
+                  setCategoriaAgregar(e.target.value)
+                  setJugadorAgregarId('')
+                }}
+                className="p-2.5 rounded-xl outline-none text-sm"
+                style={inputStyle}
+              >
+                <option value="">Todas las categorías</option>
+                {categoriasDisponibles.map(([id, nombre]) => (
+                  <option key={id} value={id}>{nombre}</option>
+                ))}
+              </select>
+              <select
+                value={jugadorAgregarId}
+                onChange={(e) => setJugadorAgregarId(e.target.value)}
+                className="p-2.5 rounded-xl outline-none text-sm"
+                style={inputStyle}
+              >
+                <option value="">Seleccionar jugador...</option>
+                {jugadoresParaAgregar.map((j) => (
+                  <option key={j.id} value={j.id}>{j.apellido}, {j.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={irAAgregar}
+              disabled={!jugadorAgregarId}
+              className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
+              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+            >
+              Ir a la ficha
+            </button>
+          </div>
+        )}
 
         <CategoriaFiltro
           categoriaId={categoriaId}
@@ -417,7 +511,42 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
           onBusquedaChange={setBusqueda}
         />
 
-        {[
+        <input
+          type="text"
+          placeholder="🔍 Buscar en diagnósticos (ej: desgarro, esguince)..."
+          value={busquedaLesion}
+          onChange={(e) => setBusquedaLesion(e.target.value)}
+          className="w-full p-2.5 rounded-xl outline-none text-sm mb-6"
+          style={inputStyle}
+        />
+
+        {busquedaLesion ? (
+          <div className="space-y-2">
+            {resultadosLesion.map(({ ficha, jugador }) => (
+              <div
+                key={ficha.id}
+                onClick={() => abrirJugador(jugador)}
+                className="p-3.5 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
+                style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
+                    {jugador.apellido}, {jugador.nombre}
+                  </p>
+                  <span className="text-xs font-mono" style={{ color: '#8A9BB8' }}>{ficha.fecha}</span>
+                </div>
+                <p className="text-sm" style={{ color: '#8A9BB8' }}>{ficha.descripcion}</p>
+              </div>
+            ))}
+            {resultadosLesion.length === 0 && (
+              <p className="text-sm" style={{ color: '#5B6B85' }}>
+                No se encontraron diagnósticos que coincidan con "{busquedaLesion}".
+              </p>
+            )}
+          </div>
+        ) : (
+          <>
+            {[
           { titulo: 'Lesionados', icono: '🟡', color: '#FBBF24', lista: lesionados },
           { titulo: 'Recuperados', icono: '🟢', color: '#4ADE80', lista: recuperados },
         ].map(
@@ -454,10 +583,12 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
             )
         )}
 
-        {lesionados.length === 0 && recuperados.length === 0 && (
-          <p className="text-sm" style={{ color: '#5B6B85' }}>
-            No hay jugadores lesionados ni con historial médico para ese filtro.
-          </p>
+            {lesionados.length === 0 && recuperados.length === 0 && (
+              <p className="text-sm" style={{ color: '#5B6B85' }}>
+                No hay jugadores lesionados ni con historial médico para ese filtro.
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>

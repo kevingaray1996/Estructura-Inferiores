@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
+import { sanitizarNombreArchivo } from '../utils/archivos'
 
 function EntrenamientosSection() {
   const [entrenamientos, setEntrenamientos] = useState([])
@@ -80,7 +81,7 @@ function EntrenamientosSection() {
   async function handleSubirImagen(archivo) {
     if (!archivo) return
     setSubiendoImagen(true)
-    const nombreArchivo = `${Date.now()}-${archivo.name.replace(/\s+/g, '_')}`
+    const nombreArchivo = `${Date.now()}-${sanitizarNombreArchivo(archivo.name)}`
     const { error } = await supabase.storage.from('Biblioteca').upload(nombreArchivo, archivo, {
       upsert: true,
     })

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { sanitizarNombreArchivo } from '../utils/archivos'
 
-function VideoSection({ jugadorInicialId, onConsumirJugadorInicial }) {
+function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABiblioteca }) {
   const [tipo, setTipo] = useState('colectivo')
   const [categorias, setCategorias] = useState([])
   const [jugadores, setJugadores] = useState([])
@@ -9,13 +10,21 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial }) {
   const [videos, setVideos] = useState([])
   const [categoriaId, setCategoriaId] = useState('')
   const [busqueda, setBusqueda] = useState('')
+  const [jugadorFiltroId, setJugadorFiltroId] = useState(null)
   const [busquedaContenido, setBusquedaContenido] = useState('')
+  const [cantidadFiltro, setCantidadFiltro] = useState('')
+  const [momentoFiltro, setMomentoFiltro] = useState('')
   const [mostrarForm, setMostrarForm] = useState(false)
   const [guardando, setGuardando] = useState(false)
 
   const [fecha, setFecha] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [contenido, setContenido] = useState('')
+  const [momentoForm, setMomentoForm] = useState('')
+  const [cantidadJugadores, setCantidadJugadores] = useState('')
+  const [agregarABiblioteca, setAgregarABiblioteca] = useState(false)
+  const [imagenBiblioteca, setImagenBiblioteca] = useState('')
+  const [subiendoImagenBiblioteca, setSubiendoImagenBiblioteca] = useState(false)
   const [url, setUrl] = useState('')
   const [catForm, setCatForm] = useState('')
   const [jugadorForm, setJugadorForm] = useState('')
@@ -45,6 +54,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial }) {
       if (jugadorInicialId) {
         setTipo('individual')
         setBusqueda('')
+        setJugadorFiltroId(jugadorInicialId)
         onConsumirJugadorInicial()
       }
     }
@@ -58,7 +68,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial }) {
   async function cargarVideos() {
     const { data } = await supabase
       .from('videos')
-      .select('*, categorias(nombre), jugadores(nombre, apellido, categoria_id), partidos(rival, fecha)')
+      .select('*, categorias(nombre), jugadores(nombre, apellido, categoria_id), partidos(rival, fecha, escudo_url)')
       .eq('tipo', tipo)
       .order('fecha', { ascending: false })
     setVideos(data || [])
@@ -69,7 +79,12 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial }) {
     setMostrarForm(false)
     setCategoriaId('')
     setBusqueda('')
+    setJugadorFiltroId(null)
     setBusquedaContenido('')
+    setCantidadFiltro('')
+    setMomentoFiltro('')
+    setAgregarABiblioteca(false)
+    setImagenBiblioteca('')
   }
 
   function obtenerFechaHoy() {
@@ -87,6 +102,23 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial }) {
     setMostrarForm(!mostrarForm)
   }
 
+  async function handleSubirImagenBiblioteca(archivo) {
+    if (!archivo) return
+    setSubiendoImagenBiblioteca(true)
+    const nombreArchivo = `${Date.now()}-${sanitizarNombreArchivo(archivo.name)}`
+    const { error } = await supabase.storage.from('Biblioteca').upload(nombreArchivo, archivo, {
+      upsert: true,
+    })
+    if (error) {
+      alert('Error al subir la imagen: ' + error.message)
+      setSubiendoImagenBiblioteca(false)
+      return
+    }
+    const { data } = supabase.storage.from('Biblioteca').getPublicUrl(nombreArchivo)
+    setImagenBiblioteca(data.publicUrl)
+    setSubiendoImagenBiblioteca(false)
+  }
+
   async function handleGuardar() {
     if (!fecha || !url) return
     setGuardando(true)
@@ -97,6 +129,8 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial }) {
         fecha: fecha,
         descripcion: descripcion,
         categoria_id: catForm || null,
+        momento: momentoForm || null,
+        partido_id: partidoForm || null,
         url: url,
       })
     } else if (tipo === 'individual') {
@@ -108,20 +142,37 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial }) {
         url: url,
       })
     } else {
+      const cantidadNum = cantidadJugadores !== '' ? parseInt(cantidadJugadores, 10) : null
       await supabase.from('videos').insert({
         tipo: 'entrenamiento',
         fecha: fecha,
         categoria_id: catForm || null,
         contenido: contenido || null,
         descripcion: descripcion,
+        cantidad_jugadores: cantidadNum,
         url: url,
       })
+
+      if (agregarABiblioteca) {
+        await supabase.from('biblioteca').insert({
+          fecha: fecha,
+          contenido: contenido || null,
+          descripcion: descripcion,
+          cantidad_jugadores: cantidadNum,
+          link_video: url || null,
+          imagen_url: imagenBiblioteca || null,
+        })
+      }
     }
 
     setGuardando(false)
     setFecha('')
     setDescripcion('')
     setContenido('')
+    setMomentoForm('')
+    setCantidadJugadores('')
+    setAgregarABiblioteca(false)
+    setImagenBiblioteca('')
     setUrl('')
     setCatForm('')
     setJugadorForm('')
@@ -141,6 +192,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial }) {
 
   const videosFiltrados = videos.filter((v) => {
     if (tipo === 'individual') {
+      if (jugadorFiltroId) return v.jugador_id === jugadorFiltroId
       const categoriaDelJugador = v.jugadores ? v.jugadores.categoria_id : null
       const coincideCategoria = !categoriaId || categoriaDelJugador === categoriaId
       const nombreJugador = v.jugadores ? v.jugadores.nombre : ''
@@ -153,10 +205,25 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial }) {
       const coincideCategoria = !categoriaId || v.categoria_id === categoriaId
       const coincideContenido =
         !busquedaContenido || (v.contenido || '').toLowerCase().includes(busquedaContenido.toLowerCase())
-      return coincideCategoria && coincideContenido
+      const coincideCantidad = !cantidadFiltro || String(v.cantidad_jugadores) === cantidadFiltro
+      return coincideCategoria && coincideContenido && coincideCantidad
+    }
+    if (tipo === 'colectivo') {
+      const coincideCategoria = !categoriaId || v.categoria_id === categoriaId
+      const coincideMomento = !momentoFiltro || v.momento === momentoFiltro
+      return coincideCategoria && coincideMomento
     }
     return !categoriaId || v.categoria_id === categoriaId
   })
+
+  const cantidadesDisponibles = [
+    ...new Set(
+      videos
+        .filter((v) => v.tipo === 'entrenamiento')
+        .map((v) => v.cantidad_jugadores)
+        .filter(Boolean)
+    ),
+  ].sort((a, b) => a - b)
 
   return (
     <div className="p-6 md:p-10">
@@ -205,22 +272,48 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial }) {
           </button>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <select
-            value={categoriaId}
-            onChange={(e) => setCategoriaId(e.target.value)}
-            className="p-2.5 rounded-xl outline-none text-sm sm:w-48"
-            style={inputStyle}
+        {tipo === 'individual' && jugadorFiltroId && (
+          <div
+            className="flex items-center justify-between gap-3 p-3 rounded-xl mb-4"
+            style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
           >
-            <option value="">Todas las categorías</option>
-            {categorias.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nombre}
-              </option>
-            ))}
-          </select>
+            <p className="text-sm" style={{ color: '#8A9BB8' }}>
+              Mostrando videos de:{' '}
+              <span style={{ color: '#F0F2F5' }}>
+                {(() => {
+                  const j = jugadores.find((jug) => jug.id === jugadorFiltroId)
+                  return j ? `${j.apellido}, ${j.nombre}` : 'jugador'
+                })()}
+              </span>
+            </p>
+            <button
+              onClick={() => setJugadorFiltroId(null)}
+              className="text-xs px-3 py-1.5 rounded-full hover:opacity-80 shrink-0"
+              style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+            >
+              Quitar filtro
+            </button>
+          </div>
+        )}
 
-          {tipo === 'individual' && (
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          {!(tipo === 'individual' && jugadorFiltroId) && (
+            <select
+              value={categoriaId}
+              onChange={(e) => setCategoriaId(e.target.value)}
+              className="p-2.5 rounded-xl outline-none text-sm sm:w-48"
+              style={inputStyle}
+            >
+              <option value="">Todas las categorías</option>
+              {categorias.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {tipo === 'individual' && !jugadorFiltroId && (
             <input
               type="text"
               placeholder="Buscar jugador..."
@@ -231,15 +324,42 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial }) {
             />
           )}
 
-          {tipo === 'entrenamiento' && (
-            <input
-              type="text"
-              placeholder="Buscar por contenido (ej: definición, presión...)"
-              value={busquedaContenido}
-              onChange={(e) => setBusquedaContenido(e.target.value)}
-              className="p-2.5 rounded-xl outline-none text-sm flex-1"
+          {tipo === 'colectivo' && (
+            <select
+              value={momentoFiltro}
+              onChange={(e) => setMomentoFiltro(e.target.value)}
+              className="p-2.5 rounded-xl outline-none text-sm sm:w-44"
               style={inputStyle}
-            />
+            >
+              <option value="">Todos los análisis</option>
+              <option value="Prepartido">Prepartido</option>
+              <option value="Postpartido">Postpartido</option>
+              <option value="Entrenamiento">Entrenamiento</option>
+            </select>
+          )}
+
+          {tipo === 'entrenamiento' && (
+            <>
+              <input
+                type="text"
+                placeholder="Buscar por contenido (ej: definición, presión...)"
+                value={busquedaContenido}
+                onChange={(e) => setBusquedaContenido(e.target.value)}
+                className="p-2.5 rounded-xl outline-none text-sm flex-1"
+                style={inputStyle}
+              />
+              <select
+                value={cantidadFiltro}
+                onChange={(e) => setCantidadFiltro(e.target.value)}
+                className="p-2.5 rounded-xl outline-none text-sm sm:w-44"
+                style={inputStyle}
+              >
+                <option value="">Cantidad de jugadores</option>
+                {cantidadesDisponibles.map((c) => (
+                  <option key={c} value={c}>{c} jugadores</option>
+                ))}
+              </select>
+            </>
           )}
 
           <button
@@ -250,6 +370,16 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial }) {
             {mostrarForm ? 'Cancelar' : '+ Nuevo video'}
           </button>
         </div>
+
+        {tipo === 'entrenamiento' && onIrABiblioteca && (
+          <button
+            onClick={onIrABiblioteca}
+            className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 mb-4 w-full sm:w-auto"
+            style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+          >
+            📚 Ir a Biblioteca
+          </button>
+        )}
 
         {mostrarForm && (
           <div
@@ -276,6 +406,30 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                   {categorias.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.nombre}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={momentoForm}
+                  onChange={(e) => setMomentoForm(e.target.value)}
+                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  style={inputStyle}
+                >
+                  <option value="">Análisis</option>
+                  <option value="Prepartido">Prepartido</option>
+                  <option value="Postpartido">Postpartido</option>
+                  <option value="Entrenamiento">Entrenamiento</option>
+                </select>
+                <select
+                  value={partidoForm}
+                  onChange={(e) => setPartidoForm(e.target.value)}
+                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  style={inputStyle}
+                >
+                  <option value="">Partido (opcional)</option>
+                  {partidos.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      vs {p.rival} — {p.fecha}
                     </option>
                   ))}
                 </select>
@@ -352,6 +506,66 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                   className="w-full p-2.5 rounded-xl outline-none text-sm resize-none"
                   style={inputStyle}
                 />
+                <input
+                  type="number"
+                  placeholder="Cantidad de jugadores"
+                  value={cantidadJugadores}
+                  onChange={(e) => setCantidadJugadores(e.target.value)}
+                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  style={inputStyle}
+                />
+                <label
+                  className="flex items-center gap-2 p-2.5 rounded-xl text-sm cursor-pointer"
+                  style={inputStyle}
+                >
+                  <input
+                    type="checkbox"
+                    checked={agregarABiblioteca}
+                    onChange={(e) => setAgregarABiblioteca(e.target.checked)}
+                  />
+                  📚 Agregar a la Biblioteca
+                </label>
+
+                {agregarABiblioteca && (
+                  <div>
+                    <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                      Imagen del ejercicio (Tactical Pad, etc.)
+                    </label>
+                    <div className="flex items-center gap-3">
+                      {imagenBiblioteca && (
+                        <img
+                          src={imagenBiblioteca}
+                          alt="Vista previa"
+                          className="w-16 h-16 rounded-lg object-cover shrink-0"
+                          style={{ border: '1px solid #2A3548' }}
+                        />
+                      )}
+                      <label
+                        className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 cursor-pointer"
+                        style={{ backgroundColor: '#0F1419', color: '#8A9BB8', border: '1px solid #2A3548' }}
+                      >
+                        {subiendoImagenBiblioteca ? 'Subiendo...' : imagenBiblioteca ? 'Cambiar imagen' : '📤 Subir imagen'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleSubirImagenBiblioteca(e.target.files?.[0])}
+                          disabled={subiendoImagenBiblioteca}
+                          className="hidden"
+                        />
+                      </label>
+                      {imagenBiblioteca && (
+                        <button
+                          type="button"
+                          onClick={() => setImagenBiblioteca('')}
+                          className="text-xs"
+                          style={{ color: '#F87171' }}
+                        >
+                          Quitar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </>
             )}
 
@@ -405,6 +619,14 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                     {titulo}
                   </p>
                   <div className="flex items-center gap-2">
+                    {tipo === 'colectivo' && v.momento && (
+                      <span
+                        className="text-xs font-mono px-2 py-1 rounded-full"
+                        style={{ backgroundColor: '#0F1419', color: '#4ADE80' }}
+                      >
+                        {v.momento}
+                      </span>
+                    )}
                     {badge && (
                       <span
                         className="text-xs font-mono px-2 py-1 rounded-full"
@@ -427,13 +649,27 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                     {v.fecha}
                   </p>
                   {vsPartido && (
-                    <span className="text-xs" style={{ color: '#8A9BB8' }}>
-                      · {vsPartido}
+                    <span className="text-xs flex items-center gap-1" style={{ color: '#8A9BB8' }}>
+                      ·
+                      {v.partidos?.escudo_url && (
+                        <img
+                          src={v.partidos.escudo_url}
+                          alt={v.partidos.rival}
+                          className="w-4 h-4 rounded-sm object-contain inline-block shrink-0"
+                          style={{ backgroundColor: '#0F1419' }}
+                        />
+                      )}
+                      {vsPartido}
                     </span>
                   )}
                   {tipo === 'entrenamiento' && v.descripcion && (
                     <span className="text-xs" style={{ color: '#8A9BB8' }}>
                       · {v.descripcion}
+                    </span>
+                  )}
+                  {tipo === 'entrenamiento' && v.cantidad_jugadores && (
+                    <span className="text-xs" style={{ color: '#8A9BB8' }}>
+                      · 👥 {v.cantidad_jugadores} jugadores
                     </span>
                   )}
                 </div>

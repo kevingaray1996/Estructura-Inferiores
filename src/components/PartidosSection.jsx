@@ -5,6 +5,7 @@ import ConvocarPartido from './ConvocarPartido'
 import AgregarPartido from './AgregarPartido'
 import CargarEstadisticas from './CargarEstadisticas'
 import FormacionPartido from './FormacionPartido'
+import EquiposSection from './EquiposSection'
 
 function PartidosSection() {
   const [categorias, setCategorias] = useState([])
@@ -84,6 +85,10 @@ function PartidosSection() {
     )
   }
 
+  if (vista === 'equipos') {
+    return <EquiposSection onVolver={() => setVista('lista')} />
+  }
+
   if (vista === 'lista') {
     return (
       <ListaPartidos
@@ -95,6 +100,7 @@ function PartidosSection() {
           setVista('convocar')
         }}
         onNuevoPartido={() => setVista('agregar')}
+        onGestionarEquipos={() => setVista('equipos')}
         onVerEstadisticas={(id) => {
           setPartidoId(id)
           setVista('estadisticas')

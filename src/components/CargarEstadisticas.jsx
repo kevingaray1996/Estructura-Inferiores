@@ -108,9 +108,24 @@ function CargarEstadisticas({ partidoId, categoriaId, onVolver }) {
         </button>
 
         <h1
-          className="text-2xl md:text-3xl mb-1"
+          className="text-2xl md:text-3xl mb-1 flex items-center gap-2.5"
           style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
         >
+          {partido.escudo_url ? (
+            <img
+              src={partido.escudo_url}
+              alt={partido.rival}
+              className="w-8 h-8 rounded object-contain shrink-0"
+              style={{ backgroundColor: '#0F1419' }}
+            />
+          ) : (
+            <span
+              className="w-8 h-8 rounded flex items-center justify-center text-sm shrink-0"
+              style={{ backgroundColor: '#0F1419', color: '#5B6B85' }}
+            >
+              🛡️
+            </span>
+          )}
           Estadísticas — vs {partido.rival}
         </h1>
         <p className="text-sm mb-6" style={{ color: '#8A9BB8' }}>
