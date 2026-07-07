@@ -8,6 +8,8 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
   const [hora, setHora] = useState('')
   const [lugar, setLugar] = useState('')
   const [localVisitante, setLocalVisitante] = useState('local')
+  const [escudoUrl, setEscudoUrl] = useState('')
+  const [subiendoEscudo, setSubiendoEscudo] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [cargando, setCargando] = useState(!!partidoIdEditar)
@@ -34,11 +36,29 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
         setHora(data.hora || '')
         setLugar(data.lugar || '')
         setLocalVisitante(data.local_visitante || 'local')
+        setEscudoUrl(data.escudo_url || '')
       }
       setCargando(false)
     }
     cargarPartido()
   }, [partidoIdEditar])
+
+  async function handleSubirEscudo(archivo) {
+    if (!archivo) return
+    setSubiendoEscudo(true)
+    const nombreArchivo = `escudos/${Date.now()}-${archivo.name.replace(/\s+/g, '_')}`
+    const { error } = await supabase.storage.from('Biblioteca').upload(nombreArchivo, archivo, {
+      upsert: true,
+    })
+    if (error) {
+      alert('Error al subir el escudo: ' + error.message)
+      setSubiendoEscudo(false)
+      return
+    }
+    const { data } = supabase.storage.from('Biblioteca').getPublicUrl(nombreArchivo)
+    setEscudoUrl(data.publicUrl)
+    setSubiendoEscudo(false)
+  }
 
   async function handleGuardar() {
     setErrorMsg('')
@@ -55,6 +75,7 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
       lugar: lugar || null,
       local_visitante: localVisitante,
       categoria_id: categoriaId,
+      escudo_url: escudoUrl || null,
     }
 
     const { error } = esEdicion
@@ -137,6 +158,45 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
             <option value="local">Local</option>
             <option value="visitante">Visitante</option>
           </select>
+
+          <div>
+            <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+              Escudo del rival
+            </label>
+            <div className="flex items-center gap-3">
+              {escudoUrl && (
+                <img
+                  src={escudoUrl}
+                  alt="Escudo del rival"
+                  className="w-12 h-12 rounded-lg object-contain shrink-0"
+                  style={{ backgroundColor: '#0F1419', border: '1px solid #2A3548' }}
+                />
+              )}
+              <label
+                className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 cursor-pointer"
+                style={{ backgroundColor: '#0F1419', color: '#8A9BB8', border: '1px solid #2A3548' }}
+              >
+                {subiendoEscudo ? 'Subiendo...' : escudoUrl ? 'Cambiar escudo' : '📤 Subir escudo'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleSubirEscudo(e.target.files?.[0])}
+                  disabled={subiendoEscudo}
+                  className="hidden"
+                />
+              </label>
+              {escudoUrl && (
+                <button
+                  type="button"
+                  onClick={() => setEscudoUrl('')}
+                  className="text-xs"
+                  style={{ color: '#F87171' }}
+                >
+                  Quitar
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         {errorMsg && (

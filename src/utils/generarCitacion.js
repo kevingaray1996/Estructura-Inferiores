@@ -20,6 +20,87 @@ function formatearFecha(fechaStr) {
   return { diaSemana, fechaCorta: `${dia}/${mes}` }
 }
 
+async function cargarImagenDataURL(url) {
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const blob = await res.blob()
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    return null
+  }
+}
+
+function formatoDeDataUrl(dataUrl) {
+  const match = /^data:image\/(\w+);/.exec(dataUrl || '')
+  return match ? match[1].toUpperCase() : 'PNG'
+}
+
+// Escudo propio: escudo vectorial simple (pentágono tipo insignia)
+function dibujarEscudoPropio(doc, cx, cy, hw = 15) {
+  doc.setFillColor(...NAVY)
+  doc.setDrawColor(...VERDE)
+  doc.setLineWidth(1.3)
+  doc.lines(
+    [
+      [2 * hw, 0],
+      [0, hw * 2],
+      [-hw, hw * 1.45],
+      [-hw, -hw * 1.45],
+    ],
+    cx - hw,
+    cy - hw * 1.65,
+    [1, 1],
+    'FD',
+    true
+  )
+}
+
+// Placeholder para escudo del rival cuando todavía no se cargó imagen
+function dibujarEscudoPlaceholder(doc, cx, cy, hw = 15) {
+  doc.setDrawColor(...GRIS)
+  doc.setLineWidth(1)
+  doc.lines(
+    [
+      [2 * hw, 0],
+      [0, hw * 2],
+      [-hw, hw * 1.45],
+      [-hw, -hw * 1.45],
+    ],
+    cx - hw,
+    cy - hw * 1.65,
+    [1, 1],
+    'D',
+    true
+  )
+}
+
+// Camiseta con número, en vez de un simple círculo
+function dibujarCamiseta(doc, px, py, numero) {
+  const hw = 12
+  doc.setFillColor(...BLANCO)
+  doc.setDrawColor(...NAVY)
+  doc.setLineWidth(1.1)
+  // Mangas: casquetes redondeados
+  doc.roundedRect(px - hw - 6, py - 9, 8, 11, 3, 3, 'FD')
+  doc.roundedRect(px + hw - 2, py - 9, 8, 11, 3, 3, 'FD')
+  // Cuerpo (tapa la unión con las mangas)
+  doc.roundedRect(px - hw, py - 10, hw * 2, 26, 6, 6, 'FD')
+  // Cuello (muesca)
+  doc.setFillColor(...VERDE_OSCURO)
+  doc.triangle(px - 4, py - 10, px + 4, py - 10, px, py - 4, 'F')
+  // Número
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(13)
+  doc.setTextColor(...NAVY)
+  doc.text(numero, px, py + 6, { align: 'center' })
+}
+
 export async function generarCitacionPDF(partidoId) {
   const { data: partido } = await supabase
     .from('partidos')
@@ -36,6 +117,8 @@ export async function generarCitacionPDF(partidoId) {
     alert('Todavía no hay convocatoria cargada para este partido.')
     return
   }
+
+  const escudoRivalDataUrl = partido.escudo_url ? await cargarImagenDataURL(partido.escudo_url) : null
 
   const doc = new jsPDF({ unit: 'pt', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
@@ -66,19 +149,44 @@ export async function generarCitacionPDF(partidoId) {
     doc.text(etiqueta, pageWidth - margin - w / 2, y, { align: 'center' })
   }
 
-  // ===== Card principal: rival + datos del partido =====
-  const cajaY = y + 18
-  const cajaH = 54
+  // ===== Cartel de escudos: propio vs rival =====
+  const cartelY = y + 20
+  const cartelH = 90
   doc.setFillColor(...NAVY)
-  doc.roundedRect(margin, cajaY, pageWidth - margin * 2, cajaH, 8, 8, 'F')
+  doc.roundedRect(margin, cartelY, pageWidth - margin * 2, cartelH, 8, 8, 'F')
+
+  const centroCartelY = cartelY + 40
+  const escudoIzqX = margin + 60
+  const escudoDerX = pageWidth - margin - 60
+
+  dibujarEscudoPropio(doc, escudoIzqX, centroCartelY, 15)
+
+  doc.setFillColor(...BLANCO)
+  doc.circle(pageWidth / 2, centroCartelY, 15, 'F')
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(11)
+  doc.setTextColor(...NAVY)
+  doc.text('VS', pageWidth / 2, centroCartelY + 4, { align: 'center' })
+
+  if (escudoRivalDataUrl) {
+    try {
+      const formato = formatoDeDataUrl(escudoRivalDataUrl)
+      doc.addImage(escudoRivalDataUrl, formato, escudoDerX - 15, centroCartelY - 15, 30, 30)
+    } catch {
+      dibujarEscudoPlaceholder(doc, escudoDerX, centroCartelY, 15)
+    }
+  } else {
+    dibujarEscudoPlaceholder(doc, escudoDerX, centroCartelY, 15)
+  }
 
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(20)
+  doc.setFontSize(10)
   doc.setTextColor(...BLANCO)
-  doc.text(`vs ${partido.rival}`, margin + 18, cajaY + 33)
+  doc.text('ESTRUCTURA INF.', escudoIzqX, centroCartelY + 32, { align: 'center', maxWidth: 100 })
+  doc.text(partido.rival.toUpperCase(), escudoDerX, centroCartelY + 32, { align: 'center', maxWidth: 100 })
 
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(9.5)
+  doc.setFontSize(9)
   doc.setTextColor(200, 208, 220)
   const subtitulo = [
     partido.local_visitante ? (partido.local_visitante === 'local' ? 'Partido de local' : 'Partido de visitante') : null,
@@ -86,11 +194,11 @@ export async function generarCitacionPDF(partidoId) {
   ]
     .filter(Boolean)
     .join('   ·   ')
-  doc.text(subtitulo, margin + 18, cajaY + 33 + 15)
+  doc.text(subtitulo, pageWidth / 2, cartelY + cartelH - 10, { align: 'center' })
 
   // ===== Franja de datos rápidos: FECHA / HORA / LUGAR =====
   const { diaSemana, fechaCorta } = formatearFecha(partido.fecha)
-  const franjaY = cajaY + cajaH + 14
+  const franjaY = cartelY + cartelH + 14
   const franjaH = 44
   const gap = 10
   const franjaW = (pageWidth - margin * 2 - gap * 2) / 3
@@ -187,7 +295,6 @@ export async function generarCitacionPDF(partidoId) {
   doc.rect(canchaX + (canchaW - areaW) / 2, canchaY + 10 + canchaH * 0.09 - canchaH * 0.005, areaW, canchaH * 0.005)
 
   const slots = FORMACIONES[partido.formacion] || []
-  const radioCirculo = 15
   slots.forEach((slot) => {
     const citacion = citaciones.find(
       (c) => String(c.posicion_cancha) === String(slot.codigo) && c.titular
@@ -195,25 +302,20 @@ export async function generarCitacionPDF(partidoId) {
     const px = canchaX + (slot.x / 100) * canchaW
     const py = canchaY + (slot.y / 100) * canchaH
 
-    doc.setFillColor(...BLANCO)
-    doc.setDrawColor(...NAVY)
-    doc.setLineWidth(1.4)
-    doc.circle(px, py, radioCirculo, 'FD')
+    const numero = citacion?.dorsal ? String(citacion.dorsal) : '–'
+    dibujarCamiseta(doc, px, py, numero)
 
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(12)
-    doc.setTextColor(...NAVY)
-    const numeroCirculo = citacion?.dorsal ? String(citacion.dorsal) : '–'
-    doc.text(numeroCirculo, px, py + 4.2, { align: 'center' })
-
-    const etiqueta = citacion ? `${citacion.jugadores?.apellido || ''}`.toUpperCase() : slot.label.toUpperCase()
+    const inicialNombre = citacion?.jugadores?.nombre ? `${citacion.jugadores.nombre[0]}.` : ''
+    const etiqueta = citacion
+      ? `${citacion.jugadores?.apellido || ''} ${inicialNombre}`.trim().toUpperCase()
+      : slot.label.toUpperCase()
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(6.8)
     const anchoTexto = doc.getTextWidth(etiqueta) + 10
     doc.setFillColor(...NAVY)
-    doc.roundedRect(px - anchoTexto / 2, py + radioCirculo + 5, anchoTexto, 12, 3, 3, 'F')
+    doc.roundedRect(px - anchoTexto / 2, py + 21, anchoTexto, 12, 3, 3, 'F')
     doc.setTextColor(...BLANCO)
-    doc.text(etiqueta.slice(0, 18), px, py + radioCirculo + 13.5, { align: 'center' })
+    doc.text(etiqueta.slice(0, 18), px, py + 29.5, { align: 'center' })
   })
 
   // ===== Pie de página =====

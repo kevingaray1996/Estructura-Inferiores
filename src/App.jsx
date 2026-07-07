@@ -6,6 +6,7 @@ import NutricionSection from './components/NutricionSection'
 import PsicologiaSection from './components/PsicologiaSection'
 import VideoSection from './components/VideoSection'
 import PartidosSection from './components/PartidosSection'
+import EntrenamientosSection from './components/EntrenamientosSection'
 
 function App() {
   const [seccion, setSeccion] = useState('plantel')
@@ -69,6 +70,7 @@ function App() {
         />
       )}
       {seccion === 'partidos' && <PartidosSection />}
+      {seccion === 'entrenamientos' && <EntrenamientosSection />}
     </Layout>
   )
 }

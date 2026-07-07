@@ -6,6 +6,7 @@ const secciones = [
     { id: 'psicologia', label: 'Psicología' },
     { id: 'video', label: 'Videoanálisis' },
     { id: 'partidos', label: 'Partidos' },
+    { id: 'entrenamientos', label: 'Entrenamientos' },
   ]
 
   return (

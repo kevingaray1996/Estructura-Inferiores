@@ -75,9 +75,26 @@ function ListaPartidos({ categoriaId, onVolver, onElegirPartido, onNuevoPartido,
               style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
             >
               <div className="flex items-center justify-between">
-                <p className="text-base font-medium" style={{ color: '#F0F2F5' }}>
-                  vs {p.rival}
-                </p>
+                <div className="flex items-center gap-2.5">
+                  {p.escudo_url ? (
+                    <img
+                      src={p.escudo_url}
+                      alt={p.rival}
+                      className="w-7 h-7 rounded object-contain shrink-0"
+                      style={{ backgroundColor: '#0F1419' }}
+                    />
+                  ) : (
+                    <span
+                      className="w-7 h-7 rounded flex items-center justify-center text-xs shrink-0"
+                      style={{ backgroundColor: '#0F1419', color: '#5B6B85' }}
+                    >
+                      🛡️
+                    </span>
+                  )}
+                  <p className="text-base font-medium" style={{ color: '#F0F2F5' }}>
+                    vs {p.rival}
+                  </p>
+                </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={(e) => {
