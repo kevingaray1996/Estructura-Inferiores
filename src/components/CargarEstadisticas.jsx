@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { CAMPOS_FISICOS } from '../utils/camposFisicos'
 
-function CargarEstadisticas({ partidoId, categoriaId, onVolver }) {
+function CargarEstadisticas({ partidoId, categoriaId, onVolver, onIrAFisico }) {
   const [partido, setPartido] = useState(null)
   const [jugadores, setJugadores] = useState([])
   const [stats, setStats] = useState({})
+  const [datosFisicos, setDatosFisicos] = useState({})
   const [guardando, setGuardando] = useState(false)
   const [guardado, setGuardado] = useState(false)
 
@@ -41,6 +43,17 @@ function CargarEstadisticas({ partidoId, categoriaId, onVolver }) {
         }
       })
       setStats(mapa)
+
+      const { data: fisicosData } = await supabase
+        .from('sesiones_fisicas')
+        .select('*')
+        .eq('partido_id', partidoId)
+
+      const mapaFisicos = {}
+      ;(fisicosData || []).forEach((f) => {
+        mapaFisicos[f.jugador_id] = f
+      })
+      setDatosFisicos(mapaFisicos)
     }
     cargarDatos()
   }, [partidoId, categoriaId])
@@ -227,6 +240,66 @@ function CargarEstadisticas({ partidoId, categoriaId, onVolver }) {
         >
           {guardando ? 'Guardando...' : guardado ? '✅ Guardado' : 'Guardar estadísticas'}
         </button>
+
+        <div className="flex items-center justify-between mt-10 mb-3">
+          <p className="text-xs uppercase tracking-wide" style={{ color: '#5B6B85' }}>
+            Físico (GPS)
+          </p>
+          {onIrAFisico && (
+            <button
+              onClick={() => onIrAFisico(partidoId)}
+              className="text-xs px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
+              style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+            >
+              📊 Cargar/editar físico
+            </button>
+          )}
+        </div>
+
+        {Object.keys(datosFisicos).length === 0 ? (
+          <p className="text-sm" style={{ color: '#5B6B85' }}>
+            Todavía no hay datos físicos cargados para este partido.
+          </p>
+        ) : (
+          <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #2A3548' }}>
+            <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#1A2332' }}>
+                  <th
+                    className="text-left p-2.5 whitespace-nowrap sticky left-0"
+                    style={{ color: '#8A9BB8', backgroundColor: '#1A2332' }}
+                  >
+                    Jugador
+                  </th>
+                  {CAMPOS_FISICOS.map((c) => (
+                    <th key={c.clave} className="text-left p-2.5 whitespace-nowrap" style={{ color: '#8A9BB8' }}>
+                      {c.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {jugadores
+                  .filter((j) => datosFisicos[j.id])
+                  .map((j, i) => (
+                    <tr key={j.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#151D2A' }}>
+                      <td
+                        className="p-2.5 whitespace-nowrap sticky left-0"
+                        style={{ color: '#F0F2F5', backgroundColor: i % 2 === 0 ? '#0F1419' : '#151D2A' }}
+                      >
+                        {j.apellido}, {j.nombre}
+                      </td>
+                      {CAMPOS_FISICOS.map((c) => (
+                        <td key={c.clave} className="p-2.5 whitespace-nowrap" style={{ color: '#8A9BB8' }}>
+                          {datosFisicos[j.id][c.clave] ?? '—'}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )

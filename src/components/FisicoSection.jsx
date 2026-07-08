@@ -1,15 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
-
-const CAMPOS = [
-  { clave: 'distancia_total_m', label: 'Dist. total (m)' },
-  { clave: 'distancia_alta_intensidad_m', label: 'Dist. alta int. (m)' },
-  { clave: 'sprints', label: 'Sprints' },
-  { clave: 'velocidad_maxima_kmh', label: 'Vel. máx (km/h)' },
-  { clave: 'player_load', label: 'Player Load' },
-  { clave: 'minutos', label: 'Minutos' },
-]
+import { CAMPOS_FISICOS as CAMPOS } from '../utils/camposFisicos'
 
 function normalizarNombre(s) {
   return (s || '')
@@ -23,7 +15,7 @@ function normalizarNombre(s) {
     .join(' ')
 }
 
-function FisicoSection({ perfil }) {
+function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
   const esTecnico = perfil.rol === 'tecnico'
   const [categorias, setCategorias] = useState([])
   const [categoriaId, setCategoriaId] = useState(esTecnico ? perfil.categoria_id : '')
@@ -39,6 +31,7 @@ function FisicoSection({ perfil }) {
   const [mostrarPegado, setMostrarPegado] = useState(false)
   const [textoPegado, setTextoPegado] = useState('')
   const [resultadoPegado, setResultadoPegado] = useState(null)
+  const partidoForzadoRef = useRef(false)
 
   useEffect(() => {
     if (esTecnico) return
@@ -48,6 +41,26 @@ function FisicoSection({ perfil }) {
     }
     cargarCategorias()
   }, [esTecnico])
+
+  useEffect(() => {
+    async function aplicarPartidoInicial() {
+      if (!partidoInicialId) return
+      const { data: partido } = await supabase
+        .from('partidos')
+        .select('*')
+        .eq('id', partidoInicialId)
+        .single()
+      if (partido) {
+        partidoForzadoRef.current = true
+        setCategoriaId(partido.categoria_id)
+        setFecha(partido.fecha)
+        setTipo('partido')
+        setPartidoId(partido.id)
+      }
+      onConsumirPartidoInicial?.()
+    }
+    aplicarPartidoInicial()
+  }, [partidoInicialId, onConsumirPartidoInicial])
 
   useEffect(() => {
     async function cargarPartidos() {
@@ -95,11 +108,19 @@ function FisicoSection({ perfil }) {
           mapa[s.jugador_id] = s
         })
         setDatos(mapa)
-        const partidoExistente = (sesionesData || []).find((s) => s.partido_id)?.partido_id
-        setPartidoId(partidoExistente || '')
+        if (partidoForzadoRef.current) {
+          partidoForzadoRef.current = false
+        } else {
+          const partidoExistente = (sesionesData || []).find((s) => s.partido_id)?.partido_id
+          setPartidoId(partidoExistente || '')
+        }
       } else {
         setDatos({})
-        setPartidoId('')
+        if (partidoForzadoRef.current) {
+          partidoForzadoRef.current = false
+        } else {
+          setPartidoId('')
+        }
       }
 
       setCargando(false)

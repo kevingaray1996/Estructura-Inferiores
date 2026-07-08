@@ -26,6 +26,7 @@ function App() {
   const [jugadorParaNutricion, setJugadorParaNutricion] = useState(null)
   const [jugadorParaPsicologia, setJugadorParaPsicologia] = useState(null)
   const [jugadorParaPlantel, setJugadorParaPlantel] = useState(null)
+  const [partidoParaFisico, setPartidoParaFisico] = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSesion(data.session))
@@ -82,11 +83,17 @@ function App() {
     setSeccion('plantel')
   }
 
+  function irAFisicoDesdePartido(partidoId) {
+    setPartidoParaFisico(partidoId)
+    setSeccion('fisico')
+  }
+
   const consumirJugadorParaPlantel = useCallback(() => setJugadorParaPlantel(null), [])
   const consumirJugadorParaMedicos = useCallback(() => setJugadorParaMedicos(null), [])
   const consumirJugadorParaNutricion = useCallback(() => setJugadorParaNutricion(null), [])
   const consumirJugadorParaPsicologia = useCallback(() => setJugadorParaPsicologia(null), [])
   const consumirJugadorParaVideo = useCallback(() => setJugadorParaVideo(null), [])
+  const consumirPartidoParaFisico = useCallback(() => setPartidoParaFisico(null), [])
 
   if (sesion === undefined) {
     return (
@@ -178,10 +185,16 @@ function App() {
           perfil={perfil}
         />
       )}
-      {seccion === 'partidos' && <PartidosSection perfil={perfil} />}
+      {seccion === 'partidos' && <PartidosSection perfil={perfil} onIrAFisico={irAFisicoDesdePartido} />}
       {seccion === 'entrenamientos' && <EntrenamientosSection />}
       {seccion === 'asistencia' && <AsistenciaSection perfil={perfil} />}
-      {seccion === 'fisico' && <FisicoSection perfil={perfil} />}
+      {seccion === 'fisico' && (
+        <FisicoSection
+          perfil={perfil}
+          partidoInicialId={partidoParaFisico}
+          onConsumirPartidoInicial={consumirPartidoParaFisico}
+        />
+      )}
       {seccion === 'pases' && <PaseCategoriaSection />}
       {seccion === 'usuarios' && <UsuariosSection />}
     </Layout>

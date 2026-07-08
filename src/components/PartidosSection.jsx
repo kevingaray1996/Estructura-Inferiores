@@ -7,7 +7,7 @@ import CargarEstadisticas from './CargarEstadisticas'
 import FormacionPartido from './FormacionPartido'
 import EquiposSection from './EquiposSection'
 
-function PartidosSection({ perfil }) {
+function PartidosSection({ perfil, onIrAFisico }) {
   const esTecnico = perfil?.rol === 'tecnico'
   const [categorias, setCategorias] = useState([])
   const [categoriaId, setCategoriaId] = useState(esTecnico ? perfil.categoria_id : '')
@@ -61,6 +61,7 @@ function PartidosSection({ perfil }) {
         partidoId={partidoId}
         categoriaId={categoriaId}
         onVolver={() => setVista('lista')}
+        onIrAFisico={onIrAFisico}
       />
     )
   }
