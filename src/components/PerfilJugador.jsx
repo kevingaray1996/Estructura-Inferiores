@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import PdfPerfilModal from './PdfPerfilModal'
 
 const estadoConfig = {
   disponible: { color: '#4ADE80', label: 'Disponible' },
@@ -15,6 +16,32 @@ const pieHabilLabel = {
 
 function iniciales(nombre, apellido) {
   return `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
+}
+
+function MiniBarras({ datos, color }) {
+  const valores = datos.map((d) => d.valor || 0)
+  const max = Math.max(...valores, 1)
+  const ancho = 26
+  const gap = 6
+  const alto = 60
+  const svgAncho = datos.length * (ancho + gap)
+
+  return (
+    <svg viewBox={`0 0 ${svgAncho} ${alto + 16}`} width={svgAncho} height={alto + 16}>
+      {datos.map((d, i) => {
+        const h = max > 0 ? (d.valor / max) * alto : 0
+        const x = i * (ancho + gap)
+        return (
+          <g key={i}>
+            <rect x={x} y={alto - h} width={ancho} height={h} rx={3} fill={color} opacity={0.85} />
+            <text x={x + ancho / 2} y={alto + 12} fontSize="8" fill="#5B6B85" textAnchor="middle">
+              {d.etiqueta}
+            </text>
+          </g>
+        )
+      })}
+    </svg>
+  )
 }
 
 function calcularEdad(fechaNacimiento) {
@@ -42,8 +69,12 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
   const [videos, setVideos] = useState([])
   const [historialCategorias, setHistorialCategorias] = useState([])
   const [asistencias, setAsistencias] = useState([])
+  const [sesionesFisicas, setSesionesFisicas] = useState([])
+  const [fichasNutricion, setFichasNutricion] = useState([])
+  const [fichasPsicologicas, setFichasPsicologicas] = useState([])
   const [eliminando, setEliminando] = useState(false)
   const [filtroStat, setFiltroStat] = useState(null)
+  const [mostrarPdf, setMostrarPdf] = useState(false)
 
   useEffect(() => {
     async function cargarDatos() {
@@ -86,6 +117,27 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
         .select('*')
         .eq('jugador_id', jugadorId)
       setAsistencias(asistenciasData || [])
+
+      const { data: fisicosData } = await supabase
+        .from('sesiones_fisicas')
+        .select('*')
+        .eq('jugador_id', jugadorId)
+        .order('fecha', { ascending: true })
+      setSesionesFisicas(fisicosData || [])
+
+      const { data: nutricionData } = await supabase
+        .from('fichas_nutricion')
+        .select('*')
+        .eq('jugador_id', jugadorId)
+        .order('fecha', { ascending: false })
+      setFichasNutricion(nutricionData || [])
+
+      const { data: psicologiaData } = await supabase
+        .from('fichas_psicologicas')
+        .select('*')
+        .eq('jugador_id', jugadorId)
+        .order('fecha', { ascending: false })
+      setFichasPsicologicas(psicologiaData || [])
     }
     cargarDatos()
   }, [jugadorId])
@@ -172,6 +224,15 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
   )
   const totalAsistenciaMarcada = asistencias.length
 
+  const sesionesFisicasRecientes = sesionesFisicas.slice(-8)
+  const datosDistanciaChart = sesionesFisicasRecientes
+    .filter((s) => s.distancia_total_m !== null)
+    .map((s) => ({
+      valor: s.distancia_total_m,
+      etiqueta: formatearFecha(s.fecha)?.slice(0, 5) || '',
+    }))
+  const ultimaSesionFisica = sesionesFisicas[sesionesFisicas.length - 1]
+
   const datosPersonales = [
     { label: 'Posición', valor: jugador.posicion },
     { label: 'Fecha nac.', valor: formatearFecha(jugador.fecha_nacimiento), extra: edad !== null ? `${edad} años` : null },
@@ -191,8 +252,26 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
       detalle: ultimaFicha ? `Último: ${ultimaFicha.descripcion || ultimaFicha.fecha}` : null,
       onClick: () => onVerFichaMedica(jugadorId),
     },
-    { nombre: 'Nutrición', icono: '🥗', resumen: 'Sin datos cargados', onClick: () => onVerNutricion(jugadorId) },
-    { nombre: 'Psicología', icono: '🧠', resumen: 'Sin datos cargados', onClick: () => onVerPsicologia(jugadorId) },
+    {
+      nombre: 'Nutrición',
+      icono: '🥗',
+      resumen:
+        fichasNutricion.length === 0
+          ? 'Sin datos cargados'
+          : `${fichasNutricion.length} registro${fichasNutricion.length > 1 ? 's' : ''}${
+              fichasNutricion[0]?.alerta_peso ? ' · alerta de peso' : ''
+            }`,
+      onClick: () => onVerNutricion(jugadorId),
+    },
+    {
+      nombre: 'Psicología',
+      icono: '🧠',
+      resumen:
+        fichasPsicologicas.length === 0
+          ? 'Sin datos cargados'
+          : `${fichasPsicologicas.length} registro${fichasPsicologicas.length > 1 ? 's' : ''}`,
+      onClick: () => onVerPsicologia(jugadorId),
+    },
     {
       nombre: 'Videoanálisis',
       icono: '🎥',
@@ -311,17 +390,26 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
         </div>
 
         <div className="flex items-center gap-4 mb-6">
-          <div
-            className="flex items-center justify-center w-16 h-16 rounded-full shrink-0 text-lg font-bold"
-            style={{
-              backgroundColor: '#1A2332',
-              border: `2px solid ${estado.color}`,
-              color: estado.color,
-              fontFamily: "'Archivo Black', sans-serif",
-            }}
-          >
-            {iniciales(jugador.nombre, jugador.apellido)}
-          </div>
+          {jugador.foto_url ? (
+            <img
+              src={jugador.foto_url}
+              alt={`${jugador.apellido}, ${jugador.nombre}`}
+              className="w-16 h-16 rounded-full object-cover shrink-0"
+              style={{ border: `2px solid ${estado.color}` }}
+            />
+          ) : (
+            <div
+              className="flex items-center justify-center w-16 h-16 rounded-full shrink-0 text-lg font-bold"
+              style={{
+                backgroundColor: '#1A2332',
+                border: `2px solid ${estado.color}`,
+                color: estado.color,
+                fontFamily: "'Archivo Black', sans-serif",
+              }}
+            >
+              {iniciales(jugador.nombre, jugador.apellido)}
+            </div>
+          )}
           <div>
             <h1
               className="text-2xl md:text-3xl"
@@ -467,7 +555,77 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
             </div>
           </>
         )}
+
+        {sesionesFisicas.length > 0 && (
+          <>
+            <p className="text-xs tracking-widest uppercase mb-3 mt-8" style={{ color: '#5B6B85' }}>
+              Físico (GPS)
+            </p>
+            <div className="p-4 rounded-xl" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
+              {datosDistanciaChart.length > 0 && (
+                <>
+                  <p className="text-[10px] uppercase tracking-wide mb-2" style={{ color: '#5B6B85' }}>
+                    Distancia total (m) — últimas sesiones
+                  </p>
+                  <div className="overflow-x-auto mb-4">
+                    <MiniBarras datos={datosDistanciaChart} color="#7DD3FC" />
+                  </div>
+                </>
+              )}
+              {ultimaSesionFisica && (
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  <p className="text-xs" style={{ color: '#8A9BB8' }}>
+                    Última sesión ({formatearFecha(ultimaSesionFisica.fecha)}):
+                  </p>
+                  {ultimaSesionFisica.distancia_total_m !== null && (
+                    <p className="text-xs" style={{ color: '#F0F2F5' }}>
+                      {ultimaSesionFisica.distancia_total_m} m
+                    </p>
+                  )}
+                  {ultimaSesionFisica.velocidad_maxima_kmh !== null && (
+                    <p className="text-xs" style={{ color: '#F0F2F5' }}>
+                      {ultimaSesionFisica.velocidad_maxima_kmh} km/h máx
+                    </p>
+                  )}
+                  {ultimaSesionFisica.sprints !== null && (
+                    <p className="text-xs" style={{ color: '#F0F2F5' }}>
+                      {ultimaSesionFisica.sprints} sprints
+                    </p>
+                  )}
+                  {ultimaSesionFisica.player_load !== null && (
+                    <p className="text-xs" style={{ color: '#F0F2F5' }}>
+                      {ultimaSesionFisica.player_load} load
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        <button
+          onClick={() => setMostrarPdf(true)}
+          className="w-full mt-8 p-3 rounded-xl font-medium text-sm transition-opacity hover:opacity-80"
+          style={{ backgroundColor: '#1A2332', color: '#F0F2F5', border: '1px solid #2A3548' }}
+        >
+          📄 Descargar PDF del perfil
+        </button>
       </div>
+
+      {mostrarPdf && (
+        <PdfPerfilModal
+          jugador={jugador}
+          totales={totales}
+          fichasMedicas={fichasMedicas}
+          historialCategorias={historialCategorias}
+          resumenAsistencia={resumenAsistencia}
+          totalAsistenciaMarcada={totalAsistenciaMarcada}
+          sesionesFisicas={sesionesFisicas}
+          fichasNutricion={fichasNutricion}
+          fichasPsicologicas={fichasPsicologicas}
+          onCerrar={() => setMostrarPdf(false)}
+        />
+      )}
     </div>
   )
 }

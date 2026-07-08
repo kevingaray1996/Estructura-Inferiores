@@ -15,6 +15,7 @@ import UsuariosSection from './components/UsuariosSection'
 import PaseCategoriaSection from './components/PaseCategoriaSection'
 import BuscadorGlobal from './components/BuscadorGlobal'
 import AsistenciaSection from './components/AsistenciaSection'
+import FisicoSection from './components/FisicoSection'
 
 function App() {
   const [sesion, setSesion] = useState(undefined)
@@ -174,6 +175,7 @@ function App() {
       {seccion === 'partidos' && <PartidosSection perfil={perfil} />}
       {seccion === 'entrenamientos' && <EntrenamientosSection />}
       {seccion === 'asistencia' && <AsistenciaSection perfil={perfil} />}
+      {seccion === 'fisico' && <FisicoSection perfil={perfil} />}
       {seccion === 'pases' && <PaseCategoriaSection />}
       {seccion === 'usuarios' && <UsuariosSection />}
     </Layout>

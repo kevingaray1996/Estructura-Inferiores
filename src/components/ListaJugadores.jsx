@@ -93,17 +93,26 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva, perfil
                   borderLeft: `3px solid ${estado.color}`,
                 }}
               >
-                <div
-                  className="flex items-center justify-center w-11 h-11 rounded-full shrink-0 text-sm font-bold"
-                  style={{
-                    backgroundColor: '#0F1419',
-                    border: `2px solid ${estado.color}`,
-                    color: estado.color,
-                    fontFamily: "'Archivo Black', sans-serif",
-                  }}
-                >
-                  {iniciales(j.nombre, j.apellido)}
-                </div>
+                {j.foto_url ? (
+                  <img
+                    src={j.foto_url}
+                    alt={`${j.apellido}, ${j.nombre}`}
+                    className="w-11 h-11 rounded-full object-cover shrink-0"
+                    style={{ border: `2px solid ${estado.color}` }}
+                  />
+                ) : (
+                  <div
+                    className="flex items-center justify-center w-11 h-11 rounded-full shrink-0 text-sm font-bold"
+                    style={{
+                      backgroundColor: '#0F1419',
+                      border: `2px solid ${estado.color}`,
+                      color: estado.color,
+                      fontFamily: "'Archivo Black', sans-serif",
+                    }}
+                  >
+                    {iniciales(j.nombre, j.apellido)}
+                  </div>
+                )}
 
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold truncate" style={{ color: '#F0F2F5' }}>

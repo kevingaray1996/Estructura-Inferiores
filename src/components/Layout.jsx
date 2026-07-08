@@ -18,6 +18,7 @@ function seccionesParaRol(rol) {
       { id: 'partidos', label: 'Partidos' },
       { id: 'entrenamientos', label: 'Entrenamientos' },
       { id: 'asistencia', label: 'Asistencia' },
+      { id: 'fisico', label: 'Físico' },
       { id: 'pases', label: 'Pases' },
       { id: 'usuarios', label: 'Usuarios' },
     ]
@@ -38,6 +39,7 @@ function seccionesParaRol(rol) {
     { id: 'partidos', label: 'Partidos' },
     { id: 'entrenamientos', label: 'Entrenamientos' },
     { id: 'asistencia', label: 'Asistencia' },
+    { id: 'fisico', label: 'Físico' },
   ]
 }
 

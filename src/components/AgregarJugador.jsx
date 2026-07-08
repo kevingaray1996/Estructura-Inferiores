@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { sanitizarNombreArchivo } from '../utils/archivos'
 
 function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
   const [categorias, setCategorias] = useState([])
@@ -10,6 +11,8 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
   const [posicion, setPosicion] = useState('')
   const [fechaNacimiento, setFechaNacimiento] = useState('')
   const [pieHabil, setPieHabil] = useState('')
+  const [fotoUrl, setFotoUrl] = useState('')
+  const [subiendoFoto, setSubiendoFoto] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [cargando, setCargando] = useState(!!jugadorIdEditar)
@@ -43,11 +46,29 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
         setPosicion(data.posicion || '')
         setFechaNacimiento(data.fecha_nacimiento || '')
         setPieHabil(data.pie_habil || '')
+        setFotoUrl(data.foto_url || '')
       }
       setCargando(false)
     }
     cargarJugador()
   }, [jugadorIdEditar])
+
+  async function handleSubirFoto(archivo) {
+    if (!archivo) return
+    setSubiendoFoto(true)
+    const nombreArchivo = `jugadores/${Date.now()}-${sanitizarNombreArchivo(archivo.name)}`
+    const { error } = await supabase.storage.from('Biblioteca').upload(nombreArchivo, archivo, {
+      upsert: true,
+    })
+    if (error) {
+      alert('Error al subir la foto: ' + error.message)
+      setSubiendoFoto(false)
+      return
+    }
+    const { data } = supabase.storage.from('Biblioteca').getPublicUrl(nombreArchivo)
+    setFotoUrl(data.publicUrl)
+    setSubiendoFoto(false)
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -68,6 +89,7 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
       posicion: posicion || null,
       fecha_nacimiento: fechaNacimiento || null,
       pie_habil: pieHabil || null,
+      foto_url: fotoUrl || null,
     }
 
     const { error } = esEdicion
@@ -116,6 +138,49 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex items-center gap-4">
+            {fotoUrl ? (
+              <img
+                src={fotoUrl}
+                alt="Foto del jugador"
+                className="w-16 h-16 rounded-full object-cover shrink-0"
+                style={{ border: '2px solid #2A3548' }}
+              />
+            ) : (
+              <div
+                className="w-16 h-16 rounded-full shrink-0 flex items-center justify-center text-xl"
+                style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#5B6B85' }}
+              >
+                📷
+              </div>
+            )}
+            <div>
+              <label
+                className="text-xs font-medium px-3 py-2 rounded-lg cursor-pointer inline-block transition-opacity hover:opacity-80"
+                style={{ backgroundColor: '#1A2332', color: '#F0F2F5', border: '1px solid #2A3548' }}
+              >
+                {subiendoFoto ? 'Subiendo...' : fotoUrl ? 'Cambiar foto' : 'Subir foto'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={subiendoFoto}
+                  onChange={(e) => handleSubirFoto(e.target.files?.[0])}
+                />
+              </label>
+              {fotoUrl && (
+                <button
+                  type="button"
+                  onClick={() => setFotoUrl('')}
+                  className="text-xs ml-2 hover:opacity-70 transition-opacity"
+                  style={{ color: '#F87171' }}
+                >
+                  Quitar
+                </button>
+              )}
+            </div>
+          </div>
+
           <div>
             <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
               Nombre
