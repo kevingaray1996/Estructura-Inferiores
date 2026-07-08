@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
 import { sanitizarNombreArchivo } from '../utils/archivos'
+import { comprimirImagen } from '../utils/comprimirImagen'
 
 function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) {
   const [equipos, setEquipos] = useState([])
@@ -71,8 +72,9 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
   async function handleSubirEscudoNuevoEquipo(archivo) {
     if (!archivo) return
     setSubiendoEscudoNuevo(true)
-    const nombreArchivo = `escudos/${Date.now()}-${sanitizarNombreArchivo(archivo.name)}`
-    const { error } = await supabase.storage.from('Biblioteca').upload(nombreArchivo, archivo, {
+    const archivoComprimido = await comprimirImagen(archivo, { maxAncho: 300, maxAlto: 300 })
+    const nombreArchivo = `escudos/${Date.now()}-${sanitizarNombreArchivo(archivoComprimido.name)}`
+    const { error } = await supabase.storage.from('Biblioteca').upload(nombreArchivo, archivoComprimido, {
       upsert: true,
     })
     if (error) {

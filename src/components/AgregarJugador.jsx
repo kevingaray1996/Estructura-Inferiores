@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { sanitizarNombreArchivo } from '../utils/archivos'
+import { comprimirImagen } from '../utils/comprimirImagen'
 
 function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
   const [categorias, setCategorias] = useState([])
@@ -56,8 +57,9 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
   async function handleSubirFoto(archivo) {
     if (!archivo) return
     setSubiendoFoto(true)
-    const nombreArchivo = `jugadores/${Date.now()}-${sanitizarNombreArchivo(archivo.name)}`
-    const { error } = await supabase.storage.from('Biblioteca').upload(nombreArchivo, archivo, {
+    const archivoComprimido = await comprimirImagen(archivo, { maxAncho: 500, maxAlto: 500 })
+    const nombreArchivo = `jugadores/${Date.now()}-${sanitizarNombreArchivo(archivoComprimido.name)}`
+    const { error } = await supabase.storage.from('Biblioteca').upload(nombreArchivo, archivoComprimido, {
       upsert: true,
     })
     if (error) {

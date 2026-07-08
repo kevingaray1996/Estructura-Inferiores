@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
 import { sanitizarNombreArchivo } from '../utils/archivos'
+import { comprimirImagen } from '../utils/comprimirImagen'
 
 function EntrenamientosSection() {
   const [entrenamientos, setEntrenamientos] = useState([])
@@ -81,8 +82,9 @@ function EntrenamientosSection() {
   async function handleSubirImagen(archivo) {
     if (!archivo) return
     setSubiendoImagen(true)
-    const nombreArchivo = `${Date.now()}-${sanitizarNombreArchivo(archivo.name)}`
-    const { error } = await supabase.storage.from('Biblioteca').upload(nombreArchivo, archivo, {
+    const archivoComprimido = await comprimirImagen(archivo, { maxAncho: 1000, maxAlto: 1000 })
+    const nombreArchivo = `${Date.now()}-${sanitizarNombreArchivo(archivoComprimido.name)}`
+    const { error } = await supabase.storage.from('Biblioteca').upload(nombreArchivo, archivoComprimido, {
       upsert: true,
     })
     if (error) {
