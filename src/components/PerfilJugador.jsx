@@ -76,7 +76,7 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
   const [eliminando, setEliminando] = useState(false)
   const [filtroStat, setFiltroStat] = useState(null)
   const [mostrarPdf, setMostrarPdf] = useState(false)
-  const [sesionFisicaAbiertaId, setSesionFisicaAbiertaId] = useState(null)
+  const [sesionFisicaSeleccionadaId, setSesionFisicaSeleccionadaId] = useState(null)
 
   useEffect(() => {
     async function cargarDatos() {
@@ -233,6 +233,10 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
       valor: s.distancia_total_m,
       etiqueta: formatearFecha(s.fecha)?.slice(0, 5) || '',
     }))
+  const idSesionFisicaPorDefecto = sesionesFisicas[sesionesFisicas.length - 1]?.id || null
+  const sesionFisicaSeleccionada = sesionesFisicas.find(
+    (s) => s.id === (sesionFisicaSeleccionadaId || idSesionFisicaPorDefecto)
+  )
 
   const datosPersonales = [
     { label: 'Posición', valor: jugador.posicion },
@@ -574,45 +578,39 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
                 </>
               )}
               <p className="text-[10px] uppercase tracking-wide mb-2" style={{ color: '#5B6B85' }}>
-                Todas las sesiones — tocá una para ver el detalle
+                Ver sesión
               </p>
-              <div className="space-y-1.5">
+              <select
+                value={sesionFisicaSeleccionadaId || idSesionFisicaPorDefecto || ''}
+                onChange={(e) => setSesionFisicaSeleccionadaId(e.target.value)}
+                className="w-full p-2.5 rounded-xl outline-none text-sm mb-3"
+                style={{ backgroundColor: '#0F1419', border: '1px solid #2A3548', color: '#F0F2F5' }}
+              >
                 {sesionesFisicas
                   .slice()
                   .reverse()
-                  .map((s) => {
-                    const abierta = sesionFisicaAbiertaId === s.id
-                    return (
-                      <div key={s.id} className="rounded-lg overflow-hidden" style={{ border: '1px solid #2A3548' }}>
-                        <div
-                          onClick={() => setSesionFisicaAbiertaId(abierta ? null : s.id)}
-                          className="flex items-center justify-between p-2.5 cursor-pointer hover:opacity-90"
-                          style={{ backgroundColor: '#0F1419' }}
-                        >
-                          <p className="text-xs" style={{ color: '#F0F2F5' }}>
-                            {formatearFecha(s.fecha)}
-                            {s.partidos ? ` · vs ${s.partidos.rival}` : s.tipo === 'partido' ? ' · Partido' : ' · Entrenamiento'}
-                          </p>
-                          <span className="text-xs" style={{ color: '#5B6B85' }}>{abierta ? '▲' : '▼'}</span>
-                        </div>
-                        {abierta && (
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-2.5" style={{ backgroundColor: '#1A2332' }}>
-                            {CAMPOS_FISICOS.map((c) => (
-                              <div key={c.clave}>
-                                <p className="text-[9px] uppercase tracking-wide" style={{ color: '#5B6B85' }}>
-                                  {c.label}
-                                </p>
-                                <p className="text-sm" style={{ color: '#F0F2F5' }}>
-                                  {s[c.clave] ?? '—'}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-              </div>
+                  .map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {formatearFecha(s.fecha)}
+                      {s.partidos ? ` · vs ${s.partidos.rival}` : s.tipo === 'partido' ? ' · Partido' : ' · Entrenamiento'}
+                    </option>
+                  ))}
+              </select>
+
+              {sesionFisicaSeleccionada && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-2.5 rounded-lg" style={{ backgroundColor: '#0F1419' }}>
+                  {CAMPOS_FISICOS.map((c) => (
+                    <div key={c.clave}>
+                      <p className="text-[9px] uppercase tracking-wide" style={{ color: '#5B6B85' }}>
+                        {c.label}
+                      </p>
+                      <p className="text-sm" style={{ color: '#F0F2F5' }}>
+                        {sesionFisicaSeleccionada[c.clave] ?? '—'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         )}
