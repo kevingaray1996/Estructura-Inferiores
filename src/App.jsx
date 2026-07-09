@@ -16,10 +16,13 @@ import PaseCategoriaSection from './components/PaseCategoriaSection'
 import BuscadorGlobal from './components/BuscadorGlobal'
 import AsistenciaSection from './components/AsistenciaSection'
 import FisicoSection from './components/FisicoSection'
-import BienestarSection from './components/BienestarSection'
+import BienestarPublico from './components/BienestarPublico'
 import CaptacionSection from './components/CaptacionSection'
 
 function App() {
+  const [categoriaBienestarId] = useState(
+    () => new URLSearchParams(window.location.search).get('bienestar')
+  )
   const [sesion, setSesion] = useState(undefined)
   const [perfil, setPerfil] = useState(undefined)
   const [seccion, setSeccion] = useState('inicio')
@@ -31,6 +34,7 @@ function App() {
   const [partidoParaFisico, setPartidoParaFisico] = useState(null)
 
   useEffect(() => {
+    if (categoriaBienestarId) return
     supabase.auth.getSession().then(({ data }) => setSesion(data.session))
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nuevaSesion) => {
@@ -42,7 +46,7 @@ function App() {
     })
 
     return () => listener.subscription.unsubscribe()
-  }, [])
+  }, [categoriaBienestarId])
 
   useEffect(() => {
     async function cargarPerfil() {
@@ -96,6 +100,10 @@ function App() {
   const consumirJugadorParaPsicologia = useCallback(() => setJugadorParaPsicologia(null), [])
   const consumirJugadorParaVideo = useCallback(() => setJugadorParaVideo(null), [])
   const consumirPartidoParaFisico = useCallback(() => setPartidoParaFisico(null), [])
+
+  if (categoriaBienestarId) {
+    return <BienestarPublico categoriaId={categoriaBienestarId} />
+  }
 
   if (sesion === undefined) {
     return (
@@ -197,7 +205,6 @@ function App() {
           onConsumirPartidoInicial={consumirPartidoParaFisico}
         />
       )}
-      {seccion === 'bienestar' && <BienestarSection perfil={perfil} />}
       {seccion === 'captacion' && <CaptacionSection perfil={perfil} />}
       {seccion === 'pases' && <PaseCategoriaSection />}
       {seccion === 'usuarios' && <UsuariosSection />}

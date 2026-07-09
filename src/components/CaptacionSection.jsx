@@ -93,6 +93,33 @@ function CaptacionSection({ perfil }) {
     setCandidatoEditando(null)
   }
 
+  async function crearJugadorDesdeCandidato(c) {
+    const { data: nuevoJugador, error: errorInsert } = await supabase
+      .from('jugadores')
+      .insert({
+        nombre: c.nombre,
+        apellido: c.apellido,
+        fecha_nacimiento: c.fecha_nacimiento || null,
+        posicion: c.posicion || null,
+        categoria_id: c.categoria_probada_id,
+        estado: 'disponible',
+      })
+      .select()
+      .single()
+
+    if (errorInsert) {
+      alert('Error al crear el jugador: ' + errorInsert.message)
+      return null
+    }
+
+    await supabase
+      .from('candidatos')
+      .update({ estado: 'aceptado', jugador_id: nuevoJugador.id })
+      .eq('id', c.id)
+
+    return nuevoJugador
+  }
+
   async function handleGuardar() {
     if (!nombre || !apellido || !categoriaProbadaId) {
       setErrorMsg('Completá nombre, apellido y categoría probada.')
@@ -114,17 +141,32 @@ function CaptacionSection({ perfil }) {
       estado,
     }
 
-    const { error } = candidatoEditando
-      ? await supabase.from('candidatos').update(datos).eq('id', candidatoEditando.id)
-      : await supabase.from('candidatos').insert(datos)
-
-    setGuardando(false)
-
-    if (error) {
-      setErrorMsg('Error al guardar: ' + error.message)
-      return
+    let candidatoGuardado
+    if (candidatoEditando) {
+      const { error } = await supabase.from('candidatos').update(datos).eq('id', candidatoEditando.id)
+      if (error) {
+        setGuardando(false)
+        setErrorMsg('Error al guardar: ' + error.message)
+        return
+      }
+      candidatoGuardado = { ...candidatoEditando, ...datos }
+    } else {
+      const { data, error } = await supabase.from('candidatos').insert(datos).select().single()
+      if (error) {
+        setGuardando(false)
+        setErrorMsg('Error al guardar: ' + error.message)
+        return
+      }
+      candidatoGuardado = data
     }
 
+    // Si quedó "aceptado" y todavía no tiene un jugador vinculado, lo pasamos
+    // directo al plantel de la categoría probada.
+    if (candidatoGuardado.estado === 'aceptado' && !candidatoGuardado.jugador_id) {
+      await crearJugadorDesdeCandidato(candidatoGuardado)
+    }
+
+    setGuardando(false)
     setMostrarForm(false)
     setCandidatoEditando(null)
     cargar()
@@ -141,31 +183,7 @@ function CaptacionSection({ perfil }) {
     const confirmar = window.confirm(`¿Dar de alta a ${c.apellido}, ${c.nombre} como jugador del plantel?`)
     if (!confirmar) return
     setConvirtiendoId(c.id)
-
-    const { data: nuevoJugador, error: errorInsert } = await supabase
-      .from('jugadores')
-      .insert({
-        nombre: c.nombre,
-        apellido: c.apellido,
-        fecha_nacimiento: c.fecha_nacimiento || null,
-        posicion: c.posicion || null,
-        categoria_id: c.categoria_probada_id,
-        estado: 'disponible',
-      })
-      .select()
-      .single()
-
-    if (errorInsert) {
-      setConvirtiendoId(null)
-      alert('Error al crear el jugador: ' + errorInsert.message)
-      return
-    }
-
-    await supabase
-      .from('candidatos')
-      .update({ estado: 'aceptado', jugador_id: nuevoJugador.id })
-      .eq('id', c.id)
-
+    await crearJugadorDesdeCandidato(c)
     setConvirtiendoId(null)
     cargar()
   }
@@ -318,6 +336,11 @@ function CaptacionSection({ perfil }) {
                 <option value="aceptado">Aceptado</option>
                 <option value="rechazado">Rechazado</option>
               </select>
+              {estado === 'aceptado' && !candidatoEditando?.jugador_id && (
+                <p className="text-xs mt-1.5" style={{ color: '#4ADE80' }}>
+                  Al guardar como "Aceptado" se crea automáticamente en el plantel de la categoría probada.
+                </p>
+              )}
             </div>
 
             {errorMsg && (
