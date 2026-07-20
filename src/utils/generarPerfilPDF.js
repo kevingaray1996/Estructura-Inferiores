@@ -106,7 +106,7 @@ export async function generarPerfilPDF(datos, secciones) {
   doc.setTextColor(...GRIS)
   const hoy = new Date()
   doc.text(
-    `Estructura Inferiores — generado el ${String(hoy.getDate()).padStart(2, '0')}/${String(hoy.getMonth() + 1).padStart(2, '0')}/${hoy.getFullYear()}`,
+    `Club Comunicaciones — generado el ${String(hoy.getDate()).padStart(2, '0')}/${String(hoy.getMonth() + 1).padStart(2, '0')}/${hoy.getFullYear()}`,
     pageWidth - margin,
     90,
     { align: 'right' }
