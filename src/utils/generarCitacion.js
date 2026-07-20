@@ -126,13 +126,13 @@ export async function generarCitacionPDF(partidoId) {
   const shieldSize = 40
 
   const propioShieldCX = margin + shieldSize / 2
-  dibujarEscudo(doc, propioShieldCX, filaEquiposY, shieldSize, NAVY, 'EI', BLANCO)
+  dibujarEscudo(doc, propioShieldCX, filaEquiposY, shieldSize, NAVY, 'CC', BLANCO)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(12)
   doc.setTextColor(...NEGRO)
   const nombrePropio = categoriaNombre
-    ? `Estructura Inferiores ${categoriaNombre} División`
-    : 'Estructura Inferiores'
+    ? `Club Comunicaciones ${categoriaNombre} División`
+    : 'Club Comunicaciones'
   doc.text(nombrePropio, propioShieldCX + shieldSize / 2 + 12, filaEquiposY + 4, {
     maxWidth: 210,
   })
