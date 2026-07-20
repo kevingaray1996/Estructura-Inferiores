@@ -99,7 +99,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
         <div className="max-w-4xl mx-auto px-6 md:px-10 pt-6">
           <div className="flex items-start justify-between gap-3 mb-1">
             <p className="text-xs tracking-widest uppercase" style={{ color: '#5B6B85' }}>
-              Estructura Inferiores
+              Club Comunicaciones
             </p>
             <div className="flex items-center gap-3 shrink-0">
               {subtitulo && (
