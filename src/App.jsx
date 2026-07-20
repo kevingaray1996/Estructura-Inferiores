@@ -18,6 +18,10 @@ import AsistenciaSection from './components/AsistenciaSection'
 import FisicoSection from './components/FisicoSection'
 import BienestarPublico from './components/BienestarPublico'
 import CaptacionSection from './components/CaptacionSection'
+import RepresentantesSection from './components/RepresentantesSection'
+import PensionesSection from './components/PensionesSection'
+import ConvocatoriasSeleccionSection from './components/ConvocatoriasSeleccionSection'
+import ContratosSection from './components/ContratosSection'
 
 function App() {
   const [categoriaBienestarId] = useState(
@@ -206,6 +210,10 @@ function App() {
         />
       )}
       {seccion === 'captacion' && <CaptacionSection perfil={perfil} />}
+      {seccion === 'representantes' && <RepresentantesSection onVolver={() => setSeccion('inicio')} />}
+      {seccion === 'pensiones' && <PensionesSection onVolver={() => setSeccion('inicio')} />}
+      {seccion === 'seleccion' && <ConvocatoriasSeleccionSection onVolver={() => setSeccion('inicio')} />}
+      {seccion === 'contratos' && <ContratosSection onVolver={() => setSeccion('inicio')} />}
       {seccion === 'pases' && <PaseCategoriaSection />}
       {seccion === 'usuarios' && <UsuariosSection />}
     </Layout>

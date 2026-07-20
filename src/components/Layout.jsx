@@ -21,6 +21,10 @@ function seccionesParaRol(rol) {
       { id: 'asistencia', label: 'Asistencia' },
       { id: 'fisico', label: 'Físico' },
       { id: 'captacion', label: 'Captación' },
+      { id: 'representantes', label: 'Representantes' },
+      { id: 'pensiones', label: 'Pensión' },
+      { id: 'seleccion', label: 'Selección' },
+      { id: 'contratos', label: 'Contratos' },
       { id: 'pases', label: 'Pases' },
       { id: 'usuarios', label: 'Usuarios' },
     ]
@@ -43,6 +47,10 @@ function seccionesParaRol(rol) {
     { id: 'asistencia', label: 'Asistencia' },
     { id: 'fisico', label: 'Físico' },
     { id: 'captacion', label: 'Captación' },
+    { id: 'representantes', label: 'Representantes' },
+    { id: 'pensiones', label: 'Pensión' },
+    { id: 'seleccion', label: 'Selección' },
+    { id: 'contratos', label: 'Contratos' },
   ]
 }
 

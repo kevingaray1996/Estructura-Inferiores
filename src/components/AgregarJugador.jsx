@@ -3,6 +3,18 @@ import { supabase } from '../supabaseClient'
 import { sanitizarNombreArchivo } from '../utils/archivos'
 import { comprimirImagen } from '../utils/comprimirImagen'
 
+const OPCIONES_POSICION = [
+  'Arquero',
+  'Defensor central',
+  'Lateral derecho',
+  'Lateral izquierdo',
+  'Mediocampista central',
+  'Volante ofensivo',
+  'Extremo derecho',
+  'Extremo izquierdo',
+  'Delantero centro',
+]
+
 function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
   const [categorias, setCategorias] = useState([])
   const [nombre, setNombre] = useState('')
@@ -17,6 +29,19 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
   const [contactoEmergenciaNombre, setContactoEmergenciaNombre] = useState('')
   const [telefonoEmergencia, setTelefonoEmergencia] = useState('')
   const [tambienReserva, setTambienReserva] = useState(false)
+  const [nroDocumento, setNroDocumento] = useState('')
+  const [nacionalidad, setNacionalidad] = useState('Argentina')
+  const [lugarNacimiento, setLugarNacimiento] = useState('')
+  const [pasaporteComunitario, setPasaporteComunitario] = useState(false)
+  const [obraSocial, setObraSocial] = useState('')
+  const [nroAfiliado, setNroAfiliado] = useState('')
+  const [posicionSecundaria, setPosicionSecundaria] = useState('')
+  const [videoPromocional, setVideoPromocional] = useState('')
+  const [fechaInicioContrato, setFechaInicioContrato] = useState('')
+  const [fechaFinContrato, setFechaFinContrato] = useState('')
+  const [pensiones, setPensiones] = useState([])
+  const [pensionId, setPensionId] = useState('')
+  const [costoPension, setCostoPension] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [cargando, setCargando] = useState(!!jugadorIdEditar)
@@ -32,6 +57,14 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
       setCategorias(data || [])
     }
     cargarCategorias()
+  }, [])
+
+  useEffect(() => {
+    async function cargarPensiones() {
+      const { data } = await supabase.from('pensiones').select('*').order('nombre')
+      setPensiones(data || [])
+    }
+    cargarPensiones()
   }, [])
 
   useEffect(() => {
@@ -54,6 +87,18 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
         setContactoEmergenciaNombre(data.contacto_emergencia_nombre || '')
         setTelefonoEmergencia(data.telefono_emergencia || '')
         setTambienReserva(!!data.tambien_reserva)
+        setNroDocumento(data.nro_documento || '')
+        setNacionalidad(data.nacionalidad || 'Argentina')
+        setLugarNacimiento(data.lugar_nacimiento || '')
+        setPasaporteComunitario(!!data.pasaporte_comunitario)
+        setObraSocial(data.obra_social || '')
+        setNroAfiliado(data.nro_afiliado || '')
+        setPosicionSecundaria(data.posicion_secundaria || '')
+        setVideoPromocional(data.video_promocional || '')
+        setFechaInicioContrato(data.fecha_inicio_contrato || '')
+        setFechaFinContrato(data.fecha_fin_contrato || '')
+        setPensionId(data.pension_id || '')
+        setCostoPension(data.costo_pension || '')
       }
       setCargando(false)
     }
@@ -101,6 +146,18 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
       contacto_emergencia_nombre: contactoEmergenciaNombre || null,
       telefono_emergencia: telefonoEmergencia || null,
       tambien_reserva: tambienReserva,
+      nro_documento: nroDocumento || null,
+      nacionalidad: nacionalidad || null,
+      lugar_nacimiento: lugarNacimiento || null,
+      pasaporte_comunitario: pasaporteComunitario,
+      obra_social: obraSocial || null,
+      nro_afiliado: nroAfiliado || null,
+      posicion_secundaria: posicionSecundaria || null,
+      video_promocional: videoPromocional || null,
+      fecha_inicio_contrato: fechaInicioContrato || null,
+      fecha_fin_contrato: fechaFinContrato || null,
+      pension_id: pensionId || null,
+      costo_pension: pensionId ? costoPension || null : null,
     }
 
     const { error } = esEdicion
@@ -263,15 +320,30 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
               style={inputStyle}
             >
               <option value="">Seleccionar...</option>
-              <option value="Arquero">Arquero</option>
-              <option value="Defensor central">Defensor central</option>
-              <option value="Lateral derecho">Lateral derecho</option>
-              <option value="Lateral izquierdo">Lateral izquierdo</option>
-              <option value="Mediocampista central">Mediocampista central</option>
-              <option value="Volante ofensivo">Volante ofensivo</option>
-              <option value="Extremo derecho">Extremo derecho</option>
-              <option value="Extremo izquierdo">Extremo izquierdo</option>
-              <option value="Delantero centro">Delantero centro</option>
+              {OPCIONES_POSICION.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+              Posición secundaria
+            </label>
+            <select
+              value={posicionSecundaria}
+              onChange={(e) => setPosicionSecundaria(e.target.value)}
+              className="w-full p-3 rounded-xl outline-none"
+              style={inputStyle}
+            >
+              <option value="">Seleccionar...</option>
+              {OPCIONES_POSICION.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -291,6 +363,172 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
               <option value="ambidiestro">Ambidiestro</option>
             </select>
           </div>
+
+          <p className="text-xs tracking-widest uppercase pt-2" style={{ color: '#5B6B85' }}>
+            Datos personales
+          </p>
+
+          <div>
+            <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+              Nro. documento
+            </label>
+            <input
+              type="text"
+              value={nroDocumento}
+              onChange={(e) => setNroDocumento(e.target.value)}
+              className="w-full p-3 rounded-xl outline-none"
+              style={inputStyle}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                Nacionalidad
+              </label>
+              <input
+                type="text"
+                value={nacionalidad}
+                onChange={(e) => setNacionalidad(e.target.value)}
+                className="w-full p-3 rounded-xl outline-none"
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                Lugar de nacimiento
+              </label>
+              <input
+                type="text"
+                value={lugarNacimiento}
+                onChange={(e) => setLugarNacimiento(e.target.value)}
+                className="w-full p-3 rounded-xl outline-none"
+                style={inputStyle}
+              />
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: '#F0F2F5' }}>
+            <input
+              type="checkbox"
+              checked={pasaporteComunitario}
+              onChange={(e) => setPasaporteComunitario(e.target.checked)}
+            />
+            Tiene pasaporte comunitario
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                Obra social
+              </label>
+              <input
+                type="text"
+                value={obraSocial}
+                onChange={(e) => setObraSocial(e.target.value)}
+                className="w-full p-3 rounded-xl outline-none"
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                Nro. afiliado
+              </label>
+              <input
+                type="text"
+                value={nroAfiliado}
+                onChange={(e) => setNroAfiliado(e.target.value)}
+                className="w-full p-3 rounded-xl outline-none"
+                style={inputStyle}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+              Video promocional (link)
+            </label>
+            <input
+              type="url"
+              value={videoPromocional}
+              onChange={(e) => setVideoPromocional(e.target.value)}
+              className="w-full p-3 rounded-xl outline-none"
+              style={inputStyle}
+              placeholder="https://..."
+            />
+          </div>
+
+          <p className="text-xs tracking-widest uppercase pt-2" style={{ color: '#5B6B85' }}>
+            Contrato
+          </p>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                Inicio de contrato
+              </label>
+              <input
+                type="date"
+                value={fechaInicioContrato}
+                onChange={(e) => setFechaInicioContrato(e.target.value)}
+                className="w-full p-3 rounded-xl outline-none"
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                Fin de contrato
+              </label>
+              <input
+                type="date"
+                value={fechaFinContrato}
+                onChange={(e) => setFechaFinContrato(e.target.value)}
+                className="w-full p-3 rounded-xl outline-none"
+                style={inputStyle}
+              />
+            </div>
+          </div>
+
+          <p className="text-xs tracking-widest uppercase pt-2" style={{ color: '#5B6B85' }}>
+            Pensión / alojamiento
+          </p>
+
+          <div>
+            <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+              Pensión
+            </label>
+            <select
+              value={pensionId}
+              onChange={(e) => setPensionId(e.target.value)}
+              className="w-full p-3 rounded-xl outline-none"
+              style={inputStyle}
+            >
+              <option value="">No vive en pensión</option>
+              {pensiones.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {pensionId && (
+            <div>
+              <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                ¿Quién paga?
+              </label>
+              <select
+                value={costoPension}
+                onChange={(e) => setCostoPension(e.target.value)}
+                className="w-full p-3 rounded-xl outline-none"
+                style={inputStyle}
+              >
+                <option value="">Seleccionar...</option>
+                <option value="club">Club</option>
+                <option value="compartido">Compartido</option>
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
