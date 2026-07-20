@@ -21,6 +21,7 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
   const [apellido, setApellido] = useState('')
   const [categoriaId, setCategoriaId] = useState('')
   const [estado, setEstado] = useState('disponible')
+  const [estadoDetalle, setEstadoDetalle] = useState('')
   const [posicion, setPosicion] = useState('')
   const [fechaNacimiento, setFechaNacimiento] = useState('')
   const [pieHabil, setPieHabil] = useState('')
@@ -113,6 +114,7 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
         setApellido(data.apellido || '')
         setCategoriaId(data.categoria_id || '')
         setEstado(data.estado || 'disponible')
+        setEstadoDetalle(data.estado_detalle || '')
         setPosicion(data.posicion || '')
         setFechaNacimiento(data.fecha_nacimiento || '')
         setPieHabil(data.pie_habil || '')
@@ -172,6 +174,7 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
       apellido,
       categoria_id: categoriaId,
       estado,
+      estado_detalle: estado === 'no_disponible' ? estadoDetalle || null : null,
       posicion: posicion || null,
       fecha_nacimiento: fechaNacimiento || null,
       pie_habil: pieHabil || null,
@@ -688,9 +691,19 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
               <option value="disponible">Disponible</option>
               <option value="lesionado">Lesionado</option>
               <option value="suspendido">Suspendido</option>
+              <option value="no_disponible">No disponible</option>
             </select>
+            {estado === 'no_disponible' && (
+              <input
+                type="text"
+                value={estadoDetalle}
+                onChange={(e) => setEstadoDetalle(e.target.value)}
+                className="w-full p-3 rounded-xl outline-none mt-2"
+                style={inputStyle}
+                placeholder="Motivo (ej: laboral, no puede asistir, dejó de venir)"
+              />
+            )}
           </div>
-
           {errorMsg && (
             <p className="text-sm" style={{ color: '#F87171' }}>
               {errorMsg}
