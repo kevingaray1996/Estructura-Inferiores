@@ -7,6 +7,7 @@ const estadoConfig = {
   disponible: { color: '#4ADE80', label: 'Disponible' },
   lesionado: { color: '#FBBF24', label: 'Lesionado' },
   suspendido: { color: '#F87171', label: 'Suspendido' },
+  no_disponible: { color: '#8A9BB8', label: 'No disponible' },
 }
 
 const pieHabilLabel = {
