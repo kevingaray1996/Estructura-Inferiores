@@ -31,7 +31,7 @@ function Login() {
           className="text-xs tracking-widest uppercase mb-1 text-center"
           style={{ color: '#5B6B85' }}
         >
-          Estructura Inferiores
+          Club Comunicaciones
         </p>
         <h1
           className="text-2xl mb-8 text-center"
