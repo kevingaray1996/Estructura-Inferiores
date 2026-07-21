@@ -14,6 +14,8 @@ const NEGRO = [23, 28, 38]
 
 const DIAS = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO']
 
+const ESCUDO_CLUB_URL = 'https://qvjviyjkxyngiggoeqlj.supabase.co/storage/v1/object/public/Biblioteca/escudos/Escudo%20simplificado.png'
+
 function formatearFecha(fechaStr) {
   if (!fechaStr) return { diaSemana: '', fechaCorta: '' }
   const [anio, mes, dia] = fechaStr.split('-')
@@ -72,6 +74,8 @@ export async function generarCitacionPDF(partidoId) {
 
   const escudoRivalDataUrl = partido.escudo_url ? await cargarImagenDataURL(partido.escudo_url) : null
 
+  const escudoClubDataUrl = await cargarImagenDataURL(ESCUDO_CLUB_URL)
+
   const doc = new jsPDF({ unit: 'pt', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const margin = 40
@@ -85,14 +89,35 @@ export async function generarCitacionPDF(partidoId) {
   doc.rect(0, 0, pageWidth, headerH, 'F')
 
   const iconoSize = 46
-  const iconoCX = margin + iconoSize / 2
-  const iconoCY = 40
+const iconoCX = margin + iconoSize / 2
+const iconoCY = 40
+if (escudoClubDataUrl) {
+  try {
+    const formato = formatoDeDataUrl(escudoClubDataUrl)
+    doc.addImage(
+      escudoClubDataUrl,
+      formato,
+      iconoCX - iconoSize / 2,
+      iconoCY - iconoSize / 2,
+      iconoSize,
+      iconoSize
+    )
+  } catch {
+    doc.setFillColor(...AZUL_CLARO)
+    doc.roundedRect(iconoCX - iconoSize / 2, iconoCY - iconoSize / 2, iconoSize, iconoSize, 10, 10, 'F')
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(12)
+    doc.setTextColor(...BLANCO)
+    doc.text('CC', iconoCX, iconoCY + 4, { align: 'center' })
+  }
+} else {
   doc.setFillColor(...AZUL_CLARO)
   doc.roundedRect(iconoCX - iconoSize / 2, iconoCY - iconoSize / 2, iconoSize, iconoSize, 10, 10, 'F')
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(12)
   doc.setTextColor(...BLANCO)
-  doc.text('CIT', iconoCX, iconoCY + 4, { align: 'center' })
+  doc.text('CC', iconoCX, iconoCY + 4, { align: 'center' })
+}
 
   const tituloX = margin + iconoSize + 14
   doc.setFont('helvetica', 'bold')
@@ -126,16 +151,29 @@ export async function generarCitacionPDF(partidoId) {
   const shieldSize = 40
 
   const propioShieldCX = margin + shieldSize / 2
+if (escudoClubDataUrl) {
+  try {
+    const formato = formatoDeDataUrl(escudoClubDataUrl)
+    doc.addImage(
+      escudoClubDataUrl,
+      formato,
+      propioShieldCX - shieldSize / 2,
+      filaEquiposY - shieldSize / 2,
+      shieldSize,
+      shieldSize
+    )
+  } catch {
+    dibujarEscudo(doc, propioShieldCX, filaEquiposY, shieldSize, NAVY, 'CC', BLANCO)
+  }
+} else {
   dibujarEscudo(doc, propioShieldCX, filaEquiposY, shieldSize, NAVY, 'CC', BLANCO)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(12)
-  doc.setTextColor(...NEGRO)
-  const nombrePropio = categoriaNombre
-    ? `Club Comunicaciones ${categoriaNombre} División`
-    : 'Club Comunicaciones'
-  doc.text(nombrePropio, propioShieldCX + shieldSize / 2 + 12, filaEquiposY + 4, {
-    maxWidth: 210,
-  })
+}
+doc.setFont('helvetica', 'bold')
+doc.setFontSize(12)
+doc.setTextColor(...NEGRO)
+doc.text('Club Comunicaciones', propioShieldCX + shieldSize / 2 + 12, filaEquiposY + 4, {
+  maxWidth: 210,
+})
 
   const rivalShieldCX = pageWidth - margin - shieldSize / 2
   if (escudoRivalDataUrl) {
