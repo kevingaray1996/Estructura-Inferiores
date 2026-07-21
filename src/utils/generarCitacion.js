@@ -2,8 +2,8 @@ import { jsPDF } from 'jspdf'
 import { supabase } from '../supabaseClient'
 import { FORMACIONES } from '../data/formaciones'
 
-const AZUL = [37, 99, 235]
-const AZUL_CLARO = [99, 143, 246]
+const AZUL = [23, 23, 23]
+const AZUL_CLARO = [251, 191, 36]
 const NAVY = [26, 35, 50]
 const VERDE_CANCHA = [19, 66, 48]
 const GRIS = [107, 114, 128]
