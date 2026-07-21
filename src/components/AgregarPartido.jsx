@@ -22,6 +22,25 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
   const [localVisitante, setLocalVisitante] = useState('local')
   const [numeroFecha, setNumeroFecha] = useState('')
   const [link, setLink] = useState('')
+
+  // --- Post-partido ---
+  const [tab, setTab] = useState('partido') // 'partido' | 'post'
+  const [golesLocal, setGolesLocal] = useState('')
+  const [golesVisitante, setGolesVisitante] = useState('')
+  const [penalesFavor, setPenalesFavor] = useState('')
+  const [penalesContra, setPenalesContra] = useState('')
+  const [videoPartidoCompleto, setVideoPartidoCompleto] = useState('')
+  const [videoResumen, setVideoResumen] = useState('')
+  const [videoAnalisisPropio, setVideoAnalisisPropio] = useState('')
+  const [videoAnalisisRival, setVideoAnalisisRival] = useState('')
+  const [informePdfUrl, setInformePdfUrl] = useState('')
+  const [videoPelotaParada, setVideoPelotaParada] = useState('')
+  const [videoGps, setVideoGps] = useState('')
+  const [videoCharlaDt, setVideoCharlaDt] = useState('')
+  const [videoArenga, setVideoArenga] = useState('')
+  const [videoResumenVigilancias, setVideoResumenVigilancias] = useState('')
+  const [descripcionPost, setDescripcionPost] = useState('')
+
   const [guardando, setGuardando] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [cargando, setCargando] = useState(!!partidoIdEditar)
@@ -56,10 +75,25 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
         if (data.equipo_id) {
           setEquipoId(data.equipo_id)
         } else {
-          // Partido viejo cargado antes de tener equipos: preservamos su rival/escudo manual
           setRivalManual(data.rival || '')
           setEscudoManual(data.escudo_url || '')
         }
+
+        setGolesLocal(data.goles_local ?? '')
+        setGolesVisitante(data.goles_visitante ?? '')
+        setPenalesFavor(data.penales_favor ?? '')
+        setPenalesContra(data.penales_contra ?? '')
+        setVideoPartidoCompleto(data.video_partido_completo || '')
+        setVideoResumen(data.video_resumen || '')
+        setVideoAnalisisPropio(data.video_analisis_propio || '')
+        setVideoAnalisisRival(data.video_analisis_rival || '')
+        setInformePdfUrl(data.informe_pdf_url || '')
+        setVideoPelotaParada(data.video_pelota_parada || '')
+        setVideoGps(data.video_gps || '')
+        setVideoCharlaDt(data.video_charla_dt || '')
+        setVideoArenga(data.video_arenga || '')
+        setVideoResumenVigilancias(data.video_resumen_vigilancias || '')
+        setDescripcionPost(data.descripcion_post || '')
       }
       setCargando(false)
     }
@@ -132,6 +166,22 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
       numero_fecha: numeroFecha || null,
       categoria_id: categoriaId,
       link: link || null,
+
+      goles_local: golesLocal === '' ? null : Number(golesLocal),
+      goles_visitante: golesVisitante === '' ? null : Number(golesVisitante),
+      penales_favor: penalesFavor === '' ? null : Number(penalesFavor),
+      penales_contra: penalesContra === '' ? null : Number(penalesContra),
+      video_partido_completo: videoPartidoCompleto || null,
+      video_resumen: videoResumen || null,
+      video_analisis_propio: videoAnalisisPropio || null,
+      video_analisis_rival: videoAnalisisRival || null,
+      informe_pdf_url: informePdfUrl || null,
+      video_pelota_parada: videoPelotaParada || null,
+      video_gps: videoGps || null,
+      video_charla_dt: videoCharlaDt || null,
+      video_arenga: videoArenga || null,
+      video_resumen_vigilancias: videoResumenVigilancias || null,
+      descripcion_post: descripcionPost || null,
     }
 
     const { error } = esEdicion
@@ -156,6 +206,39 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
 
   const escudoAMostrar = equipos.find((e) => e.id === equipoId)?.escudo_url || escudoManual
 
+  // Fila reutilizable para los campos de link del tab Post-Partido
+  function FilaLink({ label, value, onChange }) {
+    return (
+      <div>
+        <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+          {label}
+        </label>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="https://..."
+            className="flex-1 p-2.5 rounded-xl outline-none text-sm"
+            style={inputStyle}
+          />
+           {value && (
+            <a
+              href={value}
+              target="_blank"
+              rel="noreferrer"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-sm shrink-0"
+              style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#4ADE80' }}
+              title="Abrir"
+            >
+              ▶
+            </a>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="p-6 md:p-10">
       <div className="max-w-xl mx-auto">
@@ -168,158 +251,272 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
         </button>
 
         <h1
-          className="text-2xl md:text-3xl mb-8"
+          className="text-2xl md:text-3xl mb-6"
           style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
         >
           {esEdicion ? 'Editar partido' : 'Nuevo partido'}
         </h1>
 
-        <div className="space-y-3 mb-6">
-          <div>
-            <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
-              Rival
-            </label>
-            <div className="flex items-center gap-3">
-              {escudoAMostrar ? (
-                <img
-                  src={escudoAMostrar}
-                  alt="Escudo del rival"
-                  className="w-10 h-10 rounded-lg object-contain shrink-0"
-                  style={{ backgroundColor: '#0F1419', border: '1px solid #2A3548' }}
-                />
-              ) : (
-                <span
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-sm shrink-0"
-                  style={{ backgroundColor: '#0F1419', color: '#5B6B85', border: '1px solid #2A3548' }}
-                >
-                  🛡️
-                </span>
-              )}
-              <select
-                value={equipoId}
-                onChange={(e) => {
-                  setEquipoId(e.target.value)
-                  setRivalManual('')
-                  setEscudoManual('')
-                }}
-                className="flex-1 p-2.5 rounded-xl outline-none text-sm"
-                style={inputStyle}
-              >
-                <option value="">
-                  {rivalManual ? rivalManual + ' (sin vincular)' : 'Seleccionar equipo...'}
-                </option>
-                {equipos.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
+        {esEdicion && (
+          <div className="flex gap-2 mb-6">
             <button
               type="button"
-              onClick={() => setMostrarNuevoEquipo(!mostrarNuevoEquipo)}
-              className="text-xs mt-2"
-              style={{ color: '#4ADE80' }}
+              onClick={() => setTab('partido')}
+              className="flex-1 p-2.5 rounded-xl text-sm font-medium transition-opacity"
+              style={
+                tab === 'partido'
+                  ? { backgroundColor: '#4ADE80', color: '#0F1419' }
+                  : { backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#8A9BB8' }
+              }
             >
-              {mostrarNuevoEquipo ? 'Cancelar' : '+ El rival no está en la lista'}
+              Partido
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('post')}
+              className="flex-1 p-2.5 rounded-xl text-sm font-medium transition-opacity"
+              style={
+                tab === 'post'
+                  ? { backgroundColor: '#4ADE80', color: '#0F1419' }
+                  : { backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#8A9BB8' }
+              }
+            >
+              Post - Partido
             </button>
           </div>
+        )}
 
-          {mostrarNuevoEquipo && (
-            <div className="p-3 rounded-xl space-y-2" style={{ backgroundColor: '#0F1419', border: '1px solid #2A3548' }}>
-              <input
-                type="text"
-                placeholder="Nombre del nuevo equipo"
-                value={nombreNuevoEquipo}
-                onChange={(e) => setNombreNuevoEquipo(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
-                style={inputStyle}
-              />
+        {tab === 'partido' && (
+          <div className="space-y-3 mb-6">
+            <div>
+              <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                Rival
+              </label>
               <div className="flex items-center gap-3">
-                {escudoNuevoEquipo && (
+                {escudoAMostrar ? (
                   <img
-                    src={escudoNuevoEquipo}
-                    alt="Escudo"
+                    src={escudoAMostrar}
+                    alt="Escudo del rival"
                     className="w-10 h-10 rounded-lg object-contain shrink-0"
-                    style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+                    style={{ backgroundColor: '#0F1419', border: '1px solid #2A3548' }}
                   />
+                ) : (
+                  <span
+                    className="w-10 h-10 rounded-lg flex items-center justify-center text-sm shrink-0"
+                    style={{ backgroundColor: '#0F1419', color: '#5B6B85', border: '1px solid #2A3548' }}
+                  >
+                    🛡️
+                  </span>
                 )}
-                <label
-                  className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 cursor-pointer"
-                  style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+                <select
+                  value={equipoId}
+                  onChange={(e) => {
+                    setEquipoId(e.target.value)
+                    setRivalManual('')
+                    setEscudoManual('')
+                  }}
+                  className="flex-1 p-2.5 rounded-xl outline-none text-sm"
+                  style={inputStyle}
                 >
-                  {subiendoEscudoNuevo ? 'Subiendo...' : escudoNuevoEquipo ? 'Cambiar escudo' : '📤 Subir escudo'}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleSubirEscudoNuevoEquipo(e.target.files?.[0])}
-                    disabled={subiendoEscudoNuevo}
-                    className="hidden"
-                  />
-                </label>
+                  <option value="">
+                    {rivalManual ? rivalManual + ' (sin vincular)' : 'Seleccionar equipo...'}
+                  </option>
+                  {equipos.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.nombre}
+                    </option>
+                  ))}
+                </select>
               </div>
               <button
                 type="button"
-                onClick={handleGuardarNuevoEquipo}
-                disabled={guardandoEquipo || !nombreNuevoEquipo}
-                className="w-full p-2 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-                style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+                onClick={() => setMostrarNuevoEquipo(!mostrarNuevoEquipo)}
+                className="text-xs mt-2"
+                style={{ color: '#4ADE80' }}
               >
-                {guardandoEquipo ? 'Creando...' : 'Crear equipo y usarlo'}
+                {mostrarNuevoEquipo ? 'Cancelar' : '+ El rival no está en la lista'}
               </button>
             </div>
-          )}
 
-          <div className="grid grid-cols-2 gap-3">
+            {mostrarNuevoEquipo && (
+              <div className="p-3 rounded-xl space-y-2" style={{ backgroundColor: '#0F1419', border: '1px solid #2A3548' }}>
+                <input
+                  type="text"
+                  placeholder="Nombre del nuevo equipo"
+                  value={nombreNuevoEquipo}
+                  onChange={(e) => setNombreNuevoEquipo(e.target.value)}
+                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  style={inputStyle}
+                />
+                <div className="flex items-center gap-3">
+                  {escudoNuevoEquipo && (
+                    <img
+                      src={escudoNuevoEquipo}
+                      alt="Escudo"
+                      className="w-10 h-10 rounded-lg object-contain shrink-0"
+                      style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+                    />
+                  )}
+                  <label
+                    className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 cursor-pointer"
+                    style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+                  >
+                    {subiendoEscudoNuevo ? 'Subiendo...' : escudoNuevoEquipo ? 'Cambiar escudo' : '📤 Subir escudo'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleSubirEscudoNuevoEquipo(e.target.files?.[0])}
+                      disabled={subiendoEscudoNuevo}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleGuardarNuevoEquipo}
+                  disabled={guardandoEquipo || !nombreNuevoEquipo}
+                  className="w-full p-2 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
+                  style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+                >
+                  {guardandoEquipo ? 'Creando...' : 'Crear equipo y usarlo'}
+                </button>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="date"
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
+                className="p-2.5 rounded-xl outline-none text-sm"
+                style={inputStyle}
+              />
+              <input
+                type="time"
+                value={hora}
+                onChange={(e) => setHora(e.target.value)}
+                className="p-2.5 rounded-xl outline-none text-sm"
+                style={inputStyle}
+              />
+            </div>
             <input
-              type="date"
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-              className="p-2.5 rounded-xl outline-none text-sm"
+              type="text"
+              placeholder="Lugar / cancha"
+              value={lugar}
+              onChange={(e) => setLugar(e.target.value)}
+              className="w-full p-2.5 rounded-xl outline-none text-sm"
+              style={inputStyle}
+            />
+            <select
+              value={localVisitante}
+              onChange={(e) => setLocalVisitante(e.target.value)}
+              className="w-full p-2.5 rounded-xl outline-none text-sm"
+              style={inputStyle}
+            >
+              <option value="local">Local</option>
+              <option value="visitante">Visitante</option>
+            </select>
+            <input
+              type="text"
+              placeholder="Fecha del fixture (ej: Fecha 1)"
+              value={numeroFecha}
+              onChange={(e) => setNumeroFecha(e.target.value)}
+              className="w-full p-2.5 rounded-xl outline-none text-sm"
               style={inputStyle}
             />
             <input
-              type="time"
-              value={hora}
-              onChange={(e) => setHora(e.target.value)}
-              className="p-2.5 rounded-xl outline-none text-sm"
+              type="text"
+              placeholder="Link del partido (opcional)"
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              className="w-full p-2.5 rounded-xl outline-none text-sm"
               style={inputStyle}
             />
           </div>
-          <input
-            type="text"
-            placeholder="Lugar / cancha"
-            value={lugar}
-            onChange={(e) => setLugar(e.target.value)}
-            className="w-full p-2.5 rounded-xl outline-none text-sm"
-            style={inputStyle}
-          />
-          <select
-            value={localVisitante}
-            onChange={(e) => setLocalVisitante(e.target.value)}
-            className="w-full p-2.5 rounded-xl outline-none text-sm"
-            style={inputStyle}
-          >
-            <option value="local">Local</option>
-            <option value="visitante">Visitante</option>
-          </select>
-          <input
-            type="text"
-            placeholder="Fecha del fixture (ej: Fecha 1)"
-            value={numeroFecha}
-            onChange={(e) => setNumeroFecha(e.target.value)}
-            className="w-full p-2.5 rounded-xl outline-none text-sm"
-            style={inputStyle}
-          />
-          <input
-            type="text"
-            placeholder="Link del partido (opcional)"
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-            className="w-full p-2.5 rounded-xl outline-none text-sm"
-            style={inputStyle}
-          />
-        </div>
+        )}
+
+        {tab === 'post' && (
+          <div className="space-y-4 mb-6">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                  Goles Local
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={golesLocal}
+                  onChange={(e) => setGolesLocal(e.target.value)}
+                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                  Goles Visitante
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={golesVisitante}
+                  onChange={(e) => setGolesVisitante(e.target.value)}
+                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                  Penales a Favor
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={penalesFavor}
+                  onChange={(e) => setPenalesFavor(e.target.value)}
+                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                  Penales en Contra
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={penalesContra}
+                  onChange={(e) => setPenalesContra(e.target.value)}
+                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+
+            <FilaLink label="Partido Completo" value={videoPartidoCompleto} onChange={setVideoPartidoCompleto} />
+            <FilaLink label="Resumen" value={videoResumen} onChange={setVideoResumen} />
+            <FilaLink label="Análisis Propio" value={videoAnalisisPropio} onChange={setVideoAnalisisPropio} />
+            <FilaLink label="Análisis Rival Final" value={videoAnalisisRival} onChange={setVideoAnalisisRival} />
+            <FilaLink label="Informe PDF" value={informePdfUrl} onChange={setInformePdfUrl} />
+            <FilaLink label="Pelota Parada" value={videoPelotaParada} onChange={setVideoPelotaParada} />
+            <FilaLink label="GPS" value={videoGps} onChange={setVideoGps} />
+            <FilaLink label="Charla DT" value={videoCharlaDt} onChange={setVideoCharlaDt} />
+            <FilaLink label="Arenga Jugadores" value={videoArenga} onChange={setVideoArenga} />
+            <FilaLink label="Resumen Vigilancias" value={videoResumenVigilancias} onChange={setVideoResumenVigilancias} />
+
+            <div>
+              <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                Descripción
+              </label>
+              <textarea
+                value={descripcionPost}
+                onChange={(e) => setDescripcionPost(e.target.value)}
+                rows={5}
+                className="w-full p-2.5 rounded-xl outline-none text-sm resize-y"
+                style={inputStyle}
+              />
+            </div>
+          </div>
+        )}
 
         {errorMsg && (
           <p className="text-sm mb-4" style={{ color: '#F87171' }}>
