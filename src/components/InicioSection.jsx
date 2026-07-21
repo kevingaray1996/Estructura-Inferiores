@@ -35,6 +35,24 @@ function agruparProximoPartido(partidos) {
   }
 }
 
+function calcularResultado(p) {
+  if (p.goles_local == null || p.goles_visitante == null) return null
+  const golesPropios = p.local_visitante === 'visitante' ? p.goles_visitante : p.goles_local
+  const golesRivales = p.local_visitante === 'visitante' ? p.goles_local : p.goles_visitante
+
+  let etiqueta
+  if (golesPropios > golesRivales) etiqueta = 'Victoria'
+  else if (golesPropios < golesRivales) etiqueta = 'Derrota'
+  else etiqueta = 'Empate'
+
+  if (golesPropios === golesRivales && p.penales_favor != null && p.penales_contra != null) {
+    if (p.penales_favor > p.penales_contra) etiqueta = 'Victoria'
+    else if (p.penales_favor < p.penales_contra) etiqueta = 'Derrota'
+  }
+
+  return { etiqueta, texto: `${etiqueta} (${golesPropios}-${golesRivales})` }
+}
+
 function iniciales(nombre, apellido) {
   return `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
 }
@@ -43,6 +61,8 @@ function InicioSection({ perfil, onCambiarSeccion }) {
   const [lesionados, setLesionados] = useState([])
   const [proximoPartidoPrincipal, setProximoPartidoPrincipal] = useState(null)
   const [proximoPartidoReserva, setProximoPartidoReserva] = useState(null)
+  const [ultimoPartidoPrincipal, setUltimoPartidoPrincipal] = useState(null)
+  const [estadisticasRapidas, setEstadisticasRapidas] = useState(null)
   const [alertasNutricion, setAlertasNutricion] = useState([])
   const [ultimosVideos, setUltimosVideos] = useState([])
   const [cumpleanieros, setCumpleanieros] = useState([])
@@ -88,6 +108,31 @@ function InicioSection({ perfil, onCambiarSeccion }) {
         const reserva = (partidosData || []).filter((p) => p.categorias?.es_reserva)
         setProximoPartidoPrincipal(agruparProximoPartido(noReserva))
         setProximoPartidoReserva(agruparProximoPartido(reserva))
+
+        // Partidos ya jugados con resultado cargado
+        const { data: partidosPasadosData } = await supabase
+          .from('partidos')
+          .select('*, categorias(nombre, es_reserva)')
+          .lt('fecha', hoyISO)
+          .not('goles_local', 'is', null)
+          .not('goles_visitante', 'is', null)
+          .order('fecha', { ascending: false })
+
+        const pasadosNoReserva = (partidosPasadosData || []).filter((p) => !p.categorias?.es_reserva)
+        setUltimoPartidoPrincipal(pasadosNoReserva[0] || null)
+
+        let pj = 0, pg = 0, pe = 0, pp = 0, gf = 0, gc = 0
+        pasadosNoReserva.forEach((p) => {
+          const propios = p.local_visitante === 'visitante' ? p.goles_visitante : p.goles_local
+          const rivales = p.local_visitante === 'visitante' ? p.goles_local : p.goles_visitante
+          pj++
+          gf += propios
+          gc += rivales
+          if (propios > rivales) pg++
+          else if (propios < rivales) pp++
+          else pe++
+        })
+        setEstadisticasRapidas(pj > 0 ? { pj, pg, pe, pp, gf, gc } : null)
 
         const { data: videosData } = await supabase
           .from('videos')
@@ -214,6 +259,15 @@ function InicioSection({ perfil, onCambiarSeccion }) {
       </div>
     )
   }
+
+  const resultadoUltimo = ultimoPartidoPrincipal ? calcularResultado(ultimoPartidoPrincipal) : null
+  const colorUltimo = resultadoUltimo
+    ? resultadoUltimo.etiqueta === 'Victoria'
+      ? '#4ADE80'
+      : resultadoUltimo.etiqueta === 'Derrota'
+      ? '#F87171'
+      : '#FBBF24'
+    : null
 
   return (
     <div className="p-6 md:p-10">
@@ -360,6 +414,94 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                 </div>
               ) : (
                 <p className="text-sm" style={{ color: '#5B6B85' }}>No hay partidos próximos cargados.</p>
+              )}
+            </div>
+          )}
+
+          {perfil.rol !== 'medico' && (
+            <div
+              onClick={() => onCambiarSeccion('partidos')}
+              className="p-4 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
+              style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+            >
+              <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#5B6B85' }}>
+                Último resultado
+              </p>
+              {ultimoPartidoPrincipal ? (
+                <div className="flex items-center gap-2.5">
+                  {ultimoPartidoPrincipal.escudo_url ? (
+                    <img
+                      src={ultimoPartidoPrincipal.escudo_url}
+                      alt={ultimoPartidoPrincipal.rival}
+                      className="w-9 h-9 rounded object-contain shrink-0"
+                      style={{ backgroundColor: '#0F1419' }}
+                    />
+                  ) : (
+                    <span
+                      className="w-9 h-9 rounded flex items-center justify-center text-sm shrink-0"
+                      style={{ backgroundColor: '#0F1419', color: '#5B6B85' }}
+                    >
+                      🛡️
+                    </span>
+                  )}
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
+                      vs {ultimoPartidoPrincipal.rival}
+                    </p>
+                    <p className="text-xs" style={{ color: '#8A9BB8' }}>
+                      {ultimoPartidoPrincipal.fecha}
+                    </p>
+                  </div>
+                  {resultadoUltimo && (
+                    <span
+                      className="ml-auto text-xs font-mono px-2 py-1 rounded-full shrink-0"
+                      style={{ backgroundColor: '#0F1419', color: colorUltimo, border: `1px solid ${colorUltimo}40` }}
+                    >
+                      {resultadoUltimo.texto}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm" style={{ color: '#5B6B85' }}>Todavía no hay resultados cargados.</p>
+              )}
+            </div>
+          )}
+
+          {perfil.rol !== 'medico' && (
+            <div
+              onClick={() => onCambiarSeccion('partidos')}
+              className="p-4 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
+              style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+            >
+              <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#5B6B85' }}>
+                Estadísticas de la temporada
+              </p>
+              {estadisticasRapidas ? (
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-sm" style={{ color: '#8A9BB8' }}>
+                      PJ <b style={{ color: '#F0F2F5' }}>{estadisticasRapidas.pj}</b>
+                    </span>
+                    <span className="text-sm" style={{ color: '#4ADE80' }}>
+                      PG <b>{estadisticasRapidas.pg}</b>
+                    </span>
+                    <span className="text-sm" style={{ color: '#FBBF24' }}>
+                      PE <b>{estadisticasRapidas.pe}</b>
+                    </span>
+                    <span className="text-sm" style={{ color: '#F87171' }}>
+                      PP <b>{estadisticasRapidas.pp}</b>
+                    </span>
+                  </div>
+                  <p className="text-xs" style={{ color: '#8A9BB8' }}>
+                    Goles: {estadisticasRapidas.gf} a favor · {estadisticasRapidas.gc} en contra
+                    <span style={{ color: estadisticasRapidas.gf - estadisticasRapidas.gc >= 0 ? '#4ADE80' : '#F87171' }}>
+                      {' '}({estadisticasRapidas.gf - estadisticasRapidas.gc >= 0 ? '+' : ''}
+                      {estadisticasRapidas.gf - estadisticasRapidas.gc})
+                    </span>
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm" style={{ color: '#5B6B85' }}>Todavía no hay partidos con resultado cargado.</p>
               )}
             </div>
           )}
