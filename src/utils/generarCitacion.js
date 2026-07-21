@@ -128,9 +128,14 @@ if (escudoClubDataUrl) {
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10.5)
   doc.setTextColor(214, 224, 250)
-  const subtituloHeader = categoriaNombre
-    ? `Partido ${nombreLocalVisitante} · Categoría ${categoriaNombre}`
-    : `Partido ${nombreLocalVisitante}`
+  const subtituloHeader = [
+  `Partido ${nombreLocalVisitante}`,
+  categoriaNombre ? `Categoría ${categoriaNombre}` : null,
+  partido.numero_fecha ? `Fecha ${partido.numero_fecha}` : null,
+]
+  .filter(Boolean)
+  .join(' · ')
+
   doc.text(subtituloHeader, tituloX, iconoCY + 16)
 
   if (categoriaNombre || partido.formacion) {
