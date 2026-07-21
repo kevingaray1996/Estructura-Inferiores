@@ -48,6 +48,35 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
     }
   }
 
+  function calcularResultado(p) {
+    if (p.goles_local == null || p.goles_visitante == null) return null
+
+    // "Nuestros" goles dependen de si jugamos de local o de visitante
+    const golesPropios = p.local_visitante === 'visitante' ? p.goles_visitante : p.goles_local
+    const golesRivales = p.local_visitante === 'visitante' ? p.goles_local : p.goles_visitante
+
+    let etiqueta
+    if (golesPropios > golesRivales) {
+      etiqueta = 'Victoria'
+    } else if (golesPropios < golesRivales) {
+      etiqueta = 'Derrota'
+    } else {
+      etiqueta = 'Empate'
+    }
+
+    // Si hubo penales y el partido quedó igualado, definen quién ganó
+    if (golesPropios === golesRivales && p.penales_favor != null && p.penales_contra != null) {
+      if (p.penales_favor > p.penales_contra) etiqueta = 'Victoria'
+      else if (p.penales_favor < p.penales_contra) etiqueta = 'Derrota'
+    }
+
+    let texto = `${etiqueta} (${golesPropios}-${golesRivales})`
+    if (p.penales_favor != null && p.penales_contra != null) {
+      texto += ` [Pen. ${p.penales_favor}-${p.penales_contra}]`
+    }
+    return { etiqueta, texto }
+  }
+
   return (
     <div className="p-6 md:p-10">
       <div className="max-w-xl mx-auto">
@@ -117,101 +146,112 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
         )}
 
         <div className="space-y-2">
-          {partidos.map((p) => (
-            <div
-              key={p.id}
-              onClick={() => onElegirPartido(p.id)}
-              className="p-4 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
-              style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  {p.escudo_url ? (
-                    <img
-                      src={p.escudo_url}
-                      alt={p.rival}
-                      className="w-7 h-7 rounded object-contain shrink-0"
-                      style={{ backgroundColor: '#0F1419' }}
-                    />
-                  ) : (
-                    <span
-                      className="w-7 h-7 rounded flex items-center justify-center text-xs shrink-0"
-                      style={{ backgroundColor: '#0F1419', color: '#5B6B85' }}
-                    >
-                      🛡️
-                    </span>
-                  )}
-                  <p className="text-base font-medium" style={{ color: '#F0F2F5' }}>
-                    vs {p.rival}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {p.link && (
-                    <a
-                      href={p.link}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(e) => e.stopPropagation()}
+          {partidos.map((p) => {
+            const resultado = calcularResultado(p)
+            const colorResultado = resultado
+              ? resultado.etiqueta === 'Victoria'
+                ? '#4ADE80'
+                : resultado.etiqueta === 'Derrota'
+                ? '#F87171'
+                : '#FBBF24'
+              : null
+
+            return (
+              <div
+                key={p.id}
+                onClick={() => onElegirPartido(p.id)}
+                className="p-4 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
+                style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    {p.escudo_url ? (
+                      <img
+                        src={p.escudo_url}
+                        alt={p.rival}
+                        className="w-7 h-7 rounded object-contain shrink-0"
+                        style={{ backgroundColor: '#0F1419' }}
+                      />
+                    ) : (
+                      <span
+                        className="w-7 h-7 rounded flex items-center justify-center text-xs shrink-0"
+                        style={{ backgroundColor: '#0F1419', color: '#5B6B85' }}
+                      >
+                        🛡️
+                      </span>
+                    )}
+                    <p className="text-base font-medium" style={{ color: '#F0F2F5' }}>
+                      vs {p.rival}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {p.link && (
+                      <a
+                        href={p.link}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-xs px-2 py-1 rounded-full hover:opacity-80"
+                        style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                      >
+                        ▶
+                      </a>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        generarCitacionPDF(p.id)
+                      }}
                       className="text-xs px-2 py-1 rounded-full hover:opacity-80"
                       style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
                     >
-                      ▶
-                    </a>
-                  )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      generarCitacionPDF(p.id)
-                    }}
-                    className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                    style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
-                  >
-                    📄
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onVerEstadisticas(p.id)
-                    }}
-                    className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                    style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
-                  >
-                    📊
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onEditarPartido(p.id)
-                    }}
-                    className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                    style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
-                  >
-                    ✏️
-                  </button>
-                  {p.resultado && (
-                    <span
-                      className="text-xs font-mono px-2 py-1 rounded-full"
-                      style={{ backgroundColor: '#0F1419', color: '#8A9BB8', border: '1px solid #2A3548' }}
+                      📄
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onVerEstadisticas(p.id)
+                      }}
+                      className="text-xs px-2 py-1 rounded-full hover:opacity-80"
+                      style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
                     >
-                      {p.resultado}
-                    </span>
-                  )}
-                  <button
-                    onClick={(e) => handleEliminar(e, p.id)}
-                    className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                    style={{ backgroundColor: '#0F1419', color: '#F87171' }}
-                  >
-                    🗑
-                  </button>
+                      📊
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onEditarPartido(p.id)
+                      }}
+                      className="text-xs px-2 py-1 rounded-full hover:opacity-80"
+                      style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                    >
+                      ✏️
+                    </button>
+                    {resultado && (
+                      <span
+                        className="text-xs font-mono px-2 py-1 rounded-full"
+                        style={{ backgroundColor: '#0F1419', color: colorResultado, border: `1px solid ${colorResultado}40` }}
+                      >
+                        {resultado.texto}
+                      </span>
+                    )}
+                    <button
+                      onClick={(e) => handleEliminar(e, p.id)}
+                      className="text-xs px-2 py-1 rounded-full hover:opacity-80"
+                      style={{ backgroundColor: '#0F1419', color: '#F87171' }}
+                    >
+                      🗑
+                    </button>
+                  </div>
                 </div>
+                <p className="text-xs mt-1" style={{ color: '#5B6B85' }}>
+                  {p.numero_fecha && `Fecha ${p.numero_fecha} · `}
+                  {p.fecha} {p.hora && `· ${p.hora}`} {p.lugar && `· ${p.lugar}`}
+                  {p.local_visitante && ` · ${p.local_visitante}`}
+                </p>
               </div>
-              <p className="text-xs mt-1" style={{ color: '#5B6B85' }}>
-              {p.numero_fecha && `Fecha ${p.numero_fecha} · `}
-              {p.fecha} {p.hora && `· ${p.hora}`} {p.lugar && `· ${p.lugar}`}
-              {p.local_visitante && ` · ${p.local_visitante}`}
-             </p>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>
