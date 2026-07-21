@@ -20,6 +20,7 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
   const [hora, setHora] = useState('')
   const [lugar, setLugar] = useState('')
   const [localVisitante, setLocalVisitante] = useState('local')
+  const [numeroFecha, setNumeroFecha] = useState('')
   const [link, setLink] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
@@ -50,6 +51,7 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
         setHora(data.hora || '')
         setLugar(data.lugar || '')
         setLocalVisitante(data.local_visitante || 'local')
+        setNumeroFecha(data.numero_fecha || '')
         setLink(data.link || '')
         if (data.equipo_id) {
           setEquipoId(data.equipo_id)
@@ -127,6 +129,7 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
       hora: hora || null,
       lugar: lugar || null,
       local_visitante: localVisitante,
+      numero_fecha: numeroFecha || null,
       categoria_id: categoriaId,
       link: link || null,
     }
@@ -300,6 +303,14 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
             <option value="local">Local</option>
             <option value="visitante">Visitante</option>
           </select>
+          <input
+            type="text"
+            placeholder="Fecha del fixture (ej: Fecha 1)"
+            value={numeroFecha}
+            onChange={(e) => setNumeroFecha(e.target.value)}
+            className="w-full p-2.5 rounded-xl outline-none text-sm"
+            style={inputStyle}
+          />
           <input
             type="text"
             placeholder="Link del partido (opcional)"
