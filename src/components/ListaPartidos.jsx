@@ -206,9 +206,10 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
                 </div>
               </div>
               <p className="text-xs mt-1" style={{ color: '#5B6B85' }}>
-                {p.fecha} {p.hora && `· ${p.hora}`} {p.lugar && `· ${p.lugar}`}
-                {p.local_visitante && ` · ${p.local_visitante}`}
-              </p>
+              {p.numero_fecha && `Fecha ${p.numero_fecha} · `}
+              {p.fecha} {p.hora && `· ${p.hora}`} {p.lugar && `· ${p.lugar}`}
+              {p.local_visitante && ` · ${p.local_visitante}`}
+             </p>
             </div>
           ))}
         </div>
