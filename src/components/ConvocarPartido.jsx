@@ -402,6 +402,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                       Jugador
                     </th>
                     <th className="p-2" style={{ color: '#8A9BB8' }}>Conv.</th>
+                    <th className="p-2" style={{ color: '#7DD3FC' }}>Titular</th>
                     <th className="p-2" style={{ color: '#8A9BB8' }}>Dorsal</th>
                     <th className="p-2" style={{ color: '#8A9BB8' }}>Min</th>
                     <th className="p-2" style={{ color: '#8A9BB8' }}>Goles</th>
@@ -449,6 +450,15 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                             disabled={bloqueado}
                             onChange={() => toggleConvocado(j.id, bloqueado)}
                           />
+                        </td>
+                        <td className="p-2 text-center">
+                          {marcado && (
+                            <input
+                              type="checkbox"
+                              checked={s.titular}
+                              onChange={(e) => actualizarStat(j.id, 'titular', e.target.checked)}
+                            />
+                          )}
                         </td>
                         <td className="p-2">
                           {marcado && (
