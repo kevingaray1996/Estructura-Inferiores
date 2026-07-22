@@ -59,8 +59,7 @@ function iniciales(nombre, apellido) {
 
 function InicioSection({ perfil, onCambiarSeccion }) {
   const [lesionados, setLesionados] = useState([])
-  const [proximoPartidoPrincipal, setProximoPartidoPrincipal] = useState(null)
-  const [proximoPartidoReserva, setProximoPartidoReserva] = useState(null)
+  const [proximoPartido, setProximoPartido] = useState(null)
   const [ultimoPartidoPrincipal, setUltimoPartidoPrincipal] = useState(null)
   const [estadisticasRapidas, setEstadisticasRapidas] = useState(null)
   const [alertasNutricion, setAlertasNutricion] = useState([])
@@ -100,29 +99,25 @@ function InicioSection({ perfil, onCambiarSeccion }) {
       if (perfil.rol !== 'medico') {
         const { data: partidosData } = await supabase
           .from('partidos')
-          .select('*, categorias(nombre, es_reserva)')
+          .select('*, categorias(nombre)')
           .gte('fecha', hoyISO)
           .order('fecha', { ascending: true })
-
-        const noReserva = (partidosData || []).filter((p) => !p.categorias?.es_reserva)
-        const reserva = (partidosData || []).filter((p) => p.categorias?.es_reserva)
-        setProximoPartidoPrincipal(agruparProximoPartido(noReserva))
-        setProximoPartidoReserva(agruparProximoPartido(reserva))
+        setProximoPartido(agruparProximoPartido(partidosData))
 
         // Partidos ya jugados con resultado cargado
         const { data: partidosPasadosData } = await supabase
           .from('partidos')
-          .select('*, categorias(nombre, es_reserva)')
+          .select('*, categorias(nombre)')
           .lt('fecha', hoyISO)
           .not('goles_local', 'is', null)
           .not('goles_visitante', 'is', null)
           .order('fecha', { ascending: false })
 
-        const pasadosNoReserva = (partidosPasadosData || []).filter((p) => !p.categorias?.es_reserva)
-        setUltimoPartidoPrincipal(pasadosNoReserva[0] || null)
+        const pasados = partidosPasadosData || []
+        setUltimoPartidoPrincipal(pasados[0] || null)
 
         let pj = 0, pg = 0, pe = 0, pp = 0, gf = 0, gc = 0
-        pasadosNoReserva.forEach((p) => {
+        pasados.forEach((p) => {
           const propios = p.local_visitante === 'visitante' ? p.goles_visitante : p.goles_local
           const rivales = p.local_visitante === 'visitante' ? p.goles_local : p.goles_visitante
           pj++
@@ -340,14 +335,14 @@ function InicioSection({ perfil, onCambiarSeccion }) {
               style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
             >
               <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#5B6B85' }}>
-                Próximo partido · 4ta a 9na
+                Próximo partido
               </p>
-              {proximoPartidoPrincipal ? (
+              {proximoPartido ? (
                 <div className="flex items-center gap-2.5">
-                  {proximoPartidoPrincipal.escudo_url ? (
+                  {proximoPartido.escudo_url ? (
                     <img
-                      src={proximoPartidoPrincipal.escudo_url}
-                      alt={proximoPartidoPrincipal.rival}
+                      src={proximoPartido.escudo_url}
+                      alt={proximoPartido.rival}
                       className="w-9 h-9 rounded object-contain shrink-0"
                       style={{ backgroundColor: '#0F1419' }}
                     />
@@ -361,54 +356,10 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                   )}
                   <div>
                     <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
-                      vs {proximoPartidoPrincipal.rival}
+                      vs {proximoPartido.rival}
                     </p>
                     <p className="text-xs" style={{ color: '#8A9BB8' }}>
-                      {proximoPartidoPrincipal.fecha} {proximoPartidoPrincipal.hora && `· ${proximoPartidoPrincipal.hora}`}
-                      {proximoPartidoPrincipal.categoriasNombres?.length > 0
-                        ? ` · ${proximoPartidoPrincipal.categoriasNombres.join(', ')}`
-                        : ''}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm" style={{ color: '#5B6B85' }}>No hay partidos próximos cargados.</p>
-              )}
-            </div>
-          )}
-
-          {perfil.rol !== 'medico' && (
-            <div
-              onClick={() => onCambiarSeccion('partidos')}
-              className="p-4 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
-              style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
-            >
-              <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#5B6B85' }}>
-                Próximo partido · Reserva
-              </p>
-              {proximoPartidoReserva ? (
-                <div className="flex items-center gap-2.5">
-                  {proximoPartidoReserva.escudo_url ? (
-                    <img
-                      src={proximoPartidoReserva.escudo_url}
-                      alt={proximoPartidoReserva.rival}
-                      className="w-9 h-9 rounded object-contain shrink-0"
-                      style={{ backgroundColor: '#0F1419' }}
-                    />
-                  ) : (
-                    <span
-                      className="w-9 h-9 rounded flex items-center justify-center text-sm shrink-0"
-                      style={{ backgroundColor: '#0F1419', color: '#5B6B85' }}
-                    >
-                      🛡️
-                    </span>
-                  )}
-                  <div>
-                    <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
-                      vs {proximoPartidoReserva.rival}
-                    </p>
-                    <p className="text-xs" style={{ color: '#8A9BB8' }}>
-                      {proximoPartidoReserva.fecha} {proximoPartidoReserva.hora && `· ${proximoPartidoReserva.hora}`}
+                      {proximoPartido.fecha} {proximoPartido.hora && `· ${proximoPartido.hora}`}
                     </p>
                   </div>
                 </div>
