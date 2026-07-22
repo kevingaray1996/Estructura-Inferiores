@@ -16,19 +16,6 @@ const pieHabilLabel = {
   ambidiestro: 'Ambidiestro',
 }
 
-const costoPensionLabel = {
-  club: 'Paga el club',
-  compartido: 'Compartido',
-}
-
-function diasHasta(fecha) {
-  if (!fecha) return null
-  const hoy = new Date()
-  hoy.setHours(0, 0, 0, 0)
-  const destino = new Date(fecha)
-  return Math.round((destino - hoy) / (1000 * 60 * 60 * 24))
-}
-
 function iniciales(nombre, apellido) {
   return `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
 }
@@ -87,7 +74,6 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
   const [sesionesFisicas, setSesionesFisicas] = useState([])
   const [fichasNutricion, setFichasNutricion] = useState([])
   const [fichasPsicologicas, setFichasPsicologicas] = useState([])
-  const [representanteVigente, setRepresentanteVigente] = useState(null)
   const [eliminando, setEliminando] = useState(false)
   const [filtroStat, setFiltroStat] = useState(null)
   const [mostrarPdf, setMostrarPdf] = useState(false)
@@ -97,7 +83,7 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
     async function cargarDatos() {
       const { data: jugadorData } = await supabase
         .from('jugadores')
-        .select('*, categorias(nombre), pensiones(nombre)')
+        .select('*, categorias(nombre)')
         .eq('id', jugadorId)
         .single()
       setJugador(jugadorData)
@@ -155,16 +141,6 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
         .eq('jugador_id', jugadorId)
         .order('fecha', { ascending: false })
       setFichasPsicologicas(psicologiaData || [])
-
-      const { data: representanteData } = await supabase
-        .from('jugador_representantes')
-        .select('*, representantes(nombre, telefono, email)')
-        .eq('jugador_id', jugadorId)
-        .is('fecha_fin', null)
-        .order('fecha_inicio', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      setRepresentanteVigente(representanteData || null)
     }
     cargarDatos()
   }, [jugadorId])
@@ -285,21 +261,7 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
     { label: 'Nacionalidad', valor: jugador.nacionalidad, extra: jugador.lugar_nacimiento },
     { label: 'Pasaporte comunitario', valor: jugador.pasaporte_comunitario ? 'Sí' : null },
     { label: 'Obra social', valor: jugador.obra_social, extra: jugador.nro_afiliado },
-    {
-      label: 'Contrato',
-      valor: jugador.fecha_fin_contrato ? `hasta ${formatearFecha(jugador.fecha_fin_contrato)}` : null,
-      extra: jugador.fecha_inicio_contrato ? `desde ${formatearFecha(jugador.fecha_inicio_contrato)}` : null,
-    },
-    { label: 'Pensión', valor: jugador.pensiones?.nombre, extra: costoPensionLabel[jugador.costo_pension] },
-    {
-      label: 'Representante',
-      valor: representanteVigente?.representantes?.nombre,
-      extra: representanteVigente?.representantes?.telefono,
-    },
   ].filter((d) => d.valor)
-
-  const diasParaVencerContrato = diasHasta(jugador.fecha_fin_contrato)
-  const contratoPorVencer = diasParaVencerContrato !== null && diasParaVencerContrato <= 60
 
   const disciplinas = [
     {
@@ -532,22 +494,6 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
                 )}
               </p>
             </div>
-          </div>
-        )}
-
-        {contratoPorVencer && (
-          <div
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl mb-4"
-            style={{ backgroundColor: '#1A2332', border: '1px solid #FBBF24' }}
-          >
-            <span className="text-lg">⏳</span>
-            <p className="text-sm" style={{ color: '#F0F2F5' }}>
-              {diasParaVencerContrato < 0
-                ? 'El contrato ya venció'
-                : `El contrato vence en ${diasParaVencerContrato} día${diasParaVencerContrato === 1 ? '' : 's'}`}
-              {' '}
-              ({formatearFecha(jugador.fecha_fin_contrato)})
-            </p>
           </div>
         )}
 
