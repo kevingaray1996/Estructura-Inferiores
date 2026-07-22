@@ -4,6 +4,30 @@ import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { FORMACIONES } from '../data/formaciones'
 import { CAMPOS_FISICOS } from '../utils/camposFisicos'
 
+function fechaISO(date) {
+  const anio = date.getFullYear()
+  const mes = String(date.getMonth() + 1).padStart(2, '0')
+  const dia = String(date.getDate()).padStart(2, '0')
+  return `${anio}-${mes}-${dia}`
+}
+
+function obtenerRangoSemana(fechaReferencia) {
+  const fecha = new Date(`${fechaReferencia}T00:00:00`)
+  const dia = fecha.getDay() // 0=domingo...6=sábado
+  const diasDesdeLunes = (dia + 6) % 7
+  const lunes = new Date(fecha)
+  lunes.setDate(fecha.getDate() - diasDesdeLunes)
+  const viernes = new Date(lunes)
+  viernes.setDate(lunes.getDate() + 4)
+  return { lunesISO: fechaISO(lunes), viernesISO: fechaISO(viernes) }
+}
+
+const nombresDiaCorto = { 1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie' }
+function nombreDiaCorto(fechaStr) {
+  const fecha = new Date(`${fechaStr}T00:00:00`)
+  return nombresDiaCorto[fecha.getDay()] || fechaStr
+}
+
 const estadoConfig = {
   lesionado: { color: '#FBBF24', label: 'Lesionado' },
   suspendido: { color: '#F87171', label: 'Suspendido' },
@@ -32,6 +56,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
   const [convocados, setConvocados] = useState({}) // jugadorId -> dorsal (string)
   const [stats, setStats] = useState({}) // jugadorId -> statsVacias
   const [datosFisicos, setDatosFisicos] = useState({})
+  const [inasistenciasSemana, setInasistenciasSemana] = useState({}) // jugadorId -> array de fechas ausente/enfermo esta semana
 
   const [formacion, setFormacion] = useState('4-4-2')
   const [asignaciones, setAsignaciones] = useState({}) // codigo -> jugadorId
@@ -66,6 +91,25 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
     const { data: categoriasData } = await supabase.from('categorias').select('id, es_reserva')
     const { data: jugadoresData } = await obtenerJugadoresDeCategoria(supabase, categoriaId, categoriasData)
     setJugadores(jugadoresData || [])
+
+    if (partidoData?.fecha && jugadoresData?.length) {
+      const { lunesISO, viernesISO } = obtenerRangoSemana(partidoData.fecha)
+      const idsJugadores = jugadoresData.map((j) => j.id)
+      const { data: ausenciasData } = await supabase
+        .from('asistencias')
+        .select('jugador_id, fecha')
+        .in('estado', ['ausente', 'enfermo'])
+        .gte('fecha', lunesISO)
+        .lte('fecha', viernesISO)
+        .in('jugador_id', idsJugadores)
+
+      const mapaAusencias = {}
+      ;(ausenciasData || []).forEach((a) => {
+        if (!mapaAusencias[a.jugador_id]) mapaAusencias[a.jugador_id] = []
+        mapaAusencias[a.jugador_id].push(a.fecha)
+      })
+      setInasistenciasSemana(mapaAusencias)
+    }
 
     const { data: citacionesData } = await supabase
       .from('citaciones')
@@ -374,7 +418,9 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                   {jugadores.map((j, i) => {
                     const marcado = j.id in convocados
                     const estadoInfo = estadoConfig[j.estado]
-                    const bloqueado = !!estadoInfo
+                    const ausenciasDelJugador = inasistenciasSemana[j.id] || []
+                    const bloqueadoPorInasistencia = ausenciasDelJugador.length >= 2
+                    const bloqueado = !!estadoInfo || bloqueadoPorInasistencia
                     const s = stats[j.id] || statsVacias
                     return (
                       <tr key={j.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#151D2A', opacity: bloqueado ? 0.5 : 1 }}>
@@ -383,10 +429,16 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                           style={{ color: '#F0F2F5', backgroundColor: i % 2 === 0 ? '#0F1419' : '#151D2A' }}
                         >
                           {j.apellido}, {j.nombre}
-                          {bloqueado && (
+                          {estadoInfo && (
                             <span className="block" style={{ color: estadoInfo.color, fontSize: '10px' }}>
                               {estadoInfo.label}
                               {j.estado_detalle && ` — ${j.estado_detalle}`}
+                            </span>
+                          )}
+                          {!estadoInfo && bloqueadoPorInasistencia && (
+                            <span className="block" style={{ color: '#F87171', fontSize: '10px' }}>
+                              No convocable: faltó {ausenciasDelJugador.length} días esta semana (
+                              {ausenciasDelJugador.map(nombreDiaCorto).join(', ')})
                             </span>
                           )}
                         </td>
