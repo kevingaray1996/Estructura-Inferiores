@@ -1,6 +1,5 @@
 import { jsPDF } from 'jspdf'
 import { supabase } from '../supabaseClient'
-import { FORMACIONES } from '../data/formaciones'
 
 const AZUL = [23, 23, 23]
 const AZUL_CLARO = [251, 191, 36]
@@ -53,6 +52,24 @@ function dibujarEscudo(doc, cx, cy, size, colorFondo, letra, colorTexto) {
   doc.setFontSize(size * 0.32)
   doc.setTextColor(...colorTexto)
   doc.text(letra, cx, cy + size * 0.11, { align: 'center' })
+}
+
+// A partir de la posición guardada (x,y libre) intenta armar la zona del jugador
+// para mostrarla como etiqueta, ya que ya no hay un "puesto" fijo predefinido.
+function parsePosicion(c) {
+  if (!c.titular || !c.posicion_cancha || !c.posicion_cancha.includes(',')) return null
+  const [xStr, yStr] = c.posicion_cancha.split(',')
+  const x = parseFloat(xStr)
+  const y = parseFloat(yStr)
+  if (Number.isNaN(x) || Number.isNaN(y)) return null
+  return { x, y }
+}
+
+function zonaPorY(y) {
+  if (y >= 85) return 'ARQUERO'
+  if (y >= 62) return 'DEFENSA'
+  if (y >= 38) return 'MEDIOCAMPO'
+  return 'DELANTERA'
 }
 
 export async function generarCitacionPDF(partidoId) {
@@ -242,7 +259,12 @@ doc.text('Club Comunicaciones', propioShieldCX + shieldSize / 2 + 12, filaEquipo
   // ===== Dos columnas: cancha (izq) + titulares (der) =====
   const ordenados = [...citaciones].sort((a, b) => (a.dorsal || 99) - (b.dorsal || 99))
   const suplentes = ordenados.filter((c) => !c.titular)
-  const slots = FORMACIONES[partido.formacion] || []
+
+  // Titulares con posición libre guardada, ordenados de arquero (y alto) a delanteros (y bajo)
+  const titularesConPos = citaciones
+    .map((c) => ({ c, pos: parsePosicion(c) }))
+    .filter((t) => t.pos)
+    .sort((a, b) => b.pos.y - a.pos.y)
 
   const contenidoY = franjaY + franjaH + 26
   const canchaX = margin
@@ -270,14 +292,21 @@ doc.text('Club Comunicaciones', propioShieldCX + shieldSize / 2 + 12, filaEquipo
   doc.setFillColor(...BLANCO)
   doc.circle(canchaX + canchaW / 2, contenidoY + 6 + canchaH / 2, 1.4, 'F')
 
-  slots.forEach((slot) => {
-    const citacion = citaciones.find(
-      (c) => String(c.posicion_cancha) === String(slot.codigo) && c.titular
-    )
-    const px = canchaX + (slot.x / 100) * canchaW
-    const py = contenidoY + 6 + (slot.y / 100) * canchaH
+  if (titularesConPos.length === 0) {
+    doc.setFont('helvetica', 'italic')
+    doc.setFontSize(8)
+    doc.setTextColor(...BLANCO)
+    doc.text('Formación no definida', canchaX + canchaW / 2, contenidoY + 6 + canchaH / 2, {
+      align: 'center',
+      maxWidth: canchaW - 30,
+    })
+  }
 
-    const numero = citacion?.dorsal ? String(citacion.dorsal) : '–'
+  titularesConPos.forEach(({ c, pos }) => {
+    const px = canchaX + (pos.x / 100) * canchaW
+    const py = contenidoY + 6 + (pos.y / 100) * canchaH
+
+    const numero = c.dorsal ? String(c.dorsal) : '–'
     doc.setFillColor(...AZUL)
     doc.circle(px, py, 10, 'F')
     doc.setFont('helvetica', 'bold')
@@ -285,8 +314,8 @@ doc.text('Club Comunicaciones', propioShieldCX + shieldSize / 2 + 12, filaEquipo
     doc.setTextColor(...BLANCO)
     doc.text(numero, px, py + 3, { align: 'center' })
 
-    const inicialNombre = citacion?.jugadores?.nombre ? `${citacion.jugadores.nombre[0]}.` : ''
-    const etiqueta = citacion ? `${citacion.jugadores?.apellido || ''} ${inicialNombre}`.trim() : '–'
+    const inicialNombre = c.jugadores?.nombre ? `${c.jugadores.nombre[0]}.` : ''
+    const etiqueta = `${c.jugadores?.apellido || ''} ${inicialNombre}`.trim() || '–'
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(6.3)
     const anchoTexto = Math.min(doc.getTextWidth(etiqueta) + 8, 60)
@@ -298,11 +327,16 @@ doc.text('Club Comunicaciones', propioShieldCX + shieldSize / 2 + 12, filaEquipo
 
   // --- Lista de titulares ---
   let yFila = contenidoY + 36
-  slots.forEach((slot) => {
-    const citacion = citaciones.find(
-      (c) => String(c.posicion_cancha) === String(slot.codigo) && c.titular
-    )
 
+  if (titularesConPos.length === 0) {
+    doc.setFont('helvetica', 'italic')
+    doc.setFontSize(9)
+    doc.setTextColor(...GRIS)
+    doc.text('Todavía no se armó la formación de este partido', titularesX, yFila)
+    yFila += filaAltura
+  }
+
+  titularesConPos.forEach(({ c, pos }) => {
     doc.setFillColor(...GRIS_CLARO)
     doc.roundedRect(titularesX, yFila - filaAltura + 8, titularesW, filaAltura, 8, 8, 'F')
 
@@ -313,20 +347,18 @@ doc.text('Club Comunicaciones', propioShieldCX + shieldSize / 2 + 12, filaEquipo
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(9)
     doc.setTextColor(...BLANCO)
-    doc.text(citacion?.dorsal ? String(citacion.dorsal) : '–', badgeCX, badgeCY + 3, { align: 'center' })
+    doc.text(c.dorsal ? String(c.dorsal) : '–', badgeCX, badgeCY + 3, { align: 'center' })
 
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(10.5)
     doc.setTextColor(...NEGRO)
-    const nombreJugador = citacion
-      ? `${citacion.jugadores?.apellido || ''}, ${citacion.jugadores?.nombre || ''}`
-      : '–'
+    const nombreJugador = `${c.jugadores?.apellido || ''}, ${c.jugadores?.nombre || ''}`
     doc.text(nombreJugador, badgeCX + 20, badgeCY + 4, { maxWidth: titularesW * 0.5 })
 
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(8)
     doc.setTextColor(...GRIS)
-    doc.text(slot.label.toUpperCase(), titularesX + titularesW - 12, badgeCY + 3, { align: 'right' })
+    doc.text(zonaPorY(pos.y), titularesX + titularesW - 12, badgeCY + 3, { align: 'right' })
 
     yFila += filaAltura + filaGap
   })
