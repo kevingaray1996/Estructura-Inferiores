@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { FORMACIONES } from '../data/formaciones'
@@ -58,9 +58,10 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
   const [datosFisicos, setDatosFisicos] = useState({})
   const [inasistenciasSemana, setInasistenciasSemana] = useState({}) // jugadorId -> array de fechas ausente/enfermo esta semana
 
-  const [formacion, setFormacion] = useState('4-4-2')
-  const [asignaciones, setAsignaciones] = useState({}) // codigo -> jugadorId
-  const [slotActivo, setSlotActivo] = useState(null)
+  const [formacion, setFormacion] = useState('4-4-2') // ahora es solo una etiqueta de referencia
+  const [posiciones, setPosiciones] = useState({}) // jugadorId -> { x, y } en % (0-100) dentro de la cancha
+  const [arrastrando, setArrastrando] = useState(null) // jugadorId que se está moviendo
+  const fieldRef = useRef(null)
 
   const [destacadosRival, setDestacadosRival] = useState('')
 
@@ -118,13 +119,20 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
     setCitacionesExistentes(citacionesData || [])
 
     const mapaConvocados = {}
-    const asign = {}
+    const posicionesGuardadas = {}
     ;(citacionesData || []).forEach((c) => {
       mapaConvocados[c.jugador_id] = c.dorsal ?? ''
-      if (c.titular && c.posicion_cancha) asign[c.posicion_cancha] = c.jugador_id
+      if (c.titular && c.posicion_cancha && c.posicion_cancha.includes(',')) {
+        const [xStr, yStr] = c.posicion_cancha.split(',')
+        const x = parseFloat(xStr)
+        const y = parseFloat(yStr)
+        if (!Number.isNaN(x) && !Number.isNaN(y)) {
+          posicionesGuardadas[c.jugador_id] = { x, y }
+        }
+      }
     })
     setConvocados(mapaConvocados)
-    setAsignaciones(asign)
+    setPosiciones(posicionesGuardadas)
 
     const { data: statsData } = await supabase
       .from('estadisticas_jugador')
@@ -246,28 +254,50 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
     setTimeout(() => setGuardadoMsg(''), 2000)
   }
 
-  function cambiarFormacion(nueva) {
-    setFormacion(nueva)
-    setAsignaciones({})
-    setSlotActivo(null)
+  // --- Formación: arrastre libre ---
+  useEffect(() => {
+    if (!arrastrando) return
+
+    function obtenerPunto(e) {
+      return e.touches && e.touches[0] ? e.touches[0] : e
+    }
+
+    function mover(e) {
+      if (!fieldRef.current) return
+      const punto = obtenerPunto(e)
+      const rect = fieldRef.current.getBoundingClientRect()
+      let x = ((punto.clientX - rect.left) / rect.width) * 100
+      let y = ((punto.clientY - rect.top) / rect.height) * 100
+      x = Math.max(3, Math.min(97, x))
+      y = Math.max(3, Math.min(97, y))
+      setPosiciones((prev) => ({ ...prev, [arrastrando]: { x, y } }))
+      if (e.cancelable) e.preventDefault()
+    }
+
+    function soltar() {
+      setArrastrando(null)
+    }
+
+    window.addEventListener('mousemove', mover)
+    window.addEventListener('mouseup', soltar)
+    window.addEventListener('touchmove', mover, { passive: false })
+    window.addEventListener('touchend', soltar)
+    return () => {
+      window.removeEventListener('mousemove', mover)
+      window.removeEventListener('mouseup', soltar)
+      window.removeEventListener('touchmove', mover)
+      window.removeEventListener('touchend', soltar)
+    }
+  }, [arrastrando])
+
+  function agregarACancha(jugadorId) {
+    setPosiciones((prev) => ({ ...prev, [jugadorId]: prev[jugadorId] || { x: 50, y: 50 } }))
   }
 
-  function asignarJugador(codigo, jugadorId) {
-    setAsignaciones((prev) => {
+  function quitarDeCancha(jugadorId) {
+    setPosiciones((prev) => {
       const copia = { ...prev }
-      Object.keys(copia).forEach((c) => {
-        if (copia[c] === jugadorId) delete copia[c]
-      })
-      copia[codigo] = jugadorId
-      return copia
-    })
-    setSlotActivo(null)
-  }
-
-  function quitarDeSlot(codigo) {
-    setAsignaciones((prev) => {
-      const copia = { ...prev }
-      delete copia[codigo]
+      delete copia[jugadorId]
       return copia
     })
   }
@@ -277,12 +307,12 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
     await supabase.from('partidos').update({ formacion }).eq('id', partidoId)
 
     for (const c of citacionesExistentes) {
-      const codigoAsignado = Object.keys(asignaciones).find((cod) => asignaciones[cod] === c.jugador_id)
+      const pos = posiciones[c.jugador_id]
       await supabase
         .from('citaciones')
         .update({
-          titular: !!codigoAsignado,
-          posicion_cancha: codigoAsignado || null,
+          titular: !!pos,
+          posicion_cancha: pos ? `${pos.x.toFixed(2)},${pos.y.toFixed(2)}` : null,
         })
         .eq('id', c.id)
     }
@@ -315,8 +345,6 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
   }
 
   const cantidadConvocados = Object.keys(convocados).length
-  const slots = FORMACIONES[formacion] || []
-  const idsAsignados = Object.values(asignaciones)
   const convocadosOrdenados = Object.keys(convocados)
     .map((jugadorId) => ({
       jugadorId,
@@ -324,6 +352,9 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
       jugador: jugadores.find((j) => j.id === jugadorId),
     }))
     .sort((a, b) => (a.dorsal || 99) - (b.dorsal || 99))
+
+  const enCancha = convocadosOrdenados.filter((c) => posiciones[c.jugadorId])
+  const enBanco = convocadosOrdenados.filter((c) => !posiciones[c.jugadorId])
 
   return (
     <div className="p-6 md:p-10">
@@ -656,11 +687,11 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
           <>
             <div className="mb-4">
               <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
-                Formación
+                Esquema (referencia)
               </label>
               <select
                 value={formacion}
-                onChange={(e) => cambiarFormacion(e.target.value)}
+                onChange={(e) => setFormacion(e.target.value)}
                 className="p-2.5 rounded-xl outline-none text-sm"
                 style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#F0F2F5' }}
               >
@@ -672,14 +703,20 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
               </select>
             </div>
 
+            <p className="text-xs mb-3" style={{ color: '#5B6B85' }}>
+              Arrastrá a cada jugador desde el banco hacia la cancha, y movelo libremente donde quieras.
+            </p>
+
             <div className="grid md:grid-cols-[1fr_260px] gap-6 mb-6">
               <div
-                className="relative mx-auto w-full rounded-2xl overflow-hidden"
+                ref={fieldRef}
+                className="relative mx-auto w-full rounded-2xl overflow-hidden select-none"
                 style={{
                   maxWidth: 380,
                   aspectRatio: '68 / 100',
                   backgroundColor: '#183A2A',
                   border: '1px solid #2A3548',
+                  touchAction: 'none',
                 }}
               >
                 <div
@@ -709,19 +746,20 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                   }}
                 />
 
-                {slots.map((slot) => {
-                  const jugadorId = asignaciones[slot.codigo]
-                  const entrada = convocadosOrdenados.find((c) => c.jugadorId === jugadorId)
-
+                {enCancha.map((c) => {
+                  const pos = posiciones[c.jugadorId]
                   return (
                     <div
-                      key={slot.codigo}
-                      onClick={() => setSlotActivo(slot.codigo)}
-                      className="absolute flex flex-col items-center cursor-pointer"
+                      key={c.jugadorId}
+                      onMouseDown={() => setArrastrando(c.jugadorId)}
+                      onTouchStart={() => setArrastrando(c.jugadorId)}
+                      className="absolute flex flex-col items-center"
                       style={{
-                        left: `${slot.x}%`,
-                        top: `${slot.y}%`,
+                        left: `${pos.x}%`,
+                        top: `${pos.y}%`,
                         transform: 'translate(-50%, -50%)',
+                        cursor: 'grab',
+                        zIndex: arrastrando === c.jugadorId ? 10 : 1,
                       }}
                     >
                       <div
@@ -729,20 +767,31 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                         style={{
                           width: 34,
                           height: 34,
-                          backgroundColor: entrada ? '#4ADE80' : '#0F1419',
-                          color: entrada ? '#0F1419' : '#5B6B85',
-                          border: `2px solid ${entrada ? '#4ADE80' : '#2A3548'}`,
+                          backgroundColor: '#4ADE80',
+                          color: '#0F1419',
+                          border: '2px solid #4ADE80',
                           fontFamily: "'Archivo Black', sans-serif",
+                          boxShadow: arrastrando === c.jugadorId ? '0 0 0 3px rgba(74,222,128,0.4)' : 'none',
                         }}
                       >
-                        {entrada?.dorsal ?? '·'}
+                        {c.dorsal ?? '·'}
                       </div>
                       <p
                         className="text-[9px] mt-1 px-1 rounded text-center whitespace-nowrap"
                         style={{ backgroundColor: 'rgba(15,20,25,0.7)', color: '#F0F2F5', maxWidth: 76 }}
                       >
-                        {entrada ? entrada.jugador?.apellido : slot.label}
+                        {c.jugador?.apellido}
                       </p>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          quitarDeCancha(c.jugadorId)
+                        }}
+                        className="text-[9px] mt-0.5 px-1.5 rounded-full"
+                        style={{ backgroundColor: '#0F1419', color: '#F87171' }}
+                      >
+                        ✕
+                      </button>
                     </div>
                   )
                 })}
@@ -750,76 +799,35 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
 
               <div>
                 <p className="text-xs tracking-widest uppercase mb-3" style={{ color: '#5B6B85' }}>
-                  Convocados ({convocadosOrdenados.length})
+                  Banco ({enBanco.length})
                 </p>
                 <div className="space-y-1.5 max-h-[420px] overflow-y-auto">
-                  {convocadosOrdenados.map((c, i) => {
-                    const enCancha = idsAsignados.includes(c.jugadorId)
-                    return (
-                      <div
-                        key={c.jugadorId}
-                        className="flex items-center gap-2 p-2 rounded-lg text-sm"
-                        style={{
-                          backgroundColor: '#1A2332',
-                          border: `1px solid ${enCancha ? '#4ADE80' : '#2A3548'}`,
-                        }}
+                  {enBanco.map((c) => (
+                    <button
+                      key={c.jugadorId}
+                      onClick={() => agregarACancha(c.jugadorId)}
+                      className="w-full flex items-center gap-2 p-2 rounded-lg text-sm text-left hover:opacity-80"
+                      style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+                    >
+                      <span
+                        className="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold shrink-0"
+                        style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
                       >
-                        <span
-                          className="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold shrink-0"
-                          style={{
-                            backgroundColor: enCancha ? '#4ADE80' : '#0F1419',
-                            color: enCancha ? '#0F1419' : '#8A9BB8',
-                          }}
-                        >
-                          {c.dorsal ?? i + 1}
-                        </span>
-                        <span style={{ color: '#F0F2F5' }} className="truncate">
-                          {c.jugador?.apellido}, {c.jugador?.nombre}
-                        </span>
-                      </div>
-                    )
-                  })}
+                        {c.dorsal ?? '·'}
+                      </span>
+                      <span style={{ color: '#F0F2F5' }} className="truncate">
+                        {c.jugador?.apellido}, {c.jugador?.nombre}
+                      </span>
+                    </button>
+                  ))}
+                  {enBanco.length === 0 && (
+                    <p className="text-xs" style={{ color: '#5B6B85' }}>
+                      Todos los convocados están en la cancha.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
-
-            {slotActivo !== null && (
-              <div className="p-4 rounded-xl mb-6" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
-                    Elegí jugador para: {slots.find((s) => s.codigo === slotActivo)?.label}
-                  </p>
-                  <button onClick={() => setSlotActivo(null)} className="text-xs" style={{ color: '#8A9BB8' }}>
-                    Cerrar
-                  </button>
-                </div>
-                <div className="space-y-1.5 max-h-56 overflow-y-auto">
-                  {asignaciones[slotActivo] && (
-                    <button
-                      onClick={() => quitarDeSlot(slotActivo)}
-                      className="w-full text-left p-2 rounded-lg text-sm"
-                      style={{ backgroundColor: '#0F1419', color: '#F87171' }}
-                    >
-                      Quitar del puesto
-                    </button>
-                  )}
-                  {convocadosOrdenados.map((c) => (
-                    <button
-                      key={c.jugadorId}
-                      onClick={() => asignarJugador(slotActivo, c.jugadorId)}
-                      className="w-full text-left p-2 rounded-lg text-sm"
-                      style={{
-                        backgroundColor: idsAsignados.includes(c.jugadorId) ? '#0F1419' : '#1A2332',
-                        color: idsAsignados.includes(c.jugadorId) ? '#5B6B85' : '#F0F2F5',
-                      }}
-                    >
-                      {c.jugador?.apellido}, {c.jugador?.nombre}
-                      {c.dorsal ? ` (#${c.dorsal})` : ''}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
 
             <button
               onClick={handleGuardarFormacion}
