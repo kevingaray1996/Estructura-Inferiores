@@ -58,7 +58,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
   const [datosFisicos, setDatosFisicos] = useState({})
   const [inasistenciasSemana, setInasistenciasSemana] = useState({}) // jugadorId -> array de fechas ausente/enfermo esta semana
 
-  const [formacion, setFormacion] = useState('4-4-2') // ahora es solo una etiqueta de referencia
+  const [formacion, setFormacion] = useState('4-4-2')
   const [posiciones, setPosiciones] = useState({}) // jugadorId -> { x, y } en % (0-100) dentro de la cancha
   const [arrastrando, setArrastrando] = useState(null) // jugadorId que se está moviendo
   const fieldRef = useRef(null)
@@ -254,41 +254,28 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
     setTimeout(() => setGuardadoMsg(''), 2000)
   }
 
-  // --- Formación: arrastre libre ---
-  useEffect(() => {
-    if (!arrastrando) return
+  // --- Formación: arrastre libre con Pointer Events (más fluido, unifica mouse y touch) ---
+  function iniciarArrastre(e, jugadorId) {
+    e.currentTarget.setPointerCapture(e.pointerId)
+    setArrastrando(jugadorId)
+  }
 
-    function obtenerPunto(e) {
-      return e.touches && e.touches[0] ? e.touches[0] : e
-    }
+  function moverFicha(e, jugadorId) {
+    if (arrastrando !== jugadorId || !fieldRef.current) return
+    const rect = fieldRef.current.getBoundingClientRect()
+    let x = ((e.clientX - rect.left) / rect.width) * 100
+    let y = ((e.clientY - rect.top) / rect.height) * 100
+    x = Math.max(3, Math.min(97, x))
+    y = Math.max(3, Math.min(97, y))
+    setPosiciones((prev) => ({ ...prev, [jugadorId]: { x, y } }))
+  }
 
-    function mover(e) {
-      if (!fieldRef.current) return
-      const punto = obtenerPunto(e)
-      const rect = fieldRef.current.getBoundingClientRect()
-      let x = ((punto.clientX - rect.left) / rect.width) * 100
-      let y = ((punto.clientY - rect.top) / rect.height) * 100
-      x = Math.max(3, Math.min(97, x))
-      y = Math.max(3, Math.min(97, y))
-      setPosiciones((prev) => ({ ...prev, [arrastrando]: { x, y } }))
-      if (e.cancelable) e.preventDefault()
+  function soltarFicha(e) {
+    if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId)
     }
-
-    function soltar() {
-      setArrastrando(null)
-    }
-
-    window.addEventListener('mousemove', mover)
-    window.addEventListener('mouseup', soltar)
-    window.addEventListener('touchmove', mover, { passive: false })
-    window.addEventListener('touchend', soltar)
-    return () => {
-      window.removeEventListener('mousemove', mover)
-      window.removeEventListener('mouseup', soltar)
-      window.removeEventListener('touchmove', mover)
-      window.removeEventListener('touchend', soltar)
-    }
-  }, [arrastrando])
+    setArrastrando(null)
+  }
 
   function agregarACancha(jugadorId) {
     setPosiciones((prev) => ({ ...prev, [jugadorId]: prev[jugadorId] || { x: 50, y: 50 } }))
@@ -300,6 +287,36 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
       delete copia[jugadorId]
       return copia
     })
+  }
+
+  // Ordena a los convocados por dorsal y les asigna, en ese orden, los puestos
+  // predefinidos de la formación elegida (arquero, defensores, mediocampistas, delanteros).
+  function aplicarPreset(nombreFormacion) {
+    const slots = FORMACIONES[nombreFormacion] || []
+    const ordenados = Object.keys(convocados)
+      .map((jugadorId) => ({
+        jugadorId,
+        dorsal: convocados[jugadorId] ? parseInt(convocados[jugadorId], 10) : null,
+      }))
+      .sort((a, b) => (a.dorsal || 99) - (b.dorsal || 99))
+
+    const nuevaPosiciones = {}
+    slots.forEach((slot, i) => {
+      const entrada = ordenados[i]
+      if (entrada) {
+        nuevaPosiciones[entrada.jugadorId] = { x: slot.x, y: slot.y }
+      }
+    })
+    setPosiciones(nuevaPosiciones)
+  }
+
+  function cambiarFormacion(nueva) {
+    setFormacion(nueva)
+    aplicarPreset(nueva)
+  }
+
+  function handleRestablecerPosiciones() {
+    aplicarPreset(formacion)
   }
 
   async function handleGuardarFormacion() {
@@ -685,26 +702,36 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
 
         {tab === 'formacion' && (
           <>
-            <div className="mb-4">
-              <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
-                Esquema (referencia)
-              </label>
-              <select
-                value={formacion}
-                onChange={(e) => setFormacion(e.target.value)}
-                className="p-2.5 rounded-xl outline-none text-sm"
-                style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#F0F2F5' }}
+            <div className="flex items-end gap-3 mb-4 flex-wrap">
+              <div>
+                <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                  Formación
+                </label>
+                <select
+                  value={formacion}
+                  onChange={(e) => cambiarFormacion(e.target.value)}
+                  className="p-2.5 rounded-xl outline-none text-sm"
+                  style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#F0F2F5' }}
+                >
+                  {Object.keys(FORMACIONES).map((f) => (
+                    <option key={f} value={f}>
+                      {f}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={handleRestablecerPosiciones}
+                className="text-sm px-3 py-2.5 rounded-xl transition-opacity hover:opacity-80"
+                style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
               >
-                {Object.keys(FORMACIONES).map((f) => (
-                  <option key={f} value={f}>
-                    {f}
-                  </option>
-                ))}
-              </select>
+                ↺ Restablecer posiciones
+              </button>
             </div>
 
             <p className="text-xs mb-3" style={{ color: '#5B6B85' }}>
-              Arrastrá a cada jugador desde el banco hacia la cancha, y movelo libremente donde quieras.
+              Al elegir una formación, los convocados se ordenan según sus puestos (por dorsal). Después podés
+              arrastrar a cada jugador donde quieras.
             </p>
 
             <div className="grid md:grid-cols-[1fr_260px] gap-6 mb-6">
@@ -748,18 +775,23 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
 
                 {enCancha.map((c) => {
                   const pos = posiciones[c.jugadorId]
+                  const activo = arrastrando === c.jugadorId
                   return (
                     <div
                       key={c.jugadorId}
-                      onMouseDown={() => setArrastrando(c.jugadorId)}
-                      onTouchStart={() => setArrastrando(c.jugadorId)}
+                      onPointerDown={(e) => iniciarArrastre(e, c.jugadorId)}
+                      onPointerMove={(e) => moverFicha(e, c.jugadorId)}
+                      onPointerUp={soltarFicha}
+                      onPointerCancel={soltarFicha}
                       className="absolute flex flex-col items-center"
                       style={{
                         left: `${pos.x}%`,
                         top: `${pos.y}%`,
-                        transform: 'translate(-50%, -50%)',
+                        transform: activo ? 'translate(-50%, -50%) scale(1.15)' : 'translate(-50%, -50%) scale(1)',
+                        transition: activo ? 'none' : 'left 0.25s ease, top 0.25s ease, transform 0.15s ease',
                         cursor: 'grab',
-                        zIndex: arrastrando === c.jugadorId ? 10 : 1,
+                        touchAction: 'none',
+                        zIndex: activo ? 10 : 1,
                       }}
                     >
                       <div
@@ -771,7 +803,9 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                           color: '#0F1419',
                           border: '2px solid #4ADE80',
                           fontFamily: "'Archivo Black', sans-serif",
-                          boxShadow: arrastrando === c.jugadorId ? '0 0 0 3px rgba(74,222,128,0.4)' : 'none',
+                          boxShadow: activo
+                            ? '0 6px 16px rgba(0,0,0,0.5), 0 0 0 4px rgba(74,222,128,0.35)'
+                            : '0 2px 6px rgba(0,0,0,0.3)',
                         }}
                       >
                         {c.dorsal ?? '·'}
@@ -783,6 +817,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                         {c.jugador?.apellido}
                       </p>
                       <button
+                        onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => {
                           e.stopPropagation()
                           quitarDeCancha(c.jugadorId)
