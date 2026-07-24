@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
+const ESCUDO_CLUB_URL = 'https://qvjviyjkxyngiggoeqlj.supabase.co/storage/v1/object/public/Biblioteca/escudos/Escudo%20simplificado.png'
+
 function fechaISO(date) {
   const anio = date.getFullYear()
   const mes = String(date.getMonth() + 1).padStart(2, '0')
@@ -83,7 +85,6 @@ function InicioSection({ perfil, onCambiarSeccion }) {
         .order('apellido')
       setLesionados(lesionadosData || [])
 
-      // Cumpleaños de la semana (próximos 7 días, incluyendo hoy)
       const { data: jugadoresData } = await supabase
         .from('jugadores')
         .select('id, nombre, apellido, fecha_nacimiento, categorias(nombre)')
@@ -104,7 +105,6 @@ function InicioSection({ perfil, onCambiarSeccion }) {
           .order('fecha', { ascending: true })
         setProximoPartido(agruparProximoPartido(partidosData))
 
-        // Partidos ya jugados con resultado cargado
         const { data: partidosPasadosData } = await supabase
           .from('partidos')
           .select('*, categorias(nombre)')
@@ -136,9 +136,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
           .limit(5)
         setUltimosVideos(videosData || [])
 
-        // Alertas de citación y minutos: solo para el técnico de esa categoría puntual.
         if (perfil.rol === 'tecnico' && perfil.categoria_id) {
-          // Alerta: citación pendiente para un partido que juega en 2 días
           const en2Dias = new Date(hoy)
           en2Dias.setDate(en2Dias.getDate() + 2)
           const en2DiasISO = fechaISO(en2Dias)
@@ -167,7 +165,6 @@ function InicioSection({ perfil, onCambiarSeccion }) {
               })
           }
 
-          // Alerta: partido de ayer sin minutos/GPS cargados
           const ayer = new Date(hoy)
           ayer.setDate(ayer.getDate() - 1)
           const ayerISO = fechaISO(ayer)
@@ -200,9 +197,6 @@ function InicioSection({ perfil, onCambiarSeccion }) {
       }
 
       if (perfil.rol !== 'tecnico') {
-        // Traemos TODOS los registros (no solo los que tienen alerta) para poder
-        // comparar contra el más reciente de cada jugador: si el último registro
-        // ya no tiene alerta, no debe aparecer aunque haya alertado antes.
         const { data: nutricionData } = await supabase
           .from('fichas_nutricion')
           .select('*, jugadores(nombre, apellido, categorias(nombre))')
@@ -215,7 +209,6 @@ function InicioSection({ perfil, onCambiarSeccion }) {
         })
         setAlertasNutricion(alertasUnicas)
 
-        // Alerta: lesión con fecha estimada de alta vencida
         const { data: fichasVencidas } = await supabase
           .from('fichas_medicas')
           .select('*, jugadores(nombre, apellido, categorias(nombre))')
@@ -265,8 +258,26 @@ function InicioSection({ perfil, onCambiarSeccion }) {
     : null
 
   return (
-    <div className="p-6 md:p-10">
-      <div className="max-w-2xl mx-auto">
+    <div className="p-6 md:p-10 relative overflow-hidden">
+      {/* Escudo grande de fondo, semi-transparente */}
+      <img
+        src={ESCUDO_CLUB_URL}
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none select-none"
+        style={{
+          position: 'fixed',
+          right: '-8%',
+          bottom: '-8%',
+          width: '55vw',
+          maxWidth: 560,
+          minWidth: 260,
+          opacity: 0.06,
+          zIndex: 0,
+        }}
+      />
+
+      <div className="max-w-2xl mx-auto relative" style={{ zIndex: 1 }}>
         <h1
           className="text-3xl md:text-4xl mb-8"
           style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
@@ -307,7 +318,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                 >
                   <span
                     className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
-                    style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                    style={{ backgroundColor: '#0F1419', color: '#FBBF24' }}
                   >
                     {iniciales(j.nombre, j.apellido)}
                   </span>
@@ -317,7 +328,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                   </p>
                   <span
                     className="text-xs font-mono px-2 py-0.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#0F1419', color: '#4ADE80' }}
+                    style={{ backgroundColor: '#0F1419', color: '#FBBF24' }}
                   >
                     {j.diasFaltan === 0 ? '¡Hoy!' : j.diasFaltan === 1 ? 'Mañana' : `en ${j.diasFaltan} días`}
                   </span>
