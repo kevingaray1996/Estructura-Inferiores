@@ -259,7 +259,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
 
   return (
     <div className="p-6 md:p-10 relative overflow-hidden">
-      {/* Escudo grande de fondo, semi-transparente */}
+      {/* Escudo grande de fondo, semi-transparente, centrado */}
       <img
         src={ESCUDO_CLUB_URL}
         alt=""
@@ -267,21 +267,27 @@ function InicioSection({ perfil, onCambiarSeccion }) {
         className="pointer-events-none select-none"
         style={{
           position: 'fixed',
-          right: '-8%',
-          bottom: '-8%',
-          width: '55vw',
-          maxWidth: 560,
-          minWidth: 260,
-          opacity: 0.06,
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '75vw',
+          maxWidth: 760,
+          minWidth: 320,
+          opacity: 0.045,
           zIndex: 0,
         }}
       />
 
       <div className="max-w-2xl mx-auto relative" style={{ zIndex: 1 }}>
         <h1
-          className="text-3xl md:text-4xl mb-8"
+          className="text-3xl md:text-4xl mb-8 flex items-center gap-3"
           style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
         >
+          <img
+            src={ESCUDO_CLUB_URL}
+            alt="Escudo Club Comunicaciones"
+            className="w-10 h-10 md:w-12 md:h-12 object-contain"
+          />
           Inicio
         </h1>
 
