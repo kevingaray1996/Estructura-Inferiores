@@ -27,6 +27,7 @@ function seccionesParaRol(rol) {
       { id: 'contratos', label: 'Contratos' },
       { id: 'pases', label: 'Pases' },
       { id: 'usuarios', label: 'Usuarios' },
+      { id: 'bienestar', label: 'Bienestar' },
     ]
   }
   if (rol === 'medico') {
@@ -35,6 +36,7 @@ function seccionesParaRol(rol) {
       { id: 'medicos', label: 'Médicos' },
       { id: 'nutricion', label: 'Nutrición' },
       { id: 'psicologia', label: 'Psicología' },
+      { id: 'bienestar', label: 'Bienestar' },
     ]
   }
   // tecnico
