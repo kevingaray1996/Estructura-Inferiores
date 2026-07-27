@@ -109,3 +109,39 @@ export async function cargarDatosBienestar(jugadorId, periodo) {
 
   return { metricas }
 }
+
+// Revisa a un grupo de jugadores y devuelve, para cada uno que tenga algo
+// preocupante en la semana, un resumen con las métricas que dispararon la alerta.
+export async function cargarAlertasBienestar(jugadores) {
+  const alertas = []
+
+  for (const j of jugadores) {
+    const { metricas } = await cargarDatosBienestar(j.id, 'semana')
+    const motivos = []
+
+    metricas.forEach((m) => {
+      if (m.promedioActual === null) return
+      const escala5 = m.escalaMax === 5
+      const valorAlto = escala5 ? m.promedioActual >= 4 : m.promedioActual >= 8
+      const empeoroFuerte =
+        m.promedioAnterior !== null && m.promedioActual - m.promedioAnterior >= (escala5 ? 1.2 : 2)
+
+      if (valorAlto) {
+        motivos.push(`${m.label} alto (${m.promedioActual.toFixed(1)}/${m.escalaMax})`)
+      } else if (empeoroFuerte) {
+        motivos.push(`${m.label} empeoró (${m.promedioAnterior.toFixed(1)} → ${m.promedioActual.toFixed(1)})`)
+      }
+    })
+
+    if (motivos.length > 0) {
+      alertas.push({
+        jugadorId: j.id,
+        nombre: j.nombre,
+        apellido: j.apellido,
+        resumenTexto: motivos.join(', '),
+      })
+    }
+  }
+
+  return alertas
+}
