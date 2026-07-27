@@ -45,29 +45,13 @@ function promedio(valores) {
   return limpios.reduce((a, b) => a + b, 0) / limpios.length
 }
 
-export async function cargarDatosBienestar(jugadorId, periodo) {
+// Toma filas ya cargadas (de bienestar y de sesiones_fisicas) y calcula los
+// promedios/tendencia para cada métrica. No hace ninguna consulta a Supabase.
+function calcularMetricasDesdeFilas(bienestarFilas, rpeFilas, periodo) {
   const { inicioActualISO, finActualISO, inicioAnteriorISO, finAnteriorISO } = rangoPeriodo(periodo)
 
-  const { data: bienestarData } = await supabase
-    .from('bienestar')
-    .select('*')
-    .eq('jugador_id', jugadorId)
-    .gte('fecha', inicioAnteriorISO)
-    .lte('fecha', finActualISO)
-    .order('fecha', { ascending: true })
-
-  const { data: fisicoData } = await supabase
-    .from('sesiones_fisicas')
-    .select('fecha, rpe')
-    .eq('jugador_id', jugadorId)
-    .not('rpe', 'is', null)
-    .gte('fecha', inicioAnteriorISO)
-    .lte('fecha', finActualISO)
-    .order('fecha', { ascending: true })
-
-  // RPE: si hay más de un registro el mismo día (entrenamiento + partido), promediamos ese día.
   const rpePorDia = {}
-  ;(fisicoData || []).forEach((f) => {
+  rpeFilas.forEach((f) => {
     if (!rpePorDia[f.fecha]) rpePorDia[f.fecha] = []
     rpePorDia[f.fecha].push(f.rpe)
   })
@@ -75,12 +59,12 @@ export async function cargarDatosBienestar(jugadorId, periodo) {
     .map(([fecha, valores]) => ({ fecha, valor: promedio(valores) }))
     .sort((a, b) => a.fecha.localeCompare(b.fecha))
 
-  const metricas = METRICAS_BIENESTAR.map((m) => {
+  return METRICAS_BIENESTAR.map((m) => {
     let serieCompleta
     if (m.clave === 'rpe') {
       serieCompleta = rpeSerieCompleta
     } else {
-      serieCompleta = (bienestarData || [])
+      serieCompleta = bienestarFilas
         .filter((b) => b[m.clave] !== null && b[m.clave] !== undefined)
         .map((b) => ({ fecha: b.fecha, valor: b[m.clave] }))
     }
@@ -106,17 +90,75 @@ export async function cargarDatosBienestar(jugadorId, periodo) {
       serie: serieActual,
     }
   })
+}
 
+// Para un solo jugador (usado en el perfil y en la pantalla de comparativo).
+export async function cargarDatosBienestar(jugadorId, periodo) {
+  const { inicioAnteriorISO, finActualISO } = rangoPeriodo(periodo)
+
+  const { data: bienestarData } = await supabase
+    .from('bienestar')
+    .select('*')
+    .eq('jugador_id', jugadorId)
+    .gte('fecha', inicioAnteriorISO)
+    .lte('fecha', finActualISO)
+    .order('fecha', { ascending: true })
+
+  const { data: fisicoData } = await supabase
+    .from('sesiones_fisicas')
+    .select('fecha, rpe')
+    .eq('jugador_id', jugadorId)
+    .not('rpe', 'is', null)
+    .gte('fecha', inicioAnteriorISO)
+    .lte('fecha', finActualISO)
+    .order('fecha', { ascending: true })
+
+  const metricas = calcularMetricasDesdeFilas(bienestarData || [], fisicoData || [], periodo)
   return { metricas }
 }
 
-// Revisa a un grupo de jugadores y devuelve, para cada uno que tenga algo
-// preocupante en la semana, un resumen con las métricas que dispararon la alerta.
+// Para un grupo de jugadores (usado en la alerta del Inicio): solo 2 consultas
+// en total, sin importar cuántos jugadores tenga el plantel.
 export async function cargarAlertasBienestar(jugadores) {
+  if (!jugadores || jugadores.length === 0) return []
+
+  const ids = jugadores.map((j) => j.id)
+  const { inicioAnteriorISO, finActualISO } = rangoPeriodo('semana')
+
+  const { data: bienestarData } = await supabase
+    .from('bienestar')
+    .select('*')
+    .in('jugador_id', ids)
+    .gte('fecha', inicioAnteriorISO)
+    .lte('fecha', finActualISO)
+
+  const { data: fisicoData } = await supabase
+    .from('sesiones_fisicas')
+    .select('jugador_id, fecha, rpe')
+    .in('jugador_id', ids)
+    .not('rpe', 'is', null)
+    .gte('fecha', inicioAnteriorISO)
+    .lte('fecha', finActualISO)
+
+  const bienestarPorJugador = {}
+  ;(bienestarData || []).forEach((b) => {
+    if (!bienestarPorJugador[b.jugador_id]) bienestarPorJugador[b.jugador_id] = []
+    bienestarPorJugador[b.jugador_id].push(b)
+  })
+  const fisicoPorJugador = {}
+  ;(fisicoData || []).forEach((f) => {
+    if (!fisicoPorJugador[f.jugador_id]) fisicoPorJugador[f.jugador_id] = []
+    fisicoPorJugador[f.jugador_id].push(f)
+  })
+
   const alertas = []
 
-  for (const j of jugadores) {
-    const { metricas } = await cargarDatosBienestar(j.id, 'semana')
+  jugadores.forEach((j) => {
+    const metricas = calcularMetricasDesdeFilas(
+      bienestarPorJugador[j.id] || [],
+      fisicoPorJugador[j.id] || [],
+      'semana'
+    )
     const motivos = []
 
     metricas.forEach((m) => {
@@ -141,7 +183,7 @@ export async function cargarAlertasBienestar(jugadores) {
         resumenTexto: motivos.join(', '),
       })
     }
-  }
+  })
 
   return alertas
 }
