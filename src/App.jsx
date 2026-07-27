@@ -22,6 +22,7 @@ import RepresentantesSection from './components/RepresentantesSection'
 import PensionesSection from './components/PensionesSection'
 import ConvocatoriasSeleccionSection from './components/ConvocatoriasSeleccionSection'
 import ContratosSection from './components/ContratosSection'
+import BienestarComparativo from './components/BienestarComparativo'
 
 function App() {
   const [categoriaBienestarId] = useState(
@@ -36,6 +37,7 @@ function App() {
   const [jugadorParaPsicologia, setJugadorParaPsicologia] = useState(null)
   const [jugadorParaPlantel, setJugadorParaPlantel] = useState(null)
   const [partidoParaFisico, setPartidoParaFisico] = useState(null)
+  const [jugadorParaBienestar, setJugadorParaBienestar] = useState(null)
 
   useEffect(() => {
     if (categoriaBienestarId) return
@@ -97,6 +99,11 @@ function App() {
     setPartidoParaFisico(partidoId)
     setSeccion('fisico')
   }
+  
+  function irABienestarDesdePerfil(jugadorId) {
+    setJugadorParaBienestar(jugadorId)
+    setSeccion('bienestar')
+  }
 
   const consumirJugadorParaPlantel = useCallback(() => setJugadorParaPlantel(null), [])
   const consumirJugadorParaMedicos = useCallback(() => setJugadorParaMedicos(null), [])
@@ -104,6 +111,7 @@ function App() {
   const consumirJugadorParaPsicologia = useCallback(() => setJugadorParaPsicologia(null), [])
   const consumirJugadorParaVideo = useCallback(() => setJugadorParaVideo(null), [])
   const consumirPartidoParaFisico = useCallback(() => setPartidoParaFisico(null), [])
+  const consumirJugadorParaBienestar = useCallback(() => setJugadorParaBienestar(null), [])
 
   if (categoriaBienestarId) {
     return <BienestarPublico categoriaId={categoriaBienestarId} />
@@ -170,6 +178,7 @@ function App() {
           onVerPsicologia={irAPsicologiaDesdePerfil}
           jugadorInicialId={jugadorParaPlantel}
           onConsumirJugadorInicial={consumirJugadorParaPlantel}
+          onVerBienestar={irABienestarDesdePerfil}
           perfil={perfil}
         />
       )}
@@ -199,6 +208,15 @@ function App() {
           perfil={perfil}
         />
       )}
+      
+       {seccion === 'bienestar' && (
+        <BienestarComparativo
+          perfil={perfil}
+          jugadorInicialId={jugadorParaBienestar}
+          onConsumirJugadorInicial={consumirJugadorParaBienestar}
+        />
+      )}
+      
       {seccion === 'partidos' && <PartidosSection perfil={perfil} onIrAFisico={irAFisicoDesdePartido} />}
       {seccion === 'entrenamientos' && <EntrenamientosSection />}
       {seccion === 'asistencia' && <AsistenciaSection perfil={perfil} />}
