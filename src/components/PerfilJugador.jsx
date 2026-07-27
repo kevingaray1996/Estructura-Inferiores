@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import PdfPerfilModal from './PdfPerfilModal'
 import { CAMPOS_FISICOS } from '../utils/camposFisicos'
+import { cargarDatosBienestar } from '../utils/bienestar'
 
 const estadoConfig = {
   disponible: { color: '#4ADE80', label: 'Disponible' },
@@ -64,7 +65,7 @@ function formatearFecha(fechaNacimiento) {
   return `${dia}/${mes}/${anio}`
 }
 
-function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onVerNutricion, onVerPsicologia, onEditar }) {
+function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onVerNutricion, onVerPsicologia, onVerBienestar, onEditar }) {
   const [jugador, setJugador] = useState(null)
   const [estadisticas, setEstadisticas] = useState([])
   const [fichasMedicas, setFichasMedicas] = useState([])
@@ -78,6 +79,7 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
   const [filtroStat, setFiltroStat] = useState(null)
   const [mostrarPdf, setMostrarPdf] = useState(false)
   const [sesionFisicaSeleccionadaId, setSesionFisicaSeleccionadaId] = useState(null)
+  const [resumenBienestar, setResumenBienestar] = useState(null)
 
   useEffect(() => {
     async function cargarDatos() {
@@ -140,9 +142,12 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
         .select('*')
         .eq('jugador_id', jugadorId)
         .order('fecha', { ascending: false })
-      setFichasPsicologicas(psicologiaData || [])
+
+   const { metricas } = await cargarDatosBienestar(jugadorId, 'semana')
+      setResumenBienestar(metricas)
     }
     cargarDatos()
+
   }, [jugadorId])
 
   async function handleEliminarJugador() {
@@ -545,7 +550,7 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
           ))}
         </div>
 
-        {estadisticasPorAnio.length >= 2 && (
+      {estadisticasPorAnio.length >= 2 && (
           <>
             <p className="text-xs tracking-widest uppercase mb-3" style={{ color: '#5B6B85' }}>
               Comparativa por año
@@ -573,6 +578,59 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
                   ))}
                 </tbody>
               </table>
+            </div>
+          </>
+        )}
+
+        {resumenBienestar && (
+          <>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs tracking-widest uppercase" style={{ color: '#5B6B85' }}>
+                Bienestar (últimos 7 días)
+              </p>
+              {onVerBienestar && (
+                <button
+                  onClick={() => onVerBienestar(jugadorId)}
+                  className="text-xs px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
+                  style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+                >
+                  Ver análisis completo →
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-8">
+              {resumenBienestar.map((m) => {
+                const colorTendencia =
+                  m.tendencia === null
+                    ? '#5B6B85'
+                    : m.tendencia === 'estable'
+                    ? '#8A9BB8'
+                    : m.clave === 'rpe'
+                    ? '#FBBF24'
+                    : m.tendencia === 'sube'
+                    ? '#F87171'
+                    : '#4ADE80'
+                const flecha = m.tendencia === 'sube' ? '↑' : m.tendencia === 'baja' ? '↓' : m.tendencia === 'estable' ? '→' : ''
+                return (
+                  <div
+                    key={m.clave}
+                    className="p-3 rounded-xl text-center"
+                    style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+                  >
+                    <p className="text-lg font-mono" style={{ color: '#F0F2F5' }}>
+                      {m.promedioActual !== null ? m.promedioActual.toFixed(1) : '—'}
+                    </p>
+                    <p className="text-[9px] uppercase tracking-wide mb-1" style={{ color: '#5B6B85' }}>
+                      {m.label}
+                    </p>
+                    {flecha && (
+                      <p className="text-xs" style={{ color: colorTendencia }}>
+                        {flecha} {Math.abs(m.promedioActual - m.promedioAnterior).toFixed(1)}
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </>
         )}
