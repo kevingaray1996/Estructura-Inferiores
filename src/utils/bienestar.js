@@ -5,6 +5,7 @@ export const METRICAS_BIENESTAR = [
   { clave: 'dolor_muscular', label: 'Dolor muscular', escalaMax: 5 },
   { clave: 'fatiga', label: 'Fatiga', escalaMax: 5 },
   { clave: 'estres', label: 'Estrés', escalaMax: 5 },
+  { clave: 'animo_entrenar', label: 'Ánimo para entrenar', escalaMax: 5 },
   { clave: 'rpe', label: 'Esfuerzo (RPE)', escalaMax: 10 },
 ]
 
