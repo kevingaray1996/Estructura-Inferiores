@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
 
-const CAMPOS = [
-  const CAMPOS = [
+ const CAMPOS = [
   { clave: 'sueno', label: '¿Cómo dormiste?' },
   { clave: 'dolor_muscular', label: '¿Tenés dolor muscular?' },
   { clave: 'fatiga', label: '¿Qué tan cansado estás?' },
