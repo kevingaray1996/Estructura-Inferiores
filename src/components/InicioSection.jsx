@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { cargarAlertasBienestar } from '../utils/bienestar'
 
 const ESCUDO_CLUB_URL = 'https://qvjviyjkxyngiggoeqlj.supabase.co/storage/v1/object/public/Biblioteca/escudos/Escudo%20simplificado.png'
 
@@ -232,6 +233,32 @@ function InicioSection({ perfil, onCambiarSeccion }) {
               seccion: 'medicos',
             })
           })
+      }
+
+      // Alerta de bienestar: fatiga/dolor/estrés altos o en fuerte aumento esta semana
+      let jugadoresParaBienestar = []
+      if (perfil.rol === 'tecnico' && perfil.categoria_id) {
+        const { data } = await supabase
+          .from('jugadores')
+          .select('id, nombre, apellido')
+          .eq('categoria_id', perfil.categoria_id)
+        jugadoresParaBienestar = data || []
+      } else if (perfil.rol !== 'tecnico') {
+        const { data } = await supabase.from('jugadores').select('id, nombre, apellido')
+        jugadoresParaBienestar = data || []
+      }
+
+      if (jugadoresParaBienestar.length > 0) {
+        const alertasBienestar = await cargarAlertasBienestar(jugadoresParaBienestar)
+        alertasBienestar.forEach((a) => {
+          alertasNuevas.push({
+            id: `bienestar-${a.jugadorId}`,
+            icono: '😓',
+            color: '#F87171',
+            texto: `${a.apellido}, ${a.nombre} — ${a.resumenTexto}`,
+            seccion: 'bienestar',
+          })
+        })
       }
 
       setAlertas(alertasNuevas)
