@@ -3,6 +3,7 @@ import { supabase } from '../supabaseClient'
 import PdfPerfilModal from './PdfPerfilModal'
 import { CAMPOS_FISICOS } from '../utils/camposFisicos'
 import { cargarDatosBienestar } from '../utils/bienestar'
+import { generarBienestarPDF } from '../utils/generarBienestarPDF'
 
 const estadoConfig = {
   disponible: { color: '#4ADE80', label: 'Disponible' },
@@ -589,13 +590,13 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
                 Bienestar (últimos 7 días)
               </p>
               {onVerBienestar && (
-                <button
-                  onClick={() => onVerBienestar(jugadorId)}
-                  className="text-xs px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
-                  style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
-                >
-                  Ver análisis completo →
-                </button>
+               <button
+                onClick={() => generarBienestarPDF(jugador, 'semana')}
+                className="text-xs px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
+                style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+              >
+                📄 PDF
+              </button>
               )}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-8">
