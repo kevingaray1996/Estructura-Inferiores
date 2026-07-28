@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
-import { cargarDatosBienestar } from '../utils/bienestar'
+import { cargarDatosBienestar } from '../utils/bienestar' 
+import { generarBienestarPDF } from '../utils/generarBienestarPDF'
 
 function iniciales(nombre, apellido) {
   return `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
@@ -53,6 +54,17 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
   const [periodo, setPeriodo] = useState('semana')
   const [metricas, setMetricas] = useState(null)
   const [cargando, setCargando] = useState(false)
+  const [generandoPdf, setGenerandoPdf] = useState(false)
+
+  async function handleDescargarPdf() {
+  if (!jugadorSeleccionado) return
+  setGenerandoPdf(true)
+  try {
+    await generarBienestarPDF(jugadorSeleccionado, periodo)
+  } finally {
+    setGenerandoPdf(false)
+  }
+}
 
   useEffect(() => {
     if (esTecnico) return
@@ -185,7 +197,7 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
           </div>
         )}
 
-        {jugadorId && (
+       {jugadorId && (
           <div className="flex gap-2 mb-6">
             {[
               { key: 'semana', label: 'Última semana' },
@@ -204,6 +216,14 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
                 {p.label}
               </button>
             ))}
+            <button
+              onClick={handleDescargarPdf}
+              disabled={generandoPdf}
+              className="px-4 rounded-xl text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
+              style={{ backgroundColor: '#1A2332', color: '#F0F2F5', border: '1px solid #2A3548' }}
+            >
+              {generandoPdf ? '...' : '📄 PDF'}
+            </button>
           </div>
         )}
 
