@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient'
 import { generarCitacionPDF } from '../utils/generarCitacion'
 import { exportarEstadisticasPDF, exportarEstadisticasCSV } from '../utils/exportarEstadisticas'
 
-function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido, onNuevoPartido, onGestionarEquipos, onVerEstadisticas, onEditarPartido, refrescar }) {
+function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido, onNuevoPartido, onGestionarEquipos, onVerEstadisticas, onEditarPartido, onVerComparativa, refrescar }) {
   const [partidos, setPartidos] = useState([])
   const [cargando, setCargando] = useState(true)
   const [exportando, setExportando] = useState(false)
@@ -51,7 +51,6 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
   function calcularResultado(p) {
     if (p.goles_local == null || p.goles_visitante == null) return null
 
-    // "Nuestros" goles dependen de si jugamos de local o de visitante
     const golesPropios = p.local_visitante === 'visitante' ? p.goles_visitante : p.goles_local
     const golesRivales = p.local_visitante === 'visitante' ? p.goles_local : p.goles_visitante
 
@@ -64,7 +63,6 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
       etiqueta = 'Empate'
     }
 
-    // Si hubo penales y el partido quedó igualado, definen quién ganó
     if (golesPropios === golesRivales && p.penales_favor != null && p.penales_contra != null) {
       if (p.penales_favor > p.penales_contra) etiqueta = 'Victoria'
       else if (p.penales_favor < p.penales_contra) etiqueta = 'Derrota'
@@ -117,7 +115,7 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
           </div>
         </div>
 
-        <div className="flex items-center gap-2 mb-6">
+        <div className="flex items-center gap-2 mb-6 flex-wrap">
           <span className="text-xs" style={{ color: '#5B6B85' }}>
             Estadísticas de la categoría:
           </span>
@@ -136,6 +134,13 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
             style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
           >
             ⬇️ CSV
+          </button>
+          <button
+            onClick={onVerComparativa}
+            className="text-xs px-3 py-1.5 rounded-lg hover:opacity-80"
+            style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+          >
+            📊 Ver comparativa
           </button>
         </div>
 
@@ -186,7 +191,7 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
                   </div>
                   <div className="flex items-center gap-2">
                     {p.link && (
-                      <a
+                      
                         href={p.link}
                         target="_blank"
                         rel="noreferrer"
