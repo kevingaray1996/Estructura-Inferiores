@@ -68,7 +68,6 @@ function InicioSection({ perfil, onCambiarSeccion }) {
   const [ultimoPartidoPrincipal, setUltimoPartidoPrincipal] = useState(null)
   const [estadisticasRapidas, setEstadisticasRapidas] = useState(null)
   const [alertasNutricion, setAlertasNutricion] = useState([])
-  const [ultimosVideos, setUltimosVideos] = useState([])
   const [cumpleanieros, setCumpleanieros] = useState([])
   const [alertas, setAlertas] = useState([])
   const [cargando, setCargando] = useState(true)
@@ -131,13 +130,6 @@ function InicioSection({ perfil, onCambiarSeccion }) {
           else pe++
         })
         setEstadisticasRapidas(pj > 0 ? { pj, pg, pe, pp, gf, gc } : null)
-
-        const { data: videosData } = await supabase
-          .from('videos')
-          .select('*, categorias(nombre), jugadores(nombre, apellido)')
-          .order('fecha', { ascending: false })
-          .limit(5)
-        setUltimosVideos(videosData || [])
 
         if (perfil.rol === 'tecnico' && perfil.categoria_id) {
           const en2Dias = new Date(hoy)
@@ -561,30 +553,6 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                       +{alertasNutricion.length - 5} más
                     </p>
                   )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {perfil.rol !== 'medico' && (
-            <div
-              onClick={() => onCambiarSeccion('video')}
-              className="p-4 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
-              style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
-            >
-              <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#5B6B85' }}>
-                Últimos videos
-              </p>
-              {ultimosVideos.length === 0 ? (
-                <p className="text-sm" style={{ color: '#5B6B85' }}>Todavía no hay videos cargados.</p>
-              ) : (
-                <div className="space-y-1">
-                  {ultimosVideos.map((v) => (
-                    <p key={v.id} className="text-sm truncate" style={{ color: '#8A9BB8' }}>
-                      {v.descripcion || v.contenido || (v.jugadores ? `${v.jugadores.apellido}, ${v.jugadores.nombre}` : 'Video')}
-                      <span style={{ color: '#5B6B85' }}> · {v.fecha}</span>
-                    </p>
-                  ))}
                 </div>
               )}
             </div>
