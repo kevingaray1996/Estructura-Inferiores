@@ -244,8 +244,12 @@ function InicioSection({ perfil, onCambiarSeccion }) {
           categoriaPrimera.id,
           categoriasData
         )
-        for (const j of jugadoresPrimera || []) {
-          const resultado = await calcularSemaforoJugador(j.id, categoriaPrimera.id)
+
+        const resultadosSemaforo = await Promise.all(
+          (jugadoresPrimera || []).map((j) => calcularSemaforoJugador(j.id, categoriaPrimera.id))
+        )
+        ;(jugadoresPrimera || []).forEach((j, i) => {
+          const resultado = resultadosSemaforo[i]
           if (resultado.semaforo === 'rojo' || resultado.semaforo === 'amarillo') {
             const info = SEMAFORO_INFO[resultado.semaforo]
             alertasNuevas.push({
@@ -256,7 +260,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
               seccion: 'fisico',
             })
           }
-        }
+        })
       }
 
       setAlertas(alertasNuevas)
