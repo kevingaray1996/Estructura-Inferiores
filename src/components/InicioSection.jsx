@@ -58,6 +58,27 @@ function calcularResultado(p) {
   return { etiqueta, texto: `${etiqueta} (${golesPropios}-${golesRivales})` }
 }
 
+function calcularCuentaRegresiva(fecha, hora) {
+  if (!fecha) return ''
+  const fechaHoraPartido = new Date(`${fecha}T${hora || '00:00'}:00`)
+  const ahora = new Date()
+  const diffMs = fechaHoraPartido - ahora
+
+  if (diffMs <= 0) return 'Es hoy'
+
+  const totalHoras = diffMs / (1000 * 60 * 60)
+  const dias = Math.floor(totalHoras / 24)
+  const horas = Math.floor(totalHoras % 24)
+
+  if (dias === 0) {
+    return horas <= 1 ? 'Falta menos de 1 hora' : `Faltan ${horas} horas`
+  }
+  if (dias === 1) {
+    return horas > 0 ? `Falta 1 día y ${horas}h` : 'Falta 1 día'
+  }
+  return horas > 0 ? `Faltan ${dias} días y ${horas}h` : `Faltan ${dias} días`
+}
+
 function iniciales(nombre, apellido) {
   return `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
 }
@@ -405,6 +426,9 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                     </p>
                     <p className="text-xs" style={{ color: '#8A9BB8' }}>
                       {proximoPartido.fecha} {proximoPartido.hora && `· ${proximoPartido.hora}`}
+                    </p>
+                    <p className="text-xs font-medium mt-0.5" style={{ color: '#4ADE80' }}>
+                      {calcularCuentaRegresiva(proximoPartido.fecha, proximoPartido.hora)}
                     </p>
                   </div>
                 </div>
