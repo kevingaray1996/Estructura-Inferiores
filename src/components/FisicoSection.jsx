@@ -6,6 +6,7 @@ import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { agregarPendiente, contarPendientes, sincronizarPendientes } from '../utils/colaOffline'
 import CargaEntrenamiento from './CargaEntrenamiento'
 import CargaCMJ from './CargaCMJ'
+import SemaforoRiesgo from './SemaforoRiesgo'
 
 function normalizarNombre(s) {
   return (s || '')
@@ -294,10 +295,11 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
 
         {puedeVerCargaYCmj && (
           <div className="flex gap-2 mb-6">
-            {[
+             {[
               { key: 'gps', label: 'GPS / RPE' },
               { key: 'carga', label: 'Carga entrenamiento' },
               { key: 'cmj', label: 'CMJ' },
+              { key: 'semaforo', label: 'Semáforo' },
             ].map((t) => (
               <button
                 key={t.key}
@@ -317,6 +319,7 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
 
         {tab === 'carga' && puedeVerCargaYCmj && <CargaEntrenamiento perfil={perfil} />}
         {tab === 'cmj' && puedeVerCargaYCmj && <CargaCMJ perfil={perfil} />}
+        {tab === 'semaforo' && puedeVerCargaYCmj && <SemaforoRiesgo perfil={perfil} />}
 
         {tab === 'gps' && (
           <>
