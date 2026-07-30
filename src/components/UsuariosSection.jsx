@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { exportarBackupCompleto } from '../utils/exportarBackup'
 
 const rolLabel = {
   coordinacion: 'Coordinación',
@@ -21,6 +22,7 @@ function UsuariosSection() {
   const [categoriaId, setCategoriaId] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  const [exportando, setExportando] = useState(false)
 
   const inputStyle = {
     backgroundColor: '#1A2332',
@@ -42,6 +44,15 @@ function UsuariosSection() {
     const { data: categoriasData } = await supabase.from('categorias').select('*').order('orden')
     setCategorias(categoriasData || [])
     setCargando(false)
+  }
+
+  async function handleExportarBackup() {
+    setExportando(true)
+    try {
+      await exportarBackupCompleto()
+    } finally {
+      setExportando(false)
+    }
   }
 
   function abrirNuevo() {
@@ -119,13 +130,23 @@ function UsuariosSection() {
           >
             Usuarios
           </h1>
-          <button
-            onClick={mostrarForm ? cancelarForm : abrirNuevo}
-            className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
-            style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
-          >
-            {mostrarForm ? 'Cancelar' : '+ Nuevo usuario'}
-          </button>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={handleExportarBackup}
+              disabled={exportando}
+              className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 disabled:opacity-50"
+              style={{ backgroundColor: '#1A2332', color: '#F0F2F5', border: '1px solid #2A3548' }}
+            >
+              {exportando ? 'Generando...' : '📦 Exportar backup'}
+            </button>
+            <button
+              onClick={mostrarForm ? cancelarForm : abrirNuevo}
+              className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
+              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+            >
+              {mostrarForm ? 'Cancelar' : '+ Nuevo usuario'}
+            </button>
+          </div>
         </div>
         <p className="text-xs mb-6" style={{ color: '#5B6B85' }}>
           Antes de darlo de alta acá, creá el login de esa persona en Supabase
