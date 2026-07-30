@@ -5,6 +5,7 @@ const rolLabel = {
   coordinacion: 'Coordinación',
   medico: 'Depto. Médico',
   tecnico: 'Cuerpo técnico',
+  preparador_fisico: 'Preparador Físico',
 }
 
 function seccionesParaRol(rol) {
@@ -28,8 +29,6 @@ function seccionesParaRol(rol) {
       { id: 'pases', label: 'Pases' },
       { id: 'usuarios', label: 'Usuarios' },
       { id: 'bienestar', label: 'Bienestar' },
-      { id: 'carga_entrenamiento', label: 'Carga' },
-      { id: 'cmj', label: 'CMJ' },
     ]
   }
   if (rol === 'medico') {
@@ -39,6 +38,17 @@ function seccionesParaRol(rol) {
       { id: 'nutricion', label: 'Nutrición' },
       { id: 'psicologia', label: 'Psicología' },
       { id: 'bienestar', label: 'Bienestar' },
+    ]
+  }
+  if (rol === 'preparador_fisico') {
+    return [
+      { id: 'inicio', label: 'Inicio' },
+      { id: 'plantel', label: 'Plantel' },
+      { id: 'medicos', label: 'Médicos' },
+      { id: 'nutricion', label: 'Nutrición' },
+      { id: 'partidos', label: 'Partidos' },
+      { id: 'entrenamientos', label: 'Entrenamientos' },
+      { id: 'fisico', label: 'Físico' },
     ]
   }
   // tecnico
@@ -55,8 +65,6 @@ function seccionesParaRol(rol) {
     { id: 'pensiones', label: 'Pensión' },
     { id: 'seleccion', label: 'Selección' },
     { id: 'contratos', label: 'Contratos' },
-    { id: 'carga_entrenamiento', label: 'Carga' },
-    { id: 'cmj', label: 'CMJ' },
   ]
 }
 
