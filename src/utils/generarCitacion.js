@@ -45,7 +45,6 @@ function formatoDeDataUrl(dataUrl) {
   return match ? match[1].toUpperCase() : 'PNG'
 }
 
-// Escudo cuadrado con esquinas redondeadas y una letra/sigla centrada.
 function dibujarEscudo(doc, cx, cy, size, colorFondo, letra, colorTexto) {
   doc.setFillColor(...colorFondo)
   doc.roundedRect(cx - size / 2, cy - size / 2, size, size, 8, 8, 'F')
@@ -55,16 +54,11 @@ function dibujarEscudo(doc, cx, cy, size, colorFondo, letra, colorTexto) {
   doc.text(letra, cx, cy + size * 0.11, { align: 'center' })
 }
 
-// Dibuja una foto circular recortada; si no hay foto, dibuja un círculo con iniciales.
 function dibujarAvatarCircular(doc, dataUrl, cx, cy, radio, iniciales) {
   if (dataUrl) {
     try {
       const formato = formatoDeDataUrl(dataUrl)
       doc.saveGraphicsState()
-      const clip = new doc.GState({ opacity: 1 })
-      doc.setGState(clip)
-      // jsPDF no recorta círculos nativamente en todas las versiones; usamos
-      // un clip path manual con la API de "clip" disponible en jsPDF >= 2.x
       doc.circle(cx, cy, radio, null)
       doc.clip()
       doc.discardPath()
@@ -93,13 +87,6 @@ function parsePosicion(c) {
   return { x, y }
 }
 
-function zonaPorY(y) {
-  if (y >= 85) return 'ARQUERO'
-  if (y >= 62) return 'DEFENSA'
-  if (y >= 38) return 'MEDIOCAMPO'
-  return 'DELANTERA'
-}
-
 export async function generarCitacionPDF(partidoId) {
   const { data: partido } = await supabase
     .from('partidos')
@@ -120,7 +107,6 @@ export async function generarCitacionPDF(partidoId) {
   const escudoRivalDataUrl = partido.escudo_url ? await cargarImagenDataURL(partido.escudo_url) : null
   const escudoClubDataUrl = await cargarImagenDataURL(ESCUDO_CLUB_URL)
 
-  // Precargamos las fotos de todos los jugadores convocados en paralelo
   const fotosPorJugador = {}
   await Promise.all(
     citaciones.map(async (c) => {
@@ -141,7 +127,6 @@ export async function generarCitacionPDF(partidoId) {
   const headerH = 108
   doc.setFillColor(...AZUL)
   doc.rect(0, 0, pageWidth, headerH, 'F')
-  // franja amarilla inferior del header, para que se sienta más "club"
   doc.setFillColor(...AZUL_CLARO)
   doc.rect(0, headerH - 5, pageWidth, 5, 'F')
 
@@ -248,15 +233,15 @@ export async function generarCitacionPDF(partidoId) {
   const { diaSemana, fechaCorta } = formatearFecha(partido.fecha)
   const franjaY = filaEquiposY + 42
   const franjaH = 46
-  const gap = 12
-  const franjaW = (pageWidth - margin * 2 - gap * 2) / 3
+  const gapFranja = 12
+  const franjaW = (pageWidth - margin * 2 - gapFranja * 2) / 3
   const datosFranja = [
     { label: 'FECHA', valor: fechaCorta ? `${diaSemana.slice(0, 1)}${diaSemana.slice(1).toLowerCase()} ${fechaCorta}` : '—' },
     { label: 'HORA', valor: partido.hora ? `${partido.hora} hs` : '—' },
     { label: 'LUGAR', valor: partido.lugar || '—' },
   ]
   datosFranja.forEach((d, i) => {
-    const bx = margin + i * (franjaW + gap)
+    const bx = margin + i * (franjaW + gapFranja)
     doc.setFillColor(...GRIS_CLARO)
     doc.roundedRect(bx, franjaY, franjaW, franjaH, 8, 8, 'F')
     doc.setFillColor(...AZUL_CLARO)
@@ -271,7 +256,7 @@ export async function generarCitacionPDF(partidoId) {
     doc.text(String(d.valor), bx + 14, franjaY + 34, { maxWidth: franjaW - 24 })
   })
 
-  // ===== Dos columnas: cancha (izq) + titulares (der) =====
+  // ===== Tres columnas: Titulares (izq) · Cancha (centro) · Suplentes (der) =====
   const ordenados = [...citaciones].sort((a, b) => (a.dorsal || 99) - (b.dorsal || 99))
   const suplentes = ordenados.filter((c) => !c.titular)
 
@@ -281,21 +266,27 @@ export async function generarCitacionPDF(partidoId) {
     .sort((a, b) => b.pos.y - a.pos.y)
 
   const contenidoY = franjaY + franjaH + 26
-  const canchaX = margin
-  const canchaW = 190
-  const titularesX = canchaX + canchaW + 24
-  const titularesW = pageWidth - margin - titularesX
+  const contenidoAncho = pageWidth - margin * 2
+  const gapColumnas = 16
+  const canchaW = 220
+  const columnaW = (contenidoAncho - canchaW - gapColumnas * 2) / 2
 
-  const filaAltura = 34
-  const filaGap = 5
+  const titularesX = margin
+  const canchaX = margin + columnaW + gapColumnas
+  const suplentesX = canchaX + canchaW + gapColumnas
+
   const canchaH = canchaW * 1.5
+  const filaAltura = 26
+  const filaGap = 4
 
+  // --- Títulos de columna ---
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(10.5)
+  doc.setFontSize(10)
   doc.setTextColor(...AZUL)
   doc.text('TITULARES', titularesX, contenidoY)
+  doc.text('SUPLENTES', suplentesX, contenidoY)
 
-  // --- Cancha ---
+  // --- Cancha (centro) ---
   doc.setFillColor(...VERDE_CANCHA)
   doc.roundedRect(canchaX, contenidoY + 6, canchaW, canchaH, 10, 10, 'F')
   doc.setDrawColor(...BLANCO)
@@ -326,7 +317,6 @@ export async function generarCitacionPDF(partidoId) {
     doc.circle(px, py, radio + 1.5, 'F')
     dibujarAvatarCircular(doc, fotosPorJugador[c.jugador_id], px, py, radio, iniciales)
 
-    // dorsal en una placa pequeña sobre el avatar
     doc.setFillColor(...AZUL)
     doc.circle(px + radio * 0.72, py - radio * 0.72, 7, 'F')
     doc.setFont('helvetica', 'bold')
@@ -345,91 +335,57 @@ export async function generarCitacionPDF(partidoId) {
     doc.text(etiqueta.slice(0, 16), px, py + radio + 11, { align: 'center', maxWidth: anchoTexto - 2 })
   })
 
-  // --- Lista de titulares ---
-  let yFila = contenidoY + 38
-
+  // --- Lista de titulares (izquierda), compacta, sin puesto ---
+  let yTitular = contenidoY + 22
   if (titularesConPos.length === 0) {
     doc.setFont('helvetica', 'italic')
-    doc.setFontSize(9)
+    doc.setFontSize(8.5)
     doc.setTextColor(...GRIS)
-    doc.text('Todavía no se armó la formación de este partido', titularesX, yFila)
-    yFila += filaAltura
+    doc.text('Sin formación armada', titularesX, yTitular, { maxWidth: columnaW })
   }
-
-  titularesConPos.forEach(({ c, pos }) => {
+  titularesConPos.forEach(({ c }) => {
     doc.setFillColor(...GRIS_CLARO)
-    doc.roundedRect(titularesX, yFila - filaAltura + 8, titularesW, filaAltura, 8, 8, 'F')
-    doc.setFillColor(...AZUL_CLARO)
-    doc.rect(titularesX, yFila - filaAltura + 8, 3.5, filaAltura, 'F')
+    doc.roundedRect(titularesX, yTitular - filaAltura + 7, columnaW, filaAltura, 6, 6, 'F')
 
-    const badgeCX = titularesX + 24
-    const badgeCY = yFila - filaAltura / 2 + 8
+    const badgeCX = titularesX + 15
+    const badgeCY = yTitular - filaAltura / 2 + 7
     const iniciales = `${(c.jugadores?.nombre?.[0] || '')}${(c.jugadores?.apellido?.[0] || '')}`.toUpperCase()
-    dibujarAvatarCircular(doc, fotosPorJugador[c.jugador_id], badgeCX, badgeCY, 12, iniciales)
+    dibujarAvatarCircular(doc, fotosPorJugador[c.jugador_id], badgeCX, badgeCY, 9, iniciales)
 
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10.5)
+    doc.setFontSize(8)
     doc.setTextColor(...NEGRO)
-    const nombreJugador = `${c.jugadores?.apellido || ''}, ${c.jugadores?.nombre || ''}`
-    doc.text(nombreJugador, badgeCX + 20, badgeCY - 2, { maxWidth: titularesW * 0.55 })
+    const nombreJugador = `${c.dorsal ? `#${c.dorsal} ` : ''}${c.jugadores?.apellido || ''}, ${c.jugadores?.nombre || ''}`
+    doc.text(nombreJugador, badgeCX + 13, badgeCY + 3, { maxWidth: columnaW - 30 })
 
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
-    doc.setTextColor(...GRIS)
-    doc.text(`#${c.dorsal ? String(c.dorsal) : '-'}`, badgeCX + 20, badgeCY + 10)
-
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
-    doc.setTextColor(...GRIS)
-    doc.text(zonaPorY(pos.y), titularesX + titularesW - 12, badgeCY + 3, { align: 'right' })
-
-    yFila += filaAltura + filaGap
+    yTitular += filaAltura + filaGap
   })
 
-  // ===== Suplentes =====
-  const suplentesY = Math.max(contenidoY + 6 + canchaH, yFila - filaGap) + 30
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(10.5)
-  doc.setTextColor(...AZUL)
-  doc.text('SUPLENTES', margin, suplentesY)
-
+  // --- Lista de suplentes (derecha), mismo formato ---
+  let ySuplente = contenidoY + 22
   if (suplentes.length === 0) {
     doc.setFont('helvetica', 'italic')
-    doc.setFontSize(9)
+    doc.setFontSize(8.5)
     doc.setTextColor(...GRIS)
-    doc.text('Sin suplentes cargados', margin, suplentesY + 20)
-  } else {
-    const columnas = 3
-    const supGap = 12
-    const supW = (pageWidth - margin * 2 - supGap * (columnas - 1)) / columnas
-    const supH = 30
-
-    suplentes.forEach((c, i) => {
-      const col = i % columnas
-      const fila = Math.floor(i / columnas)
-      const bx = margin + col * (supW + supGap)
-      const by = suplentesY + 16 + fila * (supH + 6)
-
-      doc.setFillColor(...GRIS_CLARO)
-      doc.roundedRect(bx, by, supW, supH, 7, 7, 'F')
-
-      const numCX = bx + 19
-      const numCY = by + supH / 2
-      const iniciales = `${(c.jugadores?.nombre?.[0] || '')}${(c.jugadores?.apellido?.[0] || '')}`.toUpperCase()
-      dibujarAvatarCircular(doc, fotosPorJugador[c.jugador_id], numCX, numCY, 12, iniciales)
-
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(8)
-      doc.setTextColor(...GRIS)
-      doc.text(`#${c.dorsal ? String(c.dorsal) : '-'}`, numCX + 18, numCY - 3)
-
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(9)
-      doc.setTextColor(...NEGRO)
-      const nombreCompleto = `${c.jugadores?.apellido || ''}, ${c.jugadores?.nombre || ''}`
-      doc.text(nombreCompleto, numCX + 18, numCY + 8, { maxWidth: supW - 36 })
-    })
+    doc.text('Sin suplentes cargados', suplentesX, ySuplente, { maxWidth: columnaW })
   }
+  suplentes.forEach((c) => {
+    doc.setFillColor(...GRIS_CLARO)
+    doc.roundedRect(suplentesX, ySuplente - filaAltura + 7, columnaW, filaAltura, 6, 6, 'F')
+
+    const badgeCX = suplentesX + 15
+    const badgeCY = ySuplente - filaAltura / 2 + 7
+    const iniciales = `${(c.jugadores?.nombre?.[0] || '')}${(c.jugadores?.apellido?.[0] || '')}`.toUpperCase()
+    dibujarAvatarCircular(doc, fotosPorJugador[c.jugador_id], badgeCX, badgeCY, 9, iniciales)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    doc.setTextColor(...NEGRO)
+    const nombreCompleto = `${c.dorsal ? `#${c.dorsal} ` : ''}${c.jugadores?.apellido || ''}, ${c.jugadores?.nombre || ''}`
+    doc.text(nombreCompleto, badgeCX + 13, badgeCY + 3, { maxWidth: columnaW - 30 })
+
+    ySuplente += filaAltura + filaGap
+  })
 
   doc.save(`Citacion_vs_${partido.rival.replace(/\s+/g, '_')}.pdf`)
 }
