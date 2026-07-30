@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
 import { agregarPendiente, contarPendientes, sincronizarPendientes } from '../utils/colaOffline'
+import { generarAsistenciaPDF } from '../utils/generarAsistenciaPDF'
 
 const ESTADOS = [
   { valor: 'presente', label: 'Presente', color: '#4ADE80' },
@@ -22,6 +23,11 @@ function AsistenciaSection({ perfil }) {
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState('')
   const [pendientes, setPendientes] = useState(0)
+
+  const [mostrarReporte, setMostrarReporte] = useState(false)
+  const [reporteDesde, setReporteDesde] = useState(obtenerFechaHoy())
+  const [reporteHasta, setReporteHasta] = useState(obtenerFechaHoy())
+  const [generandoReporte, setGenerandoReporte] = useState(false)
 
   const intentarSincronizar = useCallback(async () => {
     if (!navigator.onLine) return
@@ -147,6 +153,17 @@ function AsistenciaSection({ perfil }) {
     }
   }
 
+  async function handleDescargarReporte() {
+    if (!categoriaId || !reporteDesde || !reporteHasta) return
+    setGenerandoReporte(true)
+    try {
+      const categoriaNombre = categorias.find((c) => c.id === categoriaId)?.nombre || ''
+      await generarAsistenciaPDF(categoriaId, categoriaNombre, reporteDesde, reporteHasta)
+    } finally {
+      setGenerandoReporte(false)
+    }
+  }
+
   const inputStyle = {
     backgroundColor: '#1A2332',
     border: '1px solid #2A3548',
@@ -162,6 +179,56 @@ function AsistenciaSection({ perfil }) {
         >
           Asistencia
         </h1>
+
+        <div className="mb-6">
+          <button
+            onClick={() => setMostrarReporte((v) => !v)}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
+            style={{ backgroundColor: '#1A2332', color: '#F0F2F5', border: '1px solid #2A3548' }}
+          >
+            {mostrarReporte ? 'Cerrar' : '📄 Exportar reporte de asistencia'}
+          </button>
+
+          {mostrarReporte && (
+            <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
+              <div className="grid sm:grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="text-[10px] uppercase" style={{ color: '#5B6B85' }}>Desde</label>
+                  <input
+                    type="date"
+                    value={reporteDesde}
+                    onChange={(e) => setReporteDesde(e.target.value)}
+                    className="w-full p-2.5 rounded-xl outline-none text-sm"
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase" style={{ color: '#5B6B85' }}>Hasta</label>
+                  <input
+                    type="date"
+                    value={reporteHasta}
+                    onChange={(e) => setReporteHasta(e.target.value)}
+                    className="w-full p-2.5 rounded-xl outline-none text-sm"
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+              <button
+                onClick={handleDescargarReporte}
+                disabled={!categoriaId || generandoReporte}
+                className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
+                style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+              >
+                {generandoReporte ? 'Generando...' : 'Descargar PDF'}
+              </button>
+              {!categoriaId && (
+                <p className="text-xs mt-2" style={{ color: '#5B6B85' }}>
+                  Elegí una categoría más abajo primero.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
 
         <div className="grid sm:grid-cols-2 gap-3 mb-6">
           <input
