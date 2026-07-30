@@ -5,6 +5,7 @@ const rolLabel = {
   coordinacion: 'Coordinación',
   medico: 'Depto. Médico',
   tecnico: 'Cuerpo técnico',
+  preparador_fisico: 'Preparador Físico',
 }
 
 function UsuariosSection() {
@@ -167,6 +168,7 @@ function UsuariosSection() {
               <option value="coordinacion">Coordinación (acceso total)</option>
               <option value="medico">Depto. Médico (médicos/nutrición/psicología, todas las categorías)</option>
               <option value="tecnico">Cuerpo técnico (una sola categoría)</option>
+              <option value="preparador_fisico">Preparador Físico (Físico + Carga + CMJ)</option>
             </select>
             {rol === 'tecnico' && (
               <select
