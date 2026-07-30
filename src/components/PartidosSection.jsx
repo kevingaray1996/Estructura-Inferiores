@@ -3,9 +3,8 @@ import { supabase } from '../supabaseClient'
 import ListaPartidos from './ListaPartidos'
 import ConvocarPartido from './ConvocarPartido'
 import AgregarPartido from './AgregarPartido'
-import CargarEstadisticas from './CargarEstadisticas'
-import FormacionPartido from './FormacionPartido'
 import EquiposSection from './EquiposSection'
+import ComparativaJugadoras from './ComparativaJugadoras'
 
 function PartidosSection({ perfil, onIrAFisico }) {
   const esTecnico = perfil?.rol === 'tecnico'
@@ -55,9 +54,9 @@ function PartidosSection({ perfil, onIrAFisico }) {
     )
   }
 
-  if (vista === 'estadisticas') {
+  if (vista === 'convocar') {
     return (
-      <CargarEstadisticas
+      <ConvocarPartido
         partidoId={partidoId}
         categoriaId={categoriaId}
         onVolver={() => setVista('lista')}
@@ -66,29 +65,18 @@ function PartidosSection({ perfil, onIrAFisico }) {
     )
   }
 
-  if (vista === 'formacion') {
-    return (
-      <FormacionPartido
-        partidoId={partidoId}
-        onVolver={() => setVista('convocar')}
-        onGuardado={() => setVista('lista')}
-      />
-    )
-  }
-
-  if (vista === 'convocar') {
-    return (
-      <ConvocarPartido
-        partidoId={partidoId}
-        categoriaId={categoriaId}
-        onVolver={() => setVista('lista')}
-        onSiguiente={() => setVista('formacion')}
-      />
-    )
-  }
-
   if (vista === 'equipos') {
     return <EquiposSection onVolver={() => setVista('lista')} />
+  }
+
+  if (vista === 'comparativa') {
+    return (
+      <ComparativaJugadoras
+        categoriaId={categoriaId}
+        categoriaNombre={categorias.find((c) => c.id === categoriaId)?.nombre}
+        onVolver={() => setVista('lista')}
+      />
+    )
   }
 
   if (vista === 'lista') {
@@ -106,12 +94,13 @@ function PartidosSection({ perfil, onIrAFisico }) {
         onGestionarEquipos={() => setVista('equipos')}
         onVerEstadisticas={(id) => {
           setPartidoId(id)
-          setVista('estadisticas')
+          setVista('convocar')
         }}
         onEditarPartido={(id) => {
           setPartidoId(id)
           setVista('editar')
         }}
+        onVerComparativa={() => setVista('comparativa')}
       />
     )
   }
