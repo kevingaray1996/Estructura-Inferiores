@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
-import { CAMPOS_FISICOS as CAMPOS } from '../utils/camposFisicos'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { agregarPendiente, contarPendientes, sincronizarPendientes } from '../utils/colaOffline'
 import CargaEntrenamiento from './CargaEntrenamiento'
 import CargaCMJ from './CargaCMJ'
 import SemaforoRiesgo from './SemaforoRiesgo'
+import BienestarComparativo from './BienestarComparativo'
 
 function normalizarNombre(s) {
   return (s || '')
@@ -20,10 +20,10 @@ function normalizarNombre(s) {
     .join(' ')
 }
 
-function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
+function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jugadorParaBienestar, onConsumirJugadorParaBienestar }) {
   const esTecnico = perfil.rol === 'tecnico'
   const puedeVerCargaYCmj = perfil.rol === 'coordinacion' || perfil.rol === 'preparador_fisico'
-  const [tab, setTab] = useState('gps')
+  const [tab, setTab] = useState('wellness')
 
   const [categorias, setCategorias] = useState([])
   const [categoriaId, setCategoriaId] = useState(esTecnico ? perfil.categoria_id : '')
@@ -40,7 +40,6 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
   const [textoPegado, setTextoPegado] = useState('')
   const [resultadoPegado, setResultadoPegado] = useState(null)
   const [pendientes, setPendientes] = useState(0)
-  const partidoForzadoRef = useRef(false)
 
   const intentarSincronizar = useCallback(async () => {
     if (!navigator.onLine) return
@@ -62,6 +61,12 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
   }, [intentarSincronizar])
 
   useEffect(() => {
+    if (jugadorParaBienestar) {
+      setTab('wellness')
+    }
+  }, [jugadorParaBienestar])
+
+  useEffect(() => {
     async function cargarCategorias() {
       const { data } = await supabase.from('categorias').select('*').order('orden')
       setCategorias(data || [])
@@ -78,11 +83,11 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
         .eq('id', partidoInicialId)
         .single()
       if (partido) {
-        partidoForzadoRef.current = true
         setCategoriaId(partido.categoria_id)
         setFecha(partido.fecha)
         setTipo('partido')
         setPartidoId(partido.id)
+        setTab('rpe')
       }
       onConsumirPartidoInicial?.()
     }
@@ -126,28 +131,17 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
       if (ids.length > 0) {
         const { data: sesionesData } = await supabase
           .from('sesiones_fisicas')
-          .select('*')
+          .select('jugador_id, rpe, partido_id')
           .eq('fecha', fecha)
           .eq('tipo', tipo)
           .in('jugador_id', ids)
         const mapa = {}
         ;(sesionesData || []).forEach((s) => {
-          mapa[s.jugador_id] = s
+          mapa[s.jugador_id] = { rpe: s.rpe }
         })
         setDatos(mapa)
-        if (partidoForzadoRef.current) {
-          partidoForzadoRef.current = false
-        } else {
-          const partidoExistente = (sesionesData || []).find((s) => s.partido_id)?.partido_id
-          setPartidoId(partidoExistente || '')
-        }
       } else {
         setDatos({})
-        if (partidoForzadoRef.current) {
-          partidoForzadoRef.current = false
-        } else {
-          setPartidoId('')
-        }
       }
 
       setCargando(false)
@@ -155,13 +149,10 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
     cargar()
   }, [categoriaId, fecha, tipo, categorias])
 
-  function cambiarValor(jugadorId, campo, valor) {
+  function cambiarValor(jugadorId, valor) {
     setDatos((prev) => ({
       ...prev,
-      [jugadorId]: {
-        ...prev[jugadorId],
-        [campo]: valor,
-      },
+      [jugadorId]: { rpe: valor },
     }))
   }
 
@@ -182,9 +173,9 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
       const partes = (linea.includes('\t') ? linea.split('\t') : linea.split(',')).map((p) => p.trim())
       if (partes.length < 2) return
 
-      const valores = partes.slice(-CAMPOS.length)
-      const columnasNombre = partes.slice(0, partes.length - valores.length)
-      const nombrePegado = columnasNombre.join(' ')
+      // Última columna es el RPE, todo lo anterior es el nombre.
+      const valorRpe = partes[partes.length - 1]
+      const nombrePegado = partes.slice(0, partes.length - 1).join(' ')
 
       if (!nombrePegado) return
 
@@ -196,13 +187,11 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
         return
       }
 
-      const fila = { ...nuevoDatos[match.jugador.id] }
-      CAMPOS.forEach((c, idx) => {
-        const v = (valores[idx] ?? '').toString().replace(',', '.').trim()
-        if (v !== '') fila[c.clave] = v
-      })
-      nuevoDatos[match.jugador.id] = fila
-      aplicados++
+      const v = valorRpe.replace(',', '.').trim()
+      if (v !== '') {
+        nuevoDatos[match.jugador.id] = { rpe: v }
+        aplicados++
+      }
     })
 
     setDatos(nuevoDatos)
@@ -211,9 +200,7 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
 
   function tieneAlgunValor(fila) {
     if (!fila) return false
-    const tieneCampoGps = CAMPOS.some((c) => fila[c.clave] !== undefined && fila[c.clave] !== '' && fila[c.clave] !== null)
-    const tieneRpe = fila.rpe !== undefined && fila.rpe !== '' && fila.rpe !== null
-    return tieneCampoGps || tieneRpe
+    return fila.rpe !== undefined && fila.rpe !== '' && fila.rpe !== null
   }
 
   async function handleGuardar() {
@@ -222,21 +209,13 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
 
     const filas = jugadores
       .filter((j) => tieneAlgunValor(datos[j.id]))
-      .map((j) => {
-        const fila = datos[j.id] || {}
-        const registro = {
-          fecha,
-          jugador_id: j.id,
-          tipo,
-          partido_id: tipo === 'partido' && partidoId ? partidoId : null,
-        }
-        CAMPOS.forEach((c) => {
-          const v = fila[c.clave]
-          registro[c.clave] = v === '' || v === undefined || v === null ? null : Number(v)
-        })
-        registro.rpe = fila.rpe === '' || fila.rpe === undefined || fila.rpe === null ? null : Number(fila.rpe)
-        return registro
-      })
+      .map((j) => ({
+        fecha,
+        jugador_id: j.id,
+        tipo,
+        partido_id: tipo === 'partido' && partidoId ? partidoId : null,
+        rpe: Number(datos[j.id].rpe),
+      }))
 
     const idsSinDatos = jugadores.map((j) => j.id).filter((id) => !tieneAlgunValor(datos[id]))
 
@@ -258,14 +237,14 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
       if (idsSinDatos.length > 0) {
         const { error } = await supabase
           .from('sesiones_fisicas')
-          .delete()
+          .update({ rpe: null })
           .eq('fecha', fecha)
           .eq('tipo', tipo)
           .in('jugador_id', idsSinDatos)
         if (error) throw error
       }
       setGuardando(false)
-      setMensaje('Listo, datos físicos guardados.')
+      setMensaje('Listo, RPE guardado.')
     } catch {
       agregarPendiente({ tipo: 'fisico', fecha, subtipo: tipo, filas, idsSinDatos })
       setPendientes(contarPendientes('fisico'))
@@ -280,6 +259,18 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
     color: '#F0F2F5',
   }
 
+  const tabsDisponibles = [
+    { key: 'wellness', label: 'Wellness' },
+    { key: 'rpe', label: 'RPE' },
+    ...(puedeVerCargaYCmj
+      ? [
+          { key: 'carga', label: 'Carga entrenamiento' },
+          { key: 'cmj', label: 'CMJ' },
+          { key: 'semaforo', label: 'Semáforo' },
+        ]
+      : []),
+  ]
+
   return (
     <div className="p-6 md:p-10">
       <div className="max-w-4xl mx-auto">
@@ -290,38 +281,39 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
           Físico
         </h1>
         <p className="text-sm mb-6" style={{ color: '#5B6B85' }}>
-          Métricas resumen de GPS (Catapult) y esfuerzo percibido (RPE) por jugador y sesión.
+          Wellness, esfuerzo percibido (RPE), carga de entrenamiento, CMJ y semáforo de riesgo.
         </p>
 
-        {puedeVerCargaYCmj && (
-          <div className="flex gap-2 mb-6">
-             {[
-              { key: 'gps', label: 'GPS / RPE' },
-              { key: 'carga', label: 'Carga entrenamiento' },
-              { key: 'cmj', label: 'CMJ' },
-              { key: 'semaforo', label: 'Semáforo' },
-            ].map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className="flex-1 p-2.5 rounded-xl text-sm font-medium transition-opacity"
-                style={
-                  tab === t.key
-                    ? { backgroundColor: '#4ADE80', color: '#0F1419' }
-                    : { backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#8A9BB8' }
-                }
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+        <div className="flex gap-2 mb-6 flex-wrap">
+          {tabsDisponibles.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className="flex-1 p-2.5 rounded-xl text-sm font-medium transition-opacity"
+              style={
+                tab === t.key
+                  ? { backgroundColor: '#4ADE80', color: '#0F1419' }
+                  : { backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#8A9BB8' }
+              }
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'wellness' && (
+          <BienestarComparativo
+            perfil={perfil}
+            jugadorInicialId={jugadorParaBienestar}
+            onConsumirJugadorInicial={onConsumirJugadorParaBienestar}
+          />
         )}
 
-        {tab === 'carga' && puedeVerCargaYCmj && <CargaEntrenamiento perfil={perfil} />}
-        {tab === 'cmj' && puedeVerCargaYCmj && <CargaCMJ perfil={perfil} />}
-        {tab === 'semaforo' && puedeVerCargaYCmj && <SemaforoRiesgo perfil={perfil} />}
+        {tab === 'carga' && puedeVerCargaYCmj && <CargaEntrenamiento />}
+        {tab === 'cmj' && puedeVerCargaYCmj && <CargaCMJ />}
+        {tab === 'semaforo' && puedeVerCargaYCmj && <SemaforoRiesgo />}
 
-        {tab === 'gps' && (
+        {tab === 'rpe' && (
           <>
             <div className="grid sm:grid-cols-3 gap-3 mb-3">
               <input
@@ -410,13 +402,12 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
                   {mostrarPegado && (
                     <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
                       <p className="text-xs mb-2" style={{ color: '#5B6B85' }}>
-                        Pegá las filas copiadas del reporte de Catapult (una fila por jugador). Columnas: Nombre (o
-                        Apellido y Nombre), Dist. total, Dist. alta int., Sprints, Vel. máx, Player Load, Minutos.
+                        Pegá una fila por jugador: nombre (o "Apellido, Nombre") y el valor de RPE (1-10).
                       </p>
                       <textarea
                         value={textoPegado}
                         onChange={(e) => setTextoPegado(e.target.value)}
-                        placeholder={'Pérez, Juan\t5200\t800\t18\t28.5\t420\t75\nGómez, Martín\t4900\t750\t15\t27.1\t390\t70'}
+                        placeholder={'Pérez, Juan\t7\nGómez, Martín\t5'}
                         rows={5}
                         className="w-full p-2.5 rounded-xl outline-none text-sm font-mono resize-none mb-2"
                         style={inputStyle}
@@ -464,15 +455,7 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
                         >
                           Jugador
                         </th>
-                        {CAMPOS.map((c) => (
-                          <th key={c.clave} className="text-left p-2.5 whitespace-nowrap" style={{ color: '#8A9BB8' }}>
-                            {c.label}
-                          </th>
-                        ))}
-                        <th
-                          className="text-left p-2.5 whitespace-nowrap"
-                          style={{ color: '#7DD3FC', borderLeft: '1px solid #2A3548' }}
-                        >
+                        <th className="text-left p-2.5 whitespace-nowrap" style={{ color: '#7DD3FC' }}>
                           RPE (1-10)
                         </th>
                       </tr>
@@ -502,24 +485,13 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
                               {j.apellido}, {j.nombre}
                             </div>
                           </td>
-                          {CAMPOS.map((c) => (
-                            <td key={c.clave} className="p-1.5">
-                              <input
-                                type="number"
-                                value={datos[j.id]?.[c.clave] ?? ''}
-                                onChange={(e) => cambiarValor(j.id, c.clave, e.target.value)}
-                                className="w-24 p-1.5 rounded-lg outline-none text-sm"
-                                style={inputStyle}
-                              />
-                            </td>
-                          ))}
-                          <td className="p-1.5" style={{ borderLeft: '1px solid #2A3548' }}>
+                          <td className="p-1.5">
                             <input
                               type="number"
                               min="1"
                               max="10"
                               value={datos[j.id]?.rpe ?? ''}
-                              onChange={(e) => cambiarValor(j.id, 'rpe', e.target.value)}
+                              onChange={(e) => cambiarValor(j.id, e.target.value)}
                               className="w-20 p-1.5 rounded-lg outline-none text-sm"
                               style={{ ...inputStyle, borderColor: '#7DD3FC' }}
                             />
@@ -551,7 +523,7 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial }) {
                   className="w-full sm:w-auto px-6 p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
                   style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
                 >
-                  {guardando ? 'Guardando...' : 'Guardar datos físicos'}
+                  {guardando ? 'Guardando...' : 'Guardar RPE'}
                 </button>
               </>
             )}
