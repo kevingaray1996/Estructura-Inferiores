@@ -190,9 +190,8 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <a
-                    {p.link && (
-                      
+                      {p.link && (
+                      <a
                         href={p.link}
                         target="_blank"
                         rel="noreferrer"
