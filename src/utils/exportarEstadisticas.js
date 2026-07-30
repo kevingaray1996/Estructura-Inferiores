@@ -7,7 +7,7 @@ const BLANCO = [240, 242, 245]
 const GRIS = [138, 155, 184]
 const GRIS_CLARO = [42, 53, 72]
 
-async function obtenerEstadisticasCategoria(categoriaId) {
+export async function obtenerEstadisticasCategoria(categoriaId) {
   const { data: jugadores } = await supabase
     .from('jugadores')
     .select('id, nombre, apellido')
