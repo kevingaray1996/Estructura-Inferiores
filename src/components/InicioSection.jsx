@@ -60,7 +60,8 @@ function calcularResultado(p) {
 
 function calcularCuentaRegresiva(fecha, hora) {
   if (!fecha) return ''
-  const fechaHoraPartido = new Date(`${fecha}T${hora || '00:00'}:00`)
+ const horaFormateada = hora ? (hora.length === 5 ? `${hora}:00` : hora) : '00:00:00'
+  const fechaHoraPartido = new Date(`${fecha}T${horaFormateada}`)
   const ahora = new Date()
   const diffMs = fechaHoraPartido - ahora
 
