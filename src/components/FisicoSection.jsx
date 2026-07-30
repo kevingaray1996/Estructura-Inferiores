@@ -7,6 +7,7 @@ import CargaEntrenamiento from './CargaEntrenamiento'
 import CargaCMJ from './CargaCMJ'
 import SemaforoRiesgo from './SemaforoRiesgo'
 import BienestarComparativo from './BienestarComparativo'
+import CargaWellness from './CargaWellness'
 
 function normalizarNombre(s) {
   return (s || '')
@@ -24,6 +25,7 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
   const esTecnico = perfil.rol === 'tecnico'
   const puedeVerCargaYCmj = perfil.rol === 'coordinacion' || perfil.rol === 'preparador_fisico'
   const [tab, setTab] = useState('wellness')
+  const [subTabWellness, setSubTabWellness] = useState('ver')
 
   const [categorias, setCategorias] = useState([])
   const [categoriaId, setCategoriaId] = useState(esTecnico ? perfil.categoria_id : '')
@@ -63,6 +65,7 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
   useEffect(() => {
     if (jugadorParaBienestar) {
       setTab('wellness')
+      setSubTabWellness('ver')
     }
   }, [jugadorParaBienestar])
 
@@ -173,7 +176,6 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
       const partes = (linea.includes('\t') ? linea.split('\t') : linea.split(',')).map((p) => p.trim())
       if (partes.length < 2) return
 
-      // Última columna es el RPE, todo lo anterior es el nombre.
       const valorRpe = partes[partes.length - 1]
       const nombrePegado = partes.slice(0, partes.length - 1).join(' ')
 
@@ -302,11 +304,38 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
         </div>
 
         {tab === 'wellness' && (
-          <BienestarComparativo
-            perfil={perfil}
-            jugadorInicialId={jugadorParaBienestar}
-            onConsumirJugadorInicial={onConsumirJugadorParaBienestar}
-          />
+          <div>
+            {puedeVerCargaYCmj && (
+              <div className="flex gap-2 mb-6">
+                {[
+                  { key: 'ver', label: 'Ver comparativo' },
+                  { key: 'cargar', label: 'Carga manual' },
+                ].map((sub) => (
+                  <button
+                    key={sub.key}
+                    onClick={() => setSubTabWellness(sub.key)}
+                    className="flex-1 p-2 rounded-xl text-xs font-medium transition-opacity"
+                    style={
+                      subTabWellness === sub.key
+                        ? { backgroundColor: '#7DD3FC', color: '#0F1419' }
+                        : { backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#8A9BB8' }
+                    }
+                  >
+                    {sub.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {(!puedeVerCargaYCmj || subTabWellness === 'ver') && (
+              <BienestarComparativo
+                perfil={perfil}
+                jugadorInicialId={jugadorParaBienestar}
+                onConsumirJugadorInicial={onConsumirJugadorParaBienestar}
+              />
+            )}
+            {puedeVerCargaYCmj && subTabWellness === 'cargar' && <CargaWellness />}
+          </div>
         )}
 
         {tab === 'carga' && puedeVerCargaYCmj && <CargaEntrenamiento />}
