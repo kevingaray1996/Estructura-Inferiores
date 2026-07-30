@@ -3,52 +3,40 @@ import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { calcularSemaforoJugador, SEMAFORO_INFO } from '../utils/semaforoRiesgo'
 import { generarSemaforoIndividualPDF, generarSemaforoCategoriaPDF } from '../utils/generarSemaforoPDF'
+import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
 
-function SemaforoRiesgo({ perfil }) {
-  const esTecnico = perfil?.rol === 'tecnico'
-  const [categorias, setCategorias] = useState([])
-  const [categoriaId, setCategoriaId] = useState(esTecnico ? perfil.categoria_id : '')
-  const [categoriaNombre, setCategoriaNombre] = useState('')
+function SemaforoRiesgo() {
+  const [categoria, setCategoria] = useState(null)
   const [jugadores, setJugadores] = useState([])
   const [resultados, setResultados] = useState({})
   const [cargando, setCargando] = useState(false)
   const [generandoPdf, setGenerandoPdf] = useState(false)
 
   useEffect(() => {
-    if (esTecnico) return
-    async function cargarCategorias() {
-      const { data } = await supabase.from('categorias').select('*').order('orden')
-      setCategorias(data || [])
-    }
-    cargarCategorias()
-  }, [esTecnico])
-
-  useEffect(() => {
     async function cargar() {
-      if (!categoriaId) {
-        setJugadores([])
-        setResultados({})
+      setCargando(true)
+      const cat = await obtenerCategoriaPrimeraDivision()
+      setCategoria(cat)
+
+      if (!cat) {
+        setCargando(false)
         return
       }
-      setCargando(true)
-
-      const { data: cat } = await supabase.from('categorias').select('nombre').eq('id', categoriaId).single()
-      setCategoriaNombre(cat?.nombre || '')
 
       const { data: categoriasData } = await supabase.from('categorias').select('id, es_reserva')
-      const { data: jugadoresData } = await obtenerJugadoresDeCategoria(supabase, categoriaId, categoriasData)
+      const { data: jugadoresData } = await obtenerJugadoresDeCategoria(supabase, cat.id, categoriasData)
       setJugadores(jugadoresData || [])
 
       const nuevosResultados = {}
       for (const j of jugadoresData || []) {
-        nuevosResultados[j.id] = await calcularSemaforoJugador(j.id, categoriaId)
+        nuevosResultados[j.id] = await calcularSemaforoJugador(j.id, cat.id)
       }
       setResultados(nuevosResultados)
 
       setCargando(false)
     }
     cargar()
-  }, [categoriaId])
+  }, [])
 
   async function handlePdfIndividual(jugador) {
     setGenerandoPdf(true)
@@ -63,55 +51,33 @@ function SemaforoRiesgo({ perfil }) {
     setGenerandoPdf(true)
     try {
       const filas = jugadores.map((j) => ({ jugador: j, resultado: resultados[j.id] }))
-      await generarSemaforoCategoriaPDF(categoriaNombre, filas)
+      await generarSemaforoCategoriaPDF(categoria?.nombre || 'Primera División', filas)
     } finally {
       setGenerandoPdf(false)
     }
   }
 
-  const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
-  }
-
   return (
     <div>
-      <p className="text-sm mb-4" style={{ color: '#5B6B85' }}>
-        Semáforo combinado: bienestar (z-score), carga de entrenamiento (sRPE/ACWR) y CMJ.
-      </p>
-
-      <div className="grid sm:grid-cols-2 gap-3 mb-6">
-        {!esTecnico && (
-          <select
-            value={categoriaId}
-            onChange={(e) => setCategoriaId(e.target.value)}
-            className="w-full p-2.5 rounded-xl outline-none text-sm"
-            style={inputStyle}
-          >
-            <option value="">Elegí una categoría</option>
-            {categorias.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nombre}
-              </option>
-            ))}
-          </select>
-        )}
-        {categoriaId && jugadores.length > 0 && (
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <p className="text-sm" style={{ color: '#5B6B85' }}>
+          Semáforo combinado: bienestar (z-score), carga de entrenamiento (sRPE/ACWR) y CMJ.
+        </p>
+        {jugadores.length > 0 && (
           <button
             onClick={handlePdfCategoria}
             disabled={generandoPdf}
-            className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 disabled:opacity-50"
+            className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 disabled:opacity-50 shrink-0"
             style={{ backgroundColor: '#1A2332', color: '#F0F2F5', border: '1px solid #2A3548' }}
           >
-            {generandoPdf ? '...' : '📄 Descargar reporte de la categoría'}
+            {generandoPdf ? '...' : '📄 Descargar reporte completo'}
           </button>
         )}
       </div>
 
-      {!categoriaId && (
+      {!categoria && !cargando && (
         <p className="text-sm" style={{ color: '#5B6B85' }}>
-          Elegí una categoría para ver el semáforo de riesgo.
+          No se encontró la categoría Primera División.
         </p>
       )}
 
