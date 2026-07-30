@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
-import { cargarAlertasBienestar } from '../utils/bienestar'
+import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
+import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
+import { calcularSemaforoJugador, SEMAFORO_INFO } from '../utils/semaforoRiesgo'
 
 const ESCUDO_CLUB_URL = 'https://qvjviyjkxyngiggoeqlj.supabase.co/storage/v1/object/public/Biblioteca/escudos/Escudo%20simplificado.png'
 
@@ -235,30 +237,34 @@ function InicioSection({ perfil, onCambiarSeccion }) {
           })
       }
 
-      // Alerta de bienestar: fatiga/dolor/estrés altos o en fuerte aumento esta semana
-      let jugadoresParaBienestar = []
-      if (perfil.rol === 'tecnico' && perfil.categoria_id) {
-        const { data } = await supabase
-          .from('jugadores')
-          .select('id, nombre, apellido')
-          .eq('categoria_id', perfil.categoria_id)
-        jugadoresParaBienestar = data || []
-      } else if (perfil.rol !== 'tecnico') {
-        const { data } = await supabase.from('jugadores').select('id, nombre, apellido')
-        jugadoresParaBienestar = data || []
-      }
+      // Alerta de semáforo de riesgo (Wellness + sRPE/ACWR + CMJ) — solo Primera División
+      const categoriaPrimera = await obtenerCategoriaPrimeraDivision()
+      const debeCalcularSemaforo =
+        categoriaPrimera &&
+        (perfil.rol === 'coordinacion' ||
+          perfil.rol === 'preparador_fisico' ||
+          (perfil.rol === 'tecnico' && perfil.categoria_id === categoriaPrimera.id))
 
-      if (jugadoresParaBienestar.length > 0) {
-        const alertasBienestar = await cargarAlertasBienestar(jugadoresParaBienestar)
-        alertasBienestar.forEach((a) => {
-          alertasNuevas.push({
-            id: `bienestar-${a.jugadorId}`,
-            icono: '😓',
-            color: '#F87171',
-            texto: `${a.apellido}, ${a.nombre} — ${a.resumenTexto}`,
-            seccion: 'bienestar',
-          })
-        })
+      if (debeCalcularSemaforo) {
+        const { data: categoriasData } = await supabase.from('categorias').select('id, es_reserva')
+        const { data: jugadoresPrimera } = await obtenerJugadoresDeCategoria(
+          supabase,
+          categoriaPrimera.id,
+          categoriasData
+        )
+        for (const j of jugadoresPrimera || []) {
+          const resultado = await calcularSemaforoJugador(j.id, categoriaPrimera.id)
+          if (resultado.semaforo === 'rojo' || resultado.semaforo === 'amarillo') {
+            const info = SEMAFORO_INFO[resultado.semaforo]
+            alertasNuevas.push({
+              id: `semaforo-${j.id}`,
+              icono: resultado.semaforo === 'rojo' ? '🔴' : '🟡',
+              color: info.color,
+              texto: `${j.apellido}, ${j.nombre} — Semáforo ${info.label} (${resultado.puntos}/6)`,
+              seccion: 'fisico',
+            })
+          }
+        }
       }
 
       setAlertas(alertasNuevas)
@@ -286,7 +292,6 @@ function InicioSection({ perfil, onCambiarSeccion }) {
 
   return (
     <div className="p-6 md:p-10 relative overflow-hidden">
-      {/* Escudo grande de fondo, semi-transparente, centrado */}
       <img
         src={ESCUDO_CLUB_URL}
         alt=""
