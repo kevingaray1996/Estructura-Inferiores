@@ -28,6 +28,8 @@ function seccionesParaRol(rol) {
       { id: 'pases', label: 'Pases' },
       { id: 'usuarios', label: 'Usuarios' },
       { id: 'bienestar', label: 'Bienestar' },
+      { id: 'carga_entrenamiento', label: 'Carga' },
+      { id: 'cmj', label: 'CMJ' },
     ]
   }
   if (rol === 'medico') {
@@ -53,6 +55,8 @@ function seccionesParaRol(rol) {
     { id: 'pensiones', label: 'Pensión' },
     { id: 'seleccion', label: 'Selección' },
     { id: 'contratos', label: 'Contratos' },
+    { id: 'carga_entrenamiento', label: 'Carga' },
+    { id: 'cmj', label: 'CMJ' },
   ]
 }
 
