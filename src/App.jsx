@@ -221,9 +221,7 @@ function App() {
 
       {seccion === 'carga_entrenamiento' && <CargaEntrenamiento perfil={perfil} />}
       {seccion === 'cmj' && <CargaCMJ perfil={perfil} />}
-         />
-      )}
-      
+
       {seccion === 'partidos' && <PartidosSection perfil={perfil} onIrAFisico={irAFisicoDesdePartido} />}
       {seccion === 'entrenamientos' && <EntrenamientosSection />}
       {seccion === 'asistencia' && <AsistenciaSection perfil={perfil} />}
