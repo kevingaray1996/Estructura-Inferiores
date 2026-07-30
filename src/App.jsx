@@ -23,8 +23,6 @@ import PensionesSection from './components/PensionesSection'
 import ConvocatoriasSeleccionSection from './components/ConvocatoriasSeleccionSection'
 import ContratosSection from './components/ContratosSection'
 import BienestarComparativo from './components/BienestarComparativo'
-import CargaEntrenamiento from './components/CargaEntrenamiento'
-import CargaCMJ from './components/CargaCMJ'
 
 function App() {
   const [categoriaBienestarId] = useState(
@@ -210,17 +208,14 @@ function App() {
           perfil={perfil}
         />
       )}
-      
-       {seccion === 'bienestar' && (
+
+      {seccion === 'bienestar' && (
         <BienestarComparativo
           perfil={perfil}
           jugadorInicialId={jugadorParaBienestar}
           onConsumirJugadorInicial={consumirJugadorParaBienestar}
         />
       )}
-
-      {seccion === 'carga_entrenamiento' && <CargaEntrenamiento perfil={perfil} />}
-      {seccion === 'cmj' && <CargaCMJ perfil={perfil} />}
 
       {seccion === 'partidos' && <PartidosSection perfil={perfil} onIrAFisico={irAFisicoDesdePartido} />}
       {seccion === 'entrenamientos' && <EntrenamientosSection />}
