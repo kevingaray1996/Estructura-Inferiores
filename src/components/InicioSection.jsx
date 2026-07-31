@@ -270,11 +270,12 @@ function InicioSection({ perfil, onCambiarSeccion }) {
         const resultadosSemaforo = await Promise.all(
           (jugadoresPrimera || []).map((j) => calcularSemaforoJugador(j.id, categoriaPrimera.id))
         )
+        const alertasSemaforo = []
         ;(jugadoresPrimera || []).forEach((j, i) => {
           const resultado = resultadosSemaforo[i]
           if (resultado.semaforo === 'rojo' || resultado.semaforo === 'amarillo') {
             const info = SEMAFORO_INFO[resultado.semaforo]
-            alertasNuevas.push({
+            alertasSemaforo.push({
               id: `semaforo-${j.id}`,
               icono: resultado.semaforo === 'rojo' ? '🔴' : '🟡',
               color: info.color,
@@ -283,6 +284,18 @@ function InicioSection({ perfil, onCambiarSeccion }) {
             })
           }
         })
+
+        if (alertasSemaforo.length > 3) {
+          alertasNuevas.push({
+            id: 'semaforo-resumen',
+            icono: '⚠️',
+            color: '#FBBF24',
+            texto: `${alertasSemaforo.length} jugadoras requieren atención (semáforo) — ver en Físico`,
+            seccion: 'fisico',
+          })
+        } else {
+          alertasNuevas.push(...alertasSemaforo)
+        }
       }
 
       setAlertas(alertasNuevas)
