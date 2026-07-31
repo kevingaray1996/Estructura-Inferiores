@@ -14,19 +14,15 @@ const POSICIONES = [
 ]
 
 const ZONAS_POSICION = {
-  Arquero: { x: 50, y: 88, w: 130 },
-  'Defensor central': { x: 50, y: 76, w: 150 },
-  'Lateral derecho': { x: 80, y: 68, w: 130 },
-  'Lateral izquierdo': { x: 20, y: 68, w: 130 },
-  'Mediocampista central': { x: 50, y: 52, w: 150 },
-  'Volante ofensivo': { x: 50, y: 40, w: 150 },
-  'Extremo derecho': { x: 82, y: 34, w: 120 },
-  'Extremo izquierdo': { x: 18, y: 34, w: 120 },
-  'Delantero centro': { x: 50, y: 22, w: 145 },
-}
-
-function iniciales(nombre, apellido) {
-  return `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
+  'Delantero centro': { x: 50, y: 16, w: 170 },
+  'Extremo izquierdo': { x: 18, y: 30, w: 150 },
+  'Extremo derecho': { x: 82, y: 30, w: 150 },
+  'Volante ofensivo': { x: 50, y: 44, w: 170 },
+  'Mediocampista central': { x: 50, y: 58, w: 170 },
+  'Lateral izquierdo': { x: 18, y: 72, w: 150 },
+  'Lateral derecho': { x: 82, y: 72, w: 150 },
+  'Defensor central': { x: 50, y: 78, w: 170 },
+  Arquero: { x: 50, y: 90, w: 150 },
 }
 
 function CanchaPlantel({ onSelectJugador }) {
@@ -209,23 +205,20 @@ function CanchaPlantel({ onSelectJugador }) {
                     <p className="text-[10px] uppercase tracking-wide mb-1.5" style={{ color: '#8A9BB8' }}>
                       {posicion}
                     </p>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="space-y-1.5">
                       {jugadoresDePosicion.map((j) => (
                         <button
                           key={j.id}
                           onClick={() => onSelectJugador(j.id)}
-                          className="flex items-center justify-center rounded-full text-[10px] font-bold transition-opacity hover:opacity-80"
+                          className="block w-full text-left text-[10px] px-2 py-1 rounded-lg transition-opacity hover:opacity-80"
                           style={{
-                            width: 28,
-                            height: 28,
-                            backgroundColor: '#1A2332',
-                            border: '1px solid #4ADE80',
+                            backgroundColor: '#0F1419',
+                            border: '1px solid #2A3548',
                             color: '#F0F2F5',
-                            fontFamily: "'Archivo Black', sans-serif",
                           }}
                           title={`${j.apellido}, ${j.nombre}`}
                         >
-                          {iniciales(j.nombre, j.apellido)}
+                          {`${j.apellido}, ${j.nombre}`}
                         </button>
                       ))}
                     </div>
