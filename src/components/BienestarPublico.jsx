@@ -111,6 +111,13 @@ function BienestarPublico({ categoriaId }) {
     }))
   }
 
+  function actualizarTexto(campo, valor) {
+    setValores((prev) => ({
+      ...prev,
+      [campo]: valor,
+    }))
+  }
+
   async function handleEnviar() {
     const completo = CAMPOS.every((c) => valores[c.clave])
     if (!completo) {
@@ -120,7 +127,11 @@ function BienestarPublico({ categoriaId }) {
     setGuardando(true)
     setError('')
 
-    const registro = { fecha, jugador_id: jugadorSeleccionado.id }
+    const registro = {
+      fecha,
+      jugador_id: jugadorSeleccionado.id,
+      zona_dolor: valores.zona_dolor?.trim() || null,
+    }
     CAMPOS.forEach((c) => {
       registro[c.clave] = valores[c.clave]
     })
@@ -302,6 +313,24 @@ function BienestarPublico({ categoriaId }) {
                         <span className="text-[10px]" style={{ color: '#5B6B85' }}>Mejor</span>
                         <span className="text-[10px]" style={{ color: '#5B6B85' }}>Peor</span>
                       </div>
+                      {c.clave === 'dolor_muscular' && (
+                        <div className="mt-3">
+                          <label className="text-sm mb-2 block" style={{ color: '#F0F2F5' }}>
+                            ¿Qué parte del cuerpo te duele?
+                          </label>
+                          <textarea
+                            rows={3}
+                            value={valores.zona_dolor || ''}
+                            onChange={(e) => actualizarTexto('zona_dolor', e.target.value)}
+                            placeholder="Ej: rodilla, espalda, hombro..."
+                            className="w-full p-3 rounded-xl outline-none text-sm"
+                            style={{
+                              ...inputStyle,
+                              resize: 'vertical',
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -127,11 +127,15 @@ CREATE TABLE IF NOT EXISTS "public"."bienestar" (
     "dolor_muscular" smallint,
     "fatiga" smallint,
     "estres" smallint,
+    "zona_dolor" text,
     CONSTRAINT "bienestar_dolor_muscular_check" CHECK ((("dolor_muscular" >= 1) AND ("dolor_muscular" <= 5))),
     CONSTRAINT "bienestar_estres_check" CHECK ((("estres" >= 1) AND ("estres" <= 5))),
     CONSTRAINT "bienestar_fatiga_check" CHECK ((("fatiga" >= 1) AND ("fatiga" <= 5))),
     CONSTRAINT "bienestar_sueno_check" CHECK ((("sueno" >= 1) AND ("sueno" <= 5)))
 );
+
+ALTER TABLE "public"."bienestar"
+    ADD COLUMN IF NOT EXISTS "zona_dolor" text;
 
 
 ALTER TABLE "public"."bienestar" OWNER TO "postgres";
