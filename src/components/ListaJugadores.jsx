@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { generarPlantelPDF } from '../utils/generarPlantelPDF'
 import CategoriaFiltro from './CategoriaFiltro'
 
 const estadoConfig = {
@@ -61,7 +62,14 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva, perfil
           >
             Plantel
           </h1>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap justify-end">
+            <button
+              onClick={generarPlantelPDF}
+              className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
+              style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+            >
+              📄 Descargar plantel PDF
+            </button>
             <button
               onClick={onCargaMasiva}
               className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
