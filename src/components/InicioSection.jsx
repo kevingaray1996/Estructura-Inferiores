@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
-import { calcularSemaforoJugador, SEMAFORO_INFO } from '../utils/semaforoRiesgo'
 
 const ESCUDO_CLUB_URL = 'https://qvjviyjkxyngiggoeqlj.supabase.co/storage/v1/object/public/Biblioteca/escudos/Escudo%20simplificado.png'
 
@@ -251,15 +250,15 @@ function InicioSection({ perfil, onCambiarSeccion }) {
           })
       }
 
-      // Alerta de semáforo de riesgo (Wellness + sRPE/ACWR + CMJ) — solo Primera División
+      // Alerta de Wellness (promedio del día > 3) — solo Primera División
       const categoriaPrimera = await obtenerCategoriaPrimeraDivision()
-      const debeCalcularSemaforo =
+      const debeCalcularWellness =
         categoriaPrimera &&
         (perfil.rol === 'coordinacion' ||
           perfil.rol === 'preparador_fisico' ||
           (perfil.rol === 'tecnico' && perfil.categoria_id === categoriaPrimera.id))
 
-      if (debeCalcularSemaforo) {
+      if (debeCalcularWellness) {
         const { data: categoriasData } = await supabase.from('categorias').select('id, es_reserva')
         const { data: jugadoresPrimera } = await obtenerJugadoresDeCategoria(
           supabase,
@@ -267,34 +266,52 @@ function InicioSection({ perfil, onCambiarSeccion }) {
           categoriasData
         )
 
-        const resultadosSemaforo = await Promise.all(
-          (jugadoresPrimera || []).map((j) => calcularSemaforoJugador(j.id, categoriaPrimera.id))
-        )
-        const alertasSemaforo = []
-        ;(jugadoresPrimera || []).forEach((j, i) => {
-          const resultado = resultadosSemaforo[i]
-          if (resultado.semaforo === 'rojo' || resultado.semaforo === 'amarillo') {
-            const info = SEMAFORO_INFO[resultado.semaforo]
-            alertasSemaforo.push({
-              id: `semaforo-${j.id}`,
-              icono: resultado.semaforo === 'rojo' ? '🔴' : '🟡',
-              color: info.color,
-              texto: `${j.apellido}, ${j.nombre} — Semáforo ${info.label} (${resultado.puntos}/6)`,
+        const idsPrimera = (jugadoresPrimera || []).map((j) => j.id)
+        let bienestarHoy = []
+        if (idsPrimera.length > 0) {
+          const { data: bienestarData } = await supabase
+            .from('bienestar')
+            .select('jugador_id, sueno, dolor_muscular, fatiga, estres, animo_entrenar')
+            .eq('fecha', hoyISO)
+            .in('jugador_id', idsPrimera)
+          bienestarHoy = bienestarData || []
+        }
+
+        const bienestarPorJugador = {}
+        bienestarHoy.forEach((b) => {
+          bienestarPorJugador[b.jugador_id] = b
+        })
+
+        const alertasWellness = []
+        ;(jugadoresPrimera || []).forEach((j) => {
+          const b = bienestarPorJugador[j.id]
+          if (!b) return
+          const valores = [b.sueno, b.dolor_muscular, b.fatiga, b.estres, b.animo_entrenar].filter(
+            (v) => v !== null && v !== undefined && !Number.isNaN(v)
+          )
+          if (valores.length === 0) return
+          const promedioDia = valores.reduce((a, v) => a + v, 0) / valores.length
+          if (promedioDia > 3) {
+            alertasWellness.push({
+              id: `wellness-${j.id}`,
+              icono: '🟡',
+              color: '#FBBF24',
+              texto: `${j.apellido}, ${j.nombre} — Wellness del día: ${promedioDia.toFixed(1)}`,
               seccion: 'fisico',
             })
           }
         })
 
-        if (alertasSemaforo.length > 3) {
+        if (alertasWellness.length > 3) {
           alertasNuevas.push({
-            id: 'semaforo-resumen',
+            id: 'wellness-resumen',
             icono: '⚠️',
             color: '#FBBF24',
-            texto: `${alertasSemaforo.length} jugadoras requieren atención (semáforo) — ver en Físico`,
+            texto: `${alertasWellness.length} jugadoras con wellness alto hoy — ver en Físico`,
             seccion: 'fisico',
           })
         } else {
-          alertasNuevas.push(...alertasSemaforo)
+          alertasNuevas.push(...alertasWellness)
         }
       }
 
