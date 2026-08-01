@@ -27,8 +27,12 @@ function desvioEstandar(valores) {
   return Math.sqrt(varianza)
 }
 
+const WELLNESS_MIN_RESPUESTAS = 15
+
 // --- 1) Wellness: z-score del promedio diario de las 5 preguntas, comparado
 // contra la media/desvío de los últimos días previos (sin contar hoy).
+// Necesita al menos 15 respuestas en los últimos 28 días para ser confiable;
+// si no las tiene, se marca como datos insuficientes y no dispara alerta.
 export async function calcularWellnessZScore(jugadorId) {
   const hoy = new Date()
   hoy.setHours(0, 0, 0, 0)
@@ -53,13 +57,13 @@ export async function calcularWellnessZScore(jugadorId) {
   const registroHoy = porDia.find((d) => d.fecha === hoyISO)
   const anteriores = porDia.filter((d) => d.fecha !== hoyISO).map((d) => d.promedio)
 
-  if (!registroHoy || anteriores.length < 3) {
-    return { z: null, nivel: null, valorHoy: registroHoy?.promedio ?? null }
+  if (!registroHoy || porDia.length < WELLNESS_MIN_RESPUESTAS || anteriores.length < 3) {
+    return { z: null, nivel: null, valorHoy: registroHoy?.promedio ?? null, datosInsuficientes: true }
   }
 
   const media = promedio(anteriores)
   const desvio = desvioEstandar(anteriores)
-  if (!desvio) return { z: null, nivel: null, valorHoy: registroHoy.promedio }
+  if (!desvio) return { z: null, nivel: null, valorHoy: registroHoy.promedio, datosInsuficientes: true }
 
   const z = (registroHoy.promedio - media) / desvio
   let nivel
@@ -67,7 +71,7 @@ export async function calcularWellnessZScore(jugadorId) {
   else if (Math.abs(z) < 1.5) nivel = 'moderado'
   else nivel = 'alerta'
 
-  return { z, nivel, valorHoy: registroHoy.promedio }
+  return { z, nivel, valorHoy: registroHoy.promedio, datosInsuficientes: false }
 }
 
 // --- 2) sRPE / ACWR: carga = minutos reales (bloques de entrenamiento según
