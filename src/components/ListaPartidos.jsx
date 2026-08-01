@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { generarCitacionPDF } from '../utils/generarCitacion'
+import { generarImagenCitacion } from '../utils/generarImagenCitacion'
 import { exportarEstadisticasPDF, exportarEstadisticasCSV } from '../utils/exportarEstadisticas'
 
 function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido, onNuevoPartido, onGestionarEquipos, onVerEstadisticas, onEditarPartido, onVerComparativa, refrescar }) {
@@ -211,6 +212,16 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
                       style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
                     >
                       📄
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        generarImagenCitacion(p.id)
+                      }}
+                      className="text-xs px-2 py-1 rounded-full hover:opacity-80"
+                      style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                    >
+                      🖼️
                     </button>
                     <button
                       onClick={(e) => {
