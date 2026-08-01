@@ -175,7 +175,7 @@ export async function generarImagenCitacion(partidoId) {
 
   const rows = Math.ceil(convocadas.length / COLUMNS)
   const cardWidth = (WIDTH - PADDING * 2 - GAP * (COLUMNS - 1)) / COLUMNS
-  const canvasHeight = HEADER_HEIGHT + INFO_HEIGHT + 60 + rows * cardHeight + 70
+  const canvasHeight = HEADER_HEIGHT + INFO_HEIGHT + 60 + rows * CARD_HEIGHT + 70
 
   const canvas = document.createElement('canvas')
   canvas.width = WIDTH
@@ -246,9 +246,9 @@ export async function generarImagenCitacion(partidoId) {
     const col = index % COLUMNS
     const row = Math.floor(index / COLUMNS)
     const x = PADDING + col * (cardWidth + GAP)
-    const y = gridStartY + row * cardHeight
+    const y = gridStartY + row * CARD_HEIGHT
 
-    drawRoundedRect(ctx, x, y, cardWidth, cardHeight, CARD_RADIUS, '#141B24', '#223048')
+    drawRoundedRect(ctx, x, y, cardWidth, CARD_HEIGHT, CARD_RADIUS, '#141B24', '#223048')
 
     const avatarX = x + 58
     const avatarY = y + 52
