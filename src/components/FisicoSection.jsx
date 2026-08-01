@@ -8,6 +8,7 @@ import CargaCMJ from './CargaCMJ'
 import SemaforoRiesgo from './SemaforoRiesgo'
 import BienestarComparativo from './BienestarComparativo'
 import CargaWellness from './CargaWellness'
+import AlertasDatosFisicos from './AlertasDatosFisicos'
 
 function normalizarNombre(s) {
   return (s || '')
@@ -285,6 +286,8 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
         <p className="text-sm mb-6" style={{ color: '#5B6B85' }}>
           Wellness, esfuerzo percibido (RPE), carga de entrenamiento, CMJ y semáforo de riesgo.
         </p>
+
+        <AlertasDatosFisicos incluirCargaYCmj={puedeVerCargaYCmj} />
 
         <div className="flex gap-2 mb-6 flex-wrap">
           {tabsDisponibles.map((t) => (
