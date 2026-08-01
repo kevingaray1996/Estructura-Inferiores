@@ -105,9 +105,16 @@ function SemaforoRiesgo() {
                       {`${j.nombre?.[0] || ''}${j.apellido?.[0] || ''}`.toUpperCase()}
                     </span>
                   )}
-                  <p className="text-sm truncate" style={{ color: '#F0F2F5' }}>
-                    {j.apellido}, {j.nombre}
-                  </p>
+                  <div className="min-w-0">
+                    <p className="text-sm truncate" style={{ color: '#F0F2F5' }}>
+                      {j.apellido}, {j.nombre}
+                    </p>
+                    {r?.cmj?.bajaConsecutiva && (
+                      <p className="text-[10px] mt-0.5" style={{ color: '#FBBF24' }}>
+                        CMJ en baja consecutiva
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {info ? (

@@ -156,7 +156,7 @@ export async function calcularCargaJugador(jugadorId, categoriaId) {
 
   let nivel = null
   if (acwr !== null) {
-    if (acwr > 1.5) nivel = 'alerta'
+    if (acwr > 1.5 || acwr < 0.8) nivel = 'alerta'
     else if (acwr > 1.3) nivel = 'moderado'
     else nivel = 'normal'
   }

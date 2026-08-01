@@ -99,7 +99,11 @@ export async function generarSemaforoIndividualPDF(jugador, resultado) {
     const filas = [
       ['Wellness (z-score)', resultado.wellness.z !== null ? resultado.wellness.z.toFixed(2) : '—', resultado.wellness.nivel || '—'],
       ['sRPE / ACWR', resultado.carga.acwr !== null ? resultado.carga.acwr.toFixed(2) : '—', resultado.carga.nivel || '—'],
-      ['CMJ (% de baja)', resultado.cmj.porcentaje !== null ? `${resultado.cmj.porcentaje.toFixed(1)}%` : '—', resultado.cmj.nivel || '—'],
+      [
+        'CMJ (% de baja)',
+        resultado.cmj.porcentaje !== null ? `${resultado.cmj.porcentaje.toFixed(1)}%` : '—',
+        resultado.cmj.bajaConsecutiva ? 'alerta · baja consecutiva' : resultado.cmj.nivel || '—',
+      ],
     ]
 
     doc.setFillColor(...NEGRO)
