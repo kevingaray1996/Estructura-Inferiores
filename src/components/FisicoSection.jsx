@@ -6,6 +6,7 @@ import { agregarPendiente, contarPendientes, sincronizarPendientes } from '../ut
 import CargaEntrenamiento from './CargaEntrenamiento'
 import CargaCMJ from './CargaCMJ'
 import CMJComparativo from './CMJComparativo'
+import RPEComparativo from './RPEComparativo'
 import SemaforoRiesgo from './SemaforoRiesgo'
 import BienestarComparativo from './BienestarComparativo'
 import CargaWellness from './CargaWellness'
@@ -29,6 +30,7 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
   const [tab, setTab] = useState('wellness')
   const [subTabWellness, setSubTabWellness] = useState('ver')
   const [subTabCMJ, setSubTabCMJ] = useState('cargar')
+  const [subTabRPE, setSubTabRPE] = useState('cargar')
 
   const [categorias, setCategorias] = useState([])
   const [categoriaId, setCategoriaId] = useState(esTecnico ? perfil.categoria_id : '')
@@ -373,220 +375,246 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
         {tab === 'semaforo' && puedeVerCargaYCmj && <SemaforoRiesgo />}
 
         {tab === 'rpe' && (
-          <>
-            <div className="grid sm:grid-cols-3 gap-3 mb-3">
-              <input
-                type="date"
-                value={fecha}
-                onChange={(e) => setFecha(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
-                style={inputStyle}
-              />
-              {!esTecnico && (
-                <select
-                  value={categoriaId}
-                  onChange={(e) => setCategoriaId(e.target.value)}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm"
-                  style={inputStyle}
+          <div>
+            <div className="flex gap-2 mb-6">
+              {[
+                { key: 'cargar', label: 'Carga manual' },
+                { key: 'ver', label: 'Ver comparativo' },
+              ].map((sub) => (
+                <button
+                  key={sub.key}
+                  onClick={() => setSubTabRPE(sub.key)}
+                  className="flex-1 p-2 rounded-xl text-xs font-medium transition-opacity"
+                  style={
+                    subTabRPE === sub.key
+                      ? { backgroundColor: '#7DD3FC', color: '#0F1419' }
+                      : { backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#8A9BB8' }
+                  }
                 >
-                  <option value="">Elegí una categoría</option>
-                  {categorias.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <select
-                value={tipo}
-                onChange={(e) => {
-                  setTipo(e.target.value)
-                  if (e.target.value !== 'partido') setPartidoId('')
-                }}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
-                style={inputStyle}
-              >
-                <option value="entrenamiento">Entrenamiento</option>
-                <option value="partido">Partido</option>
-              </select>
+                  {sub.label}
+                </button>
+              ))}
             </div>
 
-            {tipo === 'partido' && categoriaId && (
-              <div className="mb-6">
-                <select
-                  value={partidoId}
-                  onChange={(e) => {
-                    setPartidoId(e.target.value)
-                    const p = partidos.find((pp) => pp.id === e.target.value)
-                    if (p?.fecha) setFecha(p.fecha)
-                  }}
-                  className="w-full sm:w-72 p-2.5 rounded-xl outline-none text-sm"
-                  style={inputStyle}
-                >
-                  <option value="">Vincular a un partido (opcional)</option>
-                  {partidos.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      vs {p.rival} — {p.fecha}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
-
-            {!cargando && categoriaId && jugadores.length === 0 && (
-              <p className="text-sm" style={{ color: '#5B6B85' }}>
-                No hay jugadores cargados en esta categoría.
-              </p>
-            )}
-
-            {!categoriaId && !esTecnico && (
-              <p className="text-sm" style={{ color: '#5B6B85' }}>
-                Elegí una categoría para ver el plantel.
-              </p>
-            )}
-
-            {jugadores.length > 0 && (
+            {subTabRPE === 'cargar' && (
               <>
-                <div className="mb-4">
-                  <button
-                    onClick={() => setMostrarPegado((v) => !v)}
-                    className="text-xs font-medium px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
-                    style={{ backgroundColor: '#1A2332', color: '#F0F2F5', border: '1px solid #2A3548' }}
+                <div className="grid sm:grid-cols-3 gap-3 mb-3">
+                  <input
+                    type="date"
+                    value={fecha}
+                    onChange={(e) => setFecha(e.target.value)}
+                    className="w-full p-2.5 rounded-xl outline-none text-sm"
+                    style={inputStyle}
+                  />
+                  {!esTecnico && (
+                    <select
+                      value={categoriaId}
+                      onChange={(e) => setCategoriaId(e.target.value)}
+                      className="w-full p-2.5 rounded-xl outline-none text-sm"
+                      style={inputStyle}
+                    >
+                      <option value="">Elegí una categoría</option>
+                      {categorias.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <select
+                    value={tipo}
+                    onChange={(e) => {
+                      setTipo(e.target.value)
+                      if (e.target.value !== 'partido') setPartidoId('')
+                    }}
+                    className="w-full p-2.5 rounded-xl outline-none text-sm"
+                    style={inputStyle}
                   >
-                    {mostrarPegado ? 'Cerrar' : '📋 Pegar desde Excel'}
-                  </button>
+                    <option value="entrenamiento">Entrenamiento</option>
+                    <option value="partido">Partido</option>
+                  </select>
+                </div>
 
-                  {mostrarPegado && (
-                    <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
-                      <p className="text-xs mb-2" style={{ color: '#5B6B85' }}>
-                        Pegá una fila por jugador: nombre (o "Apellido, Nombre") y el valor de RPE (1-10).
-                      </p>
-                      <textarea
-                        value={textoPegado}
-                        onChange={(e) => setTextoPegado(e.target.value)}
-                        placeholder={'Pérez, Juan\t7\nGómez, Martín\t5'}
-                        rows={5}
-                        className="w-full p-2.5 rounded-xl outline-none text-sm font-mono resize-none mb-2"
-                        style={inputStyle}
-                      />
+                {tipo === 'partido' && categoriaId && (
+                  <div className="mb-6">
+                    <select
+                      value={partidoId}
+                      onChange={(e) => {
+                        setPartidoId(e.target.value)
+                        const p = partidos.find((pp) => pp.id === e.target.value)
+                        if (p?.fecha) setFecha(p.fecha)
+                      }}
+                      className="w-full sm:w-72 p-2.5 rounded-xl outline-none text-sm"
+                      style={inputStyle}
+                    >
+                      <option value="">Vincular a un partido (opcional)</option>
+                      {partidos.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          vs {p.rival} — {p.fecha}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
+
+                {!cargando && categoriaId && jugadores.length === 0 && (
+                  <p className="text-sm" style={{ color: '#5B6B85' }}>
+                    No hay jugadores cargados en esta categoría.
+                  </p>
+                )}
+
+                {!categoriaId && !esTecnico && (
+                  <p className="text-sm" style={{ color: '#5B6B85' }}>
+                    Elegí una categoría para ver el plantel.
+                  </p>
+                )}
+
+                {jugadores.length > 0 && (
+                  <>
+                    <div className="mb-4">
                       <button
-                        onClick={handleAplicarPegado}
-                        disabled={!textoPegado.trim()}
-                        className="text-sm font-medium px-4 py-2 rounded-xl transition-opacity hover:opacity-80 disabled:opacity-50"
-                        style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+                        onClick={() => setMostrarPegado((v) => !v)}
+                        className="text-xs font-medium px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
+                        style={{ backgroundColor: '#1A2332', color: '#F0F2F5', border: '1px solid #2A3548' }}
                       >
-                        Aplicar
+                        {mostrarPegado ? 'Cerrar' : '📋 Pegar desde Excel'}
                       </button>
 
-                      {resultadoPegado && (
-                        <div className="mt-3 text-xs">
-                          <p style={{ color: '#4ADE80' }}>
-                            {resultadoPegado.aplicados} jugador{resultadoPegado.aplicados !== 1 ? 'es' : ''} completados.
+                      {mostrarPegado && (
+                        <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
+                          <p className="text-xs mb-2" style={{ color: '#5B6B85' }}>
+                            Pegá una fila por jugador: nombre (o "Apellido, Nombre") y el valor de RPE (1-10).
                           </p>
-                          {resultadoPegado.noEncontrados.length > 0 && (
-                            <>
-                              <p style={{ color: '#F87171' }} className="mt-1">
-                                No se encontraron {resultadoPegado.noEncontrados.length} fila
-                                {resultadoPegado.noEncontrados.length !== 1 ? 's' : ''} (revisá el nombre):
+                          <textarea
+                            value={textoPegado}
+                            onChange={(e) => setTextoPegado(e.target.value)}
+                            placeholder={'Pérez, Juan\t7\nGómez, Martín\t5'}
+                            rows={5}
+                            className="w-full p-2.5 rounded-xl outline-none text-sm font-mono resize-none mb-2"
+                            style={inputStyle}
+                          />
+                          <button
+                            onClick={handleAplicarPegado}
+                            disabled={!textoPegado.trim()}
+                            className="text-sm font-medium px-4 py-2 rounded-xl transition-opacity hover:opacity-80 disabled:opacity-50"
+                            style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+                          >
+                            Aplicar
+                          </button>
+
+                          {resultadoPegado && (
+                            <div className="mt-3 text-xs">
+                              <p style={{ color: '#4ADE80' }}>
+                                {resultadoPegado.aplicados} jugador{resultadoPegado.aplicados !== 1 ? 'es' : ''} completados.
                               </p>
-                              <ul style={{ color: '#8A9BB8' }} className="list-disc list-inside">
-                                {resultadoPegado.noEncontrados.map((n) => (
-                                  <li key={n}>{n}</li>
-                                ))}
-                              </ul>
-                            </>
+                              {resultadoPegado.noEncontrados.length > 0 && (
+                                <>
+                                  <p style={{ color: '#F87171' }} className="mt-1">
+                                    No se encontraron {resultadoPegado.noEncontrados.length} fila
+                                    {resultadoPegado.noEncontrados.length !== 1 ? 's' : ''} (revisá el nombre):
+                                  </p>
+                                  <ul style={{ color: '#8A9BB8' }} className="list-disc list-inside">
+                                    {resultadoPegado.noEncontrados.map((n) => (
+                                      <li key={n}>{n}</li>
+                                    ))}
+                                  </ul>
+                                </>
+                              )}
+                            </div>
                           )}
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
 
-                <div className="overflow-x-auto mb-6 rounded-xl" style={{ border: '1px solid #2A3548' }}>
-                  <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: '#1A2332' }}>
-                        <th
-                          className="text-left p-2.5 whitespace-nowrap sticky left-0"
-                          style={{ color: '#8A9BB8', backgroundColor: '#1A2332' }}
-                        >
-                          Jugador
-                        </th>
-                        <th className="text-left p-2.5 whitespace-nowrap" style={{ color: '#7DD3FC' }}>
-                          RPE (1-10)
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {jugadores.map((j, i) => (
-                        <tr key={j.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#151D2A' }}>
-                          <td
-                            className="p-2.5 whitespace-nowrap sticky left-0"
-                            style={{ color: '#F0F2F5', backgroundColor: i % 2 === 0 ? '#0F1419' : '#151D2A' }}
-                          >
-                            <div className="flex items-center gap-2">
-                              {j.foto_url ? (
-                                <img
-                                  src={j.foto_url}
-                                  alt={`${j.apellido}, ${j.nombre}`}
-                                  className="w-6 h-6 rounded-full object-cover shrink-0"
+                    <div className="overflow-x-auto mb-6 rounded-xl" style={{ border: '1px solid #2A3548' }}>
+                      <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: '#1A2332' }}>
+                            <th
+                              className="text-left p-2.5 whitespace-nowrap sticky left-0"
+                              style={{ color: '#8A9BB8', backgroundColor: '#1A2332' }}
+                            >
+                              Jugador
+                            </th>
+                            <th className="text-left p-2.5 whitespace-nowrap" style={{ color: '#7DD3FC' }}>
+                              RPE (1-10)
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {jugadores.map((j, i) => (
+                            <tr key={j.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#151D2A' }}>
+                              <td
+                                className="p-2.5 whitespace-nowrap sticky left-0"
+                                style={{ color: '#F0F2F5', backgroundColor: i % 2 === 0 ? '#0F1419' : '#151D2A' }}
+                              >
+                                <div className="flex items-center gap-2">
+                                  {j.foto_url ? (
+                                    <img
+                                      src={j.foto_url}
+                                      alt={`${j.apellido}, ${j.nombre}`}
+                                      className="w-6 h-6 rounded-full object-cover shrink-0"
+                                    />
+                                  ) : (
+                                    <span
+                                      className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
+                                      style={{ backgroundColor: '#1A2332', color: '#8A9BB8' }}
+                                    >
+                                      {`${j.nombre?.[0] || ''}${j.apellido?.[0] || ''}`.toUpperCase()}
+                                    </span>
+                                  )}
+                                  {j.apellido}, {j.nombre}
+                                </div>
+                              </td>
+                              <td className="p-1.5">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="10"
+                                  value={datos[j.id]?.rpe ?? ''}
+                                  onChange={(e) => cambiarValor(j.id, e.target.value)}
+                                  className="w-20 p-1.5 rounded-lg outline-none text-sm"
+                                  style={{ ...inputStyle, borderColor: '#7DD3FC' }}
                                 />
-                              ) : (
-                                <span
-                                  className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
-                                  style={{ backgroundColor: '#1A2332', color: '#8A9BB8' }}
-                                >
-                                  {`${j.nombre?.[0] || ''}${j.apellido?.[0] || ''}`.toUpperCase()}
-                                </span>
-                              )}
-                              {j.apellido}, {j.nombre}
-                            </div>
-                          </td>
-                          <td className="p-1.5">
-                            <input
-                              type="number"
-                              min="1"
-                              max="10"
-                              value={datos[j.id]?.rpe ?? ''}
-                              onChange={(e) => cambiarValor(j.id, e.target.value)}
-                              className="w-20 p-1.5 rounded-lg outline-none text-sm"
-                              style={{ ...inputStyle, borderColor: '#7DD3FC' }}
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
 
-                {pendientes > 0 && (
-                  <p className="text-xs mb-3" style={{ color: '#FBBF24' }}>
-                    📴 {pendientes} registro(s) guardados sin conexión, pendientes de sincronizar.
-                  </p>
+                    {pendientes > 0 && (
+                      <p className="text-xs mb-3" style={{ color: '#FBBF24' }}>
+                        📴 {pendientes} registro(s) guardados sin conexión, pendientes de sincronizar.
+                      </p>
+                    )}
+
+                    {mensaje && (
+                      <p
+                        className="text-sm mb-4"
+                        style={{ color: mensaje.startsWith('Listo') || mensaje.includes('sincronizaron') ? '#4ADE80' : mensaje.startsWith('Sin conexión') || mensaje.startsWith('No se pudo') ? '#FBBF24' : '#F87171' }}
+                      >
+                        {mensaje}
+                      </p>
+                    )}
+
+                    <button
+                      onClick={handleGuardar}
+                      disabled={guardando}
+                      className="w-full sm:w-auto px-6 p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
+                      style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+                    >
+                      {guardando ? 'Guardando...' : 'Guardar RPE'}
+                    </button>
+                  </>
                 )}
-
-                {mensaje && (
-                  <p
-                    className="text-sm mb-4"
-                    style={{ color: mensaje.startsWith('Listo') || mensaje.includes('sincronizaron') ? '#4ADE80' : mensaje.startsWith('Sin conexión') || mensaje.startsWith('No se pudo') ? '#FBBF24' : '#F87171' }}
-                  >
-                    {mensaje}
-                  </p>
-                )}
-
-                <button
-                  onClick={handleGuardar}
-                  disabled={guardando}
-                  className="w-full sm:w-auto px-6 p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-                  style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
-                >
-                  {guardando ? 'Guardando...' : 'Guardar RPE'}
-                </button>
               </>
             )}
-          </>
+
+            {subTabRPE === 'ver' && <RPEComparativo />}
+          </div>
         )}
       </div>
     </div>
