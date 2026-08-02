@@ -1,11 +1,32 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
-import { cargarDatosBienestar } from '../utils/bienestar' 
+import { cargarDatosBienestar } from '../utils/bienestar'
 import { generarBienestarPDF } from '../utils/generarBienestarPDF'
+import { generarBienestarCategoriaPDF } from '../utils/generarBienestarCategoriaPDF'
+import { calcularWellnessZScore } from '../utils/semaforoRiesgo'
 
 function iniciales(nombre, apellido) {
   return `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
+}
+
+function promedio(valores) {
+  const limpios = valores.filter((v) => v !== null && v !== undefined && !Number.isNaN(v))
+  if (limpios.length === 0) return null
+  return limpios.reduce((a, b) => a + b, 0) / limpios.length
+}
+
+function fechaISO(date) {
+  const anio = date.getFullYear()
+  const mes = String(date.getMonth() + 1).padStart(2, '0')
+  const dia = String(date.getDate()).padStart(2, '0')
+  return `${anio}-${mes}-${dia}`
+}
+
+function restarDias(fecha, dias) {
+  const d = new Date(fecha)
+  d.setDate(d.getDate() - dias)
+  return d
 }
 
 function MiniLinea({ serie, escalaMax, color }) {
@@ -56,15 +77,22 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
   const [cargando, setCargando] = useState(false)
   const [generandoPdf, setGenerandoPdf] = useState(false)
 
+  const [resumenGeneral, setResumenGeneral] = useState([])
+  const [cargandoGeneral, setCargandoGeneral] = useState(false)
+
   async function handleDescargarPdf() {
-  if (!jugadorSeleccionado) return
-  setGenerandoPdf(true)
-  try {
-    await generarBienestarPDF(jugadorSeleccionado, periodo)
-  } finally {
-    setGenerandoPdf(false)
+    setGenerandoPdf(true)
+    try {
+      if (jugadorId && jugadorSeleccionado) {
+        await generarBienestarPDF(jugadorSeleccionado, periodo)
+      } else {
+        const categoriaNombre = categorias.find((c) => c.id === categoriaId)?.nombre
+        await generarBienestarCategoriaPDF(categoriaNombre, resumenGeneral)
+      }
+    } finally {
+      setGenerandoPdf(false)
+    }
   }
-}
 
   useEffect(() => {
     if (esTecnico) return
@@ -119,6 +147,55 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
     cargar()
   }, [jugadorId, periodo])
 
+  useEffect(() => {
+    async function cargarGeneral() {
+      if (jugadorId || jugadores.length === 0) {
+        setResumenGeneral([])
+        return
+      }
+      setCargandoGeneral(true)
+
+      const hoy = new Date()
+      const desdeSemana = fechaISO(restarDias(hoy, 6))
+      const desdeMes = fechaISO(restarDias(hoy, 27))
+      const hoyISO = fechaISO(hoy)
+
+      const ids = jugadores.map((j) => j.id)
+      const { data: bienestarData } = await supabase
+        .from('bienestar')
+        .select('jugador_id, fecha, sueno, dolor_muscular, fatiga, estres, animo_entrenar')
+        .in('jugador_id', ids)
+        .gte('fecha', desdeMes)
+        .lte('fecha', hoyISO)
+
+      const porJugador = {}
+      ;(bienestarData || []).forEach((b) => {
+        if (!porJugador[b.jugador_id]) porJugador[b.jugador_id] = []
+        const prom = promedio([b.sueno, b.dolor_muscular, b.fatiga, b.estres, b.animo_entrenar])
+        if (prom !== null) porJugador[b.jugador_id].push({ fecha: b.fecha, valor: prom })
+      })
+
+      const resultadosNivel = await Promise.all(jugadores.map((j) => calcularWellnessZScore(j.id)))
+
+      const filas = jugadores.map((j, i) => {
+        const registros = porJugador[j.id] || []
+        const promedioSemanal = promedio(registros.filter((r) => r.fecha >= desdeSemana).map((r) => r.valor))
+        const promedioMensual = promedio(registros.map((r) => r.valor))
+        return {
+          jugador: j,
+          respuestas: registros.length,
+          promedioSemanal,
+          promedioMensual,
+          nivel: resultadosNivel[i]?.nivel ?? null,
+        }
+      })
+
+      setResumenGeneral(filas)
+      setCargandoGeneral(false)
+    }
+    cargarGeneral()
+  }, [jugadorId, jugadores])
+
   const inputStyle = {
     backgroundColor: '#1A2332',
     border: '1px solid #2A3548',
@@ -129,7 +206,7 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
 
   return (
     <div className="p-6 md:p-10">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <h1
           className="text-3xl md:text-4xl mb-1"
           style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
@@ -166,7 +243,7 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
             className="w-full p-2.5 rounded-xl outline-none text-sm disabled:opacity-50"
             style={inputStyle}
           >
-            <option value="">Elegí una jugadora</option>
+            <option value="">Todo el plantel (general)</option>
             {jugadores.map((j) => (
               <option key={j.id} value={j.id}>
                 {j.apellido}, {j.nombre}
@@ -174,6 +251,46 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
             ))}
           </select>
         </div>
+
+        {!categoriaId && (
+          <p className="text-sm" style={{ color: '#5B6B85' }}>
+            Elegí una categoría para ver el comparativo.
+          </p>
+        )}
+
+        {categoriaId && (
+          <div className="flex gap-2 mb-6">
+            {jugadorId && (
+              <>
+                {[
+                  { key: 'semana', label: 'Última semana' },
+                  { key: 'mes', label: 'Último mes' },
+                ].map((p) => (
+                  <button
+                    key={p.key}
+                    onClick={() => setPeriodo(p.key)}
+                    className="flex-1 p-2.5 rounded-xl text-sm font-medium transition-opacity"
+                    style={
+                      periodo === p.key
+                        ? { backgroundColor: '#4ADE80', color: '#0F1419' }
+                        : { backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#8A9BB8' }
+                    }
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </>
+            )}
+            <button
+              onClick={handleDescargarPdf}
+              disabled={generandoPdf}
+              className="px-4 rounded-xl text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
+              style={{ backgroundColor: '#1A2332', color: '#F0F2F5', border: '1px solid #2A3548' }}
+            >
+              {generandoPdf ? '...' : '📄 PDF'}
+            </button>
+          </div>
+        )}
 
         {jugadorSeleccionado && (
           <div className="flex items-center gap-3 mb-6">
@@ -197,45 +314,76 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
           </div>
         )}
 
-       {jugadorId && (
-          <div className="flex gap-2 mb-6">
-            {[
-              { key: 'semana', label: 'Última semana' },
-              { key: 'mes', label: 'Último mes' },
-            ].map((p) => (
-              <button
-                key={p.key}
-                onClick={() => setPeriodo(p.key)}
-                className="flex-1 p-2.5 rounded-xl text-sm font-medium transition-opacity"
-                style={
-                  periodo === p.key
-                    ? { backgroundColor: '#4ADE80', color: '#0F1419' }
-                    : { backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#8A9BB8' }
-                }
-              >
-                {p.label}
-              </button>
-            ))}
-            <button
-              onClick={handleDescargarPdf}
-              disabled={generandoPdf}
-              className="px-4 rounded-xl text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: '#1A2332', color: '#F0F2F5', border: '1px solid #2A3548' }}
-            >
-              {generandoPdf ? '...' : '📄 PDF'}
-            </button>
-          </div>
-        )}
-
-        {!jugadorId && (
-          <p className="text-sm" style={{ color: '#5B6B85' }}>
-            Elegí una categoría y una jugadora para ver su comparativo.
-          </p>
+        {categoriaId && !jugadorId && (
+          <>
+            {cargandoGeneral && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
+            {!cargandoGeneral && (
+              <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #2A3548' }}>
+                <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#1A2332' }}>
+                      <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>
+                        Jugadora
+                      </th>
+                      <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>
+                        Respuestas (28d)
+                      </th>
+                      <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>
+                        Prom. semanal
+                      </th>
+                      <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>
+                        Prom. mensual
+                      </th>
+                      <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>
+                        Estado
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {resumenGeneral.map((f, i) => (
+                      <tr key={f.jugador.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#151D2A' }}>
+                        <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                          {f.jugador.apellido}, {f.jugador.nombre}
+                        </td>
+                        <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                          {f.respuestas}
+                        </td>
+                        <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                          {f.promedioSemanal !== null ? f.promedioSemanal.toFixed(1) : '—'}
+                        </td>
+                        <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                          {f.promedioMensual !== null ? f.promedioMensual.toFixed(1) : '—'}
+                        </td>
+                        <td className="p-2.5">
+                          {f.nivel ? (
+                            <span
+                              className="text-xs font-medium px-2 py-1 rounded-full"
+                              style={{
+                                backgroundColor:
+                                  f.nivel === 'alerta' ? '#F87171' : f.nivel === 'moderado' ? '#FBBF24' : '#4ADE80',
+                                color: '#0F1419',
+                              }}
+                            >
+                              {f.nivel === 'alerta' ? 'Alerta' : f.nivel === 'moderado' ? 'Moderado' : 'Normal'}
+                            </span>
+                          ) : (
+                            <span className="text-xs" style={{ color: '#5B6B85' }}>
+                              Sin datos
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
 
         {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
 
-        {!cargando && metricas && (
+        {!cargando && jugadorId && metricas && (
           <div className="space-y-4">
             {metricas.map((m) => {
               const colorLinea = m.clave === 'rpe' ? '#FBBF24' : '#7DD3FC'
@@ -249,10 +397,21 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
                   : m.tendencia === 'sube'
                   ? '#F87171'
                   : '#4ADE80'
-              const flecha = m.tendencia === 'sube' ? '↑ subió' : m.tendencia === 'baja' ? '↓ bajó' : m.tendencia === 'estable' ? '→ estable' : ''
+              const flecha =
+                m.tendencia === 'sube'
+                  ? '↑ subió'
+                  : m.tendencia === 'baja'
+                  ? '↓ bajó'
+                  : m.tendencia === 'estable'
+                  ? '→ estable'
+                  : ''
 
               return (
-                <div key={m.clave} className="p-4 rounded-xl" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
+                <div
+                  key={m.clave}
+                  className="p-4 rounded-xl"
+                  style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+                >
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
                       {m.label}
@@ -260,7 +419,10 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-mono" style={{ color: '#F0F2F5' }}>
                         {m.promedioActual !== null ? m.promedioActual.toFixed(1) : '—'}
-                        <span className="text-xs" style={{ color: '#5B6B85' }}> / {m.escalaMax}</span>
+                        <span className="text-xs" style={{ color: '#5B6B85' }}>
+                          {' '}
+                          / {m.escalaMax}
+                        </span>
                       </span>
                       {flecha && (
                         <span className="text-xs" style={{ color: colorTendencia }}>
