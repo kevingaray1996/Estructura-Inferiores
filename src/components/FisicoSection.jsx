@@ -5,6 +5,7 @@ import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { agregarPendiente, contarPendientes, sincronizarPendientes } from '../utils/colaOffline'
 import CargaEntrenamiento from './CargaEntrenamiento'
 import CargaCMJ from './CargaCMJ'
+import CMJComparativo from './CMJComparativo'
 import SemaforoRiesgo from './SemaforoRiesgo'
 import BienestarComparativo from './BienestarComparativo'
 import CargaWellness from './CargaWellness'
@@ -27,6 +28,7 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
   const puedeVerCargaYCmj = perfil.rol === 'coordinacion' || perfil.rol === 'preparador_fisico'
   const [tab, setTab] = useState('wellness')
   const [subTabWellness, setSubTabWellness] = useState('ver')
+  const [subTabCMJ, setSubTabCMJ] = useState('cargar')
 
   const [categorias, setCategorias] = useState([])
   const [categoriaId, setCategoriaId] = useState(esTecnico ? perfil.categoria_id : '')
@@ -342,7 +344,32 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
         )}
 
         {tab === 'carga' && puedeVerCargaYCmj && <CargaEntrenamiento />}
-        {tab === 'cmj' && puedeVerCargaYCmj && <CargaCMJ />}
+        {tab === 'cmj' && puedeVerCargaYCmj && (
+          <div>
+            <div className="flex gap-2 mb-6">
+              {[
+                { key: 'cargar', label: 'Carga manual' },
+                { key: 'ver', label: 'Ver comparativo' },
+              ].map((sub) => (
+                <button
+                  key={sub.key}
+                  onClick={() => setSubTabCMJ(sub.key)}
+                  className="flex-1 p-2 rounded-xl text-xs font-medium transition-opacity"
+                  style={
+                    subTabCMJ === sub.key
+                      ? { backgroundColor: '#7DD3FC', color: '#0F1419' }
+                      : { backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#8A9BB8' }
+                  }
+                >
+                  {sub.label}
+                </button>
+              ))}
+            </div>
+
+            {subTabCMJ === 'cargar' && <CargaCMJ />}
+            {subTabCMJ === 'ver' && <CMJComparativo />}
+          </div>
+        )}
         {tab === 'semaforo' && puedeVerCargaYCmj && <SemaforoRiesgo />}
 
         {tab === 'rpe' && (
