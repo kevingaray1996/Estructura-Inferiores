@@ -1,106 +1,89 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
+import { calcularCMJDrop } from '../utils/semaforoRiesgo'
+import { generarCMJIndividualPDF, generarCMJCategoriaPDF } from '../utils/generarCMJPDF'
 
-function iniciales(nombre, apellido) {
-  return `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
+function promedio(valores) {
+  const limpios = valores.filter((v) => v !== null && v !== undefined && !Number.isNaN(v))
+  if (limpios.length === 0) return null
+  return limpios.reduce((a, b) => a + b, 0) / limpios.length
 }
 
-function MiniLinea({ serie, escalaMax, color }) {
-  if (serie.length === 0) {
-    return <p className="text-xs" style={{ color: '#5B6B85' }}>Sin registros en este período.</p>
-  }
+function fechaISO(date) {
+  const anio = date.getFullYear()
+  const mes = String(date.getMonth() + 1).padStart(2, '0')
+  const dia = String(date.getDate()).padStart(2, '0')
+  return `${anio}-${mes}-${dia}`
+}
 
-  const ancho = 320
-  const alto = 90
-  const paddingX = 10
-  const paddingY = 10
-
-  const puntos = serie.map((s, i) => {
-    const x = serie.length === 1 ? ancho / 2 : paddingX + (i / (serie.length - 1)) * (ancho - paddingX * 2)
-    const y = paddingY + (1 - s.valor / escalaMax) * (alto - paddingY * 2)
-    return { x, y, valor: s.valor, fecha: s.fecha }
-  })
-
-  const pathD = puntos.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
-
-  return (
-    <svg viewBox={`0 0 ${ancho} ${alto + 16}`} width="100%" height={alto + 16}>
-      <path d={pathD} fill="none" stroke={color} strokeWidth="2" />
-      {puntos.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r="3" fill={color} />
-      ))}
-      {puntos.map((p, i) => (
-        <text key={`t-${i}`} x={p.x} y={alto + 14} fontSize="7" fill="#5B6B85" textAnchor="middle">
-          {p.fecha.slice(5).replace('-', '/')}
-        </text>
-      ))}
-    </svg>
-  )
+function restarDias(fecha, dias) {
+  const d = new Date(fecha)
+  d.setDate(d.getDate() - dias)
+  return d
 }
 
 function CMJComparativo() {
   const [categoria, setCategoria] = useState(null)
   const [jugadores, setJugadores] = useState([])
   const [jugadorId, setJugadorId] = useState('')
-  const [periodo, setPeriodo] = useState('semana')
-  const [metricas, setMetricas] = useState(null)
-  const [cargando, setCargando] = useState(false)
+  const [historial, setHistorial] = useState([])
+  const [resumenGeneral, setResumenGeneral] = useState([])
+  const [cargando, setCargando] = useState(true)
+  const [generando, setGenerando] = useState(false)
 
   useEffect(() => {
-    async function cargarCategoria() {
+    async function cargarBase() {
+      setCargando(true)
       const cat = await obtenerCategoriaPrimeraDivision()
       setCategoria(cat)
+      if (cat) {
+        const { data: categoriasData } = await supabase.from('categorias').select('id, es_reserva')
+        const { data: jugadoresData } = await obtenerJugadoresDeCategoria(supabase, cat.id, categoriasData)
+        setJugadores(jugadoresData || [])
+      }
+      setCargando(false)
     }
-    cargarCategoria()
+    cargarBase()
   }, [])
 
   useEffect(() => {
-    async function cargarJugadores() {
-      if (!categoria) {
-        setJugadores([])
-        return
-      }
-      const { data: categoriasData } = await supabase.from('categorias').select('id, es_reserva')
-      const { data } = await supabase.from('jugadores').select('*').eq('categoria_id', categoria.id)
-      const ordenados = (data || []).sort((a, b) => a.apellido.localeCompare(b.apellido))
-      setJugadores(ordenados)
-    }
-    cargarJugadores()
-  }, [categoria])
-
-  useEffect(() => {
-    async function cargar() {
+    async function cargarIndividual() {
       if (!jugadorId) {
-        setMetricas(null)
+        setHistorial([])
         return
       }
-      setCargando(true)
-
-      const { data: registros } = await supabase
+      const { data } = await supabase
         .from('cmj')
         .select('fecha, valor_cm')
         .eq('jugador_id', jugadorId)
         .order('fecha', { ascending: false })
-
-      const ahora = new Date()
-      const ventanaDias = periodo === 'semana' ? 7 : 30
-      const fechasRecientes = (registros || []).filter((r) => {
-        const fechaRegistro = new Date(`${r.fecha}T00:00:00`)
-        const diff = Math.floor((ahora - fechaRegistro) / 86400000)
-        return diff <= ventanaDias
-      })
-
-      const serie = fechasRecientes
-        .slice()
-        .reverse()
-        .map((r) => ({ fecha: r.fecha, valor: Number(r.valor_cm) }))
-
-      setMetricas({ serie })
-      setCargando(false)
+        .limit(16)
+      setHistorial(data || [])
     }
-    cargar()
-  }, [jugadorId, periodo])
+    cargarIndividual()
+  }, [jugadorId])
+
+  useEffect(() => {
+    async function cargarGeneral() {
+      if (jugadorId || jugadores.length === 0) {
+        setResumenGeneral([])
+        return
+      }
+      const resultados = await Promise.all(jugadores.map((j) => calcularCMJDrop(j.id)))
+      setResumenGeneral(jugadores.map((j, i) => ({ jugador: j, resultado: resultados[i] })))
+    }
+    cargarGeneral()
+  }, [jugadorId, jugadores])
+
+  const hoy = new Date()
+  const desdeSemana = fechaISO(restarDias(hoy, 6))
+  const desdeMes = fechaISO(restarDias(hoy, 27))
+  const promedioSemanal = promedio(historial.filter((h) => h.fecha >= desdeSemana).map((h) => h.valor_cm))
+  const promedioMensual = promedio(historial.filter((h) => h.fecha >= desdeMes).map((h) => h.valor_cm))
+  const ultimoValor = historial[0]?.valor_cm ?? null
+  const jugadorSeleccionado = jugadores.find((j) => j.id === jugadorId)
 
   const inputStyle = {
     backgroundColor: '#1A2332',
@@ -108,92 +91,163 @@ function CMJComparativo() {
     color: '#F0F2F5',
   }
 
-  const jugadorSeleccionado = jugadores.find((j) => j.id === jugadorId)
+  async function descargarPDF() {
+    setGenerando(true)
+    try {
+      if (jugadorId && jugadorSeleccionado) {
+        const resultado = await calcularCMJDrop(jugadorId)
+        await generarCMJIndividualPDF(jugadorSeleccionado, historial, resultado)
+      } else {
+        await generarCMJCategoriaPDF(categoria?.nombre, resumenGeneral)
+      }
+    } finally {
+      setGenerando(false)
+    }
+  }
+
+  if (cargando) return <p style={{ color: '#5B6B85' }}>Cargando...</p>
 
   return (
-    <div className="p-6 md:p-10">
-      <div className="max-w-2xl mx-auto">
-        <h1
-          className="text-3xl md:text-4xl mb-1"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+    <div>
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <select
+          value={jugadorId}
+          onChange={(e) => setJugadorId(e.target.value)}
+          className="w-full sm:w-64 p-2.5 rounded-xl outline-none text-sm"
+          style={inputStyle}
         >
-          CMJ
-        </h1>
-        <p className="text-sm mb-6" style={{ color: '#5B6B85' }}>
-          Comparativo del salto contramovimiento por jugador en los últimos registros.
-        </p>
+          <option value="">Todo el plantel (general)</option>
+          {jugadores.map((j) => (
+            <option key={j.id} value={j.id}>
+              {j.apellido}, {j.nombre}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={descargarPDF}
+          disabled={generando}
+          className="px-4 py-2.5 rounded-xl text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
+          style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+        >
+          {generando ? 'Generando...' : 'Descargar PDF'}
+        </button>
+      </div>
 
-        <div className="grid sm:grid-cols-2 gap-3 mb-6">
-          <select
-            value={jugadorId}
-            onChange={(e) => setJugadorId(e.target.value)}
-            className="w-full p-2.5 rounded-xl outline-none text-sm"
-            style={inputStyle}
-          >
-            <option value="">Elegí una jugadora</option>
-            {jugadores.map((j) => (
-              <option key={j.id} value={j.id}>
-                {j.apellido}, {j.nombre}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={periodo}
-            onChange={(e) => setPeriodo(e.target.value)}
-            className="w-full p-2.5 rounded-xl outline-none text-sm"
-            style={inputStyle}
-          >
-            <option value="semana">Última semana</option>
-            <option value="mes">Último mes</option>
-          </select>
+      {!jugadorId && (
+        <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #2A3548' }}>
+          <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#1A2332' }}>
+                <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>Jugadora</th>
+                <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>Último (cm)</th>
+                <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>% baja</th>
+                <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {resumenGeneral.map(({ jugador, resultado }, i) => (
+                <tr key={jugador.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#151D2A' }}>
+                  <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                    {jugador.apellido}, {jugador.nombre}
+                  </td>
+                  <td className="p-2.5" style={{ color: '#F0F2F5' }}>{resultado.ultimoValor ?? '—'}</td>
+                  <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                    {resultado.porcentaje !== null ? `${resultado.porcentaje.toFixed(1)}%` : '—'}
+                  </td>
+                  <td className="p-2.5">
+                    {resultado.nivel ? (
+                      <span
+                        className="text-xs font-medium px-2 py-1 rounded-full"
+                        style={{
+                          backgroundColor:
+                            resultado.nivel === 'alerta'
+                              ? '#F87171'
+                              : resultado.nivel === 'moderado'
+                              ? '#FBBF24'
+                              : '#4ADE80',
+                          color: '#0F1419',
+                        }}
+                      >
+                        {resultado.nivel === 'alerta' ? 'Alerta' : resultado.nivel === 'moderado' ? 'Moderado' : 'Normal'}
+                        {resultado.bajaConsecutiva ? ' · consecutiva' : ''}
+                      </span>
+                    ) : (
+                      <span className="text-xs" style={{ color: '#5B6B85' }}>
+                        Sin datos
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+      )}
 
-        {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
-
-        {!cargando && !jugadorSeleccionado && (
-          <p className="text-sm" style={{ color: '#5B6B85' }}>
-            Elegí una jugadora para ver su comparativo de CMJ.
-          </p>
-        )}
-
-        {jugadorSeleccionado && metricas && (
-          <div className="space-y-4">
-            <div className="rounded-xl p-4" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
-              <div className="flex items-center gap-3 mb-3">
-                {jugadorSeleccionado.foto_url ? (
-                  <img
-                    src={jugadorSeleccionado.foto_url}
-                    alt={`${jugadorSeleccionado.apellido}, ${jugadorSeleccionado.nombre}`}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                ) : (
-                  <span
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold"
-                    style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
-                  >
-                    {iniciales(jugadorSeleccionado.nombre, jugadorSeleccionado.apellido)}
-                  </span>
-                )}
-                <div>
-                  <p className="text-base font-semibold" style={{ color: '#F0F2F5' }}>
-                    {jugadorSeleccionado.apellido}, {jugadorSeleccionado.nombre}
-                  </p>
-                  <p className="text-xs" style={{ color: '#5B6B85' }}>
-                    CMJ en los últimos {periodo === 'semana' ? '7 días' : '30 días'}
-                  </p>
-                </div>
-              </div>
-
-              <MiniLinea
-                serie={metricas.serie}
-                escalaMax={Math.max(50, ...metricas.serie.map((s) => s.valor))}
-                color="#7DD3FC"
-              />
+      {jugadorId && (
+        <>
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <div className="p-3 rounded-xl" style={inputStyle}>
+              <p className="text-xs" style={{ color: '#5B6B85' }}>
+                Último
+              </p>
+              <p className="text-lg font-bold" style={{ color: '#F0F2F5' }}>
+                {ultimoValor ?? '—'} cm
+              </p>
+            </div>
+            <div className="p-3 rounded-xl" style={inputStyle}>
+              <p className="text-xs" style={{ color: '#5B6B85' }}>
+                Prom. semanal
+              </p>
+              <p className="text-lg font-bold" style={{ color: '#F0F2F5' }}>
+                {promedioSemanal !== null ? promedioSemanal.toFixed(1) : '—'} cm
+              </p>
+            </div>
+            <div className="p-3 rounded-xl" style={inputStyle}>
+              <p className="text-xs" style={{ color: '#5B6B85' }}>
+                Prom. mensual
+              </p>
+              <p className="text-lg font-bold" style={{ color: '#F0F2F5' }}>
+                {promedioMensual !== null ? promedioMensual.toFixed(1) : '—'} cm
+              </p>
             </div>
           </div>
-        )}
-      </div>
+
+          <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #2A3548' }}>
+            <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#1A2332' }}>
+                  <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>
+                    Fecha
+                  </th>
+                  <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>
+                    Valor (cm)
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {historial.length === 0 && (
+                  <tr>
+                    <td colSpan={2} className="p-2.5 text-sm" style={{ color: '#5B6B85' }}>
+                      Sin mediciones cargadas.
+                    </td>
+                  </tr>
+                )}
+                {historial.map((h, i) => (
+                  <tr key={h.fecha} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#151D2A' }}>
+                    <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                      {h.fecha}
+                    </td>
+                    <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                      {h.valor_cm}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   )
 }
