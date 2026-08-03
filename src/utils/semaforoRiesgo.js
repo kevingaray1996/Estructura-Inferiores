@@ -29,6 +29,9 @@ function desvioEstandar(valores) {
 
 const WELLNESS_MIN_RESPUESTAS = 15
 
+const RPE_MIN_DIAS_CRONICA = 12 // mínimo de días con carga calculable en 28 días para confiar en el ACWR
+const RPE_MIN_DIAS_SEMANA = 3   // mínimo de días con RPE cargado en la semana (de los 4 de entrenamiento)
+
 // --- 1) Wellness: z-score del promedio diario de las 5 preguntas, comparado
 // contra la media/desvío de los últimos días previos (sin contar hoy).
 // Necesita al menos 15 respuestas en los últimos 28 días para ser confiable;
@@ -81,6 +84,7 @@ export async function calcularCargaJugador(jugadorId, categoriaId) {
   hoy.setHours(0, 0, 0, 0)
   const hoyISO = fechaISO(hoy)
   const desde28ISO = fechaISO(restarDias(hoy, 27))
+  const desdeSemanaISO = fechaISO(restarDias(hoy, 6))
 
   const [{ data: jugador }, { data: bloquesRango }, { data: asistencias }, { data: statsPartidos }, { data: rpeData }] =
     await Promise.all([
@@ -143,7 +147,7 @@ export async function calcularCargaJugador(jugadorId, categoriaId) {
   Object.entries(minutosPorFecha).forEach(([fecha, minutos]) => {
     const rpes = rpePorFecha[fecha]
     if (!rpes || rpes.length === 0 || minutos <= 0) return
-    const rpeProm = promedio(rpes)
+    const rpeProm = rpes.reduce((a, b) => a + b, 0) / rpes.length
     cargaPorFecha[fecha] = minutos * rpeProm
   })
 
@@ -156,16 +160,40 @@ export async function calcularCargaJugador(jugadorId, categoriaId) {
 
   const cargaAguda = sumaUltimosNDias(7)
   const cargaCronicaSemanal = sumaUltimosNDias(28) / 4
-  const acwr = cargaCronicaSemanal > 0 ? cargaAguda / cargaCronicaSemanal : null
+  const acwrCalculado = cargaCronicaSemanal > 0 ? cargaAguda / cargaCronicaSemanal : null
 
+  // Confiabilidad del ACWR: necesita suficientes días con carga calculable
+  // (minutos + RPE) en la ventana de 28 días.
+  const diasConCarga28 = Object.keys(cargaPorFecha).length
+  const datosInsuficientes = diasConCarga28 < RPE_MIN_DIAS_CRONICA
+
+  let acwr = null
   let nivel = null
-  if (acwr !== null) {
+  if (!datosInsuficientes && acwrCalculado !== null) {
+    acwr = acwrCalculado
     if (acwr > 1.5 || acwr < 0.8) nivel = 'alerta'
     else if (acwr > 1.3) nivel = 'moderado'
     else nivel = 'normal'
   }
 
-  return { acwr, nivel, cargaAguda, cargaCronicaSemanal }
+  // Respaldo: carga simple de esta semana, solo si hay al menos 3 de los 4
+  // días de entrenamiento con RPE cargado; si no, queda nula.
+  const diasConCargaSemana = Object.keys(cargaPorFecha).filter(
+    (f) => f >= desdeSemanaISO && f <= hoyISO
+  ).length
+  const semanaInsuficiente = diasConCargaSemana < RPE_MIN_DIAS_SEMANA
+  const cargaSemanal = semanaInsuficiente ? null : cargaAguda
+
+  return {
+    acwr,
+    nivel,
+    cargaAguda,
+    cargaCronicaSemanal,
+    datosInsuficientes,
+    cargaSemanal,
+    diasConCargaSemana,
+    semanaInsuficiente,
+  }
 }
 
 // --- 3) CMJ: % de baja del último registro contra el promedio de las 3
