@@ -9,6 +9,7 @@ function CargaEntrenamiento() {
   const [posicionesDisponibles, setPosicionesDisponibles] = useState([])
   const [bloques, setBloques] = useState([])
   const [cargando, setCargando] = useState(false)
+  const [subTab, setSubTab] = useState('cargar')
 
   const [descripcion, setDescripcion] = useState('')
   const [duracion, setDuracion] = useState('')
@@ -16,6 +17,9 @@ function CargaEntrenamiento() {
   const [aplicaTodas, setAplicaTodas] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [editandoId, setEditandoId] = useState(null)
+
+  const [historial, setHistorial] = useState([])
+  const [cargandoHistorial, setCargandoHistorial] = useState(false)
 
   const inputStyle = {
     backgroundColor: '#1A2332',
@@ -67,6 +71,30 @@ function CargaEntrenamiento() {
     cargarBloques()
   }, [categoria, fecha])
 
+  useEffect(() => {
+    async function cargarHistorial() {
+      if (!categoria || subTab !== 'historial') return
+      setCargandoHistorial(true)
+      const { data } = await supabase
+        .from('entrenamiento_bloques')
+        .select('fecha, duracion_minutos')
+        .eq('categoria_id', categoria.id)
+        .order('fecha', { ascending: false })
+
+      const porFecha = {}
+      ;(data || []).forEach((b) => {
+        if (!porFecha[b.fecha]) porFecha[b.fecha] = { fecha: b.fecha, bloques: 0, minutos: 0 }
+        porFecha[b.fecha].bloques += 1
+        porFecha[b.fecha].minutos += b.duracion_minutos || 0
+      })
+
+      const filas = Object.values(porFecha).sort((a, b) => b.fecha.localeCompare(a.fecha))
+      setHistorial(filas)
+      setCargandoHistorial(false)
+    }
+    cargarHistorial()
+  }, [categoria, subTab])
+
   function limpiarForm() {
     setDescripcion('')
     setDuracion('')
@@ -92,6 +120,11 @@ function CargaEntrenamiento() {
     setPosicionesSeleccionadas((prev) =>
       prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]
     )
+  }
+
+  function irADia(fechaElegida) {
+    setFecha(fechaElegida)
+    setSubTab('cargar')
   }
 
   async function handleGuardarBloque() {
@@ -134,163 +167,243 @@ function CargaEntrenamiento() {
 
   return (
     <div>
-      <p className="text-sm mb-6" style={{ color: '#5B6B85' }}>
-        Cargá los bloques del entrenamiento del día de Primera División (duración y a qué jugadoras aplica).
-      </p>
-
-      <div className="mb-6">
-        <input
-          type="date"
-          value={fecha}
-          onChange={(e) => setFecha(e.target.value)}
-          className="w-full sm:w-56 p-2.5 rounded-xl outline-none text-sm"
-          style={inputStyle}
-        />
+      <div className="flex gap-2 mb-6">
+        {[
+          { key: 'cargar', label: 'Cargar' },
+          { key: 'historial', label: 'Historial' },
+        ].map((s) => (
+          <button
+            key={s.key}
+            onClick={() => setSubTab(s.key)}
+            className="flex-1 p-2.5 rounded-xl text-sm font-medium transition-opacity"
+            style={
+              subTab === s.key
+                ? { backgroundColor: '#4ADE80', color: '#0F1419' }
+                : { backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#8A9BB8' }
+            }
+          >
+            {s.label}
+          </button>
+        ))}
       </div>
 
-      {!categoria && (
-        <p className="text-sm" style={{ color: '#5B6B85' }}>
-          No se encontró la categoría Primera División.
-        </p>
-      )}
-
-      {categoria && (
+      {subTab === 'cargar' && (
         <>
-          <div className="p-4 rounded-xl mb-6 space-y-3" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
-            {editandoId && (
-              <p className="text-xs" style={{ color: '#8A9BB8' }}>Editando bloque</p>
-            )}
-            <textarea
-              placeholder='Ej: "Bloque de definición con pausas de 2 min" o "Despejes y posicionamiento"'
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
-              rows={2}
-              className="w-full p-2.5 rounded-xl outline-none text-sm resize-none"
-              style={inputStyle}
-            />
+          <p className="text-sm mb-6" style={{ color: '#5B6B85' }}>
+            Cargá los bloques del entrenamiento del día de Primera División (duración y a qué jugadoras aplica).
+          </p>
+
+          <div className="mb-6">
             <input
-              type="number"
-              min="1"
-              placeholder="Duración en minutos"
-              value={duracion}
-              onChange={(e) => setDuracion(e.target.value)}
-              className="w-full sm:w-48 p-2.5 rounded-xl outline-none text-sm"
+              type="date"
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              className="w-full sm:w-56 p-2.5 rounded-xl outline-none text-sm"
               style={inputStyle}
             />
-
-            <div>
-              <label className="flex items-center gap-2 text-sm cursor-pointer mb-2" style={{ color: '#F0F2F5' }}>
-                <input
-                  type="checkbox"
-                  checked={aplicaTodas}
-                  onChange={(e) => {
-                    setAplicaTodas(e.target.checked)
-                    if (e.target.checked) setPosicionesSeleccionadas([])
-                  }}
-                />
-                Aplica a todas las jugadoras
-              </label>
-
-              {!aplicaTodas && (
-                <div className="flex flex-wrap gap-2">
-                  {posicionesDisponibles.length === 0 && (
-                    <p className="text-xs" style={{ color: '#5B6B85' }}>
-                      No hay posiciones cargadas todavía.
-                    </p>
-                  )}
-                  {posicionesDisponibles.map((p) => {
-                    const activo = posicionesSeleccionadas.includes(p)
-                    return (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => togglePosicion(p)}
-                        className="text-xs px-3 py-1.5 rounded-full transition-opacity hover:opacity-80"
-                        style={{
-                          backgroundColor: activo ? '#4ADE80' : '#0F1419',
-                          color: activo ? '#0F1419' : '#8A9BB8',
-                          border: '1px solid #2A3548',
-                        }}
-                      >
-                        {p}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={handleGuardarBloque}
-                disabled={guardando || !descripcion || !duracion}
-                className="flex-1 p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-                style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
-              >
-                {guardando ? 'Guardando...' : editandoId ? 'Guardar cambios' : '+ Agregar bloque'}
-              </button>
-              {editandoId && (
-                <button
-                  onClick={limpiarForm}
-                  className="px-4 rounded-xl text-sm transition-opacity hover:opacity-80"
-                  style={{ backgroundColor: '#0F1419', color: '#8A9BB8', border: '1px solid #2A3548' }}
-                >
-                  Cancelar
-                </button>
-              )}
-            </div>
           </div>
 
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs tracking-widest uppercase" style={{ color: '#5B6B85' }}>
-              Bloques del día
-            </p>
-            <span className="text-xs font-mono" style={{ color: '#8A9BB8' }}>
-              Total: {totalMinutos} min
-            </span>
-          </div>
-
-          {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
-
-          {!cargando && bloques.length === 0 && (
+          {!categoria && (
             <p className="text-sm" style={{ color: '#5B6B85' }}>
-              Todavía no hay bloques cargados para este día.
+              No se encontró la categoría Primera División.
             </p>
           )}
 
-          <div className="space-y-2">
-            {bloques.map((b) => (
-              <div
-                key={b.id}
-                className="p-3 rounded-xl flex items-start justify-between gap-3"
-                style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
-              >
-                <div className="min-w-0">
-                  <p className="text-sm" style={{ color: '#F0F2F5' }}>{b.descripcion}</p>
-                  <p className="text-xs mt-1" style={{ color: '#8A9BB8' }}>
-                    {b.duracion_minutos} min ·{' '}
-                    {b.posiciones && b.posiciones.length > 0 ? b.posiciones.join(', ') : 'Todas las jugadoras'}
-                  </p>
+          {categoria && (
+            <>
+              <div className="p-4 rounded-xl mb-6 space-y-3" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
+                {editandoId && (
+                  <p className="text-xs" style={{ color: '#8A9BB8' }}>Editando bloque</p>
+                )}
+                <textarea
+                  placeholder='Ej: "Bloque de definición con pausas de 2 min" o "Despejes y posicionamiento"'
+                  value={descripcion}
+                  onChange={(e) => setDescripcion(e.target.value)}
+                  rows={2}
+                  className="w-full p-2.5 rounded-xl outline-none text-sm resize-none"
+                  style={inputStyle}
+                />
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Duración en minutos"
+                  value={duracion}
+                  onChange={(e) => setDuracion(e.target.value)}
+                  className="w-full sm:w-48 p-2.5 rounded-xl outline-none text-sm"
+                  style={inputStyle}
+                />
+
+                <div>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer mb-2" style={{ color: '#F0F2F5' }}>
+                    <input
+                      type="checkbox"
+                      checked={aplicaTodas}
+                      onChange={(e) => {
+                        setAplicaTodas(e.target.checked)
+                        if (e.target.checked) setPosicionesSeleccionadas([])
+                      }}
+                    />
+                    Aplica a todas las jugadoras
+                  </label>
+
+                  {!aplicaTodas && (
+                    <div className="flex flex-wrap gap-2">
+                      {posicionesDisponibles.length === 0 && (
+                        <p className="text-xs" style={{ color: '#5B6B85' }}>
+                          No hay posiciones cargadas todavía.
+                        </p>
+                      )}
+                      {posicionesDisponibles.map((p) => {
+                        const activo = posicionesSeleccionadas.includes(p)
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => togglePosicion(p)}
+                            className="text-xs px-3 py-1.5 rounded-full transition-opacity hover:opacity-80"
+                            style={{
+                              backgroundColor: activo ? '#4ADE80' : '#0F1419',
+                              color: activo ? '#0F1419' : '#8A9BB8',
+                              border: '1px solid #2A3548',
+                            }}
+                          >
+                            {p}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+
+                <div className="flex gap-2">
                   <button
-                    onClick={() => editarBloque(b)}
-                    className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                    style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                    onClick={handleGuardarBloque}
+                    disabled={guardando || !descripcion || !duracion}
+                    className="flex-1 p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
+                    style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
                   >
-                    ✏️
+                    {guardando ? 'Guardando...' : editandoId ? 'Guardar cambios' : '+ Agregar bloque'}
                   </button>
-                  <button
-                    onClick={() => handleEliminarBloque(b.id)}
-                    className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                    style={{ backgroundColor: '#0F1419', color: '#F87171' }}
-                  >
-                    🗑
-                  </button>
+                  {editandoId && (
+                    <button
+                      onClick={limpiarForm}
+                      className="px-4 rounded-xl text-sm transition-opacity hover:opacity-80"
+                      style={{ backgroundColor: '#0F1419', color: '#8A9BB8', border: '1px solid #2A3548' }}
+                    >
+                      Cancelar
+                    </button>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
+
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs tracking-widest uppercase" style={{ color: '#5B6B85' }}>
+                  Bloques del día
+                </p>
+                <span className="text-xs font-mono" style={{ color: '#8A9BB8' }}>
+                  Total: {totalMinutos} min
+                </span>
+              </div>
+
+              {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
+
+              {!cargando && bloques.length === 0 && (
+                <p className="text-sm" style={{ color: '#5B6B85' }}>
+                  Todavía no hay bloques cargados para este día.
+                </p>
+              )}
+
+              <div className="space-y-2">
+                {bloques.map((b) => (
+                  <div
+                    key={b.id}
+                    className="p-3 rounded-xl flex items-start justify-between gap-3"
+                    style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm" style={{ color: '#F0F2F5' }}>{b.descripcion}</p>
+                      <p className="text-xs mt-1" style={{ color: '#8A9BB8' }}>
+                        {b.duracion_minutos} min ·{' '}
+                        {b.posiciones && b.posiciones.length > 0 ? b.posiciones.join(', ') : 'Todas las jugadoras'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => editarBloque(b)}
+                        className="text-xs px-2 py-1 rounded-full hover:opacity-80"
+                        style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => handleEliminarBloque(b.id)}
+                        className="text-xs px-2 py-1 rounded-full hover:opacity-80"
+                        style={{ backgroundColor: '#0F1419', color: '#F87171' }}
+                      >
+                        🗑
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {subTab === 'historial' && (
+        <>
+          <p className="text-sm mb-6" style={{ color: '#5B6B85' }}>
+            Historial de días con entrenamiento cargado (Primera División). Tocá un día para verlo o editarlo.
+          </p>
+
+          {cargandoHistorial && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
+
+          {!cargandoHistorial && historial.length === 0 && (
+            <p className="text-sm" style={{ color: '#5B6B85' }}>
+              Todavía no hay ningún entrenamiento cargado.
+            </p>
+          )}
+
+          {!cargandoHistorial && historial.length > 0 && (
+            <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #2A3548' }}>
+              <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#1A2332' }}>
+                    <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>
+                      Fecha
+                    </th>
+                    <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>
+                      Bloques
+                    </th>
+                    <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>
+                      Minutos totales
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historial.map((h, i) => (
+                    <tr
+                      key={h.fecha}
+                      onClick={() => irADia(h.fecha)}
+                      className="cursor-pointer hover:opacity-80"
+                      style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#151D2A' }}
+                    >
+                      <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                        {h.fecha}
+                      </td>
+                      <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                        {h.bloques}
+                      </td>
+                      <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                        {h.minutos} min
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </>
       )}
     </div>
