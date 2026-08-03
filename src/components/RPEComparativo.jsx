@@ -119,3 +119,5 @@ export async function calcularCargaJugador(jugadorId, categoriaId) {
     semanaInsuficiente,
   }
 }
+
+export default RPEComparativo
