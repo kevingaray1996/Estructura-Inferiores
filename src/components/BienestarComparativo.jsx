@@ -127,7 +127,12 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
         return
       }
       const { data: categoriasData } = await supabase.from('categorias').select('id, es_reserva')
-      const { data } = await obtenerJugadoresDeCategoria(supabase, categoriaId, categoriasData)
+      const { data } = await obtenerJugadoresDeCategoria(
+        supabase,
+        categoriaId,
+        categoriasData,
+        { soloDisponibles: true }
+      )
       setJugadores(data || [])
     }
     cargarJugadores()

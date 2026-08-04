@@ -71,7 +71,12 @@ function RPEComparativo() {
 
       if (cat) {
         const { data: categoriasData } = await supabase.from('categorias').select('id, es_reserva')
-        const { data: jugadoresData } = await obtenerJugadoresDeCategoria(supabase, cat.id, categoriasData)
+        const { data: jugadoresData } = await obtenerJugadoresDeCategoria(
+          supabase,
+          cat.id,
+          categoriasData,
+          { soloDisponibles: true }
+        )
         setJugadores(jugadoresData || [])
       }
 
