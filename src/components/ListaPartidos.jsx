@@ -3,6 +3,7 @@ import { supabase } from '../supabaseClient'
 import { generarCitacionPDF } from '../utils/generarCitacion'
 import { generarImagenCitacion } from '../utils/generarImagenCitacion'
 import { exportarEstadisticasPDF, exportarEstadisticasCSV } from '../utils/exportarEstadisticas'
+import { COLORES } from '../theme'
 
 function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido, onNuevoPartido, onGestionarEquipos, onVerEstadisticas, onEditarPartido, onVerComparativa, refrescar }) {
   const [partidos, setPartidos] = useState([])
@@ -83,25 +84,25 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
           <button
             onClick={onVolver}
             className="text-sm mb-6 flex items-center gap-1 hover:opacity-70 transition-opacity"
-            style={{ color: '#8A9BB8' }}
+            style={{ color: COLORES.textoSecundario }}
           >
             ← Volver
           </button>
         )}
 
-        <div className="flex items-start justify-between mb-8">
+        <div className="flex items-start justify-between mb-8 flex-wrap gap-3">
           <h1
             className="text-2xl md:text-3xl"
-            style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+            style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
           >
             Partidos
           </h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {onGestionarEquipos && (
               <button
                 onClick={onGestionarEquipos}
                 className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
-                style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+                style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.textoSecundario, border: `1px solid ${COLORES.borde}` }}
               >
                 🛡️ Equipos
               </button>
@@ -109,7 +110,7 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
             <button
               onClick={onNuevoPartido}
               className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
-              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+              style={{ backgroundColor: COLORES.acento, color: '#1A1A1A' }}
             >
               + Nuevo partido
             </button>
@@ -117,14 +118,14 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
         </div>
 
         <div className="flex items-center gap-2 mb-6 flex-wrap">
-          <span className="text-xs" style={{ color: '#5B6B85' }}>
+          <span className="text-xs" style={{ color: COLORES.textoMuted }}>
             Estadísticas de la categoría:
           </span>
           <button
             onClick={() => handleExportar('pdf')}
             disabled={exportando}
             className="text-xs px-3 py-1.5 rounded-lg hover:opacity-80 disabled:opacity-50"
-            style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.textoSecundario, border: `1px solid ${COLORES.borde}` }}
           >
             📄 PDF
           </button>
@@ -132,23 +133,23 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
             onClick={() => handleExportar('csv')}
             disabled={exportando}
             className="text-xs px-3 py-1.5 rounded-lg hover:opacity-80 disabled:opacity-50"
-            style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.textoSecundario, border: `1px solid ${COLORES.borde}` }}
           >
             ⬇️ CSV
           </button>
           <button
             onClick={onVerComparativa}
             className="text-xs px-3 py-1.5 rounded-lg hover:opacity-80"
-            style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.textoSecundario, border: `1px solid ${COLORES.borde}` }}
           >
             📊 Ver comparativa
           </button>
         </div>
 
-        {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
+        {cargando && <p style={{ color: COLORES.textoMuted }}>Cargando...</p>}
 
         {!cargando && partidos.length === 0 && (
-          <p style={{ color: '#5B6B85' }}>No hay partidos cargados para esta categoría todavía.</p>
+          <p style={{ color: COLORES.textoMuted }}>No hay partidos cargados para esta categoría todavía.</p>
         )}
 
         <div className="space-y-2">
@@ -156,10 +157,10 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
             const resultado = calcularResultado(p)
             const colorResultado = resultado
               ? resultado.etiqueta === 'Victoria'
-                ? '#4ADE80'
+                ? COLORES.exito
                 : resultado.etiqueta === 'Derrota'
-                ? '#F87171'
-                : '#FBBF24'
+                ? COLORES.peligro
+                : COLORES.acento
               : null
 
             return (
@@ -167,38 +168,38 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
                 key={p.id}
                 onClick={() => onElegirPartido(p.id)}
                 className="p-4 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
-                style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+                style={{ backgroundColor: COLORES.fondoTarjeta, border: `1px solid ${COLORES.borde}` }}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
+                <div className="flex items-start justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
                     {p.escudo_url ? (
                       <img
                         src={p.escudo_url}
                         alt={p.rival}
                         className="w-7 h-7 rounded object-contain shrink-0"
-                        style={{ backgroundColor: '#0F1419' }}
+                        style={{ backgroundColor: COLORES.fondoSidebar }}
                       />
                     ) : (
                       <span
                         className="w-7 h-7 rounded flex items-center justify-center text-xs shrink-0"
-                        style={{ backgroundColor: '#0F1419', color: '#5B6B85' }}
+                        style={{ backgroundColor: COLORES.fondoSidebar, color: COLORES.textoMuted }}
                       >
                         🛡️
                       </span>
                     )}
-                    <p className="text-base font-medium" style={{ color: '#F0F2F5' }}>
+                    <p className="text-base font-medium break-words" style={{ color: COLORES.texto }}>
                       vs {p.rival}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
                     {p.link && (
-                      <a
+                      
                         href={p.link}
                         target="_blank"
                         rel="noreferrer"
                         onClick={(e) => e.stopPropagation()}
                         className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                        style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                        style={{ backgroundColor: COLORES.fondoSidebar, color: COLORES.textoSecundario }}
                       >
                         ▶
                       </a>
@@ -209,7 +210,7 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
                         generarCitacionPDF(p.id)
                       }}
                       className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                      style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                      style={{ backgroundColor: COLORES.fondoSidebar, color: COLORES.textoSecundario }}
                     >
                       📄
                     </button>
@@ -219,7 +220,7 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
                         generarImagenCitacion(p.id)
                       }}
                       className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                      style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                      style={{ backgroundColor: COLORES.fondoSidebar, color: COLORES.textoSecundario }}
                     >
                       🖼️
                     </button>
@@ -229,7 +230,7 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
                         onVerEstadisticas(p.id)
                       }}
                       className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                      style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                      style={{ backgroundColor: COLORES.fondoSidebar, color: COLORES.textoSecundario }}
                     >
                       📊
                     </button>
@@ -239,14 +240,14 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
                         onEditarPartido(p.id)
                       }}
                       className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                      style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                      style={{ backgroundColor: COLORES.fondoSidebar, color: COLORES.textoSecundario }}
                     >
                       ✏️
                     </button>
                     {resultado && (
                       <span
-                        className="text-xs font-mono px-2 py-1 rounded-full"
-                        style={{ backgroundColor: '#0F1419', color: colorResultado, border: `1px solid ${colorResultado}40` }}
+                        className="text-xs font-mono px-2 py-1 rounded-full whitespace-nowrap"
+                        style={{ backgroundColor: COLORES.fondoSidebar, color: colorResultado, border: `1px solid ${colorResultado}40` }}
                       >
                         {resultado.texto}
                       </span>
@@ -254,13 +255,13 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
                     <button
                       onClick={(e) => handleEliminar(e, p.id)}
                       className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                      style={{ backgroundColor: '#0F1419', color: '#F87171' }}
+                      style={{ backgroundColor: COLORES.fondoSidebar, color: COLORES.peligro }}
                     >
                       🗑
                     </button>
                   </div>
                 </div>
-                <p className="text-xs mt-1" style={{ color: '#5B6B85' }}>
+                <p className="text-xs mt-1" style={{ color: COLORES.textoMuted }}>
                   {p.numero_fecha && `Fecha ${p.numero_fecha} · `}
                   {p.fecha} {p.hora && `· ${p.hora}`} {p.lugar && `· ${p.lugar}`}
                   {p.local_visitante && ` · ${p.local_visitante}`}
