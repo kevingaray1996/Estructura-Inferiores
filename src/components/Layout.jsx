@@ -1,6 +1,6 @@
-import { COLORES } from '../theme'
 import { useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { COLORES } from '../theme'
 
 const rolLabel = {
   coordinacion: 'Coordinación',
@@ -85,6 +85,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
   const [mostrarLinkBienestar, setMostrarLinkBienestar] = useState(false)
   const [categoriasLink, setCategoriasLink] = useState([])
   const [linkCopiado, setLinkCopiado] = useState('')
+  const [menuAbierto, setMenuAbierto] = useState(false)
 
   function construirLink(categoriaId) {
     const url = new URL(window.location.href)
@@ -114,28 +115,72 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
     setMostrarLinkBienestar((v) => !v)
   }
 
+  function seleccionarSeccion(id) {
+    onCambiarSeccion(id)
+    setMenuAbierto(false)
+  }
+
   const iconBtnStyle = (activo) => ({
-    backgroundColor: activo ? COLORES.acento : COLORES.fondoPagina,
-    color: activo ? COLORES.fondoPagina : COLORES.textoMuted,
+    backgroundColor: activo ? COLORES.acento : COLORES.fondoSidebar,
+    color: activo ? '#1A1A1A' : COLORES.textoMuted,
     border: `1px solid ${COLORES.borde}`,
   })
 
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: COLORES.fondoPagina }}>
+      {/* Barra superior solo mobile */}
+      <div
+        className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center gap-3 px-4 h-14"
+        style={{ backgroundColor: COLORES.fondoSidebar, borderBottom: `1px solid ${COLORES.borde}` }}
+      >
+        <button
+          onClick={() => setMenuAbierto(true)}
+          aria-label="Abrir menú"
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-xl"
+          style={{ color: COLORES.acento }}
+        >
+          ☰
+        </button>
+        <p className="text-xs tracking-widest uppercase font-medium truncate" style={{ color: COLORES.texto }}>
+          Club Comunicaciones
+        </p>
+      </div>
+
+      {/* Fondo oscuro al abrir menú en mobile */}
+      {menuAbierto && (
+        <div
+          onClick={() => setMenuAbierto(false)}
+          className="md:hidden fixed inset-0 z-40"
+          style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
+        />
+      )}
+
       {/* Sidebar */}
       <aside
-        className="w-56 shrink-0 min-h-screen flex flex-col"
+        className={`w-64 md:w-56 shrink-0 min-h-screen flex flex-col fixed md:static inset-y-0 left-0 z-50 transition-transform duration-200 ${
+          menuAbierto ? 'translate-x-0' : '-translate-x-full'
+        } md:translate-x-0`}
         style={{ backgroundColor: COLORES.fondoSidebar, borderRight: `1px solid ${COLORES.borde}` }}
       >
-        <div className="px-5 pt-6 pb-4" style={{ borderBottom: `1px solid ${COLORES.borde}` }}>
-          <p className="text-xs tracking-widest uppercase font-medium" style={{ color: COLORES.texto }}>
-            Club Comunicaciones
-          </p>
-          {subtitulo && (
-            <p className="text-xs mt-1" style={{ color: COLORES.acento }}>
-              {subtitulo}
+        <div className="px-5 pt-6 pb-4 flex items-start justify-between" style={{ borderBottom: `1px solid ${COLORES.borde}` }}>
+          <div>
+            <p className="text-xs tracking-widest uppercase font-medium" style={{ color: COLORES.texto }}>
+              Club Comunicaciones
             </p>
-          )}
+            {subtitulo && (
+              <p className="text-xs mt-1" style={{ color: COLORES.acento }}>
+                {subtitulo}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={() => setMenuAbierto(false)}
+            aria-label="Cerrar menú"
+            className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-lg shrink-0"
+            style={{ color: COLORES.textoMuted }}
+          >
+            ✕
+          </button>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-3 px-2">
@@ -144,10 +189,10 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
             return (
               <button
                 key={s.id}
-                onClick={() => onCambiarSeccion(s.id)}
+                onClick={() => seleccionarSeccion(s.id)}
                 className="w-full text-left px-3 py-2.5 mb-0.5 text-sm rounded-r-lg transition-colors"
                 style={{
-                  color: activa ? COLORES.acento : COLORES.neutro,
+                  color: activa ? COLORES.acento : COLORES.textoSecundario,
                   backgroundColor: activa ? 'rgba(242,194,48,0.08)' : 'transparent',
                   borderLeft: activa ? `3px solid ${COLORES.acento}` : '3px solid transparent',
                   fontWeight: activa ? 500 : 400,
@@ -163,7 +208,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
           <div className="flex items-center gap-2 mb-3">
             {perfil?.rol !== 'medico' && (
               <button
-                onClick={() => onCambiarSeccion('calendario')}
+                onClick={() => seleccionarSeccion('calendario')}
                 aria-label="Calendario"
                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:opacity-80"
                 style={iconBtnStyle(seccionActiva === 'calendario')}
@@ -172,7 +217,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
               </button>
             )}
             <button
-              onClick={() => onCambiarSeccion('buscar')}
+              onClick={() => seleccionarSeccion('buscar')}
               aria-label="Buscar"
               className="w-8 h-8 flex items-center justify-center rounded-lg hover:opacity-80"
               style={iconBtnStyle(seccionActiva === 'buscar')}
@@ -222,7 +267,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
           <div className="flex items-center gap-2 mb-2">
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
-              style={{ backgroundColor: COLORES.acento, color: COLORES.fondoPagina }}
+              style={{ backgroundColor: COLORES.acento, color: '#1A1A1A' }}
             >
               {iniciales(perfil?.nombre || rolLabel[perfil?.rol])}
             </div>
@@ -238,7 +283,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
           <button
             onClick={() => supabase.auth.signOut()}
             className="w-full text-xs px-3 py-2 rounded-lg hover:opacity-80 text-left"
-            style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.neutro, border: `1px solid ${COLORES.borde}` }}
+            style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario, border: `1px solid ${COLORES.borde}` }}
           >
             Cerrar sesión
           </button>
@@ -246,10 +291,9 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
       </aside>
 
       {/* Contenido */}
-      <div className="flex-1 min-w-0">{children}</div>
+      <div className="flex-1 min-w-0 pt-14 md:pt-0">{children}</div>
     </div>
   )
 }
 
 export default Layout
-
