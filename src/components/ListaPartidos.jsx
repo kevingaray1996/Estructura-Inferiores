@@ -193,7 +193,7 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
                   </div>
                   <div className="flex items-center gap-1.5 flex-wrap justify-end">
                     {p.link && (
-                      
+                      <a
                         href={p.link}
                         target="_blank"
                         rel="noreferrer"
