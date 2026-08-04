@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
+import { COLORES } from '../theme'
 
  const CAMPOS = [
   { clave: 'sueno', label: '¿Cómo dormiste?' },
@@ -179,26 +180,26 @@ function BienestarPublico({ categoriaId }) {
   })
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: COLORES.fondoTarjeta,
+    border: `1px solid ${COLORES.borde}`,
+    color: COLORES.texto,
   }
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: '#0F1419' }}>
+    <div className="min-h-screen p-6" style={{ backgroundColor: COLORES.fondoPagina }}>
       <div className="max-w-md mx-auto pt-6">
         <h1
           className="text-2xl mb-1 flex items-center gap-2"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+          style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
         >
           <span>🧠</span> Bienestar
         </h1>
-        <p className="text-sm mb-6" style={{ color: '#5B6B85' }}>
+        <p className="text-sm mb-6" style={{ color: COLORES.textoMuted }}>
           {categoria?.nombre ? `${categoria.nombre} · ` : ''}
           {fecha}
         </p>
 
-        {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
+        {cargando && <p style={{ color: COLORES.textoMuted }}>Cargando...</p>}
 
         {!cargando && !jugadorSeleccionado && (
           <>
@@ -227,18 +228,18 @@ function BienestarPublico({ categoriaId }) {
                   ) : (
                     <span
                       className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                      style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                      style={{ backgroundColor: COLORES.fondoSidebar, color: COLORES.textoSecundario }}
                     >
                       {iniciales(j.nombre, j.apellido)}
                     </span>
                   )}
-                  <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
+                  <p className="text-sm font-medium" style={{ color: COLORES.texto }}>
                     {j.apellido}, {j.nombre}
                   </p>
                 </div>
               ))}
               {jugadoresFiltrados.length === 0 && (
-                <p className="text-sm" style={{ color: '#5B6B85' }}>No se encontraron jugadores.</p>
+                <p className="text-sm" style={{ color: COLORES.textoMuted }}>No se encontraron jugadores.</p>
               )}
             </div>
           </>
@@ -249,12 +250,12 @@ function BienestarPublico({ categoriaId }) {
             <button
               onClick={() => setJugadorSeleccionado(null)}
               className="text-sm mb-4 flex items-center gap-1 hover:opacity-70 transition-opacity"
-              style={{ color: '#8A9BB8' }}
+              style={{ color: COLORES.textoSecundario }}
             >
               ← No soy yo
             </button>
 
-            <p className="text-sm font-medium mb-4" style={{ color: '#F0F2F5' }}>
+            <p className="text-sm font-medium mb-4" style={{ color: COLORES.texto }}>
               Hola, {jugadorSeleccionado.nombre} 👋
             </p>
 
@@ -263,9 +264,9 @@ function BienestarPublico({ categoriaId }) {
                 onClick={() => setVista('bienestar')}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
                 style={{
-                  backgroundColor: vista === 'bienestar' ? '#4ADE80' : '#1A2332',
-                  color: vista === 'bienestar' ? '#0F1419' : '#8A9BB8',
-                  border: '1px solid #2A3548',
+                  backgroundColor: vista === 'bienestar' ? COLORES.acento : COLORES.fondoTarjeta,
+                  color: vista === 'bienestar' ? '#1A1A1A' : COLORES.textoSecundario,
+                  border: `1px solid ${COLORES.borde}`,
                 }}
               >
                 🧠 Bienestar
@@ -274,9 +275,9 @@ function BienestarPublico({ categoriaId }) {
                 onClick={() => setVista('rpe')}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
                 style={{
-                  backgroundColor: vista === 'rpe' ? '#7DD3FC' : '#1A2332',
-                  color: vista === 'rpe' ? '#0F1419' : '#8A9BB8',
-                  border: '1px solid #2A3548',
+                  backgroundColor: vista === 'rpe' ? COLORES.acento : COLORES.fondoTarjeta,
+                  color: vista === 'rpe' ? '#1A1A1A' : COLORES.textoSecundario,
+                  border: `1px solid ${COLORES.borde}`,
                 }}
               >
                 💪 Esfuerzo (RPE)
@@ -288,7 +289,7 @@ function BienestarPublico({ categoriaId }) {
                 <div className="space-y-5 mb-6">
                   {CAMPOS.map((c) => (
                     <div key={c.clave}>
-                      <p className="text-sm mb-2" style={{ color: '#F0F2F5' }}>{c.label}</p>
+                      <p className="text-sm mb-2" style={{ color: COLORES.texto }}>{c.label}</p>
                       <div className="flex gap-2">
                         {[1, 2, 3, 4, 5].map((v) => {
                           const activo = valores[c.clave] === v
@@ -298,10 +299,10 @@ function BienestarPublico({ categoriaId }) {
                               onClick={() => marcar(c.clave, v)}
                               className="flex-1 py-3 rounded-xl text-sm font-mono transition-opacity hover:opacity-80"
                               style={{
-                                backgroundColor: activo ? '#7DD3FC' : '#1A2332',
-                                color: activo ? '#0F1419' : '#8A9BB8',
+                                backgroundColor: activo ? COLORES.acento : COLORES.fondoTarjeta,
+                                color: activo ? '#1A1A1A' : COLORES.textoSecundario,
                                 fontWeight: activo ? 700 : 400,
-                                border: '1px solid #2A3548',
+                                border: `1px solid ${COLORES.borde}`,
                               }}
                             >
                               {v}
@@ -310,12 +311,12 @@ function BienestarPublico({ categoriaId }) {
                         })}
                       </div>
                       <div className="flex justify-between mt-1">
-                        <span className="text-[10px]" style={{ color: '#5B6B85' }}>Mejor</span>
-                        <span className="text-[10px]" style={{ color: '#5B6B85' }}>Peor</span>
+                        <span className="text-[10px]" style={{ color: COLORES.textoMuted }}>Mejor</span>
+                        <span className="text-[10px]" style={{ color: COLORES.textoMuted }}>Peor</span>
                       </div>
                       {c.clave === 'dolor_muscular' && (
                         <div className="mt-3">
-                          <label className="text-sm mb-2 block" style={{ color: '#F0F2F5' }}>
+                          <label className="text-sm mb-2 block" style={{ color: COLORES.texto }}>
                             ¿Qué parte del cuerpo te duele?
                           </label>
                           <textarea
@@ -336,14 +337,14 @@ function BienestarPublico({ categoriaId }) {
                 </div>
 
                 {error && (
-                  <p className="text-sm mb-4" style={{ color: '#F87171' }}>{error}</p>
+                  <p className="text-sm mb-4" style={{ color: COLORES.peligro }}>{error}</p>
                 )}
 
                 <button
                   onClick={handleEnviar}
                   disabled={guardando}
                   className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-                  style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+                  style={{ backgroundColor: COLORES.acento, color: '#1A1A1A' }}
                 >
                   {guardando ? 'Enviando...' : 'Enviar'}
                 </button>
@@ -353,7 +354,7 @@ function BienestarPublico({ categoriaId }) {
             {vista === 'bienestar' && enviado && (
               <div className="text-center py-12">
                 <p className="text-3xl mb-3">✅</p>
-                <p className="text-sm" style={{ color: '#F0F2F5' }}>
+                <p className="text-sm" style={{ color: COLORES.texto }}>
                   ¡Gracias! Ya se guardó tu bienestar de hoy.
                 </p>
               </div>
@@ -363,7 +364,7 @@ function BienestarPublico({ categoriaId }) {
               <>
                 <div className="grid grid-cols-2 gap-3 mb-5">
                   <div>
-                    <label className="text-[10px] uppercase" style={{ color: '#5B6B85' }}>Día</label>
+                    <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Día</label>
                     <input
                       type="date"
                       value={fechaRpe}
@@ -375,7 +376,7 @@ function BienestarPublico({ categoriaId }) {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase" style={{ color: '#5B6B85' }}>Actividad</label>
+                    <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Actividad</label>
                     <select
                       value={tipoRpe}
                       onChange={(e) => setTipoRpe(e.target.value)}
@@ -388,7 +389,7 @@ function BienestarPublico({ categoriaId }) {
                   </div>
                 </div>
 
-                <p className="text-sm mb-2" style={{ color: '#F0F2F5' }}>
+                <p className="text-sm mb-2" style={{ color: COLORES.texto }}>
                   ¿Qué tan duro sentiste el esfuerzo?
                 </p>
                 <div className="grid grid-cols-5 gap-2 mb-1">
@@ -400,10 +401,10 @@ function BienestarPublico({ categoriaId }) {
                         onClick={() => setValorRpe(v)}
                         className="py-3 rounded-xl text-sm font-mono transition-opacity hover:opacity-80"
                         style={{
-                          backgroundColor: activo ? '#7DD3FC' : '#1A2332',
-                          color: activo ? '#0F1419' : '#8A9BB8',
+                          backgroundColor: activo ? COLORES.acento : COLORES.fondoTarjeta,
+                          color: activo ? '#1A1A1A' : COLORES.textoSecundario,
                           fontWeight: activo ? 700 : 400,
-                          border: '1px solid #2A3548',
+                          border: `1px solid ${COLORES.borde}`,
                         }}
                       >
                         {v}
@@ -412,19 +413,19 @@ function BienestarPublico({ categoriaId }) {
                   })}
                 </div>
                 <div className="flex justify-between mb-6">
-                  <span className="text-[10px]" style={{ color: '#5B6B85' }}>Muy suave</span>
-                  <span className="text-[10px]" style={{ color: '#5B6B85' }}>Al máximo</span>
+                  <span className="text-[10px]" style={{ color: COLORES.textoMuted }}>Muy suave</span>
+                  <span className="text-[10px]" style={{ color: COLORES.textoMuted }}>Al máximo</span>
                 </div>
 
                 {rpeError && (
-                  <p className="text-sm mb-4" style={{ color: '#F87171' }}>{rpeError}</p>
+                  <p className="text-sm mb-4" style={{ color: COLORES.peligro }}>{rpeError}</p>
                 )}
 
                 <button
                   onClick={handleEnviarRpe}
                   disabled={rpeGuardando}
                   className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-                  style={{ backgroundColor: '#7DD3FC', color: '#0F1419' }}
+                  style={{ backgroundColor: COLORES.acento, color: '#1A1A1A' }}
                 >
                   {rpeGuardando ? 'Enviando...' : 'Enviar'}
                 </button>
@@ -434,7 +435,7 @@ function BienestarPublico({ categoriaId }) {
             {vista === 'rpe' && rpeEnviado && (
               <div className="text-center py-12">
                 <p className="text-3xl mb-3">✅</p>
-                <p className="text-sm" style={{ color: '#F0F2F5' }}>
+                <p className="text-sm" style={{ color: COLORES.texto }}>
                   ¡Gracias! Ya se guardó tu esfuerzo de ese día.
                 </p>
               </div>
