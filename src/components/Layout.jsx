@@ -8,6 +8,13 @@ const rolLabel = {
   preparador_fisico: 'Preparador Físico',
 }
 
+function iniciales(texto) {
+  if (!texto) return '??'
+  const partes = texto.trim().split(/\s+/)
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase()
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase()
+}
+
 function seccionesParaRol(rol) {
   if (rol === 'coordinacion') {
     return [
@@ -28,7 +35,6 @@ function seccionesParaRol(rol) {
       { id: 'contratos', label: 'Contratos' },
       { id: 'pases', label: 'Pases' },
       { id: 'usuarios', label: 'Usuarios' },
-     
     ]
   }
   if (rol === 'medico') {
@@ -107,114 +113,139 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
     setMostrarLinkBienestar((v) => !v)
   }
 
+  const iconBtnStyle = (activo) => ({
+    backgroundColor: activo ? '#F2C230' : '#1A1A18',
+    color: activo ? '#1A1A1A' : '#8A8A82',
+    border: '1px solid #2C2C2A',
+  })
+
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#0F1419' }}>
-      <div style={{ borderBottom: '1px solid #2A3548' }}>
-        <div className="max-w-4xl mx-auto px-6 md:px-10 pt-6">
-          <div className="flex items-start justify-between gap-3 mb-1">
-            <p className="text-xs tracking-widest uppercase" style={{ color: '#5B6B85' }}>
-              Club Comunicaciones
+    <div className="min-h-screen flex" style={{ backgroundColor: '#1A1A18' }}>
+      {/* Sidebar */}
+      <aside
+        className="w-56 shrink-0 min-h-screen flex flex-col"
+        style={{ backgroundColor: '#0A0A0A', borderRight: '1px solid #2C2C2A' }}
+      >
+        <div className="px-5 pt-6 pb-4" style={{ borderBottom: '1px solid #2C2C2A' }}>
+          <p className="text-xs tracking-widest uppercase font-medium" style={{ color: '#FFFFFF' }}>
+            Club Comunicaciones
+          </p>
+          {subtitulo && (
+            <p className="text-xs mt-1" style={{ color: '#F2C230' }}>
+              {subtitulo}
             </p>
-            <div className="flex items-center gap-3 shrink-0">
-              {subtitulo && (
-                <span className="text-xs" style={{ color: '#5B6B85' }}>
-                  {subtitulo}
-                </span>
-              )}
-              {perfil?.rol !== 'medico' && (
-                <button
-                  onClick={() => onCambiarSeccion('calendario')}
-                  aria-label="Calendario"
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:opacity-80"
-                  style={{
-                    backgroundColor: seccionActiva === 'calendario' ? '#4ADE80' : '#1A2332',
-                    color: seccionActiva === 'calendario' ? '#0F1419' : '#8A9BB8',
-                    border: '1px solid #2A3548',
-                  }}
-                >
-                  📅
-                </button>
-              )}
+          )}
+        </div>
+
+        <nav className="flex-1 overflow-y-auto py-3 px-2">
+          {secciones.map((s) => {
+            const activa = seccionActiva === s.id
+            return (
               <button
-                onClick={() => onCambiarSeccion('buscar')}
-                aria-label="Buscar"
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:opacity-80"
+                key={s.id}
+                onClick={() => onCambiarSeccion(s.id)}
+                className="w-full text-left px-3 py-2.5 mb-0.5 text-sm rounded-r-lg transition-colors"
                 style={{
-                  backgroundColor: seccionActiva === 'buscar' ? '#4ADE80' : '#1A2332',
-                  color: seccionActiva === 'buscar' ? '#0F1419' : '#8A9BB8',
-                  border: '1px solid #2A3548',
+                  color: activa ? '#F2C230' : '#B4B2A9',
+                  backgroundColor: activa ? 'rgba(242,194,48,0.08)' : 'transparent',
+                  borderLeft: activa ? '3px solid #F2C230' : '3px solid transparent',
+                  fontWeight: activa ? 500 : 400,
                 }}
               >
-                🔍
+                {s.label}
               </button>
-              {(perfil?.rol === 'tecnico' || perfil?.rol === 'coordinacion') && (
-                <div className="relative">
-                  <button
-                    onClick={toggleLinkBienestar}
-                    aria-label="Link de bienestar"
-                    title="Copiar link de bienestar para los jugadores"
-                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:opacity-80"
-                    style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
-                  >
-                    🔗
-                  </button>
-                  {mostrarLinkBienestar && perfil?.rol === 'coordinacion' && (
-                    <div
-                      className="absolute right-0 mt-2 p-2 rounded-xl z-10"
-                      style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548', minWidth: '180px' }}
-                    >
-                      <p className="text-[10px] uppercase px-2 pb-1.5" style={{ color: '#5B6B85' }}>
-                        Copiar link por categoría
-                      </p>
-                      {categoriasLink.map((c) => (
-                        <button
-                          key={c.id}
-                          onClick={() => copiarLink(c.id, c.nombre)}
-                          className="block w-full text-left text-sm px-2 py-1.5 rounded-lg hover:opacity-80"
-                          style={{ color: '#F0F2F5' }}
-                        >
-                          {c.nombre}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-              {linkCopiado && (
-                <span className="text-xs" style={{ color: '#4ADE80' }}>
-                  ✓ Link de {linkCopiado} copiado
-                </span>
-              )}
+            )
+          })}
+        </nav>
+
+        <div className="px-3 py-3" style={{ borderTop: '1px solid #2C2C2A' }}>
+          <div className="flex items-center gap-2 mb-3">
+            {perfil?.rol !== 'medico' && (
               <button
-                onClick={() => supabase.auth.signOut()}
-                className="text-xs px-3 py-1.5 rounded-lg hover:opacity-80"
-                style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+                onClick={() => onCambiarSeccion('calendario')}
+                aria-label="Calendario"
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:opacity-80"
+                style={iconBtnStyle(seccionActiva === 'calendario')}
               >
-                Cerrar sesión
+                📅
               </button>
+            )}
+            <button
+              onClick={() => onCambiarSeccion('buscar')}
+              aria-label="Buscar"
+              className="w-8 h-8 flex items-center justify-center rounded-lg hover:opacity-80"
+              style={iconBtnStyle(seccionActiva === 'buscar')}
+            >
+              🔍
+            </button>
+            {(perfil?.rol === 'tecnico' || perfil?.rol === 'coordinacion') && (
+              <div className="relative">
+                <button
+                  onClick={toggleLinkBienestar}
+                  aria-label="Link de bienestar"
+                  title="Copiar link de bienestar para los jugadores"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:opacity-80"
+                  style={iconBtnStyle(false)}
+                >
+                  🔗
+                </button>
+                {mostrarLinkBienestar && perfil?.rol === 'coordinacion' && (
+                  <div
+                    className="absolute left-0 bottom-10 p-2 rounded-xl z-10"
+                    style={{ backgroundColor: '#1A1A18', border: '1px solid #2C2C2A', minWidth: '180px' }}
+                  >
+                    <p className="text-[10px] uppercase px-2 pb-1.5" style={{ color: '#8A8A82' }}>
+                      Copiar link por categoría
+                    </p>
+                    {categoriasLink.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => copiarLink(c.id, c.nombre)}
+                        className="block w-full text-left text-sm px-2 py-1.5 rounded-lg hover:opacity-80"
+                        style={{ color: '#FFFFFF' }}
+                      >
+                        {c.nombre}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          {linkCopiado && (
+            <p className="text-xs mb-2" style={{ color: '#97C459' }}>
+              ✓ Link de {linkCopiado} copiado
+            </p>
+          )}
+
+          <div className="flex items-center gap-2 mb-2">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
+              style={{ backgroundColor: '#F2C230', color: '#1A1A1A' }}
+            >
+              {iniciales(perfil?.nombre || rolLabel[perfil?.rol])}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs truncate" style={{ color: '#FFFFFF' }}>
+                {perfil?.nombre || rolLabel[perfil?.rol] || 'Usuario'}
+              </p>
+              <p className="text-xs truncate" style={{ color: '#8A8A82' }}>
+                {rolLabel[perfil?.rol] || ''}
+              </p>
             </div>
           </div>
-          <nav className="flex gap-1 overflow-x-auto pb-4 -mb-px">
-            {secciones.map((s) => {
-              const activa = seccionActiva === s.id
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => onCambiarSeccion(s.id)}
-                  className="px-4 py-2 text-sm font-medium rounded-t-lg whitespace-nowrap transition-colors"
-                  style={{
-                    color: activa ? '#0F1419' : '#8A9BB8',
-                    backgroundColor: activa ? '#4ADE80' : 'transparent',
-                  }}
-                >
-                  {s.label}
-                </button>
-              )
-            })}
-          </nav>
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="w-full text-xs px-3 py-2 rounded-lg hover:opacity-80 text-left"
+            style={{ backgroundColor: '#1A1A18', color: '#B4B2A9', border: '1px solid #2C2C2A' }}
+          >
+            Cerrar sesión
+          </button>
         </div>
-      </div>
-      <div>{children}</div>
+      </aside>
+
+      {/* Contenido */}
+      <div className="flex-1 min-w-0">{children}</div>
     </div>
   )
 }
