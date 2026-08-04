@@ -1,3 +1,4 @@
+import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
@@ -18,9 +19,9 @@ function PensionesSection({ onVolver }) {
   const [filtroPensionId, setFiltroPensionId] = useState('')
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: COLORES.fondoTarjeta,
+    border: '1px solid COLORES.borde',
+    color: COLORES.texto,
   }
 
   useEffect(() => {
@@ -99,7 +100,7 @@ function PensionesSection({ onVolver }) {
         <button
           onClick={onVolver}
           className="text-sm mb-6 flex items-center gap-1 hover:opacity-70 transition-opacity"
-          style={{ color: '#8A9BB8' }}
+          style={{ color: COLORES.textoSecundario }}
         >
           ← Volver
         </button>
@@ -107,14 +108,14 @@ function PensionesSection({ onVolver }) {
         <div className="flex items-start justify-between mb-8 gap-3 flex-wrap">
           <h1
             className="text-2xl md:text-3xl"
-            style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+            style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
           >
             Pensión / alojamiento
           </h1>
           <button
             onClick={mostrarForm ? cancelarForm : abrirNuevo}
             className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
-            style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+            style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
           >
             {mostrarForm ? 'Cancelar' : '+ Nueva pensión'}
           </button>
@@ -123,10 +124,10 @@ function PensionesSection({ onVolver }) {
         {mostrarForm && (
           <div
             className="space-y-3 mb-8 p-4 rounded-xl"
-            style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
           >
             {pensionEditando && (
-              <p className="text-xs" style={{ color: '#8A9BB8' }}>
+              <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
                 Editando {pensionEditando.nombre}
               </p>
             )}
@@ -139,7 +140,7 @@ function PensionesSection({ onVolver }) {
               style={inputStyle}
             />
             {errorMsg && (
-              <p className="text-sm" style={{ color: '#F87171' }}>
+              <p className="text-sm" style={{ color: COLORES.peligro }}>
                 {errorMsg}
               </p>
             )}
@@ -147,23 +148,23 @@ function PensionesSection({ onVolver }) {
               onClick={handleGuardar}
               disabled={guardando}
               className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
             >
               {guardando ? 'Guardando...' : pensionEditando ? 'Guardar cambios' : 'Guardar pensión'}
             </button>
           </div>
         )}
 
-        {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
+        {cargando && <p style={{ color: COLORES.textoMuted }}>Cargando...</p>}
 
         {!cargando && pensiones.length === 0 && (
-          <p style={{ color: '#5B6B85' }}>No hay pensiones cargadas todavía.</p>
+          <p style={{ color: COLORES.textoMuted }}>No hay pensiones cargadas todavía.</p>
         )}
 
         {!cargando && pensiones.length > 0 && (
           <>
             <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
-              <p className="text-xs tracking-widest uppercase" style={{ color: '#5B6B85' }}>
+              <p className="text-xs tracking-widest uppercase" style={{ color: COLORES.textoMuted }}>
                 Jugadores por pensión
               </p>
               <select
@@ -185,14 +186,14 @@ function PensionesSection({ onVolver }) {
               {pensionesAMostrar.map((p) => {
                 const jugadoresDeEstaPension = jugadores.filter((j) => j.pension_id === p.id)
                 return (
-                  <div key={p.id} className="rounded-xl overflow-hidden" style={{ border: '1px solid #2A3548' }}>
+                  <div key={p.id} className="rounded-xl overflow-hidden" style={{ border: '1px solid COLORES.borde' }}>
                     <div
                       className="p-3 flex items-center justify-between"
-                      style={{ backgroundColor: '#1A2332' }}
+                      style={{ backgroundColor: COLORES.fondoTarjeta }}
                     >
-                      <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
+                      <p className="text-sm font-medium" style={{ color: COLORES.texto }}>
                         {p.nombre}{' '}
-                        <span style={{ color: '#5B6B85' }}>
+                        <span style={{ color: COLORES.textoMuted }}>
                           ({jugadoresDeEstaPension.length} jugador{jugadoresDeEstaPension.length === 1 ? '' : 'es'})
                         </span>
                       </p>
@@ -200,36 +201,36 @@ function PensionesSection({ onVolver }) {
                         <button
                           onClick={() => abrirEditar(p)}
                           className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                          style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                          style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
                         >
                           ✏️
                         </button>
                         <button
                           onClick={() => handleEliminar(p.id)}
                           className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                          style={{ backgroundColor: '#0F1419', color: '#F87171' }}
+                          style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.peligro }}
                         >
                           🗑
                         </button>
                       </div>
                     </div>
                     {jugadoresDeEstaPension.length > 0 && (
-                      <div style={{ backgroundColor: '#0F1419' }}>
+                      <div style={{ backgroundColor: COLORES.fondoPagina }}>
                         {jugadoresDeEstaPension.map((j) => (
                           <div
                             key={j.id}
                             className="flex items-center justify-between px-3 py-2 text-sm"
-                            style={{ borderTop: '1px solid #1A2332', color: '#F0F2F5' }}
+                            style={{ borderTop: '1px solid COLORES.fondoTarjeta', color: COLORES.texto }}
                           >
                             <span>
                               {j.apellido}, {j.nombre}
                               {j.categorias?.nombre && (
-                                <span className="text-xs ml-1" style={{ color: '#5B6B85' }}>
+                                <span className="text-xs ml-1" style={{ color: COLORES.textoMuted }}>
                                   · {j.categorias.nombre}
                                 </span>
                               )}
                             </span>
-                            <span className="text-xs" style={{ color: '#8A9BB8' }}>
+                            <span className="text-xs" style={{ color: COLORES.textoSecundario }}>
                               {costoLabel[j.costo_pension] || '—'}
                             </span>
                           </div>
@@ -248,3 +249,6 @@ function PensionesSection({ onVolver }) {
 }
 
 export default PensionesSection
+
+
+

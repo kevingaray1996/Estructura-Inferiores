@@ -1,3 +1,4 @@
+import { COLORES } from '../theme'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
@@ -34,9 +35,9 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
   const [fechaHasta, setFechaHasta] = useState('')
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: COLORES.fondoTarjeta,
+    border: '1px solid COLORES.borde',
+    color: COLORES.texto,
   }
 
   async function cargarJugadores() {
@@ -157,7 +158,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
         <button
           onClick={onVolver}
           className="text-sm mb-6 flex items-center gap-1 hover:opacity-70 transition-opacity"
-          style={{ color: '#8A9BB8' }}
+          style={{ color: COLORES.textoSecundario }}
         >
           ← Volver
         </button>
@@ -165,14 +166,14 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
         <div className="flex items-start justify-between mb-8 gap-3 flex-wrap">
           <h1
             className="text-2xl md:text-3xl"
-            style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+            style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
           >
             Convocatorias a Selección
           </h1>
           <button
             onClick={mostrarForm ? cancelarForm : abrirNueva}
             className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
-            style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+            style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
           >
             {mostrarForm ? 'Cancelar' : '+ Nueva convocatoria'}
           </button>
@@ -181,16 +182,16 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
         {mostrarForm && (
           <div
             className="space-y-3 mb-8 p-4 rounded-xl"
-            style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
           >
             <div>
-              <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+              <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: COLORES.textoMuted }}>
                 Jugador
               </label>
               {jugadorLabel && (
                 <div
                   className="flex items-center justify-between p-2 rounded-lg mb-1.5 text-sm"
-                  style={{ backgroundColor: '#0F1419', color: '#F0F2F5' }}
+                  style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.texto }}
                 >
                   {jugadorLabel}
                   <button
@@ -200,7 +201,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
                       setJugadorLabel('')
                     }}
                     className="text-xs"
-                    style={{ color: '#F87171' }}
+                    style={{ color: COLORES.peligro }}
                   >
                     Cambiar
                   </button>
@@ -224,10 +225,10 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
                           type="button"
                           onClick={() => elegirJugador(j)}
                           className="w-full text-left text-xs p-2 rounded-lg hover:opacity-80"
-                          style={{ backgroundColor: '#0F1419', color: '#F0F2F5' }}
+                          style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.texto }}
                         >
                           {j.apellido}, {j.nombre}
-                          {j.categorias?.nombre && <span style={{ color: '#5B6B85' }}> · {j.categorias.nombre}</span>}
+                          {j.categorias?.nombre && <span style={{ color: COLORES.textoMuted }}> · {j.categorias.nombre}</span>}
                         </button>
                       ))}
                     </div>
@@ -247,7 +248,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: COLORES.textoMuted }}>
                   Fecha inicio
                 </label>
                 <input
@@ -259,7 +260,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
                 />
               </div>
               <div>
-                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: COLORES.textoMuted }}>
                   Fecha fin
                 </label>
                 <input
@@ -282,7 +283,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
             />
 
             {errorMsg && (
-              <p className="text-sm" style={{ color: '#F87171' }}>
+              <p className="text-sm" style={{ color: COLORES.peligro }}>
                 {errorMsg}
               </p>
             )}
@@ -291,7 +292,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
               onClick={handleGuardar}
               disabled={guardando}
               className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
             >
               {guardando ? 'Guardando...' : convocatoriaEditando ? 'Guardar cambios' : 'Guardar convocatoria'}
             </button>
@@ -306,7 +307,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
             className="flex-1 p-2 rounded-lg outline-none text-xs"
             style={inputStyle}
           />
-          <span className="text-xs" style={{ color: '#5B6B85' }}>
+          <span className="text-xs" style={{ color: COLORES.textoMuted }}>
             a
           </span>
           <input
@@ -318,10 +319,10 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
           />
         </div>
 
-        {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
+        {cargando && <p style={{ color: COLORES.textoMuted }}>Cargando...</p>}
 
         {!cargando && convocatorias.length === 0 && (
-          <p style={{ color: '#5B6B85' }}>No hay convocatorias en ese rango de fechas.</p>
+          <p style={{ color: COLORES.textoMuted }}>No hay convocatorias en ese rango de fechas.</p>
         )}
 
         <div className="space-y-2">
@@ -329,23 +330,23 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
             <div
               key={c.id}
               className="p-3 rounded-xl flex items-start justify-between gap-2"
-              style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
             >
               <div className="min-w-0">
-                <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
+                <p className="text-sm font-medium" style={{ color: COLORES.texto }}>
                   {c.jugadores?.apellido}, {c.jugadores?.nombre}
                   {c.jugadores?.categorias?.nombre && (
-                    <span className="text-xs ml-1" style={{ color: '#5B6B85' }}>
+                    <span className="text-xs ml-1" style={{ color: COLORES.textoMuted }}>
                       ({c.jugadores.categorias.nombre})
                     </span>
                   )}
                 </p>
-                <p className="text-xs" style={{ color: '#8A9BB8' }}>
+                <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
                   {c.seleccion} · {formatearFecha(c.fecha_inicio)}
                   {c.fecha_fin && ` al ${formatearFecha(c.fecha_fin)}`}
                 </p>
                 {c.observaciones && (
-                  <p className="text-xs mt-1" style={{ color: '#5B6B85' }}>
+                  <p className="text-xs mt-1" style={{ color: COLORES.textoMuted }}>
                     {c.observaciones}
                   </p>
                 )}
@@ -354,14 +355,14 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
                 <button
                   onClick={() => abrirEditar(c)}
                   className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                  style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                  style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
                 >
                   ✏️
                 </button>
                 <button
                   onClick={() => handleEliminar(c.id)}
                   className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                  style={{ backgroundColor: '#0F1419', color: '#F87171' }}
+                  style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.peligro }}
                 >
                   🗑
                 </button>
@@ -375,3 +376,6 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
 }
 
 export default ConvocatoriasSeleccionSection
+
+
+

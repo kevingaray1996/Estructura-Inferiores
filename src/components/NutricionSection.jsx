@@ -1,3 +1,4 @@
+import { COLORES } from '../theme'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import CategoriaFiltro from './CategoriaFiltro'
@@ -32,7 +33,7 @@ function MiniBarras({ datos, color }) {
         return (
           <g key={i}>
             <rect x={x} y={alto - h} width={ancho} height={h} rx={3} fill={color} opacity={0.85} />
-            <text x={x + ancho / 2} y={alto + 12} fontSize="8" fill="#5B6B85" textAnchor="middle">
+            <text x={x + ancho / 2} y={alto + 12} fontSize="8" fill={COLORES.textoMuted} textAnchor="middle">
               {d.etiqueta}
             </text>
             <text x={x + ancho / 2} y={alto + 23} fontSize="9" fontWeight="600" fill={color} textAnchor="middle">
@@ -198,9 +199,9 @@ function NutricionSection({ jugadorInicialId, onConsumirJugadorInicial }) {
     .map((f) => ({ valor: f.altura, etiqueta: formatearFechaCorta(f.fecha) }))
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: COLORES.fondoTarjeta,
+    border: '1px solid COLORES.borde',
+    color: COLORES.texto,
   }
 
   if (jugadorSeleccionado) {
@@ -210,7 +211,7 @@ function NutricionSection({ jugadorInicialId, onConsumirJugadorInicial }) {
           <button
             onClick={() => setJugadorSeleccionado(null)}
             className="text-sm mb-6 flex items-center gap-1 hover:opacity-70 transition-opacity"
-            style={{ color: '#8A9BB8' }}
+            style={{ color: COLORES.textoSecundario }}
           >
             ← Volver
           </button>
@@ -220,7 +221,7 @@ function NutricionSection({ jugadorInicialId, onConsumirJugadorInicial }) {
               <p className="text-3xl">🥗</p>
               <h1
                 className="text-2xl"
-                style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+                style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
               >
                 {jugadorSeleccionado.apellido}, {jugadorSeleccionado.nombre}
               </h1>
@@ -228,16 +229,16 @@ function NutricionSection({ jugadorInicialId, onConsumirJugadorInicial }) {
             <button
               onClick={mostrarForm ? cancelarForm : abrirNuevoRegistro}
               className="text-sm font-medium px-4 py-2 rounded-xl transition-opacity hover:opacity-80 shrink-0"
-              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
             >
               {mostrarForm ? 'Cancelar' : '+ Agregar registro'}
             </button>
           </div>
 
           {mostrarForm && (
-            <div className="space-y-3 mb-6 p-4 rounded-xl" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
+            <div className="space-y-3 mb-6 p-4 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}>
               {fichaEditando && (
-                <p className="text-xs" style={{ color: '#8A9BB8' }}>
+                <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
                   Editando registro del {fichaEditando.fecha}
                 </p>
               )}
@@ -250,7 +251,7 @@ function NutricionSection({ jugadorInicialId, onConsumirJugadorInicial }) {
               />
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] uppercase" style={{ color: '#5B6B85' }}>Peso (kg)</label>
+                  <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Peso (kg)</label>
                   <input
                     type="number"
                     step="0.1"
@@ -261,7 +262,7 @@ function NutricionSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] uppercase" style={{ color: '#5B6B85' }}>Altura (cm)</label>
+                  <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Altura (cm)</label>
                   <input
                     type="number"
                     step="0.1"
@@ -280,7 +281,7 @@ function NutricionSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                 className="w-full p-2.5 rounded-xl outline-none text-sm resize-none"
                 style={inputStyle}
               />
-              <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: '#F0F2F5' }}>
+              <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: COLORES.texto }}>
                 <input
                   type="checkbox"
                   checked={alertaPeso}
@@ -292,7 +293,7 @@ function NutricionSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                 onClick={handleGuardar}
                 disabled={guardando}
                 className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-                style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+                style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
               >
                 {guardando ? 'Guardando...' : fichaEditando ? 'Guardar cambios' : 'Guardar registro'}
               </button>
@@ -300,8 +301,8 @@ function NutricionSection({ jugadorInicialId, onConsumirJugadorInicial }) {
           )}
 
           {(datosPesoChart.length >= 2 || datosAlturaChart.length >= 2) && (
-            <div className="p-4 rounded-xl mb-6" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
-              <p className="text-xs uppercase tracking-wide mb-3" style={{ color: '#5B6B85' }}>
+            <div className="p-4 rounded-xl mb-6" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}>
+              <p className="text-xs uppercase tracking-wide mb-3" style={{ color: COLORES.textoMuted }}>
                 📈 Evolución
               </p>
               <div className="flex flex-wrap gap-6">
@@ -313,28 +314,28 @@ function NutricionSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                 )}
                 {datosAlturaChart.length >= 2 && (
                   <div>
-                    <p className="text-[10px] uppercase mb-1.5" style={{ color: '#4ADE80' }}>Altura (cm)</p>
-                    <MiniBarras datos={datosAlturaChart} color="#4ADE80" />
+                    <p className="text-[10px] uppercase mb-1.5" style={{ color: COLORES.exito }}>Altura (cm)</p>
+                    <MiniBarras datos={datosAlturaChart} color={COLORES.exito} />
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          <p className="text-xs uppercase tracking-wide mb-3" style={{ color: '#5B6B85' }}>
+          <p className="text-xs uppercase tracking-wide mb-3" style={{ color: COLORES.textoMuted }}>
             Historial nutricional
           </p>
 
           <div className="space-y-2">
             {fichas.map((f) => (
-              <div key={f.id} className="p-3.5 rounded-xl" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
+              <div key={f.id} className="p-3.5 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}>
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-xs font-mono" style={{ color: '#8A9BB8' }}>{f.fecha}</p>
+                  <p className="text-xs font-mono" style={{ color: COLORES.textoSecundario }}>{f.fecha}</p>
                   <div className="flex items-center gap-2">
                     {(f.peso || f.altura) && (
                       <span
                         className="text-xs font-mono px-2 py-0.5 rounded-full"
-                        style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                        style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
                       >
                         {f.peso ? `${f.peso}kg` : ''}{f.peso && f.altura ? ' · ' : ''}{f.altura ? `${f.altura}cm` : ''}
                       </span>
@@ -342,7 +343,7 @@ function NutricionSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                     {f.alerta_peso && (
                       <span
                         className="text-xs font-mono px-2 py-0.5 rounded-full"
-                        style={{ backgroundColor: '#0F1419', color: '#F87171' }}
+                        style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.peligro }}
                       >
                         ⚠ Alerta
                       </span>
@@ -350,26 +351,26 @@ function NutricionSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                     <button
                       onClick={() => abrirEditarRegistro(f)}
                       className="text-xs px-2 py-0.5 rounded-full hover:opacity-80"
-                      style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                      style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
                     >
                       ✏️
                     </button>
                     <button
                       onClick={() => handleEliminarFicha(f.id)}
                       className="text-xs px-2 py-0.5 rounded-full hover:opacity-80"
-                      style={{ backgroundColor: '#0F1419', color: '#F87171' }}
+                      style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.peligro }}
                     >
                       🗑
                     </button>
                   </div>
                 </div>
                 {f.descripcion && (
-                  <p className="text-sm" style={{ color: '#F0F2F5' }}>{f.descripcion}</p>
+                  <p className="text-sm" style={{ color: COLORES.texto }}>{f.descripcion}</p>
                 )}
               </div>
             ))}
             {fichas.length === 0 && (
-              <p className="text-sm" style={{ color: '#5B6B85' }}>Sin registros nutricionales todavía.</p>
+              <p className="text-sm" style={{ color: COLORES.textoMuted }}>Sin registros nutricionales todavía.</p>
             )}
           </div>
         </div>
@@ -382,7 +383,7 @@ function NutricionSection({ jugadorInicialId, onConsumirJugadorInicial }) {
       <div className="max-w-2xl mx-auto">
         <h1
           className="text-3xl md:text-4xl mb-6 flex items-center gap-3"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+          style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
         >
           <span>🥗</span> Nutrición
         </h1>
@@ -395,8 +396,8 @@ function NutricionSection({ jugadorInicialId, onConsumirJugadorInicial }) {
         />
 
         {[
-          { titulo: 'Alerta de peso', icono: '🔴', color: '#F87171', lista: conAlerta },
-          { titulo: null, icono: null, color: '#2A3548', lista: sinAlerta },
+          { titulo: 'Alerta de peso', icono: '🔴', color: COLORES.peligro, lista: conAlerta },
+          { titulo: null, icono: null, color: COLORES.borde, lista: sinAlerta },
         ].map(
           (grupo) =>
             grupo.lista.length > 0 && (
@@ -412,7 +413,7 @@ function NutricionSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                       key={j.id}
                       onClick={() => abrirJugador(j)}
                       className="flex items-center gap-3 p-3.5 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
-                      style={{ backgroundColor: '#1A2332', border: `1px solid ${grupo.color}` }}
+                      style={{ backgroundColor: COLORES.fondoTarjeta, border: `1px solid ${grupo.color}` }}
                     >
                       {j.foto_url ? (
                         <img
@@ -424,15 +425,15 @@ function NutricionSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                       ) : (
                         <div
                           className="flex items-center justify-center w-9 h-9 rounded-full shrink-0 text-xs font-bold"
-                          style={{ backgroundColor: '#0F1419', border: `2px solid ${grupo.color}`, color: grupo.titulo ? grupo.color : '#8A9BB8', fontFamily: "'Archivo Black', sans-serif" }}
+                          style={{ backgroundColor: COLORES.fondoPagina, border: `2px solid ${grupo.color}`, color: grupo.titulo ? grupo.color : COLORES.textoSecundario, fontFamily: "'Archivo Black', sans-serif" }}
                         >
                           {iniciales(j.nombre, j.apellido)}
                         </div>
                       )}
-                      <p className="flex-1 text-sm" style={{ color: '#F0F2F5' }}>
+                      <p className="flex-1 text-sm" style={{ color: COLORES.texto }}>
                         {j.apellido}, {j.nombre}
                       </p>
-                      <span className="text-xs font-mono px-2 py-1 rounded-full shrink-0" style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}>
+                      <span className="text-xs font-mono px-2 py-1 rounded-full shrink-0" style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}>
                         {j.categorias?.nombre}
                       </span>
                     </div>
@@ -443,7 +444,7 @@ function NutricionSection({ jugadorInicialId, onConsumirJugadorInicial }) {
         )}
 
         {filtrados.length === 0 && (
-          <p className="text-sm" style={{ color: '#5B6B85' }}>No se encontraron jugadores con ese filtro.</p>
+          <p className="text-sm" style={{ color: COLORES.textoMuted }}>No se encontraron jugadores con ese filtro.</p>
         )}
       </div>
     </div>
@@ -451,3 +452,5 @@ function NutricionSection({ jugadorInicialId, onConsumirJugadorInicial }) {
 }
 
 export default NutricionSection
+
+

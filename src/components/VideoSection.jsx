@@ -1,3 +1,4 @@
+import { COLORES } from '../theme'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { sanitizarNombreArchivo } from '../utils/archivos'
@@ -33,9 +34,9 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
   const [partidoForm, setPartidoForm] = useState('')
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: COLORES.fondoTarjeta,
+    border: '1px solid COLORES.borde',
+    color: COLORES.texto,
   }
 
   useEffect(() => {
@@ -240,7 +241,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
       <div className="max-w-2xl mx-auto">
         <h1
           className="text-3xl md:text-4xl mb-6 flex items-center gap-3"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+          style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
         >
           <span>🎥</span>
           <span>Videoanálisis</span>
@@ -251,9 +252,9 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
             onClick={() => cambiarTipo('colectivo')}
             className="px-4 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
             style={{
-              backgroundColor: tipo === 'colectivo' ? '#4ADE80' : '#1A2332',
-              color: tipo === 'colectivo' ? '#0F1419' : '#8A9BB8',
-              border: '1px solid #2A3548',
+              backgroundColor: tipo === 'colectivo' ? COLORES.exito : COLORES.fondoTarjeta,
+              color: tipo === 'colectivo' ? COLORES.fondoPagina : COLORES.textoSecundario,
+              border: '1px solid COLORES.borde',
             }}
           >
             Colectivos
@@ -262,9 +263,9 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
             onClick={() => cambiarTipo('individual')}
             className="px-4 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
             style={{
-              backgroundColor: tipo === 'individual' ? '#4ADE80' : '#1A2332',
-              color: tipo === 'individual' ? '#0F1419' : '#8A9BB8',
-              border: '1px solid #2A3548',
+              backgroundColor: tipo === 'individual' ? COLORES.exito : COLORES.fondoTarjeta,
+              color: tipo === 'individual' ? COLORES.fondoPagina : COLORES.textoSecundario,
+              border: '1px solid COLORES.borde',
             }}
           >
             Individuales
@@ -273,9 +274,9 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
             onClick={() => cambiarTipo('entrenamiento')}
             className="px-4 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
             style={{
-              backgroundColor: tipo === 'entrenamiento' ? '#4ADE80' : '#1A2332',
-              color: tipo === 'entrenamiento' ? '#0F1419' : '#8A9BB8',
-              border: '1px solid #2A3548',
+              backgroundColor: tipo === 'entrenamiento' ? COLORES.exito : COLORES.fondoTarjeta,
+              color: tipo === 'entrenamiento' ? COLORES.fondoPagina : COLORES.textoSecundario,
+              border: '1px solid COLORES.borde',
             }}
           >
             Entrenamientos
@@ -285,11 +286,11 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
         {tipo === 'individual' && jugadorFiltroId && (
           <div
             className="flex items-center justify-between gap-3 p-3 rounded-xl mb-4"
-            style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
           >
-            <p className="text-sm" style={{ color: '#8A9BB8' }}>
+            <p className="text-sm" style={{ color: COLORES.textoSecundario }}>
               Mostrando videos de:{' '}
-              <span style={{ color: '#F0F2F5' }}>
+              <span style={{ color: COLORES.texto }}>
                 {(() => {
                   const j = jugadores.find((jug) => jug.id === jugadorFiltroId)
                   return j ? `${j.apellido}, ${j.nombre}` : 'jugador'
@@ -299,7 +300,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
             <button
               onClick={() => setJugadorFiltroId(null)}
               className="text-xs px-3 py-1.5 rounded-full hover:opacity-80 shrink-0"
-              style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+              style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
             >
               Quitar filtro
             </button>
@@ -311,7 +312,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
             esTecnico ? (
               <span
                 className="p-2.5 rounded-xl text-sm sm:w-48 text-center"
-                style={{ ...inputStyle, color: '#8A9BB8' }}
+                style={{ ...inputStyle, color: COLORES.textoSecundario }}
               >
                 {perfil?.categorias?.nombre || 'Tu categoría'}
               </span>
@@ -384,7 +385,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
           <button
             onClick={abrirFormulario}
             className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 shrink-0"
-            style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+            style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
           >
             {mostrarForm ? 'Cancelar' : '+ Nuevo video'}
           </button>
@@ -394,7 +395,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
           <button
             onClick={onIrABiblioteca}
             className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 mb-4 w-full sm:w-auto"
-            style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.textoSecundario, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
           >
             📚 Ir a Biblioteca
           </button>
@@ -403,7 +404,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
         {mostrarForm && (
           <div
             className="space-y-3 mb-6 p-4 rounded-xl"
-            style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
           >
             <input
               type="date"
@@ -418,7 +419,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                 {esTecnico ? (
                   <span
                     className="w-full block p-2.5 rounded-xl text-sm"
-                    style={{ ...inputStyle, color: '#8A9BB8' }}
+                    style={{ ...inputStyle, color: COLORES.textoSecundario }}
                   >
                     {perfil?.categorias?.nombre || 'Tu categoría'}
                   </span>
@@ -508,7 +509,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                 {esTecnico ? (
                   <span
                     className="w-full block p-2.5 rounded-xl text-sm"
-                    style={{ ...inputStyle, color: '#8A9BB8' }}
+                    style={{ ...inputStyle, color: COLORES.textoSecundario }}
                   >
                     {perfil?.categorias?.nombre || 'Tu categoría'}
                   </span>
@@ -565,7 +566,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
 
                 {agregarABiblioteca && (
                   <div>
-                    <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                    <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: COLORES.textoMuted }}>
                       Imagen del ejercicio (Tactical Pad, etc.)
                     </label>
                     <div className="flex items-center gap-3">
@@ -574,12 +575,12 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                           src={imagenBiblioteca}
                           alt="Vista previa"
                           className="w-16 h-16 rounded-lg object-cover shrink-0"
-                          style={{ border: '1px solid #2A3548' }}
+                          style={{ border: '1px solid COLORES.borde' }}
                         />
                       )}
                       <label
                         className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 cursor-pointer"
-                        style={{ backgroundColor: '#0F1419', color: '#8A9BB8', border: '1px solid #2A3548' }}
+                        style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario, border: '1px solid COLORES.borde' }}
                       >
                         {subiendoImagenBiblioteca ? 'Subiendo...' : imagenBiblioteca ? 'Cambiar imagen' : '📤 Subir imagen'}
                         <input
@@ -595,7 +596,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                           type="button"
                           onClick={() => setImagenBiblioteca('')}
                           className="text-xs"
-                          style={{ color: '#F87171' }}
+                          style={{ color: COLORES.peligro }}
                         >
                           Quitar
                         </button>
@@ -619,7 +620,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
               onClick={handleGuardar}
               disabled={guardando}
               className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
             >
               {guardando ? 'Guardando...' : 'Guardar video'}
             </button>
@@ -649,17 +650,17 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                 target="_blank"
                 rel="noreferrer"
                 className="block p-3.5 rounded-xl hover:-translate-y-0.5 transition-all duration-200"
-                style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+                style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
               >
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
+                  <p className="text-sm font-medium" style={{ color: COLORES.texto }}>
                     {titulo}
                   </p>
                   <div className="flex items-center gap-2">
                     {tipo === 'colectivo' && v.momento && (
                       <span
                         className="text-xs font-mono px-2 py-1 rounded-full"
-                        style={{ backgroundColor: '#0F1419', color: '#4ADE80' }}
+                        style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.exito }}
                       >
                         {v.momento}
                       </span>
@@ -667,7 +668,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                     {badge && (
                       <span
                         className="text-xs font-mono px-2 py-1 rounded-full"
-                        style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                        style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
                       >
                         {badge}
                       </span>
@@ -675,37 +676,37 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                     <button
                       onClick={(e) => handleEliminarVideo(e, v.id)}
                       className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                      style={{ backgroundColor: '#0F1419', color: '#F87171' }}
+                      style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.peligro }}
                     >
                       🗑
                     </button>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                  <p className="text-xs" style={{ color: '#5B6B85' }}>
+                  <p className="text-xs" style={{ color: COLORES.textoMuted }}>
                     {v.fecha}
                   </p>
                   {vsPartido && (
-                    <span className="text-xs flex items-center gap-1" style={{ color: '#8A9BB8' }}>
+                    <span className="text-xs flex items-center gap-1" style={{ color: COLORES.textoSecundario }}>
                       ·
                       {v.partidos?.escudo_url && (
                         <img
                           src={v.partidos.escudo_url}
                           alt={v.partidos.rival}
                           className="w-4 h-4 rounded-sm object-contain inline-block shrink-0"
-                          style={{ backgroundColor: '#0F1419' }}
+                          style={{ backgroundColor: COLORES.fondoPagina }}
                         />
                       )}
                       {vsPartido}
                     </span>
                   )}
                   {tipo === 'entrenamiento' && v.descripcion && (
-                    <span className="text-xs" style={{ color: '#8A9BB8' }}>
+                    <span className="text-xs" style={{ color: COLORES.textoSecundario }}>
                       · {v.descripcion}
                     </span>
                   )}
                   {tipo === 'entrenamiento' && v.cantidad_jugadores && (
-                    <span className="text-xs" style={{ color: '#8A9BB8' }}>
+                    <span className="text-xs" style={{ color: COLORES.textoSecundario }}>
                       · 👥 {v.cantidad_jugadores} jugadores
                     </span>
                   )}
@@ -716,7 +717,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
         </div>
 
         {videosFiltrados.length === 0 && (
-          <p className="text-sm" style={{ color: '#5B6B85' }}>
+          <p className="text-sm" style={{ color: COLORES.textoMuted }}>
             No hay videos cargados con ese filtro.
           </p>
         )}
@@ -726,3 +727,5 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
 }
 
 export default VideoSection
+
+

@@ -1,3 +1,4 @@
+import { COLORES } from '../theme'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
@@ -5,9 +6,9 @@ import { agregarPendiente, contarPendientes, sincronizarPendientes } from '../ut
 import { generarAsistenciaPDF } from '../utils/generarAsistenciaPDF'
 
 const ESTADOS = [
-  { valor: 'presente', label: 'Presente', color: '#4ADE80' },
-  { valor: 'tarde', label: 'Tarde', color: '#FBBF24' },
-  { valor: 'ausente', label: 'Ausente', color: '#F87171' },
+  { valor: 'presente', label: 'Presente', color: COLORES.exito },
+  { valor: 'tarde', label: 'Tarde', color: COLORES.acento },
+  { valor: 'ausente', label: 'Ausente', color: COLORES.peligro },
   { valor: 'lesionado', label: 'Lesionado', color: '#FB923C' },
   { valor: 'enfermo', label: 'Enfermo', color: '#7DD3FC' },
 ]
@@ -165,9 +166,9 @@ function AsistenciaSection({ perfil }) {
   }
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: COLORES.fondoTarjeta,
+    border: '1px solid COLORES.borde',
+    color: COLORES.texto,
   }
 
   return (
@@ -175,7 +176,7 @@ function AsistenciaSection({ perfil }) {
       <div className="max-w-xl mx-auto">
         <h1
           className="text-3xl md:text-4xl mb-6"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+          style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
         >
           Asistencia
         </h1>
@@ -184,16 +185,16 @@ function AsistenciaSection({ perfil }) {
           <button
             onClick={() => setMostrarReporte((v) => !v)}
             className="text-xs font-medium px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
-            style={{ backgroundColor: '#1A2332', color: '#F0F2F5', border: '1px solid #2A3548' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.texto, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
           >
             {mostrarReporte ? 'Cerrar' : '📄 Exportar reporte de asistencia'}
           </button>
 
           {mostrarReporte && (
-            <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
+            <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}>
               <div className="grid sm:grid-cols-2 gap-3 mb-3">
                 <div>
-                  <label className="text-[10px] uppercase" style={{ color: '#5B6B85' }}>Desde</label>
+                  <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Desde</label>
                   <input
                     type="date"
                     value={reporteDesde}
@@ -203,7 +204,7 @@ function AsistenciaSection({ perfil }) {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] uppercase" style={{ color: '#5B6B85' }}>Hasta</label>
+                  <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Hasta</label>
                   <input
                     type="date"
                     value={reporteHasta}
@@ -217,12 +218,12 @@ function AsistenciaSection({ perfil }) {
                 onClick={handleDescargarReporte}
                 disabled={!categoriaId || generandoReporte}
                 className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-                style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+                style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
               >
                 {generandoReporte ? 'Generando...' : 'Descargar PDF'}
               </button>
               {!categoriaId && (
-                <p className="text-xs mt-2" style={{ color: '#5B6B85' }}>
+                <p className="text-xs mt-2" style={{ color: COLORES.textoMuted }}>
                   Elegí una categoría más abajo primero.
                 </p>
               )}
@@ -255,16 +256,16 @@ function AsistenciaSection({ perfil }) {
           )}
         </div>
 
-        {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
+        {cargando && <p style={{ color: COLORES.textoMuted }}>Cargando...</p>}
 
         {!cargando && categoriaId && jugadores.length === 0 && (
-          <p className="text-sm" style={{ color: '#5B6B85' }}>
+          <p className="text-sm" style={{ color: COLORES.textoMuted }}>
             No hay jugadores cargados en esta categoría.
           </p>
         )}
 
         {!categoriaId && !esTecnico && (
-          <p className="text-sm" style={{ color: '#5B6B85' }}>
+          <p className="text-sm" style={{ color: COLORES.textoMuted }}>
             Elegí una categoría para ver el plantel.
           </p>
         )}
@@ -272,7 +273,7 @@ function AsistenciaSection({ perfil }) {
         {jugadores.length > 0 && (
           <>
             <div className="flex items-center gap-2 mb-4 flex-wrap">
-              <span className="text-xs" style={{ color: '#5B6B85' }}>
+              <span className="text-xs" style={{ color: COLORES.textoMuted }}>
                 Marcar todos:
               </span>
               {ESTADOS.map((e) => (
@@ -280,7 +281,7 @@ function AsistenciaSection({ perfil }) {
                   key={e.valor}
                   onClick={() => marcarTodos(e.valor)}
                   className="text-xs px-2.5 py-1 rounded-full hover:opacity-80"
-                  style={{ backgroundColor: '#1A2332', color: e.color, border: '1px solid #2A3548' }}
+                  style={{ backgroundColor: COLORES.fondoTarjeta, color: e.color, border: '1px solid COLORES.borde' }}
                 >
                   {e.label}
                 </button>
@@ -304,12 +305,12 @@ function AsistenciaSection({ perfil }) {
                     ) : (
                       <span
                         className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
-                        style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                        style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
                       >
                         {`${j.nombre?.[0] || ''}${j.apellido?.[0] || ''}`.toUpperCase()}
                       </span>
                     )}
-                    <p className="text-sm truncate" style={{ color: '#F0F2F5' }}>
+                    <p className="text-sm truncate" style={{ color: COLORES.texto }}>
                       {j.apellido}, {j.nombre}
                     </p>
                   </div>
@@ -322,8 +323,8 @@ function AsistenciaSection({ perfil }) {
                           onClick={() => marcar(j.id, e.valor)}
                           className="text-[10px] px-2 py-1 rounded-full transition-opacity hover:opacity-80"
                           style={{
-                            backgroundColor: activo ? e.color : '#0F1419',
-                            color: activo ? '#0F1419' : '#8A9BB8',
+                            backgroundColor: activo ? e.color : COLORES.fondoPagina,
+                            color: activo ? COLORES.fondoPagina : COLORES.textoSecundario,
                             fontWeight: activo ? 700 : 400,
                           }}
                         >
@@ -337,7 +338,7 @@ function AsistenciaSection({ perfil }) {
             </div>
 
             {pendientes > 0 && (
-              <p className="text-xs mb-3" style={{ color: '#FBBF24' }}>
+              <p className="text-xs mb-3" style={{ color: COLORES.acento }}>
                 📴 {pendientes} registro(s) guardados sin conexión, pendientes de sincronizar.
               </p>
             )}
@@ -345,7 +346,7 @@ function AsistenciaSection({ perfil }) {
             {mensaje && (
               <p
                 className="text-sm mb-4"
-                style={{ color: mensaje.startsWith('Listo') || mensaje.includes('sincronizaron') ? '#4ADE80' : mensaje.startsWith('Sin conexión') || mensaje.startsWith('No se pudo') ? '#FBBF24' : '#F87171' }}
+                style={{ color: mensaje.startsWith('Listo') || mensaje.includes('sincronizaron') ? COLORES.exito : mensaje.startsWith('Sin conexión') || mensaje.startsWith('No se pudo') ? COLORES.acento : COLORES.peligro }}
               >
                 {mensaje}
               </p>
@@ -355,7 +356,7 @@ function AsistenciaSection({ perfil }) {
               onClick={handleGuardar}
               disabled={guardando}
               className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
             >
               {guardando ? 'Guardando...' : 'Guardar asistencia'}
             </button>
@@ -367,3 +368,7 @@ function AsistenciaSection({ perfil }) {
 }
 
 export default AsistenciaSection
+
+
+
+

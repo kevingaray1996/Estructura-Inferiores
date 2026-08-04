@@ -1,3 +1,4 @@
+import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { sanitizarNombreArchivo } from '../utils/archivos'
@@ -17,9 +18,9 @@ function EquiposSection({ onVolver }) {
   const [errorMsg, setErrorMsg] = useState('')
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: COLORES.fondoTarjeta,
+    border: '1px solid COLORES.borde',
+    color: COLORES.texto,
   }
 
   useEffect(() => {
@@ -115,7 +116,7 @@ function EquiposSection({ onVolver }) {
         <button
           onClick={onVolver}
           className="text-sm mb-6 flex items-center gap-1 hover:opacity-70 transition-opacity"
-          style={{ color: '#8A9BB8' }}
+          style={{ color: COLORES.textoSecundario }}
         >
           ← Volver
         </button>
@@ -123,14 +124,14 @@ function EquiposSection({ onVolver }) {
         <div className="flex items-start justify-between mb-8 gap-3 flex-wrap">
           <h1
             className="text-2xl md:text-3xl"
-            style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+            style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
           >
             Equipos
           </h1>
           <button
             onClick={mostrarForm ? cancelarForm : abrirNuevo}
             className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
-            style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+            style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
           >
             {mostrarForm ? 'Cancelar' : '+ Nuevo equipo'}
           </button>
@@ -139,10 +140,10 @@ function EquiposSection({ onVolver }) {
         {mostrarForm && (
           <div
             className="space-y-3 mb-8 p-4 rounded-xl"
-            style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
           >
             {equipoEditando && (
-              <p className="text-xs" style={{ color: '#8A9BB8' }}>
+              <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
                 Editando {equipoEditando.nombre}
               </p>
             )}
@@ -156,7 +157,7 @@ function EquiposSection({ onVolver }) {
             />
 
             <div>
-              <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+              <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: COLORES.textoMuted }}>
                 Escudo
               </label>
               <div className="flex items-center gap-3">
@@ -165,12 +166,12 @@ function EquiposSection({ onVolver }) {
                     src={escudoUrl}
                     alt="Escudo"
                     className="w-12 h-12 rounded-lg object-contain shrink-0"
-                    style={{ backgroundColor: '#0F1419', border: '1px solid #2A3548' }}
+                    style={{ backgroundColor: COLORES.fondoPagina, border: '1px solid COLORES.borde' }}
                   />
                 )}
                 <label
                   className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 cursor-pointer"
-                  style={{ backgroundColor: '#0F1419', color: '#8A9BB8', border: '1px solid #2A3548' }}
+                  style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario, border: '1px solid COLORES.borde' }}
                 >
                   {subiendoEscudo ? 'Subiendo...' : escudoUrl ? 'Cambiar escudo' : '📤 Subir escudo'}
                   <input
@@ -186,7 +187,7 @@ function EquiposSection({ onVolver }) {
                     type="button"
                     onClick={() => setEscudoUrl('')}
                     className="text-xs"
-                    style={{ color: '#F87171' }}
+                    style={{ color: COLORES.peligro }}
                   >
                     Quitar
                   </button>
@@ -195,7 +196,7 @@ function EquiposSection({ onVolver }) {
             </div>
 
             {errorMsg && (
-              <p className="text-sm" style={{ color: '#F87171' }}>
+              <p className="text-sm" style={{ color: COLORES.peligro }}>
                 {errorMsg}
               </p>
             )}
@@ -204,7 +205,7 @@ function EquiposSection({ onVolver }) {
               onClick={handleGuardar}
               disabled={guardando}
               className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
             >
               {guardando ? 'Guardando...' : equipoEditando ? 'Guardar cambios' : 'Guardar equipo'}
             </button>
@@ -220,10 +221,10 @@ function EquiposSection({ onVolver }) {
           style={inputStyle}
         />
 
-        {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
+        {cargando && <p style={{ color: COLORES.textoMuted }}>Cargando...</p>}
 
         {!cargando && filtrados.length === 0 && (
-          <p style={{ color: '#5B6B85' }}>No hay equipos cargados todavía.</p>
+          <p style={{ color: COLORES.textoMuted }}>No hay equipos cargados todavía.</p>
         )}
 
         <div className="space-y-2">
@@ -231,7 +232,7 @@ function EquiposSection({ onVolver }) {
             <div
               key={e.id}
               className="p-3 rounded-xl flex items-center justify-between"
-              style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
             >
               <div className="flex items-center gap-2.5">
                 {e.escudo_url ? (
@@ -239,17 +240,17 @@ function EquiposSection({ onVolver }) {
                     src={e.escudo_url}
                     alt={e.nombre}
                     className="w-8 h-8 rounded object-contain shrink-0"
-                    style={{ backgroundColor: '#0F1419' }}
+                    style={{ backgroundColor: COLORES.fondoPagina }}
                   />
                 ) : (
                   <span
                     className="w-8 h-8 rounded flex items-center justify-center text-xs shrink-0"
-                    style={{ backgroundColor: '#0F1419', color: '#5B6B85' }}
+                    style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoMuted }}
                   >
                     🛡️
                   </span>
                 )}
-                <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
+                <p className="text-sm font-medium" style={{ color: COLORES.texto }}>
                   {e.nombre}
                 </p>
               </div>
@@ -257,14 +258,14 @@ function EquiposSection({ onVolver }) {
                 <button
                   onClick={() => abrirEditar(e)}
                   className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                  style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                  style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
                 >
                   ✏️
                 </button>
                 <button
                   onClick={() => handleEliminar(e.id)}
                   className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                  style={{ backgroundColor: '#0F1419', color: '#F87171' }}
+                  style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.peligro }}
                 >
                   🗑
                 </button>
@@ -278,3 +279,6 @@ function EquiposSection({ onVolver }) {
 }
 
 export default EquiposSection
+
+
+

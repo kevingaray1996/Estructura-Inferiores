@@ -1,3 +1,4 @@
+import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import ListaPartidos from './ListaPartidos'
@@ -110,11 +111,11 @@ function PartidosSection({ perfil, onIrAFisico }) {
       <div className="max-w-xl mx-auto">
         <h1
           className="text-3xl md:text-4xl mb-6"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+          style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
         >
           Partidos
         </h1>
-        <p className="text-xs uppercase tracking-wide mb-2" style={{ color: '#5B6B85' }}>
+        <p className="text-xs uppercase tracking-wide mb-2" style={{ color: COLORES.textoMuted }}>
           Elegí una categoría
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -123,7 +124,7 @@ function PartidosSection({ perfil, onIrAFisico }) {
               key={c.id}
               onClick={() => elegirCategoria(c.id)}
               className="p-3 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
-              style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#F0F2F5' }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde', color: COLORES.texto }}
             >
               {c.nombre}
             </button>
@@ -135,3 +136,4 @@ function PartidosSection({ perfil, onIrAFisico }) {
 }
 
 export default PartidosSection
+

@@ -1,3 +1,4 @@
+import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { exportarBackupCompleto } from '../utils/exportarBackup'
@@ -25,9 +26,9 @@ function UsuariosSection() {
   const [exportando, setExportando] = useState(false)
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: COLORES.fondoTarjeta,
+    border: '1px solid COLORES.borde',
+    color: COLORES.texto,
   }
 
   useEffect(() => {
@@ -126,7 +127,7 @@ function UsuariosSection() {
         <div className="flex items-start justify-between mb-2 gap-3 flex-wrap">
           <h1
             className="text-2xl md:text-3xl"
-            style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+            style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
           >
             Usuarios
           </h1>
@@ -135,20 +136,20 @@ function UsuariosSection() {
               onClick={handleExportarBackup}
               disabled={exportando}
               className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: '#1A2332', color: '#F0F2F5', border: '1px solid #2A3548' }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.texto, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
             >
               {exportando ? 'Generando...' : '📦 Exportar backup'}
             </button>
             <button
               onClick={mostrarForm ? cancelarForm : abrirNuevo}
               className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
-              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
             >
               {mostrarForm ? 'Cancelar' : '+ Nuevo usuario'}
             </button>
           </div>
         </div>
-        <p className="text-xs mb-6" style={{ color: '#5B6B85' }}>
+        <p className="text-xs mb-6" style={{ color: COLORES.textoMuted }}>
           Antes de darlo de alta acá, creá el login de esa persona en Supabase
           (Authentication → Add user) con este mismo email.
         </p>
@@ -156,10 +157,10 @@ function UsuariosSection() {
         {mostrarForm && (
           <div
             className="space-y-3 mb-8 p-4 rounded-xl"
-            style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
           >
             {usuarioEditando && (
-              <p className="text-xs" style={{ color: '#8A9BB8' }}>
+              <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
                 Editando {usuarioEditando.email}
               </p>
             )}
@@ -208,7 +209,7 @@ function UsuariosSection() {
             )}
 
             {errorMsg && (
-              <p className="text-sm" style={{ color: '#F87171' }}>
+              <p className="text-sm" style={{ color: COLORES.peligro }}>
                 {errorMsg}
               </p>
             )}
@@ -217,34 +218,34 @@ function UsuariosSection() {
               onClick={handleGuardar}
               disabled={guardando}
               className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
             >
               {guardando ? 'Guardando...' : usuarioEditando ? 'Guardar cambios' : 'Guardar usuario'}
             </button>
           </div>
         )}
 
-        {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
+        {cargando && <p style={{ color: COLORES.textoMuted }}>Cargando...</p>}
 
         <div className="space-y-2">
           {usuarios.map((u) => (
             <div
               key={u.email}
               className="p-3 rounded-xl flex items-center justify-between gap-3"
-              style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
             >
               <div>
-                <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
+                <p className="text-sm font-medium" style={{ color: COLORES.texto }}>
                   {u.nombre || u.email}
                 </p>
-                <p className="text-xs" style={{ color: '#8A9BB8' }}>
+                <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
                   {u.email}
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span
                   className="text-xs font-mono px-2 py-1 rounded-full"
-                  style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                  style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
                 >
                   {rolLabel[u.rol] || u.rol}
                   {u.rol === 'tecnico' && u.categorias?.nombre ? ` · ${u.categorias.nombre}` : ''}
@@ -252,14 +253,14 @@ function UsuariosSection() {
                 <button
                   onClick={() => abrirEditar(u)}
                   className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                  style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                  style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
                 >
                   ✏️
                 </button>
                 <button
                   onClick={() => handleEliminar(u)}
                   className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                  style={{ backgroundColor: '#0F1419', color: '#F87171' }}
+                  style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.peligro }}
                 >
                   🗑
                 </button>
@@ -273,3 +274,6 @@ function UsuariosSection() {
 }
 
 export default UsuariosSection
+
+
+

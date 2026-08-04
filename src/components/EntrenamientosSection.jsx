@@ -1,3 +1,4 @@
+import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
@@ -22,9 +23,9 @@ function EntrenamientosSection() {
   const [subiendoImagen, setSubiendoImagen] = useState(false)
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: COLORES.fondoTarjeta,
+    border: '1px solid COLORES.borde',
+    color: COLORES.texto,
   }
 
   useEffect(() => {
@@ -135,23 +136,23 @@ function EntrenamientosSection() {
         <div className="flex items-start justify-between mb-6 gap-3 flex-wrap">
           <h1
             className="text-3xl md:text-4xl flex items-center gap-3"
-            style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+            style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
           >
             <span>🏋️</span> Entrenamientos
           </h1>
           <button
             onClick={mostrarForm ? cancelarForm : abrirNuevo}
             className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 shrink-0"
-            style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+            style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
           >
             {mostrarForm ? 'Cancelar' : '+ Nuevo entrenamiento'}
           </button>
         </div>
 
         {mostrarForm && (
-          <div className="space-y-3 mb-8 p-4 rounded-xl" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
+          <div className="space-y-3 mb-8 p-4 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}>
             {entrenamientoEditando && (
-              <p className="text-xs" style={{ color: '#8A9BB8' }}>
+              <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
                 Editando entrenamiento del {entrenamientoEditando.fecha}
               </p>
             )}
@@ -206,7 +207,7 @@ function EntrenamientosSection() {
               />
             </div>
             <div>
-              <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+              <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: COLORES.textoMuted }}>
                 Imagen del ejercicio (Tactical Pad, etc.)
               </label>
               <div className="flex items-center gap-3">
@@ -215,12 +216,12 @@ function EntrenamientosSection() {
                     src={imagenUrl}
                     alt="Vista previa"
                     className="w-16 h-16 rounded-lg object-cover shrink-0"
-                    style={{ border: '1px solid #2A3548' }}
+                    style={{ border: '1px solid COLORES.borde' }}
                   />
                 )}
                 <label
                   className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 cursor-pointer"
-                  style={{ backgroundColor: '#0F1419', color: '#8A9BB8', border: '1px solid #2A3548' }}
+                  style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario, border: '1px solid COLORES.borde' }}
                 >
                   {subiendoImagen ? 'Subiendo...' : imagenUrl ? 'Cambiar imagen' : '📤 Subir imagen'}
                   <input
@@ -236,7 +237,7 @@ function EntrenamientosSection() {
                     type="button"
                     onClick={() => setImagenUrl('')}
                     className="text-xs"
-                    style={{ color: '#F87171' }}
+                    style={{ color: COLORES.peligro }}
                   >
                     Quitar
                   </button>
@@ -247,7 +248,7 @@ function EntrenamientosSection() {
               onClick={handleGuardar}
               disabled={guardando}
               className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
             >
               {guardando ? 'Guardando...' : entrenamientoEditando ? 'Guardar cambios' : 'Guardar entrenamiento'}
             </button>
@@ -292,11 +293,11 @@ function EntrenamientosSection() {
             <div
               key={e.id}
               className="rounded-xl overflow-hidden flex flex-col"
-              style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
             >
               <div
                 className="w-full aspect-[2/1] flex items-center justify-center"
-                style={{ backgroundColor: '#0F1419' }}
+                style={{ backgroundColor: COLORES.fondoPagina }}
               >
                 {e.imagen_url ? (
                   <img src={e.imagen_url} alt={e.contenido || 'Entrenamiento'} className="w-full h-full object-cover" />
@@ -309,16 +310,16 @@ function EntrenamientosSection() {
                   {e.contenido && (
                     <span
                       className="text-[10px] font-mono px-2 py-0.5 rounded-full shrink-0"
-                      style={{ backgroundColor: '#0F1419', color: '#4ADE80' }}
+                      style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.exito }}
                     >
                       {e.contenido}
                     </span>
                   )}
-                  <span className="text-[10px] font-mono" style={{ color: '#5B6B85' }}>{e.fecha}</span>
+                  <span className="text-[10px] font-mono" style={{ color: COLORES.textoMuted }}>{e.fecha}</span>
                 </div>
-                <p className="text-xs mb-2" style={{ color: '#F0F2F5' }}>{e.descripcion}</p>
+                <p className="text-xs mb-2" style={{ color: COLORES.texto }}>{e.descripcion}</p>
                 {e.cantidad_jugadores && (
-                  <p className="text-[10px] mb-2" style={{ color: '#8A9BB8' }}>
+                  <p className="text-[10px] mb-2" style={{ color: COLORES.textoSecundario }}>
                     👥 {e.cantidad_jugadores} jugadores
                   </p>
                 )}
@@ -329,7 +330,7 @@ function EntrenamientosSection() {
                       target="_blank"
                       rel="noreferrer"
                       className="text-xs font-medium underline"
-                      style={{ color: '#8A9BB8' }}
+                      style={{ color: COLORES.textoSecundario }}
                     >
                       ▶ Ver video
                     </a>
@@ -338,14 +339,14 @@ function EntrenamientosSection() {
                     <button
                       onClick={() => abrirEditar(e)}
                       className="text-xs px-2 py-0.5 rounded-full hover:opacity-80"
-                      style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                      style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
                     >
                       ✏️
                     </button>
                     <button
                       onClick={() => handleEliminar(e.id)}
                       className="text-xs px-2 py-0.5 rounded-full hover:opacity-80"
-                      style={{ backgroundColor: '#0F1419', color: '#F87171' }}
+                      style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.peligro }}
                     >
                       🗑
                     </button>
@@ -357,7 +358,7 @@ function EntrenamientosSection() {
         </div>
 
         {filtrados.length === 0 && (
-          <p className="text-sm" style={{ color: '#5B6B85' }}>No hay entrenamientos cargados con ese filtro.</p>
+          <p className="text-sm" style={{ color: COLORES.textoMuted }}>No hay entrenamientos cargados con ese filtro.</p>
         )}
       </div>
     </div>
@@ -365,3 +366,6 @@ function EntrenamientosSection() {
 }
 
 export default EntrenamientosSection
+
+
+

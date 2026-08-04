@@ -1,3 +1,4 @@
+import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
@@ -113,9 +114,9 @@ function PaseCategoriaSection() {
   }
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: COLORES.fondoTarjeta,
+    border: '1px solid COLORES.borde',
+    color: COLORES.texto,
   }
 
   return (
@@ -123,11 +124,11 @@ function PaseCategoriaSection() {
       <div className="max-w-xl mx-auto">
         <h1
           className="text-2xl md:text-3xl mb-2"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+          style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
         >
           Pase de categoría
         </h1>
-        <p className="text-xs mb-6" style={{ color: '#5B6B85' }}>
+        <p className="text-xs mb-6" style={{ color: COLORES.textoMuted }}>
           Para usar a fin de temporada: elegí de qué categoría a cuál pasan los jugadores
           seleccionados. Queda guardado en la trayectoria de cada jugador.
         </p>
@@ -170,10 +171,10 @@ function PaseCategoriaSection() {
           style={inputStyle}
         />
 
-        {cargando && <p style={{ color: '#5B6B85' }}>Cargando jugadores...</p>}
+        {cargando && <p style={{ color: COLORES.textoMuted }}>Cargando jugadores...</p>}
 
         {!cargando && origenId && jugadores.length === 0 && (
-          <p className="text-sm" style={{ color: '#5B6B85' }}>
+          <p className="text-sm" style={{ color: COLORES.textoMuted }}>
             No hay jugadores en esa categoría.
           </p>
         )}
@@ -181,13 +182,13 @@ function PaseCategoriaSection() {
         {jugadores.length > 0 && (
           <>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs uppercase tracking-wide" style={{ color: '#5B6B85' }}>
+              <p className="text-xs uppercase tracking-wide" style={{ color: COLORES.textoMuted }}>
                 Jugadores ({seleccionados.size}/{jugadores.length})
               </p>
               <button
                 onClick={toggleTodos}
                 className="text-xs"
-                style={{ color: '#4ADE80' }}
+                style={{ color: COLORES.exito }}
               >
                 {seleccionados.size === jugadores.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
               </button>
@@ -197,7 +198,7 @@ function PaseCategoriaSection() {
                 <label
                   key={j.id}
                   className="flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer"
-                  style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+                  style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
                 >
                   <input
                     type="checkbox"
@@ -213,12 +214,12 @@ function PaseCategoriaSection() {
                   ) : (
                     <span
                       className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
-                      style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                      style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
                     >
                       {`${j.nombre?.[0] || ''}${j.apellido?.[0] || ''}`.toUpperCase()}
                     </span>
                   )}
-                  <span className="text-sm" style={{ color: '#F0F2F5' }}>
+                  <span className="text-sm" style={{ color: COLORES.texto }}>
                     {j.apellido}, {j.nombre}
                   </span>
                 </label>
@@ -228,7 +229,7 @@ function PaseCategoriaSection() {
         )}
 
         {mensaje && (
-          <p className="text-sm mb-4" style={{ color: mensaje.startsWith('Listo') ? '#4ADE80' : '#F87171' }}>
+          <p className="text-sm mb-4" style={{ color: mensaje.startsWith('Listo') ? COLORES.exito : COLORES.peligro }}>
             {mensaje}
           </p>
         )}
@@ -237,7 +238,7 @@ function PaseCategoriaSection() {
           onClick={handleConfirmar}
           disabled={guardando || jugadores.length === 0}
           className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-          style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+          style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
         >
           {guardando ? 'Procesando...' : 'Confirmar pase'}
         </button>
@@ -247,3 +248,6 @@ function PaseCategoriaSection() {
 }
 
 export default PaseCategoriaSection
+
+
+

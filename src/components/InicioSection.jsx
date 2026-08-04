@@ -1,3 +1,4 @@
+import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
@@ -631,3 +632,5 @@ function InicioSection({ perfil, onCambiarSeccion }) {
 }
 
 export default InicioSection
+
+

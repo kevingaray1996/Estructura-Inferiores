@@ -1,12 +1,13 @@
+import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import CategoriaFiltro from './CategoriaFiltro'
 import { obtenerFechaHoy } from '../utils/fecha'
 
 const ESTADO_CONFIG = {
-  en_prueba: { label: 'En prueba', color: '#FBBF24', icono: '🕓' },
-  aceptado: { label: 'Aceptado', color: '#4ADE80', icono: '✅' },
-  rechazado: { label: 'Rechazado', color: '#F87171', icono: '✖️' },
+  en_prueba: { label: 'En prueba', color: COLORES.acento, icono: '🕓' },
+  aceptado: { label: 'Aceptado', color: COLORES.exito, icono: '✅' },
+  rechazado: { label: 'Rechazado', color: COLORES.peligro, icono: '✖️' },
 }
 
 function iniciales(nombre, apellido) {
@@ -202,9 +203,9 @@ function CaptacionSection({ perfil }) {
   }))
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: COLORES.fondoTarjeta,
+    border: '1px solid COLORES.borde',
+    color: COLORES.texto,
   }
 
   return (
@@ -213,21 +214,21 @@ function CaptacionSection({ perfil }) {
         <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
           <h1
             className="text-3xl md:text-4xl flex items-center gap-3"
-            style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+            style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
           >
             <span>🔎</span> Captación
           </h1>
           <button
             onClick={mostrarForm ? cancelarForm : abrirNuevo}
             className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 shrink-0"
-            style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+            style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
           >
             {mostrarForm ? 'Cancelar' : '+ Nuevo candidato'}
           </button>
         </div>
 
         {mostrarForm && (
-          <div className="space-y-3 mb-6 p-4 rounded-xl" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
+          <div className="space-y-3 mb-6 p-4 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}>
             <div className="grid sm:grid-cols-2 gap-3">
               <input
                 type="text"
@@ -248,7 +249,7 @@ function CaptacionSection({ perfil }) {
             </div>
             <div className="grid sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] uppercase" style={{ color: '#5B6B85' }}>Fecha de nacimiento</label>
+                <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Fecha de nacimiento</label>
                 <input
                   type="date"
                   value={fechaNacimiento}
@@ -268,9 +269,9 @@ function CaptacionSection({ perfil }) {
             </div>
             <div className="grid sm:grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] uppercase" style={{ color: '#5B6B85' }}>Categoría probada</label>
+                <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Categoría probada</label>
                 {esTecnico ? (
-                  <p className="p-2.5 rounded-xl text-sm" style={{ ...inputStyle, color: '#8A9BB8' }}>
+                  <p className="p-2.5 rounded-xl text-sm" style={{ ...inputStyle, color: COLORES.textoSecundario }}>
                     {perfil?.categorias?.nombre || 'Tu categoría'}
                   </p>
                 ) : (
@@ -288,7 +289,7 @@ function CaptacionSection({ perfil }) {
                 )}
               </div>
               <div>
-                <label className="text-[10px] uppercase" style={{ color: '#5B6B85' }}>Fecha de la prueba</label>
+                <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Fecha de la prueba</label>
                 <input
                   type="date"
                   value={fechaPrueba}
@@ -325,7 +326,7 @@ function CaptacionSection({ perfil }) {
               style={inputStyle}
             />
             <div>
-              <label className="text-[10px] uppercase" style={{ color: '#5B6B85' }}>Estado</label>
+              <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Estado</label>
               <select
                 value={estado}
                 onChange={(e) => setEstado(e.target.value)}
@@ -337,21 +338,21 @@ function CaptacionSection({ perfil }) {
                 <option value="rechazado">Rechazado</option>
               </select>
               {estado === 'aceptado' && !candidatoEditando?.jugador_id && (
-                <p className="text-xs mt-1.5" style={{ color: '#4ADE80' }}>
+                <p className="text-xs mt-1.5" style={{ color: COLORES.exito }}>
                   Al guardar como "Aceptado" se crea automáticamente en el plantel de la categoría probada.
                 </p>
               )}
             </div>
 
             {errorMsg && (
-              <p className="text-sm" style={{ color: '#F87171' }}>{errorMsg}</p>
+              <p className="text-sm" style={{ color: COLORES.peligro }}>{errorMsg}</p>
             )}
 
             <button
               onClick={handleGuardar}
               disabled={guardando}
               className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
             >
               {guardando ? 'Guardando...' : candidatoEditando ? 'Guardar cambios' : 'Guardar candidato'}
             </button>
@@ -367,7 +368,7 @@ function CaptacionSection({ perfil }) {
           categoriaNombre={perfil?.categorias?.nombre}
         />
 
-        {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
+        {cargando && <p style={{ color: COLORES.textoMuted }}>Cargando...</p>}
 
         {!cargando &&
           grupos.map(
@@ -382,20 +383,20 @@ function CaptacionSection({ perfil }) {
                       <div
                         key={c.id}
                         className="p-3.5 rounded-xl"
-                        style={{ backgroundColor: '#1A2332', border: `1px solid ${grupo.config.color}` }}
+                        style={{ backgroundColor: COLORES.fondoTarjeta, border: `1px solid ${grupo.config.color}` }}
                       >
                         <div className="flex items-center gap-3">
                           <span
                             className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                            style={{ backgroundColor: '#0F1419', color: '#8A9BB8', fontFamily: "'Archivo Black', sans-serif" }}
+                            style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario, fontFamily: "'Archivo Black', sans-serif" }}
                           >
                             {iniciales(c.nombre, c.apellido)}
                           </span>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate" style={{ color: '#F0F2F5' }}>
+                            <p className="text-sm font-medium truncate" style={{ color: COLORES.texto }}>
                               {c.apellido}, {c.nombre}
                             </p>
-                            <p className="text-xs" style={{ color: '#8A9BB8' }}>
+                            <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
                               {c.categorias?.nombre}
                               {c.posicion ? ` · ${c.posicion}` : ''}
                               {c.fecha_prueba ? ` · ${c.fecha_prueba}` : ''}
@@ -407,34 +408,34 @@ function CaptacionSection({ perfil }) {
                                 onClick={() => handleConvertir(c)}
                                 disabled={convirtiendoId === c.id}
                                 className="text-xs px-2.5 py-1 rounded-full hover:opacity-80 disabled:opacity-50"
-                                style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+                                style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
                               >
                                 {convirtiendoId === c.id ? 'Creando...' : '➕ Pasar a plantel'}
                               </button>
                             )}
                             {c.jugador_id && (
-                              <span className="text-xs px-2.5 py-1 rounded-full" style={{ backgroundColor: '#0F1419', color: '#4ADE80' }}>
+                              <span className="text-xs px-2.5 py-1 rounded-full" style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.exito }}>
                                 Ya está en el plantel
                               </span>
                             )}
                             <button
                               onClick={() => abrirEditar(c)}
                               className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                              style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                              style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
                             >
                               ✏️
                             </button>
                             <button
                               onClick={() => handleEliminar(c.id)}
                               className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                              style={{ backgroundColor: '#0F1419', color: '#F87171' }}
+                              style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.peligro }}
                             >
                               🗑
                             </button>
                           </div>
                         </div>
                         {c.notas && (
-                          <p className="text-xs mt-2" style={{ color: '#8A9BB8' }}>{c.notas}</p>
+                          <p className="text-xs mt-2" style={{ color: COLORES.textoSecundario }}>{c.notas}</p>
                         )}
                       </div>
                     ))}
@@ -444,7 +445,7 @@ function CaptacionSection({ perfil }) {
           )}
 
         {!cargando && filtrados.length === 0 && (
-          <p className="text-sm" style={{ color: '#5B6B85' }}>
+          <p className="text-sm" style={{ color: COLORES.textoMuted }}>
             No hay candidatos cargados para ese filtro.
           </p>
         )}
@@ -454,3 +455,6 @@ function CaptacionSection({ perfil }) {
 }
 
 export default CaptacionSection
+
+
+

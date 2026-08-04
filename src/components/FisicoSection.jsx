@@ -1,3 +1,4 @@
+import { COLORES } from '../theme'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
@@ -261,9 +262,9 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
   }
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: COLORES.fondoTarjeta,
+    border: '1px solid COLORES.borde',
+    color: COLORES.texto,
   }
 
   const tabsDisponibles = [
@@ -283,11 +284,11 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
       <div className="max-w-4xl mx-auto">
         <h1
           className="text-3xl md:text-4xl mb-1"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+          style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
         >
           Físico
         </h1>
-        <p className="text-sm mb-6" style={{ color: '#5B6B85' }}>
+        <p className="text-sm mb-6" style={{ color: COLORES.textoMuted }}>
           Wellness, esfuerzo percibido (RPE), carga de entrenamiento, CMJ y semáforo de riesgo.
         </p>
 
@@ -301,8 +302,8 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
               className="flex-1 p-2.5 rounded-xl text-sm font-medium transition-opacity"
               style={
                 tab === t.key
-                  ? { backgroundColor: '#4ADE80', color: '#0F1419' }
-                  : { backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#8A9BB8' }
+                  ? { backgroundColor: COLORES.exito, color: COLORES.fondoPagina }
+                  : { backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde', color: COLORES.textoSecundario }
               }
             >
               {t.label}
@@ -324,8 +325,8 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
                     className="flex-1 p-2 rounded-xl text-xs font-medium transition-opacity"
                     style={
                       subTabWellness === sub.key
-                        ? { backgroundColor: '#7DD3FC', color: '#0F1419' }
-                        : { backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#8A9BB8' }
+                        ? { backgroundColor: '#7DD3FC', color: COLORES.fondoPagina }
+                        : { backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde', color: COLORES.textoSecundario }
                     }
                   >
                     {sub.label}
@@ -359,8 +360,8 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
                   className="flex-1 p-2 rounded-xl text-xs font-medium transition-opacity"
                   style={
                     subTabCMJ === sub.key
-                      ? { backgroundColor: '#7DD3FC', color: '#0F1419' }
-                      : { backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#8A9BB8' }
+                      ? { backgroundColor: '#7DD3FC', color: COLORES.fondoPagina }
+                      : { backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde', color: COLORES.textoSecundario }
                   }
                 >
                   {sub.label}
@@ -387,8 +388,8 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
                   className="flex-1 p-2 rounded-xl text-xs font-medium transition-opacity"
                   style={
                     subTabRPE === sub.key
-                      ? { backgroundColor: '#7DD3FC', color: '#0F1419' }
-                      : { backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#8A9BB8' }
+                      ? { backgroundColor: '#7DD3FC', color: COLORES.fondoPagina }
+                      : { backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde', color: COLORES.textoSecundario }
                   }
                 >
                   {sub.label}
@@ -457,16 +458,16 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
                   </div>
                 )}
 
-                {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
+                {cargando && <p style={{ color: COLORES.textoMuted }}>Cargando...</p>}
 
                 {!cargando && categoriaId && jugadores.length === 0 && (
-                  <p className="text-sm" style={{ color: '#5B6B85' }}>
+                  <p className="text-sm" style={{ color: COLORES.textoMuted }}>
                     No hay jugadores cargados en esta categoría.
                   </p>
                 )}
 
                 {!categoriaId && !esTecnico && (
-                  <p className="text-sm" style={{ color: '#5B6B85' }}>
+                  <p className="text-sm" style={{ color: COLORES.textoMuted }}>
                     Elegí una categoría para ver el plantel.
                   </p>
                 )}
@@ -477,14 +478,14 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
                       <button
                         onClick={() => setMostrarPegado((v) => !v)}
                         className="text-xs font-medium px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
-                        style={{ backgroundColor: '#1A2332', color: '#F0F2F5', border: '1px solid #2A3548' }}
+                        style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.texto, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
                       >
                         {mostrarPegado ? 'Cerrar' : '📋 Pegar desde Excel'}
                       </button>
 
                       {mostrarPegado && (
-                        <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
-                          <p className="text-xs mb-2" style={{ color: '#5B6B85' }}>
+                        <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}>
+                          <p className="text-xs mb-2" style={{ color: COLORES.textoMuted }}>
                             Pegá una fila por jugador: nombre (o "Apellido, Nombre") y el valor de RPE (1-10).
                           </p>
                           <textarea
@@ -499,23 +500,23 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
                             onClick={handleAplicarPegado}
                             disabled={!textoPegado.trim()}
                             className="text-sm font-medium px-4 py-2 rounded-xl transition-opacity hover:opacity-80 disabled:opacity-50"
-                            style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+                            style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
                           >
                             Aplicar
                           </button>
 
                           {resultadoPegado && (
                             <div className="mt-3 text-xs">
-                              <p style={{ color: '#4ADE80' }}>
+                              <p style={{ color: COLORES.exito }}>
                                 {resultadoPegado.aplicados} jugador{resultadoPegado.aplicados !== 1 ? 'es' : ''} completados.
                               </p>
                               {resultadoPegado.noEncontrados.length > 0 && (
                                 <>
-                                  <p style={{ color: '#F87171' }} className="mt-1">
+                                  <p style={{ color: COLORES.peligro }} className="mt-1">
                                     No se encontraron {resultadoPegado.noEncontrados.length} fila
                                     {resultadoPegado.noEncontrados.length !== 1 ? 's' : ''} (revisá el nombre):
                                   </p>
-                                  <ul style={{ color: '#8A9BB8' }} className="list-disc list-inside">
+                                  <ul style={{ color: COLORES.textoSecundario }} className="list-disc list-inside">
                                     {resultadoPegado.noEncontrados.map((n) => (
                                       <li key={n}>{n}</li>
                                     ))}
@@ -528,13 +529,13 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
                       )}
                     </div>
 
-                    <div className="overflow-x-auto mb-6 rounded-xl" style={{ border: '1px solid #2A3548' }}>
+                    <div className="overflow-x-auto mb-6 rounded-xl" style={{ border: '1px solid COLORES.borde' }}>
                       <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
                         <thead>
-                          <tr style={{ backgroundColor: '#1A2332' }}>
+                          <tr style={{ backgroundColor: COLORES.fondoTarjeta }}>
                             <th
                               className="text-left p-2.5 whitespace-nowrap sticky left-0"
-                              style={{ color: '#8A9BB8', backgroundColor: '#1A2332' }}
+                              style={{ color: COLORES.textoSecundario, backgroundColor: COLORES.fondoTarjeta }}
                             >
                               Jugador
                             </th>
@@ -548,7 +549,7 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
                             <tr key={j.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#151D2A' }}>
                               <td
                                 className="p-2.5 whitespace-nowrap sticky left-0"
-                                style={{ color: '#F0F2F5', backgroundColor: i % 2 === 0 ? '#0F1419' : '#151D2A' }}
+                                style={{ color: COLORES.texto, backgroundColor: i % 2 === 0 ? COLORES.fondoPagina : '#151D2A' }}
                               >
                                 <div className="flex items-center gap-2">
                                   {j.foto_url ? (
@@ -560,7 +561,7 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
                                   ) : (
                                     <span
                                       className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
-                                      style={{ backgroundColor: '#1A2332', color: '#8A9BB8' }}
+                                      style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.textoSecundario }}
                                     >
                                       {`${j.nombre?.[0] || ''}${j.apellido?.[0] || ''}`.toUpperCase()}
                                     </span>
@@ -586,7 +587,7 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
                     </div>
 
                     {pendientes > 0 && (
-                      <p className="text-xs mb-3" style={{ color: '#FBBF24' }}>
+                      <p className="text-xs mb-3" style={{ color: COLORES.acento }}>
                         📴 {pendientes} registro(s) guardados sin conexión, pendientes de sincronizar.
                       </p>
                     )}
@@ -594,7 +595,7 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
                     {mensaje && (
                       <p
                         className="text-sm mb-4"
-                        style={{ color: mensaje.startsWith('Listo') || mensaje.includes('sincronizaron') ? '#4ADE80' : mensaje.startsWith('Sin conexión') || mensaje.startsWith('No se pudo') ? '#FBBF24' : '#F87171' }}
+                        style={{ color: mensaje.startsWith('Listo') || mensaje.includes('sincronizaron') ? COLORES.exito : mensaje.startsWith('Sin conexión') || mensaje.startsWith('No se pudo') ? COLORES.acento : COLORES.peligro }}
                       >
                         {mensaje}
                       </p>
@@ -604,7 +605,7 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
                       onClick={handleGuardar}
                       disabled={guardando}
                       className="w-full sm:w-auto px-6 p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-                      style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+                      style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
                     >
                       {guardando ? 'Guardando...' : 'Guardar RPE'}
                     </button>
@@ -622,3 +623,6 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
 }
 
 export default FisicoSection
+
+
+

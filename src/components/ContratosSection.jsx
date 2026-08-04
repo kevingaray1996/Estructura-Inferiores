@@ -1,3 +1,4 @@
+import { COLORES } from '../theme'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
@@ -26,10 +27,10 @@ function diasHasta(fecha) {
 }
 
 function estadoColor(dias) {
-  if (dias === null) return '#5B6B85'
-  if (dias < 0) return '#F87171'
-  if (dias <= 60) return '#FBBF24'
-  return '#4ADE80'
+  if (dias === null) return COLORES.textoMuted
+  if (dias < 0) return COLORES.peligro
+  if (dias <= 60) return COLORES.acento
+  return COLORES.exito
 }
 
 function hoyISO() {
@@ -46,9 +47,9 @@ function ContratosSection({ onVolver }) {
   const [cargando, setCargando] = useState(true)
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: COLORES.fondoTarjeta,
+    border: '1px solid COLORES.borde',
+    color: COLORES.texto,
   }
 
   const cargar = useCallback(async () => {
@@ -78,21 +79,21 @@ function ContratosSection({ onVolver }) {
         <button
           onClick={onVolver}
           className="text-sm mb-6 flex items-center gap-1 hover:opacity-70 transition-opacity"
-          style={{ color: '#8A9BB8' }}
+          style={{ color: COLORES.textoSecundario }}
         >
           ← Volver
         </button>
 
         <h1
           className="text-2xl md:text-3xl mb-6"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+          style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
         >
           Jugadores con contrato
         </h1>
 
         <div className="flex items-center gap-2 mb-6">
           <div className="flex-1">
-            <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+            <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: COLORES.textoMuted }}>
               Fin de contrato desde
             </label>
             <input
@@ -104,7 +105,7 @@ function ContratosSection({ onVolver }) {
             />
           </div>
           <div className="flex-1">
-            <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+            <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: COLORES.textoMuted }}>
               Hasta
             </label>
             <input
@@ -117,10 +118,10 @@ function ContratosSection({ onVolver }) {
           </div>
         </div>
 
-        {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
+        {cargando && <p style={{ color: COLORES.textoMuted }}>Cargando...</p>}
 
         {!cargando && jugadores.length === 0 && (
-          <p style={{ color: '#5B6B85' }}>No hay jugadores con contrato venciendo en ese rango.</p>
+          <p style={{ color: COLORES.textoMuted }}>No hay jugadores con contrato venciendo en ese rango.</p>
         )}
 
         <div className="space-y-2">
@@ -130,7 +131,7 @@ function ContratosSection({ onVolver }) {
               <div
                 key={j.id}
                 className="p-3 rounded-xl flex items-center justify-between gap-3"
-                style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+                style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <span
@@ -138,10 +139,10 @@ function ContratosSection({ onVolver }) {
                     style={{ backgroundColor: estadoColor(dias) }}
                   />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate" style={{ color: '#F0F2F5' }}>
+                    <p className="text-sm font-medium truncate" style={{ color: COLORES.texto }}>
                       {j.apellido}, {j.nombre}
                     </p>
-                    <p className="text-xs" style={{ color: '#8A9BB8' }}>
+                    <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
                       {j.categorias?.nombre}
                       {j.posicion && ` · ${j.posicion}`}
                       {calcularEdad(j.fecha_nacimiento) !== null && ` · ${calcularEdad(j.fecha_nacimiento)} años`}
@@ -149,7 +150,7 @@ function ContratosSection({ onVolver }) {
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-xs" style={{ color: '#F0F2F5' }}>
+                  <p className="text-xs" style={{ color: COLORES.texto }}>
                     {formatearFecha(j.fecha_inicio_contrato) || '—'} → {formatearFecha(j.fecha_fin_contrato)}
                   </p>
                   <p className="text-[10px]" style={{ color: estadoColor(dias) }}>
@@ -166,3 +167,6 @@ function ContratosSection({ onVolver }) {
 }
 
 export default ContratosSection
+
+
+

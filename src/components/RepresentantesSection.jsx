@@ -1,3 +1,4 @@
+import { COLORES } from '../theme'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
@@ -30,9 +31,9 @@ function RepresentantesSection({ onVolver }) {
   const [busquedaJugador, setBusquedaJugador] = useState('')
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: COLORES.fondoTarjeta,
+    border: '1px solid COLORES.borde',
+    color: COLORES.texto,
   }
 
   useEffect(() => {
@@ -178,7 +179,7 @@ function RepresentantesSection({ onVolver }) {
         <button
           onClick={onVolver}
           className="text-sm mb-6 flex items-center gap-1 hover:opacity-70 transition-opacity"
-          style={{ color: '#8A9BB8' }}
+          style={{ color: COLORES.textoSecundario }}
         >
           ← Volver
         </button>
@@ -186,14 +187,14 @@ function RepresentantesSection({ onVolver }) {
         <div className="flex items-start justify-between mb-8 gap-3 flex-wrap">
           <h1
             className="text-2xl md:text-3xl"
-            style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+            style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
           >
             Representantes
           </h1>
           <button
             onClick={mostrarForm ? cancelarForm : abrirNuevo}
             className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
-            style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+            style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
           >
             {mostrarForm ? 'Cancelar' : '+ Nuevo representante'}
           </button>
@@ -202,10 +203,10 @@ function RepresentantesSection({ onVolver }) {
         {mostrarForm && (
           <div
             className="space-y-3 mb-8 p-4 rounded-xl"
-            style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
           >
             {representanteEditando && (
-              <p className="text-xs" style={{ color: '#8A9BB8' }}>
+              <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
                 Editando {representanteEditando.nombre}
               </p>
             )}
@@ -243,7 +244,7 @@ function RepresentantesSection({ onVolver }) {
             />
 
             {errorMsg && (
-              <p className="text-sm" style={{ color: '#F87171' }}>
+              <p className="text-sm" style={{ color: COLORES.peligro }}>
                 {errorMsg}
               </p>
             )}
@@ -252,7 +253,7 @@ function RepresentantesSection({ onVolver }) {
               onClick={handleGuardar}
               disabled={guardando}
               className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
             >
               {guardando ? 'Guardando...' : representanteEditando ? 'Guardar cambios' : 'Guardar representante'}
             </button>
@@ -268,26 +269,26 @@ function RepresentantesSection({ onVolver }) {
           style={inputStyle}
         />
 
-        {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
+        {cargando && <p style={{ color: COLORES.textoMuted }}>Cargando...</p>}
 
         {!cargando && filtrados.length === 0 && (
-          <p style={{ color: '#5B6B85' }}>No hay representantes cargados todavía.</p>
+          <p style={{ color: COLORES.textoMuted }}>No hay representantes cargados todavía.</p>
         )}
 
         <div className="space-y-2">
           {filtrados.map((r) => (
-            <div key={r.id} className="rounded-xl overflow-hidden" style={{ border: '1px solid #2A3548' }}>
+            <div key={r.id} className="rounded-xl overflow-hidden" style={{ border: '1px solid COLORES.borde' }}>
               <div
                 className="p-3 flex items-center justify-between cursor-pointer"
-                style={{ backgroundColor: '#1A2332' }}
+                style={{ backgroundColor: COLORES.fondoTarjeta }}
                 onClick={() => toggleExpandir(r.id)}
               >
                 <div>
-                  <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
+                  <p className="text-sm font-medium" style={{ color: COLORES.texto }}>
                     {r.nombre}
                   </p>
                   {(r.telefono || r.email) && (
-                    <p className="text-xs" style={{ color: '#8A9BB8' }}>
+                    <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
                       {[r.telefono, r.email].filter(Boolean).join(' · ')}
                     </p>
                   )}
@@ -296,21 +297,21 @@ function RepresentantesSection({ onVolver }) {
                   <button
                     onClick={() => abrirEditar(r)}
                     className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                    style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                    style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
                   >
                     ✏️
                   </button>
                   <button
                     onClick={() => handleEliminarRepresentante(r.id)}
                     className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                    style={{ backgroundColor: '#0F1419', color: '#F87171' }}
+                    style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.peligro }}
                   >
                     🗑
                   </button>
                   <button
                     onClick={() => toggleExpandir(r.id)}
                     className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                    style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                    style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
                   >
                     {expandidoId === r.id ? '▲' : '▼'}
                   </button>
@@ -318,34 +319,34 @@ function RepresentantesSection({ onVolver }) {
               </div>
 
               {expandidoId === r.id && (
-                <div className="p-3 space-y-3" style={{ backgroundColor: '#0F1419' }}>
-                  <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: '#8A9BB8' }}>
+                <div className="p-3 space-y-3" style={{ backgroundColor: COLORES.fondoPagina }}>
+                  <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: COLORES.textoSecundario }}>
                     <input type="checkbox" checked={verHistorico} onChange={(e) => setVerHistorico(e.target.checked)} />
                     Ver histórico
                   </label>
 
-                  {cargandoAsignaciones && <p className="text-xs" style={{ color: '#5B6B85' }}>Cargando...</p>}
+                  {cargandoAsignaciones && <p className="text-xs" style={{ color: COLORES.textoMuted }}>Cargando...</p>}
 
                   {!cargandoAsignaciones && asignaciones.length === 0 && (
-                    <p className="text-xs" style={{ color: '#5B6B85' }}>Sin jugadores vinculados.</p>
+                    <p className="text-xs" style={{ color: COLORES.textoMuted }}>Sin jugadores vinculados.</p>
                   )}
 
                   {asignaciones.map((a) => (
                     <div
                       key={a.id}
                       className="flex items-center justify-between p-2 rounded-lg"
-                      style={{ backgroundColor: '#1A2332' }}
+                      style={{ backgroundColor: COLORES.fondoTarjeta }}
                     >
                       <div>
-                        <p className="text-sm" style={{ color: '#F0F2F5' }}>
+                        <p className="text-sm" style={{ color: COLORES.texto }}>
                           {a.jugadores?.apellido}, {a.jugadores?.nombre}
                           {a.jugadores?.categorias?.nombre && (
-                            <span className="text-xs ml-1" style={{ color: '#5B6B85' }}>
+                            <span className="text-xs ml-1" style={{ color: COLORES.textoMuted }}>
                               ({a.jugadores.categorias.nombre})
                             </span>
                           )}
                         </p>
-                        <p className="text-[10px]" style={{ color: '#5B6B85' }}>
+                        <p className="text-[10px]" style={{ color: COLORES.textoMuted }}>
                           desde {formatearFecha(a.fecha_inicio)}
                           {a.fecha_fin ? ` hasta ${formatearFecha(a.fecha_fin)}` : ' · vigente'}
                         </p>
@@ -355,7 +356,7 @@ function RepresentantesSection({ onVolver }) {
                           <button
                             onClick={() => finalizarAsignacion(a.id)}
                             className="text-[10px] px-2 py-1 rounded-full hover:opacity-80"
-                            style={{ backgroundColor: '#0F1419', color: '#FBBF24' }}
+                            style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.acento }}
                           >
                             Finalizar
                           </button>
@@ -363,7 +364,7 @@ function RepresentantesSection({ onVolver }) {
                         <button
                           onClick={() => eliminarAsignacion(a.id)}
                           className="text-[10px] px-2 py-1 rounded-full hover:opacity-80"
-                          style={{ backgroundColor: '#0F1419', color: '#F87171' }}
+                          style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.peligro }}
                         >
                           🗑
                         </button>
@@ -387,11 +388,11 @@ function RepresentantesSection({ onVolver }) {
                             key={j.id}
                             onClick={() => asignarJugador(j.id)}
                             className="w-full text-left text-xs p-2 rounded-lg hover:opacity-80"
-                            style={{ backgroundColor: '#1A2332', color: '#F0F2F5' }}
+                            style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.texto }}
                           >
                             {j.apellido}, {j.nombre}
                             {j.categorias?.nombre && (
-                              <span style={{ color: '#5B6B85' }}> · {j.categorias.nombre}</span>
+                              <span style={{ color: COLORES.textoMuted }}> · {j.categorias.nombre}</span>
                             )}
                           </button>
                         ))}
@@ -409,3 +410,6 @@ function RepresentantesSection({ onVolver }) {
 }
 
 export default RepresentantesSection
+
+
+

@@ -1,3 +1,4 @@
+import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
@@ -18,7 +19,7 @@ const PALETA_ENTRENAMIENTO = [
 ]
 
 function colorParaContenido(contenido) {
-  if (!contenido) return { bg: '#1A2332', color: '#8A9BB8' }
+  if (!contenido) return { bg: COLORES.fondoTarjeta, color: COLORES.textoSecundario }
   let hash = 0
   for (let i = 0; i < contenido.length; i++) {
     hash = contenido.charCodeAt(i) + ((hash << 5) - hash)
@@ -183,9 +184,9 @@ function CalendarioSection({ perfil }) {
   const eventosDelDiaSeleccionado = diaSeleccionado ? eventosPorDia[diaSeleccionado] || [] : []
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: COLORES.fondoTarjeta,
+    border: '1px solid COLORES.borde',
+    color: COLORES.texto,
   }
 
   function irAHoy() {
@@ -198,7 +199,7 @@ function CalendarioSection({ perfil }) {
       <div className="max-w-3xl mx-auto">
         <h1
           className="text-3xl md:text-4xl mb-6"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+          style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
         >
           Calendario
         </h1>
@@ -208,24 +209,24 @@ function CalendarioSection({ perfil }) {
             <button
               onClick={() => setMesActual((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
               className="text-sm px-3 py-1.5 rounded-lg hover:opacity-80"
-              style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.textoSecundario, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
             >
               ←
             </button>
-            <p className="text-sm font-medium min-w-[140px] text-center" style={{ color: '#F0F2F5' }}>
+            <p className="text-sm font-medium min-w-[140px] text-center" style={{ color: COLORES.texto }}>
               {MESES[mesActual.getMonth()]} {mesActual.getFullYear()}
             </p>
             <button
               onClick={() => setMesActual((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
               className="text-sm px-3 py-1.5 rounded-lg hover:opacity-80"
-              style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.textoSecundario, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
             >
               →
             </button>
             <button
               onClick={irAHoy}
               className="text-xs px-3 py-1.5 rounded-lg hover:opacity-80"
-              style={{ backgroundColor: '#1A2332', color: '#4ADE80', border: '1px solid #2A3548' }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.exito, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
             >
               Hoy
             </button>
@@ -248,15 +249,15 @@ function CalendarioSection({ perfil }) {
           )}
         </div>
 
-        {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
+        {cargando && <p style={{ color: COLORES.textoMuted }}>Cargando...</p>}
 
-        <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #2A3548' }}>
-          <div className="grid grid-cols-7" style={{ backgroundColor: '#1A2332' }}>
+        <div className="rounded-xl overflow-hidden" style={{ border: '1px solid COLORES.borde' }}>
+          <div className="grid grid-cols-7" style={{ backgroundColor: COLORES.fondoTarjeta }}>
             {DIAS_SEMANA.map((d) => (
               <div
                 key={d}
                 className="text-center text-[10px] uppercase tracking-wide py-2"
-                style={{ color: '#5B6B85' }}
+                style={{ color: COLORES.textoMuted }}
               >
                 {d}
               </div>
@@ -264,7 +265,7 @@ function CalendarioSection({ perfil }) {
           </div>
 
           {semanas.map((semana, i) => (
-            <div key={i} className="grid grid-cols-7" style={{ borderTop: '1px solid #2A3548' }}>
+            <div key={i} className="grid grid-cols-7" style={{ borderTop: '1px solid COLORES.borde' }}>
               {semana.map((dia) => {
                 const eventosDia = eventosPorDia[dia.iso] || []
                 const esHoy = dia.iso === hoyISO
@@ -278,8 +279,8 @@ function CalendarioSection({ perfil }) {
                     onClick={() => setDiaSeleccionado(dia.iso)}
                     className="min-h-[84px] p-1.5 cursor-pointer"
                     style={{
-                      borderLeft: '1px solid #2A3548',
-                      backgroundColor: esSeleccionado ? '#1A2332' : 'transparent',
+                      borderLeft: '1px solid COLORES.borde',
+                      backgroundColor: esSeleccionado ? COLORES.fondoTarjeta : 'transparent',
                       opacity: dia.delMes ? 1 : 0.35,
                     }}
                   >
@@ -287,8 +288,8 @@ function CalendarioSection({ perfil }) {
                       <span
                         className="w-5 h-5 flex items-center justify-center text-xs rounded-full"
                         style={{
-                          backgroundColor: esHoy ? '#4ADE80' : 'transparent',
-                          color: esHoy ? '#0F1419' : '#8A9BB8',
+                          backgroundColor: esHoy ? COLORES.exito : 'transparent',
+                          color: esHoy ? COLORES.fondoPagina : COLORES.textoSecundario,
                           fontWeight: esHoy ? 700 : 400,
                         }}
                       >
@@ -299,7 +300,7 @@ function CalendarioSection({ perfil }) {
                       {visibles.map((e) => {
                         const c =
                           e.tipo === 'partido'
-                            ? { bg: '#0F1419', color: '#4ADE80' }
+                            ? { bg: COLORES.fondoPagina, color: COLORES.exito }
                             : colorParaContenido(e.titulo)
                         return (
                           <div
@@ -314,7 +315,7 @@ function CalendarioSection({ perfil }) {
                         )
                       })}
                       {restantes > 0 && (
-                        <p className="text-[9px] px-1" style={{ color: '#5B6B85' }}>
+                        <p className="text-[9px] px-1" style={{ color: COLORES.textoMuted }}>
                           +{restantes} más
                         </p>
                       )}
@@ -328,12 +329,12 @@ function CalendarioSection({ perfil }) {
 
         {diaSeleccionado && (
           <div className="mt-6">
-            <p className="text-xs uppercase tracking-wide mb-2" style={{ color: '#5B6B85' }}>
+            <p className="text-xs uppercase tracking-wide mb-2" style={{ color: COLORES.textoMuted }}>
               {formatearFechaLarga(diaSeleccionado)}
             </p>
 
             {eventosDelDiaSeleccionado.length === 0 ? (
-              <p className="text-sm" style={{ color: '#5B6B85' }}>
+              <p className="text-sm" style={{ color: COLORES.textoMuted }}>
                 No hay partidos ni entrenamientos ese día.
               </p>
             ) : (
@@ -342,7 +343,7 @@ function CalendarioSection({ perfil }) {
                   <div
                     key={e.id}
                     className="p-3 rounded-xl flex items-center gap-3"
-                    style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+                    style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
                   >
                     {e.tipo === 'partido' ? (
                       e.escudo ? (
@@ -350,12 +351,12 @@ function CalendarioSection({ perfil }) {
                           src={e.escudo}
                           alt={e.titulo}
                           className="w-8 h-8 rounded object-contain shrink-0"
-                          style={{ backgroundColor: '#0F1419' }}
+                          style={{ backgroundColor: COLORES.fondoPagina }}
                         />
                       ) : (
                         <span
                           className="w-8 h-8 rounded flex items-center justify-center text-sm shrink-0"
-                          style={{ backgroundColor: '#0F1419', color: '#5B6B85' }}
+                          style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoMuted }}
                         >
                           🛡️
                         </span>
@@ -363,16 +364,16 @@ function CalendarioSection({ perfil }) {
                     ) : (
                       <span
                         className="w-8 h-8 rounded flex items-center justify-center text-sm shrink-0"
-                        style={{ backgroundColor: '#0F1419' }}
+                        style={{ backgroundColor: COLORES.fondoPagina }}
                       >
                         🏋️
                       </span>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
+                      <p className="text-sm font-medium" style={{ color: COLORES.texto }}>
                         {e.titulo}
                       </p>
-                      <p className="text-xs truncate" style={{ color: '#8A9BB8' }}>
+                      <p className="text-xs truncate" style={{ color: COLORES.textoSecundario }}>
                         {e.detalle}
                         {e.categorias?.length > 0 && ` · ${e.categorias.join(', ')}`}
                         {!e.categorias && e.categoria && ` · ${e.categoria}`}
@@ -381,8 +382,8 @@ function CalendarioSection({ perfil }) {
                     <span
                       className="text-[10px] font-mono px-2 py-1 rounded-full shrink-0"
                       style={{
-                        backgroundColor: '#0F1419',
-                        color: e.tipo === 'partido' ? '#4ADE80' : '#8A9BB8',
+                        backgroundColor: COLORES.fondoPagina,
+                        color: e.tipo === 'partido' ? COLORES.exito : COLORES.textoSecundario,
                       }}
                     >
                       {e.tipo === 'partido' ? 'Partido' : 'Entrenamiento'}
@@ -399,3 +400,6 @@ function CalendarioSection({ perfil }) {
 }
 
 export default CalendarioSection
+
+
+

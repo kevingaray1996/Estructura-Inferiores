@@ -1,3 +1,4 @@
+import { COLORES } from '../theme'
 import { useState } from 'react'
 import { supabase } from '../supabaseClient'
 
@@ -14,9 +15,9 @@ function Login() {
   const [cargando, setCargando] = useState(false)
 
   const inputStyle = {
-    backgroundColor: '#FFFFFF',
-    border: '1px solid #D9D2BF',
-    color: '#1A1A1A',
+    backgroundColor: COLORES.texto,
+    border: `1px solid ${COLORES.borde}`,
+    color: COLORES.fondoPagina,
   }
 
   async function handleLogin(e) {
@@ -31,7 +32,7 @@ function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: '#0A0A0A' }}>
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: COLORES.fondoSidebar }}>
       <div className="w-full max-w-sm flex flex-col items-center">
         <img
           src={ESCUDO_URL}
@@ -40,24 +41,24 @@ function Login() {
         />
         <h1
           className="text-xl mb-1 text-center"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#FFFFFF' }}
+          style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
         >
           Club Comunicaciones
         </h1>
         <p
           className="text-xs tracking-widest uppercase mb-8 text-center"
-          style={{ color: '#F2C230' }}
+          style={{ color: COLORES.acento }}
         >
           Primera División
         </p>
 
         <div
           className="w-full p-6 rounded-2xl"
-          style={{ backgroundColor: '#F2EEE2' }}
+          style={{ backgroundColor: COLORES.fondoTarjeta }}
         >
           <form onSubmit={handleLogin} className="space-y-3">
             <div>
-              <label className="text-xs font-medium block mb-1" style={{ color: '#5F5E5A' }}>
+              <label className="text-xs font-medium block mb-1" style={{ color: COLORES.textoMuted }}>
                 Email
               </label>
               <input
@@ -72,7 +73,7 @@ function Login() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium block mb-1" style={{ color: '#5F5E5A' }}>
+              <label className="text-xs font-medium block mb-1" style={{ color: COLORES.textoMuted }}>
                 Contraseña
               </label>
               <input
@@ -87,7 +88,7 @@ function Login() {
               />
             </div>
             {errorMsg && (
-              <p className="text-sm" style={{ color: '#A32D2D' }}>
+              <p className="text-sm" style={{ color: COLORES.peligro }}>
                 {errorMsg}
               </p>
             )}
@@ -95,13 +96,13 @@ function Login() {
               type="submit"
               disabled={cargando}
               className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: '#F2C230', color: '#1A1A1A' }}
+              style={{ backgroundColor: COLORES.acento, color: COLORES.fondoPagina }}
             >
               {cargando ? 'Ingresando...' : 'Ingresar'}
             </button>
           </form>
         </div>
-        <p className="text-xs mt-4 text-center" style={{ color: '#5F5E5A' }}>
+        <p className="text-xs mt-4 text-center" style={{ color: COLORES.textoMuted }}>
           ¿No tenés usuario y contraseña? Pediselo al cuerpo técnico.
         </p>
       </div>
@@ -110,3 +111,4 @@ function Login() {
 }
 
 export default Login
+

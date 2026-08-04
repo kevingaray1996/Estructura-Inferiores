@@ -1,3 +1,4 @@
+import { COLORES } from '../theme'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import CategoriaFiltro from './CategoriaFiltro'
@@ -114,9 +115,9 @@ function PsicologiaSection({ jugadorInicialId, onConsumirJugadorInicial }) {
   })
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: COLORES.fondoTarjeta,
+    border: '1px solid COLORES.borde',
+    color: COLORES.texto,
   }
 
   if (jugadorSeleccionado) {
@@ -126,7 +127,7 @@ function PsicologiaSection({ jugadorInicialId, onConsumirJugadorInicial }) {
           <button
             onClick={() => setJugadorSeleccionado(null)}
             className="text-sm mb-6 flex items-center gap-1 hover:opacity-70 transition-opacity"
-            style={{ color: '#8A9BB8' }}
+            style={{ color: COLORES.textoSecundario }}
           >
             ← Volver
           </button>
@@ -136,7 +137,7 @@ function PsicologiaSection({ jugadorInicialId, onConsumirJugadorInicial }) {
               <p className="text-3xl">🧠</p>
               <h1
                 className="text-2xl"
-                style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+                style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
               >
                 {jugadorSeleccionado.apellido}, {jugadorSeleccionado.nombre}
               </h1>
@@ -144,16 +145,16 @@ function PsicologiaSection({ jugadorInicialId, onConsumirJugadorInicial }) {
             <button
               onClick={mostrarForm ? cancelarForm : abrirNuevoRegistro}
               className="text-sm font-medium px-4 py-2 rounded-xl transition-opacity hover:opacity-80 shrink-0"
-              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
             >
               {mostrarForm ? 'Cancelar' : '+ Agregar registro'}
             </button>
           </div>
 
           {mostrarForm && (
-            <div className="space-y-3 mb-6 p-4 rounded-xl" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
+            <div className="space-y-3 mb-6 p-4 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}>
               {fichaEditando && (
-                <p className="text-xs" style={{ color: '#8A9BB8' }}>
+                <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
                   Editando registro del {fichaEditando.fecha}
                 </p>
               )}
@@ -184,47 +185,47 @@ function PsicologiaSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                 onClick={handleGuardar}
                 disabled={guardando}
                 className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-                style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+                style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
               >
                 {guardando ? 'Guardando...' : fichaEditando ? 'Guardar cambios' : 'Guardar registro'}
               </button>
             </div>
           )}
 
-          <p className="text-xs uppercase tracking-wide mb-3" style={{ color: '#5B6B85' }}>
+          <p className="text-xs uppercase tracking-wide mb-3" style={{ color: COLORES.textoMuted }}>
             Historial de sesiones
           </p>
 
           <div className="space-y-2">
             {fichas.map((f) => (
-              <div key={f.id} className="p-3.5 rounded-xl" style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}>
+              <div key={f.id} className="p-3.5 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}>
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-xs font-mono" style={{ color: '#8A9BB8' }}>{f.fecha}</p>
+                  <p className="text-xs font-mono" style={{ color: COLORES.textoSecundario }}>{f.fecha}</p>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => abrirEditarRegistro(f)}
                       className="text-xs px-2 py-0.5 rounded-full hover:opacity-80"
-                      style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                      style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
                     >
                       ✏️
                     </button>
                     <button
                       onClick={() => handleEliminarFicha(f.id)}
                       className="text-xs px-2 py-0.5 rounded-full hover:opacity-80"
-                      style={{ backgroundColor: '#0F1419', color: '#F87171' }}
+                      style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.peligro }}
                     >
                       🗑
                     </button>
                   </div>
                 </div>
-                <p className="text-sm" style={{ color: '#F0F2F5' }}>{f.descripcion}</p>
+                <p className="text-sm" style={{ color: COLORES.texto }}>{f.descripcion}</p>
                 {f.link_informe && (
                   <a
                     href={f.link_informe}
                     target="_blank"
                     rel="noreferrer"
                     className="text-xs mt-1 inline-block underline"
-                    style={{ color: '#8A9BB8' }}
+                    style={{ color: COLORES.textoSecundario }}
                   >
                     📎 Ver informe
                   </a>
@@ -232,7 +233,7 @@ function PsicologiaSection({ jugadorInicialId, onConsumirJugadorInicial }) {
               </div>
             ))}
             {fichas.length === 0 && (
-              <p className="text-sm" style={{ color: '#5B6B85' }}>Sin registros todavía.</p>
+              <p className="text-sm" style={{ color: COLORES.textoMuted }}>Sin registros todavía.</p>
             )}
           </div>
         </div>
@@ -245,7 +246,7 @@ function PsicologiaSection({ jugadorInicialId, onConsumirJugadorInicial }) {
       <div className="max-w-2xl mx-auto">
         <h1
           className="text-3xl md:text-4xl mb-6 flex items-center gap-3"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+          style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
         >
           <span>🧠</span> Psicología
         </h1>
@@ -263,27 +264,27 @@ function PsicologiaSection({ jugadorInicialId, onConsumirJugadorInicial }) {
               key={j.id}
               onClick={() => abrirJugador(j)}
               className="flex items-center gap-3 p-3.5 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
-              style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
             >
               {j.foto_url ? (
                 <img
                   src={j.foto_url}
                   alt={`${j.apellido}, ${j.nombre}`}
                   className="w-9 h-9 rounded-full object-cover shrink-0"
-                  style={{ border: '2px solid #2A3548' }}
+                  style={{ border: '2px solid COLORES.borde' }}
                 />
               ) : (
                 <div
                   className="flex items-center justify-center w-9 h-9 rounded-full shrink-0 text-xs font-bold"
-                  style={{ backgroundColor: '#0F1419', border: '2px solid #2A3548', color: '#8A9BB8', fontFamily: "'Archivo Black', sans-serif" }}
+                  style={{ backgroundColor: COLORES.fondoPagina, border: '2px solid COLORES.borde', color: COLORES.textoSecundario, fontFamily: "'Archivo Black', sans-serif" }}
                 >
                   {iniciales(j.nombre, j.apellido)}
                 </div>
               )}
-              <p className="flex-1 text-sm" style={{ color: '#F0F2F5' }}>
+              <p className="flex-1 text-sm" style={{ color: COLORES.texto }}>
                 {j.apellido}, {j.nombre}
               </p>
-              <span className="text-xs font-mono px-2 py-1 rounded-full shrink-0" style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}>
+              <span className="text-xs font-mono px-2 py-1 rounded-full shrink-0" style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}>
                 {j.categorias?.nombre}
               </span>
             </div>
@@ -291,7 +292,7 @@ function PsicologiaSection({ jugadorInicialId, onConsumirJugadorInicial }) {
         </div>
 
         {filtrados.length === 0 && (
-          <p className="text-sm" style={{ color: '#5B6B85' }}>No se encontraron jugadores con ese filtro.</p>
+          <p className="text-sm" style={{ color: COLORES.textoMuted }}>No se encontraron jugadores con ese filtro.</p>
         )}
       </div>
     </div>
@@ -299,3 +300,5 @@ function PsicologiaSection({ jugadorInicialId, onConsumirJugadorInicial }) {
 }
 
 export default PsicologiaSection
+
+

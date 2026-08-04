@@ -1,3 +1,4 @@
+import { COLORES } from '../theme'
 import { useState } from 'react'
 import { supabase } from '../supabaseClient'
 
@@ -114,24 +115,24 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
   }
 
   const iconBtnStyle = (activo) => ({
-    backgroundColor: activo ? '#F2C230' : '#1A1A18',
-    color: activo ? '#1A1A1A' : '#8A8A82',
-    border: '1px solid #2C2C2A',
+    backgroundColor: activo ? COLORES.acento : COLORES.fondoPagina,
+    color: activo ? COLORES.fondoPagina : COLORES.textoMuted,
+    border: `1px solid ${COLORES.borde}`,
   })
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: '#1A1A18' }}>
+    <div className="min-h-screen flex" style={{ backgroundColor: COLORES.fondoPagina }}>
       {/* Sidebar */}
       <aside
         className="w-56 shrink-0 min-h-screen flex flex-col"
-        style={{ backgroundColor: '#0A0A0A', borderRight: '1px solid #2C2C2A' }}
+        style={{ backgroundColor: COLORES.fondoSidebar, borderRight: `1px solid ${COLORES.borde}` }}
       >
-        <div className="px-5 pt-6 pb-4" style={{ borderBottom: '1px solid #2C2C2A' }}>
-          <p className="text-xs tracking-widest uppercase font-medium" style={{ color: '#FFFFFF' }}>
+        <div className="px-5 pt-6 pb-4" style={{ borderBottom: `1px solid ${COLORES.borde}` }}>
+          <p className="text-xs tracking-widest uppercase font-medium" style={{ color: COLORES.texto }}>
             Club Comunicaciones
           </p>
           {subtitulo && (
-            <p className="text-xs mt-1" style={{ color: '#F2C230' }}>
+            <p className="text-xs mt-1" style={{ color: COLORES.acento }}>
               {subtitulo}
             </p>
           )}
@@ -146,9 +147,9 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
                 onClick={() => onCambiarSeccion(s.id)}
                 className="w-full text-left px-3 py-2.5 mb-0.5 text-sm rounded-r-lg transition-colors"
                 style={{
-                  color: activa ? '#F2C230' : '#B4B2A9',
+                  color: activa ? COLORES.acento : COLORES.neutro,
                   backgroundColor: activa ? 'rgba(242,194,48,0.08)' : 'transparent',
-                  borderLeft: activa ? '3px solid #F2C230' : '3px solid transparent',
+                  borderLeft: activa ? `3px solid ${COLORES.acento}` : '3px solid transparent',
                   fontWeight: activa ? 500 : 400,
                 }}
               >
@@ -158,7 +159,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
           })}
         </nav>
 
-        <div className="px-3 py-3" style={{ borderTop: '1px solid #2C2C2A' }}>
+        <div className="px-3 py-3" style={{ borderTop: `1px solid ${COLORES.borde}` }}>
           <div className="flex items-center gap-2 mb-3">
             {perfil?.rol !== 'medico' && (
               <button
@@ -192,9 +193,9 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
                 {mostrarLinkBienestar && perfil?.rol === 'coordinacion' && (
                   <div
                     className="absolute left-0 bottom-10 p-2 rounded-xl z-10"
-                    style={{ backgroundColor: '#1A1A18', border: '1px solid #2C2C2A', minWidth: '180px' }}
+                    style={{ backgroundColor: COLORES.fondoPagina, border: `1px solid ${COLORES.borde}`, minWidth: '180px' }}
                   >
-                    <p className="text-[10px] uppercase px-2 pb-1.5" style={{ color: '#8A8A82' }}>
+                    <p className="text-[10px] uppercase px-2 pb-1.5" style={{ color: COLORES.textoMuted }}>
                       Copiar link por categoría
                     </p>
                     {categoriasLink.map((c) => (
@@ -202,7 +203,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
                         key={c.id}
                         onClick={() => copiarLink(c.id, c.nombre)}
                         className="block w-full text-left text-sm px-2 py-1.5 rounded-lg hover:opacity-80"
-                        style={{ color: '#FFFFFF' }}
+                        style={{ color: COLORES.texto }}
                       >
                         {c.nombre}
                       </button>
@@ -213,7 +214,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
             )}
           </div>
           {linkCopiado && (
-            <p className="text-xs mb-2" style={{ color: '#97C459' }}>
+            <p className="text-xs mb-2" style={{ color: COLORES.exito }}>
               ✓ Link de {linkCopiado} copiado
             </p>
           )}
@@ -221,15 +222,15 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
           <div className="flex items-center gap-2 mb-2">
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
-              style={{ backgroundColor: '#F2C230', color: '#1A1A1A' }}
+              style={{ backgroundColor: COLORES.acento, color: COLORES.fondoPagina }}
             >
               {iniciales(perfil?.nombre || rolLabel[perfil?.rol])}
             </div>
             <div className="min-w-0">
-              <p className="text-xs truncate" style={{ color: '#FFFFFF' }}>
+              <p className="text-xs truncate" style={{ color: COLORES.texto }}>
                 {perfil?.nombre || rolLabel[perfil?.rol] || 'Usuario'}
               </p>
-              <p className="text-xs truncate" style={{ color: '#8A8A82' }}>
+              <p className="text-xs truncate" style={{ color: COLORES.textoMuted }}>
                 {rolLabel[perfil?.rol] || ''}
               </p>
             </div>
@@ -237,7 +238,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
           <button
             onClick={() => supabase.auth.signOut()}
             className="w-full text-xs px-3 py-2 rounded-lg hover:opacity-80 text-left"
-            style={{ backgroundColor: '#1A1A18', color: '#B4B2A9', border: '1px solid #2C2C2A' }}
+            style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.neutro, border: `1px solid ${COLORES.borde}` }}
           >
             Cerrar sesión
           </button>
@@ -251,3 +252,4 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
 }
 
 export default Layout
+
