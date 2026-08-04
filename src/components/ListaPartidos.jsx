@@ -170,7 +170,7 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
                 className="p-4 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
                 style={{ backgroundColor: COLORES.fondoTarjeta, border: `1px solid ${COLORES.borde}` }}
               >
-                <div className="flex items-start justify-between flex-wrap gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
                     {p.escudo_url ? (
                       <img
