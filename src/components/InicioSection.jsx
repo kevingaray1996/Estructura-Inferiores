@@ -174,7 +174,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                 alertasNuevas.push({
                   id: `citacion-${p.id}`,
                   icono: '📋',
-                  color: '#FBBF24',
+                  color: '#F2C230',
                   texto: `Falta cargar la citación vs ${p.rival} — juega en 2 días`,
                   seccion: 'partidos',
                 })
@@ -203,7 +203,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                 alertasNuevas.push({
                   id: `minutos-${p.id}`,
                   icono: '⏱️',
-                  color: '#FB923C',
+                  color: '#EF9F27',
                   texto: `Falta cargar los minutos/GPS del partido vs ${p.rival} de ayer`,
                   seccion: 'fisico',
                 })
@@ -243,7 +243,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
             alertasNuevas.push({
               id: `lesion-${f.id}`,
               icono: '🩺',
-              color: '#F87171',
+              color: '#E24B4A',
               texto: `${f.jugadores?.apellido}, ${f.jugadores?.nombre} — el alta estimada (${f.fecha_estimada_alta}) ya venció, revisar estado`,
               seccion: 'medicos',
             })
@@ -295,7 +295,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
             alertasWellness.push({
               id: `wellness-${j.id}`,
               icono: '🟡',
-              color: '#FBBF24',
+              color: '#F2C230',
               texto: `${j.apellido}, ${j.nombre} — Wellness del día: ${promedioDia.toFixed(1)}`,
               seccion: 'fisico',
             })
@@ -306,7 +306,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
           alertasNuevas.push({
             id: 'wellness-resumen',
             icono: '⚠️',
-            color: '#FBBF24',
+            color: '#F2C230',
             texto: `${alertasWellness.length} jugadoras con wellness alto hoy — ver en Físico`,
             seccion: 'fisico',
           })
@@ -324,7 +324,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
   if (cargando) {
     return (
       <div className="p-6 md:p-10">
-        <p style={{ color: '#5B6B85' }}>Cargando...</p>
+        <p style={{ color: '#8A8A82' }}>Cargando...</p>
       </div>
     )
   }
@@ -332,11 +332,19 @@ function InicioSection({ perfil, onCambiarSeccion }) {
   const resultadoUltimo = ultimoPartidoPrincipal ? calcularResultado(ultimoPartidoPrincipal) : null
   const colorUltimo = resultadoUltimo
     ? resultadoUltimo.etiqueta === 'Victoria'
-      ? '#4ADE80'
+      ? '#97C459'
       : resultadoUltimo.etiqueta === 'Derrota'
-      ? '#F87171'
-      : '#FBBF24'
-    : null
+      ? '#E24B4A'
+      : '#F2C230'
+    : '#5F5E5A'
+
+  const cardStyle = (accent) => ({
+    backgroundColor: '#242422',
+    borderTop: `3px solid ${accent}`,
+    borderLeft: '1px solid #2C2C2A',
+    borderRight: '1px solid #2C2C2A',
+    borderBottom: '1px solid #2C2C2A',
+  })
 
   return (
     <div className="p-6 md:p-10 relative overflow-hidden">
@@ -358,10 +366,10 @@ function InicioSection({ perfil, onCambiarSeccion }) {
         }}
       />
 
-      <div className="max-w-2xl mx-auto relative" style={{ zIndex: 1 }}>
+      <div className="max-w-5xl mx-auto relative" style={{ zIndex: 1 }}>
         <h1
           className="text-3xl md:text-4xl mb-8 flex items-center gap-3"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#FFFFFF' }}
         >
           <img
             src={ESCUDO_CLUB_URL}
@@ -373,7 +381,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
 
         {alertas.length > 0 && (
           <div className="mb-6 space-y-2">
-            <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#5B6B85' }}>
+            <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#8A8A82' }}>
               🔔 Alertas
             </p>
             {alertas.map((a) => (
@@ -381,10 +389,10 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                 key={a.id}
                 onClick={() => onCambiarSeccion(a.seccion)}
                 className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
-                style={{ backgroundColor: '#1A2332', border: `1px solid ${a.color}` }}
+                style={{ backgroundColor: '#242422', border: `1px solid ${a.color}` }}
               >
                 <span className="text-lg shrink-0">{a.icono}</span>
-                <p className="text-sm" style={{ color: '#F0F2F5' }}>{a.texto}</p>
+                <p className="text-sm" style={{ color: '#FFFFFF' }}>{a.texto}</p>
               </div>
             ))}
           </div>
@@ -392,7 +400,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
 
         {cumpleanieros.length > 0 && (
           <div className="mb-6">
-            <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#5B6B85' }}>
+            <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#8A8A82' }}>
               🎂 Cumpleaños de la semana
             </p>
             <div className="flex flex-wrap gap-2">
@@ -400,21 +408,21 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                 <div
                   key={j.id}
                   className="flex items-center gap-2 px-3 py-2 rounded-xl"
-                  style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+                  style={{ backgroundColor: '#242422', border: '1px solid #2C2C2A' }}
                 >
                   <span
                     className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
-                    style={{ backgroundColor: '#0F1419', color: '#FBBF24' }}
+                    style={{ backgroundColor: '#1A1A18', color: '#F2C230' }}
                   >
                     {iniciales(j.nombre, j.apellido)}
                   </span>
-                  <p className="text-sm" style={{ color: '#F0F2F5' }}>
+                  <p className="text-sm" style={{ color: '#FFFFFF' }}>
                     {j.apellido}, {j.nombre}
-                    <span style={{ color: '#5B6B85' }}> · {j.categorias?.nombre}</span>
+                    <span style={{ color: '#8A8A82' }}> · {j.categorias?.nombre}</span>
                   </p>
                   <span
                     className="text-xs font-mono px-2 py-0.5 rounded-full shrink-0"
-                    style={{ backgroundColor: '#0F1419', color: '#FBBF24' }}
+                    style={{ backgroundColor: '#1A1A18', color: '#F2C230' }}
                   >
                     {j.diasFaltan === 0 ? '¡Hoy!' : j.diasFaltan === 1 ? 'Mañana' : `en ${j.diasFaltan} días`}
                   </span>
@@ -424,14 +432,14 @@ function InicioSection({ perfil, onCambiarSeccion }) {
           </div>
         )}
 
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {perfil.rol !== 'medico' && (
             <div
               onClick={() => onCambiarSeccion('partidos')}
               className="p-4 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
-              style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+              style={cardStyle('#F2C230')}
             >
-              <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#5B6B85' }}>
+              <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#8A8A82' }}>
                 Próximo partido
               </p>
               {proximoPartido ? (
@@ -441,30 +449,30 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                       src={proximoPartido.escudo_url}
                       alt={proximoPartido.rival}
                       className="w-9 h-9 rounded object-contain shrink-0"
-                      style={{ backgroundColor: '#0F1419' }}
+                      style={{ backgroundColor: '#1A1A18' }}
                     />
                   ) : (
                     <span
                       className="w-9 h-9 rounded flex items-center justify-center text-sm shrink-0"
-                      style={{ backgroundColor: '#0F1419', color: '#5B6B85' }}
+                      style={{ backgroundColor: '#1A1A18', color: '#8A8A82' }}
                     >
                       🛡️
                     </span>
                   )}
                   <div>
-                    <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
+                    <p className="text-sm font-medium" style={{ color: '#FFFFFF' }}>
                       vs {proximoPartido.rival}
                     </p>
-                    <p className="text-xs" style={{ color: '#8A9BB8' }}>
+                    <p className="text-xs" style={{ color: '#B4B2A9' }}>
                       {proximoPartido.fecha} {proximoPartido.hora && `· ${proximoPartido.hora}`}
                     </p>
-                    <p className="text-xs font-medium mt-0.5" style={{ color: '#4ADE80' }}>
+                    <p className="text-xs font-medium mt-0.5" style={{ color: '#97C459' }}>
                       {calcularCuentaRegresiva(proximoPartido.fecha, proximoPartido.hora)}
                     </p>
                   </div>
                 </div>
               ) : (
-                <p className="text-sm" style={{ color: '#5B6B85' }}>No hay partidos próximos cargados.</p>
+                <p className="text-sm" style={{ color: '#8A8A82' }}>No hay partidos próximos cargados.</p>
               )}
             </div>
           )}
@@ -473,9 +481,9 @@ function InicioSection({ perfil, onCambiarSeccion }) {
             <div
               onClick={() => onCambiarSeccion('partidos')}
               className="p-4 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
-              style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+              style={cardStyle(colorUltimo)}
             >
-              <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#5B6B85' }}>
+              <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#8A8A82' }}>
                 Último resultado
               </p>
               {ultimoPartidoPrincipal ? (
@@ -485,35 +493,35 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                       src={ultimoPartidoPrincipal.escudo_url}
                       alt={ultimoPartidoPrincipal.rival}
                       className="w-9 h-9 rounded object-contain shrink-0"
-                      style={{ backgroundColor: '#0F1419' }}
+                      style={{ backgroundColor: '#1A1A18' }}
                     />
                   ) : (
                     <span
                       className="w-9 h-9 rounded flex items-center justify-center text-sm shrink-0"
-                      style={{ backgroundColor: '#0F1419', color: '#5B6B85' }}
+                      style={{ backgroundColor: '#1A1A18', color: '#8A8A82' }}
                     >
                       🛡️
                     </span>
                   )}
                   <div>
-                    <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
+                    <p className="text-sm font-medium" style={{ color: '#FFFFFF' }}>
                       vs {ultimoPartidoPrincipal.rival}
                     </p>
-                    <p className="text-xs" style={{ color: '#8A9BB8' }}>
+                    <p className="text-xs" style={{ color: '#B4B2A9' }}>
                       {ultimoPartidoPrincipal.fecha}
                     </p>
                   </div>
                   {resultadoUltimo && (
                     <span
                       className="ml-auto text-xs font-mono px-2 py-1 rounded-full shrink-0"
-                      style={{ backgroundColor: '#0F1419', color: colorUltimo, border: `1px solid ${colorUltimo}40` }}
+                      style={{ backgroundColor: '#1A1A18', color: colorUltimo, border: `1px solid ${colorUltimo}40` }}
                     >
                       {resultadoUltimo.texto}
                     </span>
                   )}
                 </div>
               ) : (
-                <p className="text-sm" style={{ color: '#5B6B85' }}>Todavía no hay resultados cargados.</p>
+                <p className="text-sm" style={{ color: '#8A8A82' }}>Todavía no hay resultados cargados.</p>
               )}
             </div>
           )}
@@ -522,37 +530,37 @@ function InicioSection({ perfil, onCambiarSeccion }) {
             <div
               onClick={() => onCambiarSeccion('partidos')}
               className="p-4 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
-              style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+              style={cardStyle('#B4B2A9')}
             >
-              <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#5B6B85' }}>
+              <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#8A8A82' }}>
                 Estadísticas de la temporada
               </p>
               {estadisticasRapidas ? (
                 <div>
                   <div className="flex items-center gap-3 mb-2">
-                    <span className="text-sm" style={{ color: '#8A9BB8' }}>
-                      PJ <b style={{ color: '#F0F2F5' }}>{estadisticasRapidas.pj}</b>
+                    <span className="text-sm" style={{ color: '#B4B2A9' }}>
+                      PJ <b style={{ color: '#FFFFFF' }}>{estadisticasRapidas.pj}</b>
                     </span>
-                    <span className="text-sm" style={{ color: '#4ADE80' }}>
+                    <span className="text-sm" style={{ color: '#97C459' }}>
                       PG <b>{estadisticasRapidas.pg}</b>
                     </span>
-                    <span className="text-sm" style={{ color: '#FBBF24' }}>
+                    <span className="text-sm" style={{ color: '#F2C230' }}>
                       PE <b>{estadisticasRapidas.pe}</b>
                     </span>
-                    <span className="text-sm" style={{ color: '#F87171' }}>
+                    <span className="text-sm" style={{ color: '#E24B4A' }}>
                       PP <b>{estadisticasRapidas.pp}</b>
                     </span>
                   </div>
-                  <p className="text-xs" style={{ color: '#8A9BB8' }}>
+                  <p className="text-xs" style={{ color: '#B4B2A9' }}>
                     Goles: {estadisticasRapidas.gf} a favor · {estadisticasRapidas.gc} en contra
-                    <span style={{ color: estadisticasRapidas.gf - estadisticasRapidas.gc >= 0 ? '#4ADE80' : '#F87171' }}>
+                    <span style={{ color: estadisticasRapidas.gf - estadisticasRapidas.gc >= 0 ? '#97C459' : '#E24B4A' }}>
                       {' '}({estadisticasRapidas.gf - estadisticasRapidas.gc >= 0 ? '+' : ''}
                       {estadisticasRapidas.gf - estadisticasRapidas.gc})
                     </span>
                   </p>
                 </div>
               ) : (
-                <p className="text-sm" style={{ color: '#5B6B85' }}>Todavía no hay partidos con resultado cargado.</p>
+                <p className="text-sm" style={{ color: '#8A8A82' }}>Todavía no hay partidos con resultado cargado.</p>
               )}
             </div>
           )}
@@ -560,25 +568,25 @@ function InicioSection({ perfil, onCambiarSeccion }) {
           <div
             onClick={() => onCambiarSeccion(perfil.rol === 'medico' ? 'medicos' : 'plantel')}
             className="p-4 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
-            style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+            style={cardStyle('#F2C230')}
           >
-            <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#5B6B85' }}>
+            <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#8A8A82' }}>
               Lesionados activos
             </p>
             {lesionados.length === 0 ? (
-              <p className="text-sm" style={{ color: '#5B6B85' }}>No hay jugadores lesionados.</p>
+              <p className="text-sm" style={{ color: '#8A8A82' }}>No hay jugadores lesionados.</p>
             ) : (
               <div className="space-y-1">
                 {lesionados.slice(0, 5).map((j) => (
-                  <p key={j.id} className="text-sm" style={{ color: '#FBBF24' }}>
+                  <p key={j.id} className="text-sm" style={{ color: '#F2C230' }}>
                     {j.apellido}, {j.nombre}
                     {j.categorias?.nombre && (
-                      <span style={{ color: '#5B6B85' }}> · {j.categorias.nombre}</span>
+                      <span style={{ color: '#8A8A82' }}> · {j.categorias.nombre}</span>
                     )}
                   </p>
                 ))}
                 {lesionados.length > 5 && (
-                  <p className="text-xs" style={{ color: '#5B6B85' }}>
+                  <p className="text-xs" style={{ color: '#8A8A82' }}>
                     +{lesionados.length - 5} más
                   </p>
                 )}
@@ -590,25 +598,25 @@ function InicioSection({ perfil, onCambiarSeccion }) {
             <div
               onClick={() => onCambiarSeccion('nutricion')}
               className="p-4 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
-              style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+              style={cardStyle('#E24B4A')}
             >
-              <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#5B6B85' }}>
+              <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#8A8A82' }}>
                 Alertas de nutrición
               </p>
               {alertasNutricion.length === 0 ? (
-                <p className="text-sm" style={{ color: '#5B6B85' }}>Sin alertas de peso activas.</p>
+                <p className="text-sm" style={{ color: '#8A8A82' }}>Sin alertas de peso activas.</p>
               ) : (
                 <div className="space-y-1">
                   {alertasNutricion.slice(0, 5).map((f) => (
-                    <p key={f.id} className="text-sm" style={{ color: '#F87171' }}>
+                    <p key={f.id} className="text-sm" style={{ color: '#E24B4A' }}>
                       {f.jugadores?.apellido}, {f.jugadores?.nombre}
                       {f.jugadores?.categorias?.nombre && (
-                        <span style={{ color: '#5B6B85' }}> · {f.jugadores.categorias.nombre}</span>
+                        <span style={{ color: '#8A8A82' }}> · {f.jugadores.categorias.nombre}</span>
                       )}
                     </p>
                   ))}
                   {alertasNutricion.length > 5 && (
-                    <p className="text-xs" style={{ color: '#5B6B85' }}>
+                    <p className="text-xs" style={{ color: '#8A8A82' }}>
                       +{alertasNutricion.length - 5} más
                     </p>
                   )}
