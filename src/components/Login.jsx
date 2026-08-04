@@ -4,7 +4,7 @@ import { supabase } from '../supabaseClient'
 // Ajustá el path si el archivo del escudo tiene otro nombre en el bucket
 const { data: escudoData } = supabase.storage
   .from('Biblioteca')
-  .getPublicUrl('escudos/escudo.png')
+  .getPublicUrl('escudos/Escudo simplificado.png')
 const ESCUDO_URL = escudoData.publicUrl
 
 function Login() {
