@@ -184,6 +184,11 @@ export async function calcularCargaJugador(jugadorId, categoriaId) {
   const semanaInsuficiente = diasConCargaSemana < RPE_MIN_DIAS_SEMANA
   const cargaSemanal = semanaInsuficiente ? null : cargaAguda
 
+  const diasFaltantesRPE = Object.entries(minutosPorFecha)
+    .filter(([fecha, minutos]) => minutos > 0 && (!rpePorFecha[fecha] || rpePorFecha[fecha].length === 0))
+    .map(([fecha]) => fecha)
+    .sort()
+
   return {
     acwr,
     nivel,
@@ -193,6 +198,7 @@ export async function calcularCargaJugador(jugadorId, categoriaId) {
     cargaSemanal,
     diasConCargaSemana,
     semanaInsuficiente,
+    diasFaltantesRPE,
   }
 }
 

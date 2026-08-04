@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
@@ -60,6 +60,7 @@ function RPEComparativo() {
   const [resumenGeneral, setResumenGeneral] = useState([])
   const [cargando, setCargando] = useState(true)
   const [generando, setGenerando] = useState(false)
+  const [filaExpandida, setFilaExpandida] = useState(null)
 
   useEffect(() => {
     async function cargarBase() {
@@ -186,29 +187,70 @@ function RPEComparativo() {
                 <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>Carga aguda (7d)</th>
                 <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>Carga crónica</th>
                 <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>ACWR</th>
+                <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>Días sin RPE (28d)</th>
                 <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>Estado</th>
               </tr>
             </thead>
             <tbody>
-              {resumenGeneral.map(({ jugador, resultado }, index) => (
-                <tr key={jugador.id} style={{ backgroundColor: index % 2 === 0 ? 'transparent' : '#151D2A' }}>
-                  <td className="p-2.5" style={{ color: '#F0F2F5' }}>
-                    {jugador.apellido}, {jugador.nombre}
-                  </td>
-                  <td className="p-2.5" style={{ color: '#F0F2F5' }}>
-                    {formatearValor(resultado?.cargaAguda, 0)}
-                  </td>
-                  <td className="p-2.5" style={{ color: '#F0F2F5' }}>
-                    {formatearValor(resultado?.cargaCronicaSemanal, 0)}
-                  </td>
-                  <td className="p-2.5" style={{ color: '#F0F2F5' }}>
-                    {formatearValor(resultado?.acwr, 2)}
-                  </td>
-                  <td className="p-2.5">
-                    <EstadoChip resultado={resultado} />
-                  </td>
-                </tr>
-              ))}
+              {resumenGeneral.map(({ jugador, resultado }, index) => {
+                const expandida = filaExpandida === jugador.id
+                const fechasSinRPE = resultado?.diasFaltantesRPE || []
+
+                return (
+                  <Fragment key={jugador.id}>
+                    <tr
+                      onClick={() => setFilaExpandida((actual) => (actual === jugador.id ? null : jugador.id))}
+                      style={{
+                        backgroundColor: index % 2 === 0 ? 'transparent' : '#151D2A',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                        {jugador.apellido}, {jugador.nombre}
+                      </td>
+                      <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                        {formatearValor(resultado?.cargaAguda, 0)}
+                      </td>
+                      <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                        {formatearValor(resultado?.cargaCronicaSemanal, 0)}
+                      </td>
+                      <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                        {formatearValor(resultado?.acwr, 2)}
+                      </td>
+                      <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                        {fechasSinRPE.length}
+                      </td>
+                      <td className="p-2.5">
+                        <EstadoChip resultado={resultado} />
+                      </td>
+                    </tr>
+                    {expandida && (
+                      <tr>
+                        <td className="p-2.5" colSpan={6} style={{ color: '#F0F2F5', backgroundColor: '#121A28' }}>
+                          <div className="text-sm">
+                            <div className="font-semibold mb-2">Fechas sin RPE cargado (28d)</div>
+                            {fechasSinRPE.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {fechasSinRPE.map((fecha) => (
+                                  <span
+                                    key={fecha}
+                                    className="px-2 py-1 rounded-full text-xs"
+                                    style={{ backgroundColor: '#1A2332', color: '#F0F2F5' }}
+                                  >
+                                    {fecha}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span style={{ color: '#5B6B85' }}>Sin fechas pendientes</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -258,6 +300,30 @@ function RPEComparativo() {
               {resultadoIndividual.cargaSemanal !== null && resultadoIndividual.cargaSemanal !== undefined
                 ? `Carga semanal de respaldo: ${resultadoIndividual.cargaSemanal.toFixed(0)}`
                 : 'Carga semanal de respaldo: Nula'}
+            </div>
+          )}
+
+          {resultadoIndividual.diasFaltantesRPE?.length > 0 && (
+            <div
+              className="rounded-xl p-3 text-sm"
+              style={{
+                backgroundColor: '#172235',
+                border: '1px solid #2A3548',
+                color: '#F0F2F5',
+              }}
+            >
+              <div className="font-semibold mb-2">Fechas con entrenamiento/partido sin RPE cargado</div>
+              <div className="flex flex-wrap gap-2">
+                {resultadoIndividual.diasFaltantesRPE.map((fecha) => (
+                  <span
+                    key={fecha}
+                    className="px-2 py-1 rounded-full text-xs"
+                    style={{ backgroundColor: '#1A2332', color: '#F0F2F5' }}
+                  >
+                    {fecha}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>
