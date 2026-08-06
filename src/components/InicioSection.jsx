@@ -1,4 +1,3 @@
-import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
@@ -92,6 +91,8 @@ function InicioSection({ perfil, onCambiarSeccion }) {
   const [alertasNutricion, setAlertasNutricion] = useState([])
   const [cumpleanieros, setCumpleanieros] = useState([])
   const [alertas, setAlertas] = useState([])
+  const [alertasWellnessDetalle, setAlertasWellnessDetalle] = useState([])
+  const [wellnessExpandido, setWellnessExpandido] = useState(false)
   const [cargando, setCargando] = useState(true)
 
   useEffect(() => {
@@ -330,18 +331,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
           })
         })
 
-        if (alertasWellness.length > 3) {
-          const hayAlgunaAlta = alertasWellness.some((a) => a.icono === '🔴')
-          alertasNuevas.push({
-            id: 'wellness-resumen',
-            icono: hayAlgunaAlta ? '🔴' : '🟡',
-            color: hayAlgunaAlta ? '#E24B4A' : '#F2C230',
-            texto: `${alertasWellness.length} jugadoras con wellness alto hoy — ver en Físico`,
-            seccion: 'fisico',
-          })
-        } else {
-          alertasNuevas.push(...alertasWellness)
-        }
+        setAlertasWellnessDetalle(alertasWellness)
       }
 
       setAlertas(alertasNuevas)
@@ -424,6 +414,54 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                 <p className="text-sm" style={{ color: '#FFFFFF' }}>{a.texto}</p>
               </div>
             ))}
+          </div>
+        )}
+
+        {alertasWellnessDetalle.length > 0 && (
+          <div className="mb-6 space-y-2">
+            <p className="text-xs tracking-widest uppercase mb-2" style={{ color: '#8A8A82' }}>
+              🔔 Wellness
+            </p>
+            {alertasWellnessDetalle.length > 3 && !wellnessExpandido ? (
+              <div
+                onClick={() => setWellnessExpandido(true)}
+                className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
+                style={{
+                  backgroundColor: '#242422',
+                  border: `1px solid ${alertasWellnessDetalle.some((a) => a.icono === '🔴') ? '#E24B4A' : '#F2C230'}`,
+                }}
+              >
+                <span className="text-lg shrink-0">
+                  {alertasWellnessDetalle.some((a) => a.icono === '🔴') ? '🔴' : '🟡'}
+                </span>
+                <p className="text-sm flex-1" style={{ color: '#FFFFFF' }}>
+                  {alertasWellnessDetalle.length} jugadoras con wellness alto hoy — tocá para ver el detalle
+                </p>
+              </div>
+            ) : (
+              <>
+                {alertasWellnessDetalle.length > 3 && (
+                  <div
+                    onClick={() => setWellnessExpandido(false)}
+                    className="text-xs cursor-pointer hover:opacity-70 transition-opacity px-1"
+                    style={{ color: '#8A8A82' }}
+                  >
+                    ▲ Colapsar
+                  </div>
+                )}
+                {alertasWellnessDetalle.map((a) => (
+                  <div
+                    key={a.id}
+                    onClick={() => onCambiarSeccion(a.seccion)}
+                    className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
+                    style={{ backgroundColor: '#242422', border: `1px solid ${a.color}` }}
+                  >
+                    <span className="text-lg shrink-0">{a.icono}</span>
+                    <p className="text-sm" style={{ color: '#FFFFFF' }}>{a.texto}</p>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
 
@@ -660,5 +698,3 @@ function InicioSection({ perfil, onCambiarSeccion }) {
 }
 
 export default InicioSection
-
-
