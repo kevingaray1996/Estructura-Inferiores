@@ -78,10 +78,14 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
   useEffect(() => {
     async function cargarCategorias() {
       const { data } = await supabase.from('categorias').select('*').order('orden')
-      setCategorias(data || [])
+      const cats = data || []
+      setCategorias(cats)
+      if (!esTecnico && cats.length <= 1) {
+        setCategoriaId(cats[0]?.id || '')
+      }
     }
     cargarCategorias()
-  }, [])
+  }, [esTecnico])
 
   useEffect(() => {
     async function aplicarPartidoInicial() {
@@ -267,6 +271,8 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
     color: COLORES.texto,
   }
 
+  const categoriaBloqueada = esTecnico || categorias.length <= 1
+
   const tabsDisponibles = [
     { key: 'wellness', label: 'Wellness' },
     { key: 'rpe', label: 'RPE' },
@@ -407,7 +413,7 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
                     className="w-full p-2.5 rounded-xl outline-none text-sm"
                     style={inputStyle}
                   />
-                  {!esTecnico && (
+                  {!categoriaBloqueada && (
                     <select
                       value={categoriaId}
                       onChange={(e) => setCategoriaId(e.target.value)}
@@ -466,7 +472,7 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
                   </p>
                 )}
 
-                {!categoriaId && !esTecnico && (
+                {!categoriaId && !categoriaBloqueada && (
                   <p className="text-sm" style={{ color: COLORES.textoMuted }}>
                     Elegí una categoría para ver el plantel.
                   </p>
@@ -623,6 +629,3 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
 }
 
 export default FisicoSection
-
-
-
