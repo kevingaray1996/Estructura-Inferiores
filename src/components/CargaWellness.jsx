@@ -150,7 +150,7 @@ function CargaWellness() {
 
       {jugadores.length > 0 && (
         <>
-          <div className="overflow-x-auto mb-6 rounded-xl" style={{ border: `1px solid ${COLORES.borde}` }}>
+          <div className="overflow-auto mb-6 rounded-xl max-h-[70vh]" style={{ border: `1px solid ${COLORES.borde}` }}>
             <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ backgroundColor: COLORES.fondoTarjeta }}>
