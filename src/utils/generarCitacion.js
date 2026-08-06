@@ -40,6 +40,39 @@ async function cargarImagenDataURL(url) {
   }
 }
 
+async function cargarImagenCuadradaDataURL(url) {
+  if (!url) return null
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const blob = await res.blob()
+    const objectUrl = URL.createObjectURL(blob)
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const img = new Image()
+        img.onload = () => {
+          const size = Math.min(img.width, img.height)
+          const sx = (img.width - size) / 2
+          const sy = (img.height - size) / 2
+          const canvas = document.createElement('canvas')
+          canvas.width = size
+          canvas.height = size
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(img, sx, sy, size, size, 0, 0, size, size)
+          resolve(canvas.toDataURL('image/png'))
+        }
+        img.onerror = reject
+        img.src = objectUrl
+      })
+      return dataUrl
+    } finally {
+      URL.revokeObjectURL(objectUrl)
+    }
+  } catch {
+    return null
+  }
+}
+
 function formatoDeDataUrl(dataUrl) {
   const match = /^data:image\/(\w+);/.exec(dataUrl || '')
   return match ? match[1].toUpperCase() : 'PNG'
@@ -111,7 +144,7 @@ export async function generarCitacionPDF(partidoId) {
   await Promise.all(
     citaciones.map(async (c) => {
       if (c.jugadores?.foto_url) {
-        fotosPorJugador[c.jugador_id] = await cargarImagenDataURL(c.jugadores.foto_url)
+        fotosPorJugador[c.jugador_id] = await cargarImagenCuadradaDataURL(c.jugadores.foto_url)
       }
     })
   )
@@ -127,7 +160,7 @@ export async function generarCitacionPDF(partidoId) {
   await Promise.all(
     staff.map(async (s) => {
       if (s.foto_url) {
-        fotosPorStaff[s.email] = await cargarImagenDataURL(s.foto_url)
+        fotosPorStaff[s.email] = await cargarImagenCuadradaDataURL(s.foto_url)
       }
     })
   )
