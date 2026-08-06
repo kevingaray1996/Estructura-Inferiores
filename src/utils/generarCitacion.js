@@ -116,6 +116,22 @@ export async function generarCitacionPDF(partidoId) {
     })
   )
 
+  const { data: staffData } = await supabase
+    .from('perfiles')
+    .select('*')
+    .eq('aparece_en_pdf', true)
+    .order('orden_pdf', { ascending: true, nullsFirst: false })
+
+  const staff = staffData || []
+  const fotosPorStaff = {}
+  await Promise.all(
+    staff.map(async (s) => {
+      if (s.foto_url) {
+        fotosPorStaff[s.email] = await cargarImagenDataURL(s.foto_url)
+      }
+    })
+  )
+
   const doc = new jsPDF({ unit: 'pt', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const margin = 40
@@ -386,6 +402,66 @@ export async function generarCitacionPDF(partidoId) {
 
     ySuplente += filaAltura + filaGap
   })
+
+  // ===== Cuerpo técnico (pie) =====
+  if (staff.length > 0) {
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const staffRadio = 20
+    const staffColW = 82
+    const staffRowH = 78
+    const porFila = Math.max(1, Math.floor(contenidoAncho / staffColW))
+    const filas = Math.ceil(staff.length / porFila)
+    const altoNecesario = 30 + filas * staffRowH
+
+    let staffY = Math.max(contenidoY + canchaH + 30, yTitular, ySuplente) + 20
+
+    if (staffY + altoNecesario > pageHeight - margin) {
+      doc.addPage()
+      staffY = margin + 20
+    }
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.setTextColor(...AZUL)
+    doc.text('CUERPO TÉCNICO', margin, staffY)
+
+    let cursorX = margin
+    let cursorY = staffY + 34
+    let enFila = 0
+
+    staff.forEach((s) => {
+      if (enFila >= porFila) {
+        enFila = 0
+        cursorX = margin
+        cursorY += staffRowH
+      }
+      const cx = cursorX + staffRadio
+      const cy = cursorY
+      const inicialesStaff = (s.nombre || s.email || '?')
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((p) => p[0])
+        .join('')
+        .toUpperCase()
+      dibujarAvatarCircular(doc, fotosPorStaff[s.email], cx, cy, staffRadio, inicialesStaff)
+
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(8)
+      doc.setTextColor(...NEGRO)
+      doc.text(s.nombre || s.email, cx, cy + staffRadio + 12, { align: 'center', maxWidth: staffColW - 6 })
+
+      if (s.cargo_pdf) {
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(7)
+        doc.setTextColor(...GRIS)
+        doc.text(s.cargo_pdf, cx, cy + staffRadio + 22, { align: 'center', maxWidth: staffColW - 6 })
+      }
+
+      cursorX += staffColW
+      enFila++
+    })
+  }
 
   doc.save(`Citacion_vs_${partido.rival.replace(/\s+/g, '_')}.pdf`)
 }
