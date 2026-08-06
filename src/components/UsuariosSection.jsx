@@ -10,6 +10,22 @@ const rolLabel = {
   preparador_fisico: 'Preparador Físico',
 }
 
+function iniciales(nombre, email) {
+  const base = nombre || email || '?'
+  const partes = base.trim().split(/\s+/)
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase()
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase()
+}
+
+async function subirFotoPerfil(file, email) {
+  const ext = file.name.split('.').pop()
+  const nombreArchivo = `staff/${email.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.${ext}`
+  const { error } = await supabase.storage.from('Biblioteca').upload(nombreArchivo, file, { upsert: true })
+  if (error) throw error
+  const { data } = supabase.storage.from('Biblioteca').getPublicUrl(nombreArchivo)
+  return data.publicUrl
+}
+
 function UsuariosSection() {
   const [usuarios, setUsuarios] = useState([])
   const [categorias, setCategorias] = useState([])
@@ -21,6 +37,12 @@ function UsuariosSection() {
   const [nombre, setNombre] = useState('')
   const [rol, setRol] = useState('tecnico')
   const [categoriaId, setCategoriaId] = useState('')
+  const [cargoPdf, setCargoPdf] = useState('')
+  const [apareceEnPdf, setApareceEnPdf] = useState(false)
+  const [ordenPdf, setOrdenPdf] = useState('')
+  const [fotoUrlActual, setFotoUrlActual] = useState('')
+  const [fotoArchivo, setFotoArchivo] = useState(null)
+  const [fotoPreview, setFotoPreview] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [exportando, setExportando] = useState(false)
@@ -40,6 +62,7 @@ function UsuariosSection() {
     const { data: usuariosData } = await supabase
       .from('perfiles')
       .select('*, categorias(nombre)')
+      .order('orden_pdf', { ascending: true, nullsFirst: false })
       .order('rol')
     setUsuarios(usuariosData || [])
     const { data: categoriasData } = await supabase.from('categorias').select('*').order('orden')
@@ -62,6 +85,12 @@ function UsuariosSection() {
     setNombre('')
     setRol('tecnico')
     setCategoriaId('')
+    setCargoPdf('')
+    setApareceEnPdf(false)
+    setOrdenPdf('')
+    setFotoUrlActual('')
+    setFotoArchivo(null)
+    setFotoPreview('')
     setErrorMsg('')
     setMostrarForm(true)
   }
@@ -72,6 +101,12 @@ function UsuariosSection() {
     setNombre(u.nombre || '')
     setRol(u.rol)
     setCategoriaId(u.categoria_id || '')
+    setCargoPdf(u.cargo_pdf || '')
+    setApareceEnPdf(!!u.aparece_en_pdf)
+    setOrdenPdf(u.orden_pdf ?? '')
+    setFotoUrlActual(u.foto_url || '')
+    setFotoArchivo(null)
+    setFotoPreview('')
     setErrorMsg('')
     setMostrarForm(true)
   }
@@ -79,6 +114,13 @@ function UsuariosSection() {
   function cancelarForm() {
     setMostrarForm(false)
     setUsuarioEditando(null)
+  }
+
+  function handleElegirFoto(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setFotoArchivo(file)
+    setFotoPreview(URL.createObjectURL(file))
   }
 
   async function handleGuardar() {
@@ -93,11 +135,26 @@ function UsuariosSection() {
     }
     setGuardando(true)
 
+    let fotoUrlFinal = fotoUrlActual
+    if (fotoArchivo) {
+      try {
+        fotoUrlFinal = await subirFotoPerfil(fotoArchivo, email.trim().toLowerCase())
+      } catch (err) {
+        setErrorMsg('Error al subir la foto: ' + err.message)
+        setGuardando(false)
+        return
+      }
+    }
+
     const datos = {
       email: email.trim().toLowerCase(),
       nombre: nombre || null,
       rol,
       categoria_id: rol === 'tecnico' ? categoriaId : null,
+      cargo_pdf: cargoPdf || null,
+      aparece_en_pdf: apareceEnPdf,
+      orden_pdf: ordenPdf === '' ? null : Number(ordenPdf),
+      foto_url: fotoUrlFinal || null,
     }
 
     const { error } = usuarioEditando
@@ -164,6 +221,27 @@ function UsuariosSection() {
                 Editando {usuarioEditando.email}
               </p>
             )}
+
+            <div className="flex items-center gap-3">
+              <div
+                className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center text-sm font-medium shrink-0"
+                style={{ backgroundColor: COLORES.fondoSidebar, color: COLORES.textoSecundario }}
+              >
+                {fotoPreview || fotoUrlActual ? (
+                  <img src={fotoPreview || fotoUrlActual} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  iniciales(nombre, email)
+                )}
+              </div>
+              <label
+                className="text-xs font-medium px-3 py-2 rounded-lg cursor-pointer hover:opacity-80"
+                style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario, border: '1px solid COLORES.borde' }}
+              >
+                Cambiar foto
+                <input type="file" accept="image/*" onChange={handleElegirFoto} className="hidden" />
+              </label>
+            </div>
+
             <input
               type="email"
               placeholder="Email (el mismo del login de Supabase)"
@@ -208,6 +286,46 @@ function UsuariosSection() {
               </select>
             )}
 
+            <div>
+              <label className="text-xs block mb-1" style={{ color: COLORES.textoMuted }}>
+                Cargo a mostrar (en el PDF de citación, en vez del rol del sistema)
+              </label>
+              <input
+                type="text"
+                placeholder="Ej: Videoanalista, Director Técnico, Ayudante de campo..."
+                value={cargoPdf}
+                onChange={(e) => setCargoPdf(e.target.value)}
+                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                style={inputStyle}
+              />
+            </div>
+
+            <label className="flex items-center gap-2 text-sm" style={{ color: COLORES.textoSecundario }}>
+              <input
+                type="checkbox"
+                checked={apareceEnPdf}
+                onChange={(e) => setApareceEnPdf(e.target.checked)}
+              />
+              Aparece en el PDF de citación
+            </label>
+
+            {apareceEnPdf && (
+              <div>
+                <label className="text-xs block mb-1" style={{ color: COLORES.textoMuted }}>
+                  Orden en el PDF (1 = primero, menor número aparece antes)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Ej: 1"
+                  value={ordenPdf}
+                  onChange={(e) => setOrdenPdf(e.target.value)}
+                  className="w-24 p-2.5 rounded-xl outline-none text-sm"
+                  style={inputStyle}
+                />
+              </div>
+            )}
+
             {errorMsg && (
               <p className="text-sm" style={{ color: COLORES.peligro }}>
                 {errorMsg}
@@ -234,15 +352,37 @@ function UsuariosSection() {
               className="p-3 rounded-xl flex items-center justify-between gap-3"
               style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
             >
-              <div>
-                <p className="text-sm font-medium" style={{ color: COLORES.texto }}>
-                  {u.nombre || u.email}
-                </p>
-                <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
-                  {u.email}
-                </p>
+              <div className="flex items-center gap-3 min-w-0">
+                <div
+                  className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center text-xs font-medium shrink-0"
+                  style={{ backgroundColor: COLORES.fondoSidebar, color: COLORES.textoSecundario }}
+                >
+                  {u.foto_url ? (
+                    <img src={u.foto_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    iniciales(u.nombre, u.email)
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate" style={{ color: COLORES.texto }}>
+                    {u.nombre || u.email}
+                  </p>
+                  <p className="text-xs truncate" style={{ color: COLORES.textoSecundario }}>
+                    {u.email}
+                    {u.cargo_pdf ? ` · ${u.cargo_pdf}` : ''}
+                  </p>
+                </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                {u.aparece_en_pdf && (
+                  <span
+                    className="text-xs px-2 py-1 rounded-full"
+                    style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.acento }}
+                    title="Aparece en el PDF de citación"
+                  >
+                    📄
+                  </span>
+                )}
                 <span
                   className="text-xs font-mono px-2 py-1 rounded-full"
                   style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
@@ -274,6 +414,3 @@ function UsuariosSection() {
 }
 
 export default UsuariosSection
-
-
-
