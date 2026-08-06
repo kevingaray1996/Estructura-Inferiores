@@ -170,12 +170,6 @@ function CargaWellness() {
                       {c.label}
                     </th>
                   ))}
-                  <th
-                    className="text-left p-2.5 whitespace-nowrap sticky top-0 z-10"
-                    style={{ color: COLORES.textoSecundario, backgroundColor: COLORES.fondoTarjeta }}
-                  >
-                    Obs.
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -190,7 +184,7 @@ function CargaWellness() {
                     }}
                   >
                     <td
-                      className="p-2.5 whitespace-nowrap sticky left-0"
+                      className="p-2.5 sticky left-0"
                       style={{ color: COLORES.texto, backgroundColor: i % 2 === 0 ? COLORES.fondoPagina : '#1F1F1D' }}
                     >
                       <div className="flex items-center gap-2">
@@ -208,7 +202,16 @@ function CargaWellness() {
                             {`${j.nombre?.[0] || ''}${j.apellido?.[0] || ''}`.toUpperCase()}
                           </span>
                         )}
-                        {j.apellido}, {j.nombre}
+                        <div>
+                          <div className="whitespace-nowrap">
+                            {j.apellido}, {j.nombre}
+                          </div>
+                          {filaConDolor && (
+                            <div className="text-[11px]" style={{ color: COLORES.peligro }}>
+                              📍 {zonaDolor}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
                     {CAMPOS.map((c) => (
@@ -224,13 +227,6 @@ function CargaWellness() {
                         />
                       </td>
                     ))}
-                    <td className="p-1.5 text-center">
-                      {filaConDolor && (
-                        <span title={zonaDolor} style={{ color: COLORES.peligro, cursor: 'help', fontSize: '16px' }}>
-                          📍
-                        </span>
-                      )}
-                    </td>
                   </tr>
                 )})}
               </tbody>
