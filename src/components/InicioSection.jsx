@@ -283,31 +283,59 @@ function InicioSection({ perfil, onCambiarSeccion }) {
           bienestarPorJugador[b.jugador_id] = b
         })
 
+        const LABELS_WELLNESS = {
+          sueno: 'Sueño',
+          dolor_muscular: 'Dolor muscular',
+          fatiga: 'Fatiga',
+          estres: 'Estrés',
+          animo_entrenar: 'Ánimo para entrenar',
+        }
+
         const alertasWellness = []
         ;(jugadoresPrimera || []).forEach((j) => {
           const b = bienestarPorJugador[j.id]
           if (!b) return
-          const valores = [b.sueno, b.dolor_muscular, b.fatiga, b.estres, b.animo_entrenar].filter(
-            (v) => v !== null && v !== undefined && !Number.isNaN(v)
-          )
-          if (valores.length === 0) return
-          const promedioDia = valores.reduce((a, v) => a + v, 0) / valores.length
-          if (promedioDia > 3) {
-            alertasWellness.push({
-              id: `wellness-${j.id}`,
-              icono: '🟡',
-              color: '#F2C230',
-              texto: `${j.apellido}, ${j.nombre} — Wellness del día: ${promedioDia.toFixed(1)}`,
-              seccion: 'fisico',
-            })
+          const camposValores = [
+            ['sueno', b.sueno],
+            ['dolor_muscular', b.dolor_muscular],
+            ['fatiga', b.fatiga],
+            ['estres', b.estres],
+            ['animo_entrenar', b.animo_entrenar],
+          ].filter(([, v]) => v !== null && v !== undefined && !Number.isNaN(v))
+          if (camposValores.length === 0) return
+
+          const promedioDia = camposValores.reduce((a, [, v]) => a + v, 0) / camposValores.length
+          const factoresAltos = camposValores
+            .filter(([, v]) => v >= 4)
+            .map(([clave, v]) => ({ label: LABELS_WELLNESS[clave], valor: v }))
+
+          const hayAlerta = promedioDia > 3 || factoresAltos.length > 0
+          if (!hayAlerta) return
+
+          const esAlta = promedioDia > 4 || factoresAltos.some((f) => f.valor === 5)
+          const color = esAlta ? '#E24B4A' : '#F2C230'
+          const icono = esAlta ? '🔴' : '🟡'
+
+          let texto = `${j.apellido}, ${j.nombre} — Wellness del día: ${promedioDia.toFixed(1)}`
+          if (factoresAltos.length > 0) {
+            texto += ` (${factoresAltos.map((f) => `${f.label} ${f.valor}`).join(', ')})`
           }
+
+          alertasWellness.push({
+            id: `wellness-${j.id}`,
+            icono,
+            color,
+            texto,
+            seccion: 'fisico',
+          })
         })
 
         if (alertasWellness.length > 3) {
+          const hayAlgunaAlta = alertasWellness.some((a) => a.icono === '🔴')
           alertasNuevas.push({
             id: 'wellness-resumen',
-            icono: '⚠️',
-            color: '#F2C230',
+            icono: hayAlgunaAlta ? '🔴' : '🟡',
+            color: hayAlgunaAlta ? '#E24B4A' : '#F2C230',
             texto: `${alertasWellness.length} jugadoras con wellness alto hoy — ver en Físico`,
             seccion: 'fisico',
           })
