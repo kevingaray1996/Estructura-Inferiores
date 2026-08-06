@@ -352,12 +352,19 @@ function BienestarPublico({ categoriaId }) {
               </>
             )}
 
-            {vista === 'bienestar' && enviado && (
+           {vista === 'bienestar' && enviado && (
               <div className="text-center py-12">
                 <p className="text-3xl mb-3">✅</p>
-                <p className="text-sm" style={{ color: COLORES.texto }}>
+                <p className="text-sm mb-4" style={{ color: COLORES.texto }}>
                   ¡Gracias! Ya se guardó tu bienestar de hoy.
                 </p>
+                <button
+                  onClick={() => setEnviado(false)}
+                  className="text-xs px-3 py-1.5 rounded-lg hover:opacity-80"
+                  style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.textoSecundario, border: `1px solid ${COLORES.borde}` }}
+                >
+                  ✏️ Editar mi respuesta
+                </button>
               </div>
             )}
 
