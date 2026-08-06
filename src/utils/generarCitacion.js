@@ -53,7 +53,7 @@ async function cargarImagenCuadradaDataURL(url) {
         img.onload = () => {
           const size = Math.min(img.width, img.height)
           const sx = (img.width - size) / 2
-          const sy = (img.height - size) / 2
+          const sy = 0
           const canvas = document.createElement('canvas')
           canvas.width = size
           canvas.height = size
