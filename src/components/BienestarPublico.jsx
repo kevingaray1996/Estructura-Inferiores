@@ -73,7 +73,6 @@ function BienestarPublico({ categoriaId }) {
   async function elegirJugador(j) {
     setJugadorSeleccionado(j)
     setVista('bienestar')
-    setEnviado(false)
     setError('')
     setRpeEnviado(false)
     setRpeError('')
@@ -86,6 +85,8 @@ function BienestarPublico({ categoriaId }) {
       .eq('fecha', fecha)
       .maybeSingle()
     setValores(data || {})
+    const yaCompleto = data && CAMPOS.every((c) => data[c.clave])
+    setEnviado(!!yaCompleto)
   }
 
   useEffect(() => {
