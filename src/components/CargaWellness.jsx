@@ -3,6 +3,7 @@ import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
+import { COLORES } from '../theme'
 
 const CAMPOS = [
   { clave: 'sueno', label: 'Sueño' },
@@ -22,9 +23,9 @@ function CargaWellness() {
   const [mensaje, setMensaje] = useState('')
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: COLORES.fondoTarjeta,
+    border: `1px solid ${COLORES.borde}`,
+    color: COLORES.texto,
   }
 
   useEffect(() => {
@@ -117,7 +118,7 @@ function CargaWellness() {
 
   return (
     <div>
-      <p className="text-sm mb-6" style={{ color: '#5B6B85' }}>
+      <p className="text-sm mb-6" style={{ color: COLORES.textoMuted }}>
         Carga manual de wellness de Primera División. Útil para cargar días atrasados o completar datos
         que la jugadora no respondió por el link. Si ya hay una respuesta cargada para esa fecha (por el
         link de bienestar), acá se muestra y se puede editar.
@@ -134,33 +135,33 @@ function CargaWellness() {
       </div>
 
       {!categoria && (
-        <p className="text-sm" style={{ color: '#5B6B85' }}>
+        <p className="text-sm" style={{ color: COLORES.textoMuted }}>
           No se encontró la categoría Primera División.
         </p>
       )}
 
-      {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
+      {cargando && <p style={{ color: COLORES.textoMuted }}>Cargando...</p>}
 
       {!cargando && categoria && jugadores.length === 0 && (
-        <p className="text-sm" style={{ color: '#5B6B85' }}>
+        <p className="text-sm" style={{ color: COLORES.textoMuted }}>
           No hay jugadoras cargadas en Primera División.
         </p>
       )}
 
       {jugadores.length > 0 && (
         <>
-          <div className="overflow-x-auto mb-6 rounded-xl" style={{ border: '1px solid #2A3548' }}>
+          <div className="overflow-x-auto mb-6 rounded-xl" style={{ border: `1px solid ${COLORES.borde}` }}>
             <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ backgroundColor: '#1A2332' }}>
+                <tr style={{ backgroundColor: COLORES.fondoTarjeta }}>
                   <th
                     className="text-left p-2.5 whitespace-nowrap sticky left-0"
-                    style={{ color: '#8A9BB8', backgroundColor: '#1A2332' }}
+                    style={{ color: COLORES.textoSecundario, backgroundColor: COLORES.fondoTarjeta }}
                   >
                     Jugadora
                   </th>
                   {CAMPOS.map((c) => (
-                    <th key={c.clave} className="text-left p-2.5 whitespace-nowrap" style={{ color: '#8A9BB8' }}>
+                    <th key={c.clave} className="text-left p-2.5 whitespace-nowrap" style={{ color: COLORES.textoSecundario }}>
                       {c.label}
                     </th>
                   ))}
@@ -168,10 +169,10 @@ function CargaWellness() {
               </thead>
               <tbody>
                 {jugadores.map((j, i) => (
-                  <tr key={j.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#151D2A' }}>
+                  <tr key={j.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#1F1F1D' }}>
                     <td
                       className="p-2.5 whitespace-nowrap sticky left-0"
-                      style={{ color: '#F0F2F5', backgroundColor: i % 2 === 0 ? '#0F1419' : '#151D2A' }}
+                      style={{ color: COLORES.texto, backgroundColor: i % 2 === 0 ? COLORES.fondoPagina : '#1F1F1D' }}
                     >
                       <div className="flex items-center gap-2">
                         {j.foto_url ? (
@@ -183,7 +184,7 @@ function CargaWellness() {
                         ) : (
                           <span
                             className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
-                            style={{ backgroundColor: '#1A2332', color: '#8A9BB8' }}
+                            style={{ backgroundColor: COLORES.fondoSidebar, color: COLORES.textoSecundario }}
                           >
                             {`${j.nombre?.[0] || ''}${j.apellido?.[0] || ''}`.toUpperCase()}
                           </span>
@@ -213,7 +214,7 @@ function CargaWellness() {
           {mensaje && (
             <p
               className="text-sm mb-4"
-              style={{ color: mensaje.startsWith('Listo') ? '#4ADE80' : '#F87171' }}
+              style={{ color: mensaje.startsWith('Listo') ? COLORES.exito : COLORES.peligro }}
             >
               {mensaje}
             </p>
@@ -223,7 +224,7 @@ function CargaWellness() {
             onClick={handleGuardar}
             disabled={guardando}
             className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-            style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+            style={{ backgroundColor: COLORES.acento, color: '#1A1A1A' }}
           >
             {guardando ? 'Guardando...' : 'Guardar wellness'}
           </button>
