@@ -64,6 +64,7 @@ function CargaWellness() {
             fatiga: b.fatiga ?? '',
             estres: b.estres ?? '',
             animo_entrenar: b.animo_entrenar ?? '',
+            zona_dolor: b.zona_dolor || '',
           }
         })
         setValores(mapa)
@@ -169,11 +170,25 @@ function CargaWellness() {
                       {c.label}
                     </th>
                   ))}
+                  <th
+                    className="text-left p-2.5 whitespace-nowrap sticky top-0 z-10"
+                    style={{ color: COLORES.textoSecundario, backgroundColor: COLORES.fondoTarjeta }}
+                  >
+                    Obs.
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {jugadores.map((j, i) => (
-                  <tr key={j.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#1F1F1D' }}>
+                {jugadores.map((j, i) => {
+                  const zonaDolor = valores[j.id]?.zona_dolor
+                  const filaConDolor = !!zonaDolor
+                  return (
+                  <tr
+                    key={j.id}
+                    style={{
+                      backgroundColor: filaConDolor ? 'rgba(226,75,74,0.08)' : i % 2 === 0 ? 'transparent' : '#1F1F1D',
+                    }}
+                  >
                     <td
                       className="p-2.5 whitespace-nowrap sticky left-0"
                       style={{ color: COLORES.texto, backgroundColor: i % 2 === 0 ? COLORES.fondoPagina : '#1F1F1D' }}
@@ -209,8 +224,15 @@ function CargaWellness() {
                         />
                       </td>
                     ))}
+                    <td className="p-1.5 text-center">
+                      {filaConDolor && (
+                        <span title={zonaDolor} style={{ color: COLORES.peligro, cursor: 'help', fontSize: '16px' }}>
+                          📍
+                        </span>
+                      )}
+                    </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>
