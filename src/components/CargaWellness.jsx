@@ -155,13 +155,17 @@ function CargaWellness() {
               <thead>
                 <tr style={{ backgroundColor: COLORES.fondoTarjeta }}>
                   <th
-                    className="text-left p-2.5 whitespace-nowrap sticky left-0"
+                    className="text-left p-2.5 whitespace-nowrap sticky left-0 top-0 z-20"
                     style={{ color: COLORES.textoSecundario, backgroundColor: COLORES.fondoTarjeta }}
                   >
                     Jugadora
                   </th>
                   {CAMPOS.map((c) => (
-                    <th key={c.clave} className="text-left p-2.5 whitespace-nowrap" style={{ color: COLORES.textoSecundario }}>
+                    <th
+                      key={c.clave}
+                      className="text-left p-2.5 whitespace-nowrap sticky top-0 z-10"
+                      style={{ color: COLORES.textoSecundario, backgroundColor: COLORES.fondoTarjeta }}
+                    >
                       {c.label}
                     </th>
                   ))}
