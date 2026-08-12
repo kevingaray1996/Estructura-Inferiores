@@ -4,6 +4,7 @@ import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
 import { calcularCMJDrop } from '../utils/semaforoRiesgo'
 import { generarCMJIndividualPDF, generarCMJCategoriaPDF } from '../utils/generarCMJPDF'
+import { COLORES } from '../theme'
 
 function promedio(valores) {
   const limpios = valores.filter((v) => v !== null && v !== undefined && !Number.isNaN(v))
@@ -22,6 +23,70 @@ function restarDias(fecha, dias) {
   const d = new Date(fecha)
   d.setDate(d.getDate() - dias)
   return d
+}
+
+function formatearFechaCorta(fechaStr) {
+  const [anio, mes, dia] = fechaStr.split('-')
+  return `${dia}.${mes}.${anio.slice(2)}`
+}
+
+function GraficoCMJ({ historial }) {
+  if (historial.length < 2) {
+    return (
+      <p className="text-sm mb-6" style={{ color: COLORES.textoMuted }}>
+        Hace falta al menos 2 mediciones para mostrar el gráfico de evolución.
+      </p>
+    )
+  }
+
+  const datos = [...historial].sort((a, b) => (a.fecha < b.fecha ? -1 : 1))
+  const valores = datos.map((d) => d.valor_cm)
+  const min = Math.min(...valores)
+  const max = Math.max(...valores)
+  const rango = max - min || 1
+  const w = 700
+  const h = 190
+  const padX = 12
+  const padTop = 18
+  const padBottom = 10
+
+  const puntos = datos.map((d, i) => {
+    const x = datos.length === 1 ? w / 2 : padX + (i / (datos.length - 1)) * (w - padX * 2)
+    const y = padTop + (1 - (d.valor_cm - min) / rango) * (h - padTop - padBottom)
+    return { x, y, ...d }
+  })
+
+  const lineaPath = puntos.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+  const areaPath = `${lineaPath} L ${puntos[puntos.length - 1].x} ${h} L ${puntos[0].x} ${h} Z`
+  const medio = Math.floor(datos.length / 2)
+
+  return (
+    <div className="mb-6">
+      <p className="text-xs tracking-widest uppercase mb-2" style={{ color: COLORES.textoMuted }}>
+        Altura de salto (cm)
+      </p>
+      <div className="rounded-xl p-3" style={{ backgroundColor: COLORES.fondoTarjeta, border: `1px solid ${COLORES.borde}` }}>
+        <svg viewBox={`0 0 ${w} ${h}`} style={{ width: '100%', height: 180, display: 'block' }}>
+          <defs>
+            <linearGradient id="gradienteCMJ" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={COLORES.peligro} stopOpacity="0.35" />
+              <stop offset="100%" stopColor={COLORES.peligro} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path d={areaPath} fill="url(#gradienteCMJ)" stroke="none" />
+          <path d={lineaPath} fill="none" stroke={COLORES.peligro} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+          {puntos.map((p, i) => (
+            <circle key={i} cx={p.x} cy={p.y} r="4" fill={COLORES.peligro} stroke={COLORES.fondoTarjeta} strokeWidth="1.5" />
+          ))}
+        </svg>
+        <div className="flex justify-between text-xs mt-1" style={{ color: COLORES.textoMuted }}>
+          <span>{formatearFechaCorta(datos[0].fecha)}</span>
+          {datos.length > 2 && <span>{formatearFechaCorta(datos[medio].fecha)}</span>}
+          <span>{formatearFechaCorta(datos[datos.length - 1].fecha)}</span>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function CMJComparativo() {
@@ -91,9 +156,9 @@ function CMJComparativo() {
   const jugadorSeleccionado = jugadores.find((j) => j.id === jugadorId)
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: COLORES.fondoTarjeta,
+    border: `1px solid ${COLORES.borde}`,
+    color: COLORES.texto,
   }
 
   async function descargarPDF() {
@@ -110,7 +175,7 @@ function CMJComparativo() {
     }
   }
 
-  if (cargando) return <p style={{ color: '#5B6B85' }}>Cargando...</p>
+  if (cargando) return <p style={{ color: COLORES.textoMuted }}>Cargando...</p>
 
   return (
     <div>
@@ -132,31 +197,36 @@ function CMJComparativo() {
           onClick={descargarPDF}
           disabled={generando}
           className="px-4 py-2.5 rounded-xl text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-          style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+          style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
         >
           {generando ? 'Generando...' : 'Descargar PDF'}
         </button>
       </div>
 
       {!jugadorId && (
-        <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #2A3548' }}>
+        <div className="overflow-x-auto rounded-xl" style={{ border: `1px solid ${COLORES.borde}` }}>
           <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ backgroundColor: '#1A2332' }}>
-                <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>Jugadora</th>
-                <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>Último (cm)</th>
-                <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>% baja</th>
-                <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>Estado</th>
+              <tr style={{ backgroundColor: COLORES.fondoTarjeta }}>
+                <th className="text-left p-2.5" style={{ color: COLORES.textoSecundario }}>Jugadora</th>
+                <th className="text-left p-2.5" style={{ color: COLORES.textoSecundario }}>Último (cm)</th>
+                <th className="text-left p-2.5" style={{ color: COLORES.textoSecundario }}>% baja</th>
+                <th className="text-left p-2.5" style={{ color: COLORES.textoSecundario }}>Estado</th>
               </tr>
             </thead>
             <tbody>
               {resumenGeneral.map(({ jugador, resultado }, i) => (
-                <tr key={jugador.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#151D2A' }}>
-                  <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                <tr
+                  key={jugador.id}
+                  onClick={() => setJugadorId(jugador.id)}
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                  style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#1F1F1D' }}
+                >
+                  <td className="p-2.5" style={{ color: COLORES.texto }}>
                     {jugador.apellido}, {jugador.nombre}
                   </td>
-                  <td className="p-2.5" style={{ color: '#F0F2F5' }}>{resultado.ultimoValor ?? '—'}</td>
-                  <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                  <td className="p-2.5" style={{ color: COLORES.texto }}>{resultado.ultimoValor ?? '—'}</td>
+                  <td className="p-2.5" style={{ color: COLORES.texto }}>
                     {resultado.porcentaje !== null ? `${resultado.porcentaje.toFixed(1)}%` : '—'}
                   </td>
                   <td className="p-2.5">
@@ -166,18 +236,18 @@ function CMJComparativo() {
                         style={{
                           backgroundColor:
                             resultado.nivel === 'alerta'
-                              ? '#F87171'
+                              ? COLORES.peligro
                               : resultado.nivel === 'moderado'
-                              ? '#FBBF24'
-                              : '#4ADE80',
-                          color: '#0F1419',
+                              ? COLORES.acento
+                              : COLORES.exito,
+                          color: '#1A1A1A',
                         }}
                       >
                         {resultado.nivel === 'alerta' ? 'Alerta' : resultado.nivel === 'moderado' ? 'Moderado' : 'Normal'}
                         {resultado.bajaConsecutiva ? ' · consecutiva' : ''}
                       </span>
                     ) : (
-                      <span className="text-xs" style={{ color: '#5B6B85' }}>
+                      <span className="text-xs" style={{ color: COLORES.textoMuted }}>
                         Sin datos
                       </span>
                     )}
@@ -186,46 +256,63 @@ function CMJComparativo() {
               ))}
             </tbody>
           </table>
+          <p className="text-xs p-2.5" style={{ color: COLORES.textoMuted }}>
+            Tocá una jugadora para ver su evolución individual.
+          </p>
         </div>
       )}
 
       {jugadorId && (
         <>
+          <button
+            onClick={() => setJugadorId('')}
+            className="text-sm mb-4 flex items-center gap-1 hover:opacity-70 transition-opacity"
+            style={{ color: COLORES.textoSecundario }}
+          >
+            ← Volver al plantel
+          </button>
+
+          <p className="text-sm font-medium mb-4" style={{ color: COLORES.texto }}>
+            {jugadorSeleccionado?.apellido}, {jugadorSeleccionado?.nombre}
+          </p>
+
+          <GraficoCMJ historial={historial} />
+
           <div className="grid grid-cols-3 gap-3 mb-6">
             <div className="p-3 rounded-xl" style={inputStyle}>
-              <p className="text-xs" style={{ color: '#5B6B85' }}>
+              <p className="text-xs" style={{ color: COLORES.textoMuted }}>
                 Último
               </p>
-              <p className="text-lg font-bold" style={{ color: '#F0F2F5' }}>
+              <p className="text-lg font-bold" style={{ color: COLORES.texto }}>
                 {ultimoValor ?? '—'} cm
               </p>
             </div>
             <div className="p-3 rounded-xl" style={inputStyle}>
-              <p className="text-xs" style={{ color: '#5B6B85' }}>
+              <p className="text-xs" style={{ color: COLORES.textoMuted }}>
                 Prom. semanal
               </p>
-              <p className="text-lg font-bold" style={{ color: '#F0F2F5' }}>
+              <p className="text-lg font-bold" style={{ color: COLORES.texto }}>
                 {promedioSemanal !== null ? promedioSemanal.toFixed(1) : '—'} cm
               </p>
             </div>
             <div className="p-3 rounded-xl" style={inputStyle}>
-              <p className="text-xs" style={{ color: '#5B6B85' }}>
+              <p className="text-xs" style={{ color: COLORES.textoMuted }}>
                 Prom. mensual
               </p>
-              <p className="text-lg font-bold" style={{ color: '#F0F2F5' }}>
+              <p className="text-lg font-bold" style={{ color: COLORES.texto }}>
                 {promedioMensual !== null ? promedioMensual.toFixed(1) : '—'} cm
               </p>
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #2A3548' }}>
+          <div className="overflow-x-auto rounded-xl" style={{ border: `1px solid ${COLORES.borde}` }}>
             <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ backgroundColor: '#1A2332' }}>
-                  <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>
+                <tr style={{ backgroundColor: COLORES.fondoTarjeta }}>
+                  <th className="text-left p-2.5" style={{ color: COLORES.textoSecundario }}>
                     Fecha
                   </th>
-                  <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>
+                  <th className="text-left p-2.5" style={{ color: COLORES.textoSecundario }}>
                     Valor (cm)
                   </th>
                 </tr>
@@ -233,17 +320,17 @@ function CMJComparativo() {
               <tbody>
                 {historial.length === 0 && (
                   <tr>
-                    <td colSpan={2} className="p-2.5 text-sm" style={{ color: '#5B6B85' }}>
+                    <td colSpan={2} className="p-2.5 text-sm" style={{ color: COLORES.textoMuted }}>
                       Sin mediciones cargadas.
                     </td>
                   </tr>
                 )}
                 {historial.map((h, i) => (
-                  <tr key={h.fecha} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#151D2A' }}>
-                    <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                  <tr key={h.fecha} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#1F1F1D' }}>
+                    <td className="p-2.5" style={{ color: COLORES.texto }}>
                       {h.fecha}
                     </td>
-                    <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                    <td className="p-2.5" style={{ color: COLORES.texto }}>
                       {h.valor_cm}
                     </td>
                   </tr>
