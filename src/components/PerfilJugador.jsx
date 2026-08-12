@@ -552,7 +552,7 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
 
         {jugador.video_promocional && (
           
-            href={jugador.video_promocional}
+            <a href={jugador.video_promocional}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-2 text-sm mb-6 hover:opacity-80 transition-opacity"
