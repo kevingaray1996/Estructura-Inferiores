@@ -7,6 +7,8 @@ const OPCIONES = [
   { clave: 'medico', label: 'Historial médico' },
   { clave: 'nutricion', label: 'Nutrición' },
   { clave: 'psicologia', label: 'Psicología' },
+  { clave: 'cmj', label: 'Evolución de CMJ' },
+  { clave: 'wellness', label: 'Wellness (últimos 30 días)' },
   { clave: 'fisico', label: 'Físico (GPS)' },
   { clave: 'asistencia', label: 'Asistencia' },
   { clave: 'trayectoria', label: 'Trayectoria entre categorías' },
@@ -22,6 +24,9 @@ function PdfPerfilModal({
   resumenAsistencia,
   totalAsistenciaMarcada,
   sesionesFisicas,
+  cmjHistorial,
+  resumenBienestarMensual,
+  asistenciaReciente,
   onCerrar,
 }) {
   const [secciones, setSecciones] = useState(
@@ -47,6 +52,9 @@ function PdfPerfilModal({
           resumenAsistencia,
           totalAsistenciaMarcada,
           sesionesFisicas,
+          cmjHistorial,
+          resumenBienestarMensual,
+          asistenciaReciente,
         },
         secciones
       )
@@ -75,7 +83,6 @@ function PdfPerfilModal({
         <p className="text-xs mb-4" style={{ color: '#8A9BB8' }}>
           {jugador.apellido}, {jugador.nombre} — elegí qué incluir
         </p>
-
         <div className="space-y-2 mb-6">
           {OPCIONES.map((o) => (
             <label
@@ -92,7 +99,6 @@ function PdfPerfilModal({
             </label>
           ))}
         </div>
-
         <div className="flex gap-2">
           <button
             onClick={onCerrar}
