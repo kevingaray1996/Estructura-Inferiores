@@ -6,6 +6,8 @@ const BLANCO = [255, 255, 255]
 const GRIS = [90, 100, 115]
 const TEXTO_OSCURO = [30, 30, 30]
 const AMARILLO_CLARO = [255, 251, 235]
+const ROJO = [226, 75, 74]
+const ROJO_CLARO = [252, 228, 227]
 
 const ESCUDO_CLUB_URL = 'https://qvjviyjkxyngiggoeqlj.supabase.co/storage/v1/object/public/Biblioteca/escudos/Escudo%20simplificado.png'
 
@@ -55,6 +57,78 @@ function restarDias(fecha, dias) {
   const d = new Date(fecha)
   d.setDate(d.getDate() - dias)
   return d
+}
+
+function dibujarGraficoCMJ(doc, x, y, width, height, historial) {
+  doc.setDrawColor(...[220, 220, 220])
+  doc.setFillColor(...BLANCO)
+  doc.roundedRect(x, y, width, height, 8, 8, 'FD')
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.setTextColor(...GRIS)
+  doc.text('ALTURA DE SALTO (CM)', x + 14, y + 14)
+
+  const datos = [...historial].sort((a, b) => (a.fecha < b.fecha ? -1 : 1))
+
+  if (datos.length < 2) {
+    doc.setFont('helvetica', 'italic')
+    doc.setFontSize(9)
+    doc.setTextColor(...GRIS)
+    doc.text('Hace falta al menos 2 mediciones para mostrar el gráfico.', x + width / 2, y + height / 2, {
+      align: 'center',
+    })
+    return
+  }
+
+  const padX = 16
+  const padTop = 24
+  const padBottom = 22
+  const plotW = width - padX * 2
+  const plotH = height - padTop - padBottom
+
+  const valores = datos.map((d) => d.valor_cm)
+  const min = Math.min(...valores)
+  const max = Math.max(...valores)
+  const rango = max - min || 1
+
+  const puntos = datos.map((d, i) => {
+    const px = x + padX + (datos.length === 1 ? plotW / 2 : (i / (datos.length - 1)) * plotW)
+    const py = y + padTop + (1 - (d.valor_cm - min) / rango) * plotH
+    return { x: px, y: py }
+  })
+
+  // Área sombreada bajo la línea
+  const baseY = y + padTop + plotH
+  const areaPuntos = [{ x: puntos[0].x, y: baseY }, ...puntos, { x: puntos[puntos.length - 1].x, y: baseY }]
+  const areaLines = []
+  for (let i = 1; i < areaPuntos.length; i++) {
+    areaLines.push([areaPuntos[i].x - areaPuntos[i - 1].x, areaPuntos[i].y - areaPuntos[i - 1].y])
+  }
+  doc.setFillColor(...ROJO_CLARO)
+  doc.lines(areaLines, areaPuntos[0].x, areaPuntos[0].y, [1, 1], 'F', true)
+
+  // Línea de tendencia
+  const lineLines = []
+  for (let i = 1; i < puntos.length; i++) {
+    lineLines.push([puntos[i].x - puntos[i - 1].x, puntos[i].y - puntos[i - 1].y])
+  }
+  doc.setDrawColor(...ROJO)
+  doc.setLineWidth(1.6)
+  doc.lines(lineLines, puntos[0].x, puntos[0].y, [1, 1], 'S', false)
+
+  // Puntos
+  puntos.forEach((p) => {
+    doc.setFillColor(...ROJO)
+    doc.circle(p.x, p.y, 2.4, 'F')
+  })
+
+  // Fechas en los extremos
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  doc.setTextColor(...GRIS)
+  doc.text(datos[0].fecha, x + padX, y + height - 8)
+  doc.text(datos[datos.length - 1].fecha, x + width - padX, y + height - 8, { align: 'right' })
 }
 
 function dibujarEncabezado(doc, pageWidth, titulo, subtitulo, escudoDataUrl) {
@@ -130,6 +204,10 @@ export async function generarCMJIndividualPDF(jugador, historial, resultado) {
     doc.text(c.valor, x + 12, y + 38)
   })
   y += 70
+
+  const alturaGrafico = 150
+  dibujarGraficoCMJ(doc, margin, y, pageWidth - margin * 2, alturaGrafico, historial)
+  y += alturaGrafico + 20
 
   if (resultado) {
     const colorNivel = resultado.nivel ? NIVEL_COLOR[resultado.nivel] : GRIS
