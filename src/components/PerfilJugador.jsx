@@ -66,6 +66,13 @@ function formatearFecha(fechaNacimiento) {
   return `${dia}/${mes}/${anio}`
 }
 
+function fechaISO(date) {
+  const anio = date.getFullYear()
+  const mes = String(date.getMonth() + 1).padStart(2, '0')
+  const dia = String(date.getDate()).padStart(2, '0')
+  return `${anio}-${mes}-${dia}`
+}
+
 function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onVerNutricion, onVerPsicologia, onVerBienestar, onEditar }) {
   const [jugador, setJugador] = useState(null)
   const [estadisticas, setEstadisticas] = useState([])
@@ -81,6 +88,9 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
   const [mostrarPdf, setMostrarPdf] = useState(false)
   const [sesionFisicaSeleccionadaId, setSesionFisicaSeleccionadaId] = useState(null)
   const [resumenBienestar, setResumenBienestar] = useState(null)
+  const [cmjHistorial, setCmjHistorial] = useState([])
+  const [resumenBienestarMensual, setResumenBienestarMensual] = useState(null)
+  const [asistenciaReciente, setAsistenciaReciente] = useState(null)
 
   useEffect(() => {
     async function cargarDatos() {
@@ -124,12 +134,49 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
         .eq('jugador_id', jugadorId)
       setAsistencias(asistenciasData || [])
 
+      const hoyRef = new Date()
+      const fecha14 = fechaISO(new Date(hoyRef.getFullYear(), hoyRef.getMonth(), hoyRef.getDate() - 13))
+      const recientes = (asistenciasData || []).filter((a) => a.fecha >= fecha14)
+      const resumenReciente = recientes.reduce(
+        (acc, a) => ({ ...acc, [a.estado]: (acc[a.estado] || 0) + 1 }),
+        { presente: 0, tarde: 0, ausente: 0, lesionado: 0, enfermo: 0 }
+      )
+      setAsistenciaReciente({ resumen: resumenReciente, total: recientes.length })
+
       const { data: fisicosData } = await supabase
         .from('sesiones_fisicas')
         .select('*, partidos(rival, fecha)')
         .eq('jugador_id', jugadorId)
         .order('fecha', { ascending: true })
       setSesionesFisicas(fisicosData || [])
+
+      const { data: cmjData } = await supabase
+        .from('cmj')
+        .select('fecha, valor_cm')
+        .eq('jugador_id', jugadorId)
+        .order('fecha', { ascending: true })
+      setCmjHistorial(cmjData || [])
+
+      const fecha30 = fechaISO(new Date(hoyRef.getFullYear(), hoyRef.getMonth(), hoyRef.getDate() - 29))
+      const { data: bienestarMesData } = await supabase
+        .from('bienestar')
+        .select('sueno, dolor_muscular, fatiga, estres, animo_entrenar')
+        .eq('jugador_id', jugadorId)
+        .gte('fecha', fecha30)
+      const camposBienestar = [
+        { clave: 'sueno', label: 'Sueño' },
+        { clave: 'dolor_muscular', label: 'Dolor musc.' },
+        { clave: 'fatiga', label: 'Fatiga' },
+        { clave: 'estres', label: 'Estrés' },
+        { clave: 'animo_entrenar', label: 'Ánimo' },
+      ]
+      const filasBienestarMes = bienestarMesData || []
+      const resumenMes = camposBienestar.map((c) => {
+        const valores = filasBienestarMes.map((f) => f[c.clave]).filter((v) => v !== null && v !== undefined)
+        const prom = valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : null
+        return { ...c, promedio: prom }
+      })
+      setResumenBienestarMensual(filasBienestarMes.length > 0 ? resumenMes : null)
 
       const { data: nutricionData } = await supabase
         .from('fichas_nutricion')
@@ -504,7 +551,7 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
         )}
 
         {jugador.video_promocional && (
-          <a
+          
             href={jugador.video_promocional}
             target="_blank"
             rel="noreferrer"
@@ -788,6 +835,9 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
           sesionesFisicas={sesionesFisicas}
           fichasNutricion={fichasNutricion}
           fichasPsicologicas={fichasPsicologicas}
+          cmjHistorial={cmjHistorial}
+          resumenBienestarMensual={resumenBienestarMensual}
+          asistenciaReciente={asistenciaReciente}
           onCerrar={() => setMostrarPdf(false)}
         />
       )}
