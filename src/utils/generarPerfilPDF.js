@@ -6,6 +6,8 @@ const BLANCO = [255, 255, 255]
 const GRIS = [90, 100, 115]
 const AMARILLO_CLARO = [255, 251, 235]
 const TEXTO_OSCURO = [30, 30, 30]
+const ROJO = [226, 75, 74]
+const ROJO_CLARO = [252, 228, 227]
 
 const ESCUDO_CLUB_URL = 'https://qvjviyjkxyngiggoeqlj.supabase.co/storage/v1/object/public/Biblioteca/escudos/Escudo%20simplificado.png'
 
@@ -47,6 +49,69 @@ function calcularEdad(fechaNacimiento) {
   return edad
 }
 
+function dibujarGraficoCMJ(doc, x, y, width, height, historial) {
+  doc.setDrawColor(220, 220, 220)
+  doc.setFillColor(...BLANCO)
+  doc.roundedRect(x, y, width, height, 8, 8, 'FD')
+
+  const datos = [...historial].sort((a, b) => (a.fecha < b.fecha ? -1 : 1))
+
+  if (datos.length < 2) {
+    doc.setFont('helvetica', 'italic')
+    doc.setFontSize(9)
+    doc.setTextColor(...GRIS)
+    doc.text('Hace falta al menos 2 mediciones para mostrar el gráfico.', x + width / 2, y + height / 2, {
+      align: 'center',
+    })
+    return
+  }
+
+  const padX = 16
+  const padTop = 16
+  const padBottom = 22
+  const plotW = width - padX * 2
+  const plotH = height - padTop - padBottom
+
+  const valores = datos.map((d) => d.valor_cm)
+  const min = Math.min(...valores)
+  const max = Math.max(...valores)
+  const rango = max - min || 1
+
+  const puntos = datos.map((d, i) => {
+    const px = x + padX + (datos.length === 1 ? plotW / 2 : (i / (datos.length - 1)) * plotW)
+    const py = y + padTop + (1 - (d.valor_cm - min) / rango) * plotH
+    return { x: px, y: py }
+  })
+
+  const baseY = y + padTop + plotH
+  const areaPuntos = [{ x: puntos[0].x, y: baseY }, ...puntos, { x: puntos[puntos.length - 1].x, y: baseY }]
+  const areaLines = []
+  for (let i = 1; i < areaPuntos.length; i++) {
+    areaLines.push([areaPuntos[i].x - areaPuntos[i - 1].x, areaPuntos[i].y - areaPuntos[i - 1].y])
+  }
+  doc.setFillColor(...ROJO_CLARO)
+  doc.lines(areaLines, areaPuntos[0].x, areaPuntos[0].y, [1, 1], 'F', true)
+
+  const lineLines = []
+  for (let i = 1; i < puntos.length; i++) {
+    lineLines.push([puntos[i].x - puntos[i - 1].x, puntos[i].y - puntos[i - 1].y])
+  }
+  doc.setDrawColor(...ROJO)
+  doc.setLineWidth(1.6)
+  doc.lines(lineLines, puntos[0].x, puntos[0].y, [1, 1], 'S', false)
+
+  puntos.forEach((p) => {
+    doc.setFillColor(...ROJO)
+    doc.circle(p.x, p.y, 2.2, 'F')
+  })
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  doc.setTextColor(...GRIS)
+  doc.text(datos[0].fecha, x + padX, y + height - 8)
+  doc.text(datos[datos.length - 1].fecha, x + width - padX, y + height - 8, { align: 'right' })
+}
+
 export async function generarPerfilPDF(datos, secciones) {
   const {
     jugador,
@@ -58,6 +123,9 @@ export async function generarPerfilPDF(datos, secciones) {
     resumenAsistencia,
     totalAsistenciaMarcada,
     sesionesFisicas,
+    cmjHistorial,
+    resumenBienestarMensual,
+    asistenciaReciente,
   } = datos
 
   const fotoDataUrl = jugador.foto_url ? await cargarImagenDataURL(jugador.foto_url) : null
@@ -288,10 +356,69 @@ export async function generarPerfilPDF(datos, secciones) {
     y += 8
   }
 
+  // ===== Evolución de CMJ =====
+  if (secciones.cmj) {
+    tituloSeccion('Evolución de CMJ')
+    if (!cmjHistorial || cmjHistorial.length === 0) {
+      lineaTexto('Sin mediciones de CMJ cargadas.', { color: GRIS })
+    } else {
+      const alturaGrafico = 130
+      chequearSalto(alturaGrafico + 10)
+      dibujarGraficoCMJ(doc, margin, y, pageWidth - margin * 2, alturaGrafico, cmjHistorial)
+      y += alturaGrafico + 16
+      const ultimos = [...cmjHistorial].sort((a, b) => (a.fecha < b.fecha ? 1 : -1)).slice(0, 3)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(...TEXTO_OSCURO)
+      doc.text(
+        `Últimas mediciones: ${ultimos.map((m) => `${m.valor_cm} cm (${formatearFecha(m.fecha)})`).join('  ·  ')}`,
+        margin,
+        y,
+        { maxWidth: pageWidth - margin * 2 }
+      )
+      y += 20
+    }
+    y += 8
+  }
+
+  // ===== Wellness (últimos 30 días) =====
+  if (secciones.wellness) {
+    tituloSeccion('Wellness (últimos 30 días)')
+    if (!resumenBienestarMensual) {
+      lineaTexto('Sin datos de wellness cargados en los últimos 30 días.', { color: GRIS })
+    } else {
+      chequearSalto(55)
+      const cardW = (pageWidth - margin * 2 - 40) / 5
+      resumenBienestarMensual.forEach((m, i) => {
+        const x = margin + i * (cardW + 10)
+        doc.setFillColor(...AMARILLO_CLARO)
+        doc.roundedRect(x, y, cardW, 46, 8, 8, 'F')
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(13)
+        doc.setTextColor(...NEGRO)
+        doc.text(m.promedio !== null ? m.promedio.toFixed(1) : '—', x + cardW / 2, y + 20, { align: 'center' })
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(7)
+        doc.setTextColor(...GRIS)
+        doc.text(m.label, x + cardW / 2, y + 34, { align: 'center' })
+      })
+      y += 66
+    }
+    y += 8
+  }
+
   // ===== Físico (GPS) =====
   if (secciones.fisico) {
     tituloSeccion('Físico (GPS)')
-    if (sesionesFisicas.length === 0) {
+    const sesionesConDatos = (sesionesFisicas || []).filter(
+      (s) =>
+        s.distancia_total_m !== null ||
+        s.distancia_alta_intensidad_m !== null ||
+        s.sprints !== null ||
+        s.velocidad_maxima_kmh !== null ||
+        s.player_load !== null
+    )
+    if (sesionesConDatos.length === 0) {
       lineaTexto('Sin datos físicos cargados.', { color: GRIS })
     } else {
       chequearSalto(20)
@@ -306,8 +433,8 @@ export async function generarPerfilPDF(datos, secciones) {
       y += 20
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(...TEXTO_OSCURO)
-      sesionesFisicas
-        .slice()
+      sesionesConDatos
+        .slice(-20)
         .reverse()
         .forEach((s, i) => {
           chequearSalto(18)
@@ -326,6 +453,13 @@ export async function generarPerfilPDF(datos, secciones) {
           doc.text(s.player_load !== null ? String(s.player_load) : '—', xs[6], y)
           y += 18
         })
+      if (sesionesConDatos.length > 20) {
+        doc.setFont('helvetica', 'italic')
+        doc.setFontSize(8)
+        doc.setTextColor(...GRIS)
+        doc.text(`Mostrando las últimas 20 sesiones de ${sesionesConDatos.length} con datos cargados.`, margin, y + 4)
+        y += 16
+      }
     }
     y += 8
   }
@@ -355,6 +489,20 @@ export async function generarPerfilPDF(datos, secciones) {
         doc.setFont('helvetica', 'bold')
       })
       y += 24
+
+      if (asistenciaReciente && asistenciaReciente.total > 0) {
+        chequearSalto(20)
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(8.5)
+        doc.setTextColor(...GRIS)
+        doc.text('Últimos 14 días:', margin, y)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(...TEXTO_OSCURO)
+        const r = asistenciaReciente.resumen
+        const texto = `${r.presente} presente(s) · ${r.tarde} tarde(s) · ${r.ausente} ausente(s) · ${r.lesionado} lesionado(s) · ${r.enfermo} enfermo(s)`
+        doc.text(texto, margin + 90, y, { maxWidth: pageWidth - margin * 2 - 90 })
+        y += 20
+      }
     }
   }
 
