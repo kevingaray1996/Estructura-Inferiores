@@ -50,7 +50,7 @@ const statsVacias = {
 function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
   const [partido, setPartido] = useState(null)
   const [jugadores, setJugadores] = useState([])
-  const [tab, setTab] = useState('convocados') // 'convocados' | 'formacion' | 'destacados'
+  const [tab, setTab] = useState('convocados') // 'convocados' | 'formacion' | 'post' | 'destacados'
 
   const [citacionesExistentes, setCitacionesExistentes] = useState([])
   const [convocados, setConvocados] = useState({}) // jugadorId -> dorsal (string)
@@ -64,6 +64,23 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
   const fieldRef = useRef(null)
 
   const [destacadosRival, setDestacadosRival] = useState('')
+
+  // --- Post-partido ---
+  const [golesLocal, setGolesLocal] = useState('')
+  const [golesVisitante, setGolesVisitante] = useState('')
+  const [penalesFavor, setPenalesFavor] = useState('')
+  const [penalesContra, setPenalesContra] = useState('')
+  const [videoPartidoCompleto, setVideoPartidoCompleto] = useState('')
+  const [videoResumen, setVideoResumen] = useState('')
+  const [videoAnalisisPropio, setVideoAnalisisPropio] = useState('')
+  const [videoAnalisisRival, setVideoAnalisisRival] = useState('')
+  const [informePdfUrl, setInformePdfUrl] = useState('')
+  const [videoPelotaParada, setVideoPelotaParada] = useState('')
+  const [videoGps, setVideoGps] = useState('')
+  const [videoCharlaDt, setVideoCharlaDt] = useState('')
+  const [videoArenga, setVideoArenga] = useState('')
+  const [videoResumenVigilancias, setVideoResumenVigilancias] = useState('')
+  const [descripcionPost, setDescripcionPost] = useState('')
 
   const [guardando, setGuardando] = useState(false)
   const [guardadoMsg, setGuardadoMsg] = useState('')
@@ -88,6 +105,22 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
     setPartido(partidoData)
     if (partidoData?.formacion) setFormacion(partidoData.formacion)
     setDestacadosRival(partidoData?.destacados_rival || '')
+
+    setGolesLocal(partidoData?.goles_local ?? '')
+    setGolesVisitante(partidoData?.goles_visitante ?? '')
+    setPenalesFavor(partidoData?.penales_favor ?? '')
+    setPenalesContra(partidoData?.penales_contra ?? '')
+    setVideoPartidoCompleto(partidoData?.video_partido_completo || '')
+    setVideoResumen(partidoData?.video_resumen || '')
+    setVideoAnalisisPropio(partidoData?.video_analisis_propio || '')
+    setVideoAnalisisRival(partidoData?.video_analisis_rival || '')
+    setInformePdfUrl(partidoData?.informe_pdf_url || '')
+    setVideoPelotaParada(partidoData?.video_pelota_parada || '')
+    setVideoGps(partidoData?.video_gps || '')
+    setVideoCharlaDt(partidoData?.video_charla_dt || '')
+    setVideoArenga(partidoData?.video_arenga || '')
+    setVideoResumenVigilancias(partidoData?.video_resumen_vigilancias || '')
+    setDescripcionPost(partidoData?.descripcion_post || '')
 
     const { data: categoriasData } = await supabase.from('categorias').select('id, es_reserva')
     const { data: jugadoresData } = await obtenerJugadoresDeCategoria(supabase, categoriaId, categoriasData)
@@ -353,6 +386,33 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
     setTimeout(() => setGuardadoMsg(''), 2000)
   }
 
+  async function handleGuardarPost() {
+    setGuardando(true)
+    await supabase
+      .from('partidos')
+      .update({
+        goles_local: golesLocal === '' ? null : Number(golesLocal),
+        goles_visitante: golesVisitante === '' ? null : Number(golesVisitante),
+        penales_favor: penalesFavor === '' ? null : Number(penalesFavor),
+        penales_contra: penalesContra === '' ? null : Number(penalesContra),
+        video_partido_completo: videoPartidoCompleto || null,
+        video_resumen: videoResumen || null,
+        video_analisis_propio: videoAnalisisPropio || null,
+        video_analisis_rival: videoAnalisisRival || null,
+        informe_pdf_url: informePdfUrl || null,
+        video_pelota_parada: videoPelotaParada || null,
+        video_gps: videoGps || null,
+        video_charla_dt: videoCharlaDt || null,
+        video_arenga: videoArenga || null,
+        video_resumen_vigilancias: videoResumenVigilancias || null,
+        descripcion_post: descripcionPost || null,
+      })
+      .eq('id', partidoId)
+    setGuardando(false)
+    setGuardadoMsg('Post-Partido guardado')
+    setTimeout(() => setGuardadoMsg(''), 2000)
+  }
+
   if (!partido) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -410,10 +470,11 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
           {partido.local_visitante && ` · ${partido.local_visitante}`}
         </p>
 
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 flex-wrap">
           {[
             { key: 'convocados', label: 'Convocados' },
             { key: 'formacion', label: 'Formación' },
+            { key: 'post', label: 'Post-Partido' },
             { key: 'destacados', label: 'Destacados - Rival' },
           ].map((t) => (
             <button
@@ -871,6 +932,130 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
               style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
             >
               {guardando ? 'Guardando...' : 'Guardar formación'}
+            </button>
+          </>
+        )}
+
+        {tab === 'post' && (
+          <>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div>
+                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                  Goles Local
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={golesLocal}
+                  onChange={(e) => setGolesLocal(e.target.value)}
+                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                  Goles Visitante
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={golesVisitante}
+                  onChange={(e) => setGolesVisitante(e.target.value)}
+                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                  Penales a Favor
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={penalesFavor}
+                  onChange={(e) => setPenalesFavor(e.target.value)}
+                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                  Penales en Contra
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={penalesContra}
+                  onChange={(e) => setPenalesContra(e.target.value)}
+                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3 mb-4">
+              {[
+                ['Partido Completo', videoPartidoCompleto, setVideoPartidoCompleto],
+                ['Resumen', videoResumen, setVideoResumen],
+                ['Análisis Propio', videoAnalisisPropio, setVideoAnalisisPropio],
+                ['Análisis Rival Final', videoAnalisisRival, setVideoAnalisisRival],
+                ['Informe PDF', informePdfUrl, setInformePdfUrl],
+                ['Pelota Parada', videoPelotaParada, setVideoPelotaParada],
+                ['GPS', videoGps, setVideoGps],
+                ['Charla DT', videoCharlaDt, setVideoCharlaDt],
+                ['Arenga Jugadores', videoArenga, setVideoArenga],
+                ['Resumen Vigilancias', videoResumenVigilancias, setVideoResumenVigilancias],
+              ].map(([label, value, setValue]) => (
+                <div key={label}>
+                  <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                    {label}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={value}
+                      onChange={(e) => setValue(e.target.value)}
+                      placeholder="https://..."
+                      className="flex-1 p-2.5 rounded-xl outline-none text-sm"
+                      style={inputStyle}
+                    />
+                    {value && (
+                      
+                        href={value}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-9 h-9 rounded-full flex items-center justify-center text-sm shrink-0"
+                        style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#4ADE80' }}
+                        title="Abrir"
+                      >
+                        ▶
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mb-6">
+              <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                Descripción
+              </label>
+              <textarea
+                value={descripcionPost}
+                onChange={(e) => setDescripcionPost(e.target.value)}
+                rows={5}
+                className="w-full p-2.5 rounded-xl outline-none text-sm resize-y"
+                style={inputStyle}
+              />
+            </div>
+
+            <button
+              onClick={handleGuardarPost}
+              disabled={guardando}
+              className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
+              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+            >
+              {guardando ? 'Guardando...' : 'Guardar Post-Partido'}
             </button>
           </>
         )}
