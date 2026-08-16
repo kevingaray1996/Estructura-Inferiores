@@ -1020,7 +1020,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                       style={inputStyle}
                     />
                     {value && (
-                      
+                      <a
                         href={value}
                         target="_blank"
                         rel="noreferrer"
