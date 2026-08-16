@@ -12,6 +12,7 @@ import SemaforoRiesgo from './SemaforoRiesgo'
 import BienestarComparativo from './BienestarComparativo'
 import CargaWellness from './CargaWellness'
 import AlertasDatosFisicos from './AlertasDatosFisicos'
+import CicloComparativo from './CicloComparativo'
 
 function normalizarNombre(s) {
   return (s || '')
@@ -28,6 +29,7 @@ function normalizarNombre(s) {
 function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jugadorParaBienestar, onConsumirJugadorParaBienestar }) {
   const esTecnico = perfil.rol === 'tecnico'
   const puedeVerCargaYCmj = perfil.rol === 'coordinacion' || perfil.rol === 'preparador_fisico'
+  const puedeVerCiclo = perfil.rol !== 'medico'
   const [tab, setTab] = useState('wellness')
   const [subTabWellness, setSubTabWellness] = useState('ver')
   const [subTabCMJ, setSubTabCMJ] = useState('cargar')
@@ -283,6 +285,7 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
           { key: 'semaforo', label: 'Semáforo' },
         ]
       : []),
+    ...(puedeVerCiclo ? [{ key: 'ciclo', label: 'Ciclo' }] : []),
   ]
 
   return (
@@ -380,6 +383,7 @@ function FisicoSection({ perfil, partidoInicialId, onConsumirPartidoInicial, jug
           </div>
         )}
         {tab === 'semaforo' && puedeVerCargaYCmj && <SemaforoRiesgo />}
+        {tab === 'ciclo' && puedeVerCiclo && <CicloComparativo />}
 
         {tab === 'rpe' && (
           <div>
