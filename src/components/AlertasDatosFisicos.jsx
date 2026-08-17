@@ -3,12 +3,10 @@ import { supabase } from '../supabaseClient'
 import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { calcularSemaforoJugador } from '../utils/semaforoRiesgo'
-
 function AlertasDatosFisicos({ incluirCargaYCmj }) {
   const [cargando, setCargando] = useState(true)
   const [faltantes, setFaltantes] = useState({ wellness: [], carga: [], cmj: [] })
   const [abierto, setAbierto] = useState(false)
-
   useEffect(() => {
     async function cargar() {
       setCargando(true)
@@ -18,42 +16,36 @@ function AlertasDatosFisicos({ incluirCargaYCmj }) {
         setCargando(false)
         return
       }
-
       const { data: categoriasData } = await supabase.from('categorias').select('id, es_reserva')
-      const { data: jugadoresPrimera } = await obtenerJugadoresDeCategoria(
+      const { data: jugadoresPrimeraTodos } = await obtenerJugadoresDeCategoria(
         supabase,
         categoriaPrimera.id,
         categoriasData
       )
-
+      const jugadoresPrimera = (jugadoresPrimeraTodos || []).filter((j) => j.estado !== 'no_disponible')
       const resultados = await Promise.all(
-        (jugadoresPrimera || []).map((j) => calcularSemaforoJugador(j.id, categoriaPrimera.id))
+        jugadoresPrimera.map((j) => calcularSemaforoJugador(j.id, categoriaPrimera.id))
       )
-
       const wellness = []
       const carga = []
       const cmj = []
-      ;(jugadoresPrimera || []).forEach((j, i) => {
+      jugadoresPrimera.forEach((j, i) => {
         const r = resultados[i]
         const nombre = `${j.apellido}, ${j.nombre}`
         if (r.wellness.nivel === null) wellness.push(nombre)
         if (r.carga.nivel === null) carga.push(nombre)
         if (r.cmj.nivel === null) cmj.push(nombre)
       })
-
       setFaltantes({ wellness, carga, cmj })
       setCargando(false)
     }
     cargar()
   }, [])
-
   const totalWellness = faltantes.wellness.length
   const totalCarga = incluirCargaYCmj ? faltantes.carga.length : 0
   const totalCmj = incluirCargaYCmj ? faltantes.cmj.length : 0
   const total = totalWellness + totalCarga + totalCmj
-
   if (cargando || total === 0) return null
-
   return (
     <div className="mb-6 rounded-xl overflow-hidden" style={{ border: '1px solid #FBBF24' }}>
       <button
@@ -64,7 +56,6 @@ function AlertasDatosFisicos({ incluirCargaYCmj }) {
         <span>⚠️ Alertas — datos insuficientes ({total})</span>
         <span>{abierto ? '▲' : '▼'}</span>
       </button>
-
       {abierto && (
         <div className="p-3 space-y-3" style={{ backgroundColor: '#0F1419' }}>
           {totalWellness > 0 && (
@@ -96,5 +87,4 @@ function AlertasDatosFisicos({ incluirCargaYCmj }) {
     </div>
   )
 }
-
 export default AlertasDatosFisicos
