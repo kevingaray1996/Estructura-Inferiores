@@ -9,6 +9,7 @@ function CargaCMJ() {
   const [fecha, setFecha] = useState(obtenerFechaHoy())
   const [jugadores, setJugadores] = useState([])
   const [valores, setValores] = useState({})
+  const [idsConRegistro, setIdsConRegistro] = useState(new Set())
   const [cargando, setCargando] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState('')
@@ -52,8 +53,10 @@ function CargaCMJ() {
           mapa[c.jugador_id] = c.valor_cm
         })
         setValores(mapa)
+        setIdsConRegistro(new Set((cmjData || []).map((c) => c.jugador_id)))
       } else {
         setValores({})
+        setIdsConRegistro(new Set())
       }
       setCargando(false)
     }
@@ -68,13 +71,23 @@ function CargaCMJ() {
     setGuardando(true)
     setMensaje('')
 
+    function tieneValor(jugadorId) {
+      const v = valores[jugadorId]
+      return v !== undefined && v !== '' && v !== null
+    }
+
     const filas = jugadores
-      .filter((j) => valores[j.id] !== undefined && valores[j.id] !== '' && valores[j.id] !== null)
+      .filter((j) => tieneValor(j.id))
       .map((j) => ({
         fecha,
         jugador_id: j.id,
         valor_cm: Number(valores[j.id]),
       }))
+
+    // Jugadoras que tenían un valor guardado y ahora quedó vacío: hay que borrar ese registro
+    const idsABorrar = jugadores
+      .filter((j) => idsConRegistro.has(j.id) && !tieneValor(j.id))
+      .map((j) => j.id)
 
     if (filas.length > 0) {
       const { error } = await supabase.from('cmj').upsert(filas, { onConflict: 'fecha,jugador_id' })
@@ -85,6 +98,20 @@ function CargaCMJ() {
       }
     }
 
+    if (idsABorrar.length > 0) {
+      const { error } = await supabase
+        .from('cmj')
+        .delete()
+        .eq('fecha', fecha)
+        .in('jugador_id', idsABorrar)
+      if (error) {
+        setMensaje('Error al borrar: ' + error.message)
+        setGuardando(false)
+        return
+      }
+    }
+
+    setIdsConRegistro(new Set(jugadores.filter((j) => tieneValor(j.id)).map((j) => j.id)))
     setGuardando(false)
     setMensaje('Listo, valores de CMJ guardados.')
   }
