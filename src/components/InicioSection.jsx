@@ -332,6 +332,18 @@ function InicioSection({ perfil, onCambiarSeccion }) {
         })
 
         setAlertasWellnessDetalle(alertasWellness)
+
+        // Alerta de plantel: muchas jugadoras con estrés alto hoy (posible malestar grupal)
+        const conEstresAlto = Object.values(bienestarPorJugador).filter((b) => b.estres > 3).length
+        if (conEstresAlto >= 10) {
+          alertasNuevas.push({
+            id: 'estres-plantel',
+            icono: '😤',
+            color: '#E24B4A',
+            texto: `${conEstresAlto} jugadoras con estrés alto hoy — el plantel podría estar molesto por algo, vale la pena charlarlo`,
+            seccion: 'fisico',
+          })
+        }
       }
 
       setAlertas(alertasNuevas)
