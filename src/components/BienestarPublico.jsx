@@ -57,6 +57,7 @@ function BienestarPublico({ categoriaId }) {
   const [rpeGuardando, setRpeGuardando] = useState(false)
   const [rpeEnviado, setRpeEnviado] = useState(false)
   const [rpeError, setRpeError] = useState('')
+  const [partidoHoy, setPartidoHoy] = useState(null)
 
   useEffect(() => {
     async function cargar() {
@@ -74,6 +75,15 @@ function BienestarPublico({ categoriaId }) {
         .eq('categoria_id', categoriaId)
         .order('apellido')
       setJugadores(jugadoresData || [])
+
+      const { data: partidoHoyData } = await supabase
+        .from('partidos')
+        .select('id, rival, fecha')
+        .eq('categoria_id', categoriaId)
+        .eq('fecha', fecha)
+        .maybeSingle()
+      setPartidoHoy(partidoHoyData || null)
+
       setCargando(false)
     }
     cargar()
@@ -86,7 +96,7 @@ function BienestarPublico({ categoriaId }) {
     setRpeEnviado(false)
     setRpeError('')
     setFechaRpe(fecha)
-    setTipoRpe('entrenamiento')
+    setTipoRpe(partidoHoy ? 'partido' : 'entrenamiento')
     const { data } = await supabase
       .from('bienestar')
       .select('*')
@@ -179,7 +189,13 @@ function BienestarPublico({ categoriaId }) {
     const { error: errorGuardar } = await supabase
       .from('sesiones_fisicas')
       .upsert(
-        { fecha: fechaRpe, jugador_id: jugadorSeleccionado.id, tipo: tipoRpe, rpe: valorRpe },
+        {
+          fecha: fechaRpe,
+          jugador_id: jugadorSeleccionado.id,
+          tipo: tipoRpe,
+          rpe: valorRpe,
+          partido_id: partidoHoy && fechaRpe === partidoHoy.fecha && tipoRpe === 'partido' ? partidoHoy.id : null,
+        },
         { onConflict: 'fecha,jugador_id,tipo' }
       )
 
@@ -442,32 +458,38 @@ function BienestarPublico({ categoriaId }) {
 
             {vista === 'rpe' && !rpeEnviado && (
               <>
-                <div className="grid grid-cols-2 gap-3 mb-5">
-                  <div>
-                    <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Día</label>
-                    <input
-                      type="date"
-                      value={fechaRpe}
-                      min={fechaMinima}
-                      max={fecha}
-                      onChange={(e) => setFechaRpe(e.target.value)}
-                      className="w-full p-2.5 rounded-xl outline-none text-sm"
-                      style={inputStyle}
-                    />
+                {partidoHoy ? (
+                  <p className="text-sm mb-5" style={{ color: COLORES.texto }}>
+                    🏆 RPE del partido vs <b>{partidoHoy.rival}</b> — {partidoHoy.fecha}
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3 mb-5">
+                    <div>
+                      <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Día</label>
+                      <input
+                        type="date"
+                        value={fechaRpe}
+                        min={fechaMinima}
+                        max={fecha}
+                        onChange={(e) => setFechaRpe(e.target.value)}
+                        className="w-full p-2.5 rounded-xl outline-none text-sm"
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Actividad</label>
+                      <select
+                        value={tipoRpe}
+                        onChange={(e) => setTipoRpe(e.target.value)}
+                        className="w-full p-2.5 rounded-xl outline-none text-sm"
+                        style={inputStyle}
+                      >
+                        <option value="entrenamiento">Entrenamiento</option>
+                        <option value="partido">Partido</option>
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Actividad</label>
-                    <select
-                      value={tipoRpe}
-                      onChange={(e) => setTipoRpe(e.target.value)}
-                      className="w-full p-2.5 rounded-xl outline-none text-sm"
-                      style={inputStyle}
-                    >
-                      <option value="entrenamiento">Entrenamiento</option>
-                      <option value="partido">Partido</option>
-                    </select>
-                  </div>
-                </div>
+                )}
 
                 <p className="text-sm mb-2" style={{ color: COLORES.texto }}>
                   ¿Qué tan duro sentiste el esfuerzo?
