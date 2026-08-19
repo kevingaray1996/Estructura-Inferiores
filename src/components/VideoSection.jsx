@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { sanitizarNombreArchivo } from '../utils/archivos'
 import { comprimirImagen } from '../utils/comprimirImagen'
+import EstadisticasEquipo from './EstadisticasEquipo'
 
 function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABiblioteca, perfil }) {
   const esTecnico = perfil?.rol === 'tecnico'
@@ -69,6 +70,10 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
   }, [jugadorInicialId, onConsumirJugadorInicial])
 
   const cargarVideos = useCallback(async () => {
+    if (tipo === 'estadisticas') {
+      setVideos([])
+      return
+    }
     const { data } = await supabase
       .from('videos')
       .select('*, categorias(nombre), jugadores(nombre, apellido, categoria_id, foto_url), partidos(rival, fecha, escudo_url)')
@@ -236,9 +241,11 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
     ),
   ].sort((a, b) => a - b)
 
+  const nombreCategoriaSeleccionada = categorias.find((c) => c.id === categoriaId)?.nombre
+
   return (
     <div className="p-6 md:p-10">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto" style={tipo === 'estadisticas' ? { maxWidth: '64rem' } : undefined}>
         <h1
           className="text-3xl md:text-4xl mb-6 flex items-center gap-3"
           style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
@@ -280,6 +287,17 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
             }}
           >
             Entrenamientos
+          </button>
+          <button
+            onClick={() => cambiarTipo('estadisticas')}
+            className="px-4 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
+            style={{
+              backgroundColor: tipo === 'estadisticas' ? COLORES.exito : COLORES.fondoTarjeta,
+              color: tipo === 'estadisticas' ? COLORES.fondoPagina : COLORES.textoSecundario,
+              border: '1px solid COLORES.borde',
+            }}
+          >
+            📊 Estadísticas
           </button>
         </div>
 
@@ -382,13 +400,15 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
             </>
           )}
 
-          <button
-            onClick={abrirFormulario}
-            className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 shrink-0"
-            style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
-          >
-            {mostrarForm ? 'Cancelar' : '+ Nuevo video'}
-          </button>
+          {tipo !== 'estadisticas' && (
+            <button
+              onClick={abrirFormulario}
+              className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 shrink-0"
+              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+            >
+              {mostrarForm ? 'Cancelar' : '+ Nuevo video'}
+            </button>
+          )}
         </div>
 
         {tipo === 'entrenamiento' && onIrABiblioteca && (
@@ -401,7 +421,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
           </button>
         )}
 
-        {mostrarForm && (
+        {mostrarForm && tipo !== 'estadisticas' && (
           <div
             className="space-y-3 mb-6 p-4 rounded-xl"
             style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
@@ -627,99 +647,107 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
           </div>
         )}
 
-        <div className="space-y-2">
-          {videosFiltrados.map((v) => {
-            let titulo
-            let badge
-            if (tipo === 'colectivo') {
-              titulo = v.descripcion || (v.categorias ? v.categorias.nombre : '')
-              badge = v.categorias ? v.categorias.nombre : ''
-            } else if (tipo === 'individual') {
-              titulo = v.jugadores ? v.jugadores.apellido + ', ' + v.jugadores.nombre : ''
-              badge = v.fecha
-            } else {
-              titulo = v.contenido || (v.categorias ? v.categorias.nombre : 'Entrenamiento')
-              badge = v.categorias ? v.categorias.nombre : ''
-            }
-            const vsPartido = v.partidos ? `vs ${v.partidos.rival}` : null
+        {tipo === 'estadisticas' ? (
+          <EstadisticasEquipo
+            categoriaId={esTecnico ? perfil.categoria_id : categoriaId}
+            categoriaNombre={esTecnico ? perfil?.categorias?.nombre : nombreCategoriaSeleccionada}
+          />
+        ) : (
+          <>
+            <div className="space-y-2">
+              {videosFiltrados.map((v) => {
+                let titulo
+                let badge
+                if (tipo === 'colectivo') {
+                  titulo = v.descripcion || (v.categorias ? v.categorias.nombre : '')
+                  badge = v.categorias ? v.categorias.nombre : ''
+                } else if (tipo === 'individual') {
+                  titulo = v.jugadores ? v.jugadores.apellido + ', ' + v.jugadores.nombre : ''
+                  badge = v.fecha
+                } else {
+                  titulo = v.contenido || (v.categorias ? v.categorias.nombre : 'Entrenamiento')
+                  badge = v.categorias ? v.categorias.nombre : ''
+                }
+                const vsPartido = v.partidos ? `vs ${v.partidos.rival}` : null
 
-            return (
-              
-                <a key={v.id}
-                href={v.url}
-                target="_blank"
-                rel="noreferrer"
-                className="block p-3.5 rounded-xl hover:-translate-y-0.5 transition-all duration-200"
-                style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
-              >
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium" style={{ color: COLORES.texto }}>
-                    {titulo}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    {tipo === 'colectivo' && v.momento && (
-                      <span
-                        className="text-xs font-mono px-2 py-1 rounded-full"
-                        style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.exito }}
-                      >
-                        {v.momento}
-                      </span>
-                    )}
-                    {badge && (
-                      <span
-                        className="text-xs font-mono px-2 py-1 rounded-full"
-                        style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
-                      >
-                        {badge}
-                      </span>
-                    )}
-                    <button
-                      onClick={(e) => handleEliminarVideo(e, v.id)}
-                      className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                      style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.peligro }}
-                    >
-                      🗑
-                    </button>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <p className="text-xs" style={{ color: COLORES.textoMuted }}>
-                    {v.fecha}
-                  </p>
-                  {vsPartido && (
-                    <span className="text-xs flex items-center gap-1" style={{ color: COLORES.textoSecundario }}>
-                      ·
-                      {v.partidos?.escudo_url && (
-                        <img
-                          src={v.partidos.escudo_url}
-                          alt={v.partidos.rival}
-                          className="w-4 h-4 rounded-sm object-contain inline-block shrink-0"
-                          style={{ backgroundColor: COLORES.fondoPagina }}
-                        />
+                return (
+                  <a key={v.id}
+                    href={v.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block p-3.5 rounded-xl hover:-translate-y-0.5 transition-all duration-200"
+                    style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium" style={{ color: COLORES.texto }}>
+                        {titulo}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        {tipo === 'colectivo' && v.momento && (
+                          <span
+                            className="text-xs font-mono px-2 py-1 rounded-full"
+                            style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.exito }}
+                          >
+                            {v.momento}
+                          </span>
+                        )}
+                        {badge && (
+                          <span
+                            className="text-xs font-mono px-2 py-1 rounded-full"
+                            style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
+                          >
+                            {badge}
+                          </span>
+                        )}
+                        <button
+                          onClick={(e) => handleEliminarVideo(e, v.id)}
+                          className="text-xs px-2 py-1 rounded-full hover:opacity-80"
+                          style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.peligro }}
+                        >
+                          🗑
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-xs" style={{ color: COLORES.textoMuted }}>
+                        {v.fecha}
+                      </p>
+                      {vsPartido && (
+                        <span className="text-xs flex items-center gap-1" style={{ color: COLORES.textoSecundario }}>
+                          ·
+                          {v.partidos?.escudo_url && (
+                            <img
+                              src={v.partidos.escudo_url}
+                              alt={v.partidos.rival}
+                              className="w-4 h-4 rounded-sm object-contain inline-block shrink-0"
+                              style={{ backgroundColor: COLORES.fondoPagina }}
+                            />
+                          )}
+                          {vsPartido}
+                        </span>
                       )}
-                      {vsPartido}
-                    </span>
-                  )}
-                  {tipo === 'entrenamiento' && v.descripcion && (
-                    <span className="text-xs" style={{ color: COLORES.textoSecundario }}>
-                      · {v.descripcion}
-                    </span>
-                  )}
-                  {tipo === 'entrenamiento' && v.cantidad_jugadores && (
-                    <span className="text-xs" style={{ color: COLORES.textoSecundario }}>
-                      · 👥 {v.cantidad_jugadores} jugadores
-                    </span>
-                  )}
-                </div>
-              </a>
-            )
-          })}
-        </div>
+                      {tipo === 'entrenamiento' && v.descripcion && (
+                        <span className="text-xs" style={{ color: COLORES.textoSecundario }}>
+                          · {v.descripcion}
+                        </span>
+                      )}
+                      {tipo === 'entrenamiento' && v.cantidad_jugadores && (
+                        <span className="text-xs" style={{ color: COLORES.textoSecundario }}>
+                          · 👥 {v.cantidad_jugadores} jugadores
+                        </span>
+                      )}
+                    </div>
+                  </a>
+                )
+              })}
+            </div>
 
-        {videosFiltrados.length === 0 && (
-          <p className="text-sm" style={{ color: COLORES.textoMuted }}>
-            No hay videos cargados con ese filtro.
-          </p>
+            {videosFiltrados.length === 0 && (
+              <p className="text-sm" style={{ color: COLORES.textoMuted }}>
+                No hay videos cargados con ese filtro.
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -727,5 +755,3 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
 }
 
 export default VideoSection
-
-
