@@ -39,7 +39,7 @@ function formatearFecha(fecha) {
   if (!fecha) return '—'
   const [anio, mes, dia] = fecha.split('-')
   if (!anio || !mes || !dia) return fecha
-  return `${dia}/${mes}/${anio}`
+  return dia + '/' + mes + '/' + anio
 }
 
 function calcularEdad(fechaNacimiento) {
