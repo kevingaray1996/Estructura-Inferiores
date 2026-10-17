@@ -21,7 +21,7 @@ const C = {
 }
 
 const ROLES_EVALUAN = ['tecnico', 'coordinacion', 'preparador_fisico']
-const ROLES_VEN_TODO = ['coordinacion']
+const ROLES_VEN_TODO = ['tecnico', 'coordinacion', 'preparador_fisico', 'medico']
 
 const REC = {
   continuidad: 'Continuidad',
