@@ -1,9 +1,12 @@
+
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import PdfPerfilModal from './PdfPerfilModal'
 import { CAMPOS_FISICOS } from '../utils/camposFisicos'
 import { cargarDatosBienestar } from '../utils/bienestar'
 import { generarBienestarPDF } from '../utils/generarBienestarPDF'
+
+const CATEGORIA_PRIMERA_ID = '438874e7-e59f-460b-bec4-3c0ef5b44016'
 
 const estadoConfig = {
   disponible: { color: '#4ADE80', label: 'Disponible' },
@@ -73,7 +76,16 @@ function fechaISO(date) {
   return `${anio}-${mes}-${dia}`
 }
 
-function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onVerNutricion, onVerPsicologia, onVerBienestar, onEditar }) {
+function PerfilJugador({
+  jugadorId,
+  onVolver,
+  onVerFichaMedica,
+  onVerVideos,
+  onVerNutricion,
+  onVerPsicologia,
+  onVerBienestar,
+  onEditar,
+}) {
   const [jugador, setJugador] = useState(null)
   const [estadisticas, setEstadisticas] = useState([])
   const [fichasMedicas, setFichasMedicas] = useState([])
@@ -93,25 +105,43 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
   const [asistenciaReciente, setAsistenciaReciente] = useState(null)
 
   useEffect(() => {
+    let activo = true
+
     async function cargarDatos() {
       const { data: jugadorData } = await supabase
         .from('jugadores')
         .select('*, categorias(nombre)')
         .eq('id', jugadorId)
         .single()
+
+      if (!activo) return
       setJugador(jugadorData)
 
-      const { data: statsData } = await supabase
+      // Estadísticas exclusivamente de partidos de Primera División.
+      // El filtro se aplica sobre el partido, no sobre la categoría actual
+      // asignada a la ficha de la jugadora.
+      const { data: statsData, error: errorStats } = await supabase
         .from('estadisticas_jugador')
-        .select('*, partidos(rival, fecha, escudo_url)')
+        .select('*, partidos!inner(rival, fecha, escudo_url, categoria_id)')
         .eq('jugador_id', jugadorId)
-      setEstadisticas(statsData || [])
+        .eq('partidos.categoria_id', CATEGORIA_PRIMERA_ID)
+
+      if (!activo) return
+
+      if (errorStats) {
+        console.error('Error cargando estadísticas de Primera División:', errorStats)
+        setEstadisticas([])
+      } else {
+        setEstadisticas(statsData || [])
+      }
 
       const { data: fichasData } = await supabase
         .from('fichas_medicas')
         .select('*')
         .eq('jugador_id', jugadorId)
         .order('fecha', { ascending: false })
+
+      if (!activo) return
       setFichasMedicas(fichasData || [])
 
       const { data: videosData } = await supabase
@@ -119,23 +149,32 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
         .select('*')
         .eq('jugador_id', jugadorId)
         .eq('tipo', 'individual')
+
+      if (!activo) return
       setVideos(videosData || [])
 
+      // Se conserva la trayectoria histórica sin modificarla.
       const { data: historialData } = await supabase
         .from('historial_categorias')
         .select('*, categoria_anterior:categoria_anterior_id(nombre), categoria_nueva:categoria_nueva_id(nombre)')
         .eq('jugador_id', jugadorId)
         .order('fecha', { ascending: false })
+
+      if (!activo) return
       setHistorialCategorias(historialData || [])
 
       const { data: asistenciasData } = await supabase
         .from('asistencias')
         .select('*')
         .eq('jugador_id', jugadorId)
+
+      if (!activo) return
       setAsistencias(asistenciasData || [])
 
       const hoyRef = new Date()
-      const fecha14 = fechaISO(new Date(hoyRef.getFullYear(), hoyRef.getMonth(), hoyRef.getDate() - 13))
+      const fecha14 = fechaISO(
+        new Date(hoyRef.getFullYear(), hoyRef.getMonth(), hoyRef.getDate() - 13)
+      )
       const recientes = (asistenciasData || []).filter((a) => a.fecha >= fecha14)
       const resumenReciente = recientes.reduce(
         (acc, a) => ({ ...acc, [a.estado]: (acc[a.estado] || 0) + 1 }),
@@ -148,6 +187,8 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
         .select('*, partidos(rival, fecha)')
         .eq('jugador_id', jugadorId)
         .order('fecha', { ascending: true })
+
+      if (!activo) return
       setSesionesFisicas(fisicosData || [])
 
       const { data: cmjData } = await supabase
@@ -155,14 +196,21 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
         .select('fecha, valor_cm')
         .eq('jugador_id', jugadorId)
         .order('fecha', { ascending: true })
+
+      if (!activo) return
       setCmjHistorial(cmjData || [])
 
-      const fecha30 = fechaISO(new Date(hoyRef.getFullYear(), hoyRef.getMonth(), hoyRef.getDate() - 29))
+      const fecha30 = fechaISO(
+        new Date(hoyRef.getFullYear(), hoyRef.getMonth(), hoyRef.getDate() - 29)
+      )
       const { data: bienestarMesData } = await supabase
         .from('bienestar')
         .select('sueno, dolor_muscular, fatiga, estres, animo_entrenar')
         .eq('jugador_id', jugadorId)
         .gte('fecha', fecha30)
+
+      if (!activo) return
+
       const camposBienestar = [
         { clave: 'sueno', label: 'Sueño' },
         { clave: 'dolor_muscular', label: 'Dolor musc.' },
@@ -172,8 +220,13 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
       ]
       const filasBienestarMes = bienestarMesData || []
       const resumenMes = camposBienestar.map((c) => {
-        const valores = filasBienestarMes.map((f) => f[c.clave]).filter((v) => v !== null && v !== undefined)
-        const prom = valores.length > 0 ? valores.reduce((a, b) => a + b, 0) / valores.length : null
+        const valores = filasBienestarMes
+          .map((f) => f[c.clave])
+          .filter((v) => v !== null && v !== undefined)
+        const prom =
+          valores.length > 0
+            ? valores.reduce((a, b) => a + b, 0) / valores.length
+            : null
         return { ...c, promedio: prom }
       })
       setResumenBienestarMensual(filasBienestarMes.length > 0 ? resumenMes : null)
@@ -183,6 +236,8 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
         .select('*')
         .eq('jugador_id', jugadorId)
         .order('fecha', { ascending: false })
+
+      if (!activo) return
       setFichasNutricion(nutricionData || [])
 
       const { data: psicologiaData } = await supabase
@@ -191,11 +246,20 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
         .eq('jugador_id', jugadorId)
         .order('fecha', { ascending: false })
 
-   const { metricas } = await cargarDatosBienestar(jugadorId, 'semana')
+      if (!activo) return
+      setFichasPsicologicas(psicologiaData || [])
+
+      const { metricas } = await cargarDatosBienestar(jugadorId, 'semana')
+
+      if (!activo) return
       setResumenBienestar(metricas)
     }
+
     cargarDatos()
 
+    return () => {
+      activo = false
+    }
   }, [jugadorId])
 
   async function handleEliminarJugador() {
@@ -308,7 +372,11 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
 
   const datosPersonales = [
     { label: 'Posición', valor: jugador.posicion, extra: jugador.posicion_secundaria },
-    { label: 'Fecha nac.', valor: formatearFecha(jugador.fecha_nacimiento), extra: edad !== null ? `${edad} años` : null },
+    {
+      label: 'Fecha nac.',
+      valor: formatearFecha(jugador.fecha_nacimiento),
+      extra: edad !== null ? `${edad} años` : null,
+    },
     { label: 'Pie hábil', valor: pieHabilLabel[jugador.pie_habil] },
     { label: 'Documento', valor: jugador.nro_documento },
     { label: 'Nacionalidad', valor: jugador.nacionalidad, extra: jugador.lugar_nacimiento },
@@ -551,8 +619,8 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
         )}
 
         {jugador.video_promocional && (
-          
-            <a href={jugador.video_promocional}
+          <a
+            href={jugador.video_promocional}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-2 text-sm mb-6 hover:opacity-80 transition-opacity"
@@ -563,7 +631,7 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
         )}
 
         <p className="text-xs tracking-widest uppercase mb-3" style={{ color: '#5B6B85' }}>
-          Estadísticas
+          Estadísticas · Primera División
         </p>
         <div className="grid grid-cols-3 md:grid-cols-7 gap-3 mb-8">
           {[
@@ -598,10 +666,10 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
           ))}
         </div>
 
-      {estadisticasPorAnio.length >= 2 && (
+        {estadisticasPorAnio.length >= 2 && (
           <>
             <p className="text-xs tracking-widest uppercase mb-3" style={{ color: '#5B6B85' }}>
-              Comparativa por año
+              Comparativa por año · Primera División
             </p>
             <div className="overflow-x-auto rounded-xl mb-8" style={{ border: '1px solid #2A3548' }}>
               <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
@@ -637,13 +705,13 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
                 Bienestar (últimos 7 días)
               </p>
               {onVerBienestar && (
-               <button
-                onClick={() => generarBienestarPDF(jugador, 'semana')}
-                className="text-xs px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
-                style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
-              >
-                📄 PDF
-              </button>
+                <button
+                  onClick={() => generarBienestarPDF(jugador, 'semana')}
+                  className="text-xs px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
+                  style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+                >
+                  📄 PDF
+                </button>
               )}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-8">
@@ -658,7 +726,15 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
                     : m.tendencia === 'sube'
                     ? '#F87171'
                     : '#4ADE80'
-                const flecha = m.tendencia === 'sube' ? '↑' : m.tendencia === 'baja' ? '↓' : m.tendencia === 'estable' ? '→' : ''
+                const flecha =
+                  m.tendencia === 'sube'
+                    ? '↑'
+                    : m.tendencia === 'baja'
+                    ? '↓'
+                    : m.tendencia === 'estable'
+                    ? '→'
+                    : ''
+
                 return (
                   <div
                     key={m.clave}
@@ -698,7 +774,10 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
               <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
                 {d.nombre}
               </p>
-              <p className="text-xs mt-1" style={{ color: d.resumen === 'Sin datos cargados' ? '#5B6B85' : '#8A9BB8' }}>
+              <p
+                className="text-xs mt-1"
+                style={{ color: d.resumen === 'Sin datos cargados' ? '#5B6B85' : '#8A9BB8' }}
+              >
                 {d.resumen}
               </p>
               {d.detalle && (
@@ -784,7 +863,11 @@ function PerfilJugador({ jugadorId, onVolver, onVerFichaMedica, onVerVideos, onV
                   .map((s) => (
                     <option key={s.id} value={s.id}>
                       {formatearFecha(s.fecha)}
-                      {s.partidos ? ` · vs ${s.partidos.rival}` : s.tipo === 'partido' ? ' · Partido' : ' · Entrenamiento'}
+                      {s.partidos
+                        ? ` · vs ${s.partidos.rival}`
+                        : s.tipo === 'partido'
+                        ? ' · Partido'
+                        : ' · Entrenamiento'}
                     </option>
                   ))}
               </select>
