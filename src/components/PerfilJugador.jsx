@@ -201,7 +201,7 @@ function TarjetaArea({ disciplina }) {
       className="w-full min-w-0 text-left p-3 md:p-4 rounded-xl transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 focus:outline-none focus:ring-2"
       style={{
         backgroundColor: TARJETA,
-        border: `1px solid ${BORDE}`,
+        border: '1px solid ' + BORDE,
         '--tw-ring-color': AMARILLO,
       }}
     >
