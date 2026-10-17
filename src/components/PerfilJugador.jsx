@@ -34,7 +34,6 @@ function iniciales(nombre, apellido) {
   const segunda = apellido ? apellido.charAt(0) : ''
   return (primera + segunda).toUpperCase()
 }
-}
 
 function formatearFecha(fecha) {
   if (!fecha) return '—'
