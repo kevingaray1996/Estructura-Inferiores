@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
-import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
-import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
 
 const ESCUDO_CLUB_URL =
   'https://qvjviyjkxyngiggoeqlj.supabase.co/storage/v1/object/public/Biblioteca/escudos/Escudo%20simplificado.png'
 
-// Paleta del club (la misma que usa InicioSection.jsx)
+// Paleta del club
 const AMARILLO = '#F2C230'
 const C = {
   fondoTarjeta: '#242422',
@@ -19,11 +17,10 @@ const C = {
   peligro: '#E24B4A',
 }
 
-// Deben coincidir con las listas del SQL (puede_evaluar / ve_todas_evaluaciones).
 const ROLES_EVALUAN = ['tecnico', 'coordinacion', 'preparador_fisico']
 const ROLES_VEN_TODO = ['coordinacion']
 
-// Cambiar a true si querés habilitar la pestaña de final de temporada
+// Pestaña de final de temporada visible
 const MOSTRAR_FINAL = true
 
 const REC = {
@@ -64,23 +61,6 @@ const armarNombres = (lista) => {
     if (e.evaluador_nombre) m[e.evaluador_id] = e.evaluador_nombre
   })
   return m
-}
-
-async function traerTodo(tabla) {
-  let todo = []
-  let desde = 0
-  while (true) {
-    const { data, error } = await supabase
-      .from(tabla)
-      .select('*')
-      .order('id')
-      .range(desde, desde + 999)
-    if (error || !data) break
-    todo = todo.concat(data)
-    if (data.length < 1000) break
-    desde += 1000
-  }
-  return todo
 }
 
 function resumenJugador(evals, criterios) {
@@ -612,7 +592,9 @@ function PanelInformes({ jugadores, criterios, evals, nombresEval, escudo }) {
   const [visor, setVisor] = useState(null)
 
   useEffect(() => {
-    if (modo === 'final') traerTodo('estadisticas_jugador').then(setStats)
+    if (modo === 'final') {
+      supabase.from('estadisticas_jugador').select('*').then(({ data }) => setStats(data || []))
+    }
   }, [modo])
 
   const periodoSel = modo === 'final' ? 'final-' + anio : mes
@@ -741,16 +723,16 @@ export default function EvaluacionesSection({ user, perfil }) {
   async function cargarDatos() {
     setCargando(true)
 
-    const [cat, critData, evalsData] = await Promise.all([
-      obtenerCategoriaPrimeraDivision(),
-      traerTodo('criterios_evaluacion'),
-      traerTodo('evaluaciones'),
+    // Carga ultrarrápida: consultas directas y livianas a Supabase en una sola tanda
+    const [jugsRes, critRes, evalsRes] = await Promise.all([
+      supabase.from('jugadores').select('id, nombre, apellido, nombre_completo, foto_url').order('apellido'),
+      supabase.from('criterios_evaluacion').select('*').order('orden'),
+      supabase.from('evaluaciones').select('*').limit(500)
     ])
 
-    const jugs = cat ? await obtenerJugadoresDeCategoria(cat.id) : []
-    setJugadores(jugs)
-    setCriterios(critData.sort((a, b) => (a.orden || 0) - (b.orden || 0)))
-    setEvals(evalsData)
+    setJugadores(jugsRes.data || [])
+    setCriterios(critRes.data || [])
+    setEvals(evalsRes.data || [])
     setCargando(false)
   }
 
