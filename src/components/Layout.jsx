@@ -46,6 +46,7 @@ function seccionesParaRol(rol) {
       { id: 'nutricion', label: 'Nutrición' },
       { id: 'psicologia', label: 'Psicología' },
       { id: 'bienestar', label: 'Bienestar' },
+      { id: 'evaluaciones', label: 'Evaluaciones' },
     ]
   }
   if (rol === 'preparador_fisico') {
@@ -57,6 +58,7 @@ function seccionesParaRol(rol) {
       { id: 'partidos', label: 'Partidos' },
       { id: 'entrenamientos', label: 'Entrenamientos' },
       { id: 'fisico', label: 'Físico' },
+      { id: 'evaluaciones', label: 'Evaluaciones' },
     ]
   }
   // tecnico
@@ -73,6 +75,7 @@ function seccionesParaRol(rol) {
     { id: 'pensiones', label: 'Pensión' },
     { id: 'seleccion', label: 'Selección' },
     { id: 'contratos', label: 'Contratos' },
+    { id: 'evaluaciones', label: 'Evaluaciones' },
   ]
 }
 
