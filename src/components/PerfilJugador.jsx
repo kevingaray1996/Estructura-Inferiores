@@ -582,25 +582,29 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
     goles: {
       titulo: 'Goles',
       filtro: (e) => (Number(e.goles) || 0) > 0,
-      valor: (e) => `${e.goles} gol${e.goles > 1 ? 'es' : ''}`,
+     valor: (e) => String(e.goles) + ' gol' + (e.goles > 1 ? 'es' : ''),
     },
     asistencias: {
-      titulo: 'Asistencias',
-      filtro: (e) => (Number(e.asistencias) || 0) > 0,
-      valor: (e) => `${e.asistencias} asist.`,
+  titulo: 'Asistencias',
+  filtro: (e) => (Number(e.asistencias) || 0) > 0,
+  valor: (e) => String(e.asistencias) + ' asist.',
+},
     },
     amarillas: {
-      titulo: 'Tarjetas amarillas',
-      filtro: (e) => (Number(e.tarjetas_amarillas) || 0) > 0,
-      valor: (e) =>
-        `${e.tarjetas_amarillas} amarilla${e.tarjetas_amarillas > 1 ? 's' : ''}`,
-    },
+  titulo: 'Tarjetas amarillas',
+  filtro: (e) => (Number(e.tarjetas_amarillas) || 0) > 0,
+  valor: (e) =>
+    String(e.tarjetas_amarillas) +
+    ' amarilla' +
+    (e.tarjetas_amarillas > 1 ? 's' : ''),
+},
     rojas: {
-      titulo: 'Tarjetas rojas',
-      filtro: (e) => (Number(e.tarjetas_rojas) || 0) > 0,
-      valor: (e) => `${e.tarjetas_rojas} roja${e.tarjetas_rojas > 1 ? 's' : ''}`,
-    },
-  }
+  titulo: 'Tarjetas rojas',
+  filtro: (e) => (Number(e.tarjetas_rojas) || 0) > 0,
+  valor: (e) =>
+    String(e.tarjetas_rojas) + ' roja' + (e.tarjetas_rojas > 1 ? 's' : ''),
+},
+}
 
   const ultimaFicha = fichasMedicas[0]
   const lesionesActivas = fichasMedicas.filter((f) => !f.recuperado).length
@@ -635,7 +639,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
     {
       label: 'Fecha de nacimiento',
       valor: formatearFecha(jugador.fecha_nacimiento),
-      extra: edad !== null ? `${edad} años` : null,
+      extra: edad !== null ? String(edad) + ' años' : null,
     },
     {
       label: 'Pie hábil',
@@ -666,46 +670,55 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
       nombre: 'Área médica',
       icono: '🩺',
       resumen:
-        fichasMedicas.length === 0
-          ? 'Sin datos cargados'
-          : `${fichasMedicas.length} registro${fichasMedicas.length !== 1 ? 's' : ''}${
-              lesionesActivas > 0
-                ? ` · ${lesionesActivas} activa${lesionesActivas !== 1 ? 's' : ''}`
-                : ''
-            }`,
-      detalle: ultimaFicha
-        ? `Último registro: ${ultimaFicha.descripcion || formatearFecha(ultimaFicha.fecha)}`
-        : null,
+  fichasMedicas.length === 0
+    ? 'Sin datos cargados'
+    : String(fichasMedicas.length) +
+      ' registro' +
+      (fichasMedicas.length !== 1 ? 's' : '') +
+      (lesionesActivas > 0
+        ? ' · ' +
+          String(lesionesActivas) +
+          ' activa' +
+          (lesionesActivas !== 1 ? 's' : '')
+        : ''),
+detalle: ultimaFicha
+  ? 'Último registro: ' +
+    (ultimaFicha.descripcion || formatearFecha(ultimaFicha.fecha))
+  : null,
       onClick: () => onVerFichaMedica?.(jugadorId),
     },
     {
       nombre: 'Nutrición',
       icono: '🥗',
-      resumen:
-        fichasNutricion.length === 0
-          ? 'Sin datos cargados'
-          : `${fichasNutricion.length} registro${fichasNutricion.length !== 1 ? 's' : ''}${
-              fichasNutricion[0]?.alerta_peso ? ' · alerta de peso' : ''
-            }`,
+     resumen:
+  fichasNutricion.length === 0
+    ? 'Sin datos cargados'
+    : String(fichasNutricion.length) +
+      ' registro' +
+      (fichasNutricion.length !== 1 ? 's' : '') +
+      (fichasNutricion[0]?.alerta_peso ? ' · alerta de peso' : ''),
       onClick: () => onVerNutricion?.(jugadorId),
     },
     {
-      nombre: 'Psicología',
-      icono: '🧠',
-      resumen:
-        fichasPsicologicas.length === 0
-          ? 'Sin datos cargados'
-          : `${fichasPsicologicas.length} registro${fichasPsicologicas.length !== 1 ? 's' : ''}`,
-      onClick: () => onVerPsicologia?.(jugadorId),
-    },
+     nombre: 'Psicología',
+icono: '🧠',
+resumen:
+  fichasPsicologicas.length === 0
+    ? 'Sin datos cargados'
+    : String(fichasPsicologicas.length) +
+      ' registro' +
+      (fichasPsicologicas.length !== 1 ? 's' : ''),
+onClick: () => onVerPsicologia?.(jugadorId),
+},
     {
       nombre: 'Videoanálisis',
       icono: '🎥',
       resumen:
-        videos.length === 0
-          ? 'Sin datos cargados'
-          : `${videos.length} video${videos.length !== 1 ? 's' : ''}`,
-      onClick: () => onVerVideos?.(jugadorId),
+  fichasPsicologicas.length === 0
+    ? 'Sin datos cargados'
+    : String(fichasPsicologicas.length) +
+      ' registro' +
+      (fichasPsicologicas.length !== 1 ? 's' : ''),
     },
   ]
 
@@ -763,14 +776,14 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
                 className="p-3 rounded-xl flex items-center justify-between gap-3"
                 style={{
                   backgroundColor: TARJETA,
-                  border: `1px solid ${BORDE}`,
+                  border: '1px solid ' + BORDE,
                 }}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   {e.partidos?.escudo_url ? (
                     <img
                       src={e.partidos.escudo_url}
-                      alt={`Escudo de ${e.partidos.rival || 'rival'}`}
+                      alt={'Escudo de ' + (e.partidos.rival || 'rival')}
                       className="w-9 h-9 rounded-lg object-contain shrink-0"
                       style={{ backgroundColor: FONDO }}
                     />
@@ -837,7 +850,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
               style={{
                 backgroundColor: TARJETA,
                 color: TEXTO,
-                border: `1px solid ${BORDE}`,
+                border: '1px solid ' + BORDE,
               }}
             >
               ✏️ Editar ficha
@@ -877,13 +890,18 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
           className="rounded-2xl overflow-hidden mb-6"
           style={{
             backgroundColor: TARJETA,
-            border: `1px solid ${BORDE}`,
+            border: '1px solid ' + BORDE,
           }}
         >
           <div
             className="h-1.5"
             style={{
-              background: `linear-gradient(90deg, ${AMARILLO} 0%, ${AMARILLO} 35%, #3B3F36 35%, #3B3F36 100%)`,
+             background:
+  'linear-gradient(90deg, ' +
+  AMARILLO +
+  ' 0%, ' +
+  AMARILLO +
+  ' 35%, #3B3F36 35%, #3B3F36 100%)',
             }}
           />
 
@@ -892,11 +910,11 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
               {jugador.foto_url ? (
                 <img
                   src={jugador.foto_url}
-                  alt={`${jugador.nombre} ${jugador.apellido}`}
+                  alt={jugador.nombre + ' ' + jugador.apellido}
                   className="w-32 h-40 md:w-36 md:h-44 rounded-xl object-cover object-top shrink-0"
                   style={{
                     backgroundColor: FONDO,
-                    border: `1px solid ${BORDE}`,
+                    border: '1px solid ' + BORDE,
                   }}
                 />
               ) : (
@@ -904,7 +922,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
                   className="w-32 h-40 md:w-36 md:h-44 rounded-xl flex items-center justify-center shrink-0"
                   style={{
                     backgroundColor: FONDO,
-                    border: `1px solid ${BORDE}`,
+                    border: '1px solid ' + BORDE,
                     color: AMARILLO,
                   }}
                 >
@@ -945,16 +963,16 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
                       className="text-xs px-2.5 py-1.5 rounded-lg"
                       style={{
                         backgroundColor: FONDO,
-                        color: TEXTO,
-                        border: `1px solid ${BORDE}`,
-                      }}
-                    >
-                      {jugador.posicion}
-                      {jugador.posicion_secundaria
-                        ? ` · ${jugador.posicion_secundaria}`
-                        : ''}
-                    </span>
-                  )}
+color: TEXTO,
+border: '1px solid ' + BORDE,
+}}
+>
+  {jugador.posicion}
+  {jugador.posicion_secundaria
+    ? ' · ' + jugador.posicion_secundaria
+    : ''}
+</span>
+)}
 
                   {dorsal !== null && dorsal !== '' && (
                     <span
@@ -973,9 +991,9 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
                   <span
                     className="inline-flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-full"
                     style={{
-                      backgroundColor: `${estado.color}18`,
+                      backgroundColor: estado.color + '18',
                       color: estado.color,
-                      border: `1px solid ${estado.color}50`,
+                      border: '1px solid ' + estado.color + '50',
                     }}
                   >
                     <span
@@ -1042,7 +1060,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
                       ' · '}
                     {jugador.telefono_emergencia && (
                       <a
-                        href={`tel:${jugador.telefono_emergencia}`}
+                        href={'tel:' + jugador.telefono_emergencia}
                         style={{ color: '#7DD3FC' }}
                       >
                         {jugador.telefono_emergencia}
@@ -1062,7 +1080,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
               className="rounded-xl"
               style={{
                 backgroundColor: TARJETA,
-                border: `1px solid ${BORDE}`,
+                border: '1px solid ' + BORDE,
               }}
             >
               <summary
@@ -1146,7 +1164,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
                 className="min-w-0 p-3 md:p-4 rounded-xl text-left transition-all duration-200"
                 style={{
                   backgroundColor: TARJETA,
-                  border: `1px solid ${BORDE}`,
+                  border: '1px solid ' + BORDE,
                   cursor: stat.key ? 'pointer' : 'default',
                 }}
               >
@@ -1180,7 +1198,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
           className="rounded-2xl p-3 md:p-5 mb-8"
           style={{
             backgroundColor: TARJETA,
-            border: `1px solid ${BORDE}`,
+            border: '1px solid ' + BORDE,
           }}
         >
           <TituloSeccion
@@ -1203,7 +1221,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr style={{ borderBottom: `1px solid ${BORDE}` }}>
+                   <tr style={{ borderBottom: '1px solid ' + BORDE }}>
                       {['Rival / fecha', 'Resultado', 'Min.', 'Goles', 'Asist.', 'Tarjetas'].map(
                         (titulo) => (
                           <th
@@ -1227,14 +1245,14 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
                       return (
                         <tr
                           key={e.id}
-                          style={{ borderBottom: `1px solid ${BORDE}` }}
+                          style={{ borderBottom: '1px solid ' + BORDE }}
                         >
                           <td className="px-2 py-3">
                             <div className="flex items-center gap-2.5 min-w-[150px]">
                               {partido?.escudo_url ? (
                                 <img
                                   src={partido.escudo_url}
-                                  alt={`Escudo de ${partido.rival || 'rival'}`}
+                                  alt={'Escudo de ' + (partido.rival || 'rival')}
                                   className="w-8 h-8 rounded-lg object-contain shrink-0"
                                   style={{ backgroundColor: FONDO }}
                                 />
@@ -1297,11 +1315,11 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
 
                           <td className="px-2 py-3 whitespace-nowrap">
                             <span style={{ color: '#FBBF24' }}>
-                              {amarillas > 0 ? `🟨 ${amarillas}` : ''}
+                              {amarillas > 0 ? '🟨 ' + amarillas : ''}
                             </span>
                             {amarillas > 0 && rojas > 0 ? ' ' : ''}
                             <span style={{ color: '#F87171' }}>
-                              {rojas > 0 ? `🟥 ${rojas}` : ''}
+                              {rojas > 0 ? '🟥 ' + rojas : ''}
                             </span>
                             {amarillas === 0 && rojas === 0 && (
                               <span style={{ color: MUTED }}>—</span>
@@ -1328,7 +1346,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
                       className="p-3 rounded-xl"
                       style={{
                         backgroundColor: FONDO,
-                        border: `1px solid ${BORDE}`,
+                        border: '1px solid ' + BORDE,
                       }}
                     >
                       <div className="flex items-center justify-between gap-3">
@@ -1336,7 +1354,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
                           {partido?.escudo_url ? (
                             <img
                               src={partido.escudo_url}
-                              alt={`Escudo de ${partido.rival || 'rival'}`}
+                              alt={'Escudo de ' + (partido.rival || 'rival')}
                               className="w-9 h-9 rounded-lg object-contain shrink-0"
                             />
                           ) : (
@@ -1376,7 +1394,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
 
                       <div
                         className="grid grid-cols-4 gap-2 mt-3 pt-3"
-                        style={{ borderTop: `1px solid ${BORDE}` }}
+                        style={{ borderTop: '1px solid ' + BORDE }}
                       >
                         {[
                           {
@@ -1384,7 +1402,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
                             valor:
                               e.minutos_jugados !== null &&
                               e.minutos_jugados !== undefined
-                                ? `${e.minutos_jugados}′`
+                                ? String(e.minutos_jugados) + '′'
                                 : '—',
                           },
                           { label: 'Goles', valor: e.goles ?? 0 },
@@ -1393,7 +1411,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
                             label: 'Tarjetas',
                             valor:
                               amarillas + rojas > 0
-                                ? `${amarillas}🟨 ${rojas}🟥`
+                                ? String(amarillas) + '🟨 ' + String(rojas) + '🟥'
                                 : '—',
                           },
                         ].map((stat) => (
@@ -1431,7 +1449,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
 
             <div
               className="overflow-x-auto rounded-xl"
-              style={{ border: `1px solid ${BORDE}` }}
+              style={{ border: '1px solid ' + BORDE }}
             >
               <table className="min-w-full text-sm">
                 <thead>
@@ -1455,7 +1473,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
                       key={a.anio}
                       style={{
                         backgroundColor: i % 2 === 0 ? FONDO : TARJETA,
-                        borderTop: `1px solid ${BORDE}`,
+                        borderTop: '1px solid ' + BORDE,
                       }}
                     >
                       <td
@@ -1499,7 +1517,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
                     style={{
                       backgroundColor: TARJETA,
                       color: SECUNDARIO,
-                      border: `1px solid ${BORDE}`,
+                      border: '1px solid ' + BORDE,
                     }}
                   >
                     ↓ PDF
@@ -1536,7 +1554,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
                     className="p-3 rounded-xl"
                     style={{
                       backgroundColor: TARJETA,
-                      border: `1px solid ${BORDE}`,
+                      border: '1px solid ' + BORDE,
                     }}
                   >
                     <p
@@ -1591,7 +1609,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
           <section className="mb-8">
             <TituloSeccion
               titulo="Asistencia"
-              detalle={`${totalAsistenciaMarcada} registros acumulados`}
+              detalle={String(totalAsistenciaMarcada) + ' registros acumulados'}
             />
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
@@ -1627,7 +1645,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
                   className="p-3 rounded-xl"
                   style={{
                     backgroundColor: TARJETA,
-                    border: `1px solid ${BORDE}`,
+                    border: '1px solid ' + BORDE,
                   }}
                 >
                   <p
@@ -1663,14 +1681,14 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
               className="rounded-xl p-4 space-y-3"
               style={{
                 backgroundColor: TARJETA,
-                border: `1px solid ${BORDE}`,
+                border: '1px solid ' + BORDE,
               }}
             >
               {historialCategorias.map((h) => (
                 <div
                   key={h.id}
                   className="flex items-start gap-3"
-                  style={{ borderBottom: `1px solid ${BORDE}`, paddingBottom: 12 }}
+                  style={{ borderBottom: '1px solid ' + BORDE, paddingBottom: 12 }}
                 >
                   <div
                     className="w-2 h-2 rounded-full mt-1.5 shrink-0"
@@ -1685,7 +1703,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
                     </p>
                     <p className="text-xs mt-1" style={{ color: MUTED }}>
                       {formatearFecha(h.fecha)}
-                      {h.temporada ? ` · Temporada ${h.temporada}` : ''}
+                      {h.temporada ? ' · Temporada ' + h.temporada : ''}
                     </p>
                   </div>
                 </div>
@@ -1706,7 +1724,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
               className="rounded-2xl p-4 md:p-5"
               style={{
                 backgroundColor: TARJETA,
-                border: `1px solid ${BORDE}`,
+                border: '1px solid ' + BORDE,
               }}
             >
               {datosDistanciaChart.length > 0 && (
@@ -1747,7 +1765,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
                 className="w-full p-3 rounded-xl outline-none text-sm mb-4"
                 style={{
                   backgroundColor: FONDO,
-                  border: `1px solid ${BORDE}`,
+                  border: '1px solid ' + BORDE,
                   color: TEXTO,
                 }}
               >
@@ -1758,7 +1776,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
                     <option key={s.id} value={s.id}>
                       {formatearFecha(s.fecha)}
                       {s.partidos
-                        ? ` · vs ${s.partidos.rival}`
+                        ? ' · vs ' + s.partidos.rival
                         : s.tipo === 'partido'
                           ? ' · Partido'
                           : ' · Entrenamiento'}
@@ -1821,7 +1839,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
                   className="p-3 rounded-xl"
                   style={{
                     backgroundColor: TARJETA,
-                    border: `1px solid ${BORDE}`,
+                    border: '1px solid ' + BORDE,
                   }}
                 >
                   <p className="text-xs mb-2" style={{ color: SECUNDARIO }}>
