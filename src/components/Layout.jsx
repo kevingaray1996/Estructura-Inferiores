@@ -36,6 +36,7 @@ function seccionesParaRol(rol) {
       { id: 'contratos', label: 'Contratos' },
       { id: 'pases', label: 'Pases' },
       { id: 'usuarios', label: 'Usuarios' },
+      { id: 'evaluaciones', label: 'Evaluaciones' },
     ]
   }
   if (rol === 'medico') {
