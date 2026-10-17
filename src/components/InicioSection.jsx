@@ -8,15 +8,15 @@ const ESCUDO_CLUB_URL =
   'https://qvjviyjkxyngiggoeqlj.supabase.co/storage/v1/object/public/Biblioteca/escudos/Escudo%20simplificado.png'
 
 const C = {
-  fondo: '#171715',
-  tarjeta: '#22221F',
-  tarjetaSecundaria: '#292925',
-  borde: '#383831',
+  fondo: 'var(--fondo-pagina)',
+  tarjeta: 'var(--fondo-tarjeta)',
+  tarjetaSecundaria: 'var(--fondo-secundario)',
+  borde: 'var(--borde)',
   amarillo: '#F2C230',
-  texto: '#F7F7F2',
-  secundario: '#AAA99F',
-  verde: '#97C459',
-  rojo: '#E77970',
+  texto: 'var(--texto)',
+  secundario: 'var(--texto-secundario)',
+  verde: 'var(--exito)',
+  rojo: 'var(--peligro)',
 }
 
 function fechaISO(date) {
@@ -681,7 +681,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
           className="relative overflow-hidden rounded-2xl mb-7 p-5 sm:p-7"
           style={{
             background:
-              'linear-gradient(115deg, #29291F 0%, #22221F 55%, #1C1C19 100%)',
+              'linear-gradient(115deg, var(--fondo-secundario) 0%, var(--fondo-tarjeta) 55%, var(--fondo-pagina) 100%)',
             border: `1px solid ${C.borde}`,
           }}
         >
@@ -932,7 +932,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                 className="p-5"
                 style={{
                   background:
-                    'linear-gradient(135deg, #2A291F 0%, #22221F 80%)',
+                    'linear-gradient(135deg, var(--fondo-secundario) 0%, var(--fondo-tarjeta) 80%)',
                   borderTop: `3px solid ${C.amarillo}`,
                 }}
               >
@@ -1423,7 +1423,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
               Club Comunicaciones · Gestión deportiva
             </p>
           </div>
-          <p className="text-[10px] uppercase tracking-wider" style={{ color: '#77766E' }}>
+          <p className="text-[10px] uppercase tracking-wider" style={{ color: C.secundario }}>
             Panel interno
           </p>
         </footer>
