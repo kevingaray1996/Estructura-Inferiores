@@ -130,5 +130,709 @@ body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;padding:16px;fon
 .head img.esc{width:56px;height:56px;object-fit:contain}
 .head img.foto{width:64px;height:64px;border-radius:50%;object-fit:cover;margin-left:auto;border:2px solid ${AMARILLO}}
 .head h1{margin:0;font-size:20px}
-.head p{margin:2px 0 0;color:${AMARILLO};font-size:12px} .franja{height:6px;background:${AMARILLO};margin-bottom:14px}
-h2{font-size:13px;margin:16px 0 6px;padding-left:8px;border-left:4px solid ${AM
+.head p{margin:2px 0 0;color:${AMARILLO};font-size:12px}
+.franja{height:6px;background:${AMARILLO};margin-bottom:14px}
+h2{font-size:13px;margin:16px 0 6px;padding-left:8px;border-left:4px solid ${AMARILLO};text-transform:uppercase;letter-spacing:.5px}
+table{width:100%;border-collapse:collapse;margin-top:4px}
+th{background:#111;color:${AMARILLO};text-align:left;padding:5px 6px;font-size:11px}
+td{padding:5px 6px;border-bottom:1px solid #ddd}
+.fila{display:flex;align-items:center;gap:8px;margin:4px 0}
+.lab{width:170px}
+.barra{flex:1;height:10px;background:#eee;border-radius:5px;overflow:hidden}
+.barra i{display:block;height:100%;background:${AMARILLO}}
+.kpis{display:flex;flex-wrap:wrap;gap:8px}
+.kpi{border:1px solid #ddd;border-radius:6px;padding:6px 10px;text-align:center;min-width:70px}
+.kpi b{display:block;font-size:16px}
+.coment{border:1px solid #ddd;border-radius:6px;padding:8px;margin:6px 0;page-break-inside:avoid}
+.coment p{margin:4px 0 0;white-space:pre-wrap}
+.tag{background:${AMARILLO};padding:1px 7px;border-radius:10px;font-weight:700;font-size:10px;margin-left:6px}
+.pie{margin-top:18px;color:#777;font-size:10px;text-align:center}
+.vacio{color:#777;font-style:italic}
+`
+
+const docHtml = (titulo, cuerpo) =>
+  '<!doctype html><html><head><meta charset="utf-8"><title>' +
+  esc(titulo) +
+  '</title><style>' +
+  CSS +
+  '</style></head><body>' +
+  cuerpo +
+  '</body></html>'
+
+const cabecera = (escudo, titulo, sub, foto) =>
+  '<div class="head">' +
+  (escudo ? '<img class="esc" src="' + esc(escudo) + '" onerror="this.style.display=\'none\'">' : '') +
+  '<div><h1>' + esc(titulo) + '</h1><p>' + esc(sub) + '</p></div>' +
+  (foto ? '<img class="foto" src="' + esc(foto) + '" onerror="this.style.display=\'none\'">' : '') +
+  '</div><div class="franja"></div>'
+
+function svgLinea(puntos) {
+  const W = 520
+  const H = 150
+  const P = 28
+  const n = puntos.length
+  const x = (i) => P + (n === 1 ? (W - 2 * P) / 2 : (i * (W - 2 * P)) / (n - 1))
+  const y = (v) => H - P - (v / 5) * (H - 2 * P)
+  const path = puntos
+    .map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(p.v).toFixed(1)}`)
+    .join(' ')
+  const puntosSvg = puntos
+    .map(
+      (p, i) =>
+        `<circle cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="4" fill="#111"/>` +
+        `<text x="${x(i).toFixed(1)}" y="${(y(p.v) - 9).toFixed(1)}" font-size="10" text-anchor="middle">${p.v.toFixed(1)}</text>` +
+        `<text x="${x(i).toFixed(1)}" y="${H - 8}" font-size="10" text-anchor="middle" fill="#555">${esc(p.label)}</text>`
+    )
+    .join('')
+  return (
+    `<svg viewBox="0 0 ${W} ${H}" width="100%">` +
+    `<line x1="${P}" y1="${y(0)}" x2="${W - P}" y2="${y(0)}" stroke="#ccc"/>` +
+    `<line x1="${P}" y1="${y(5)}" x2="${W - P}" y2="${y(5)}" stroke="#eee"/>` +
+    `<text x="4" y="${y(5) + 3}" font-size="10" fill="#777">5</text>` +
+    `<text x="4" y="${y(0) + 3}" font-size="10" fill="#777">0</text>` +
+    `<path d="${path}" fill="none" stroke="${AMARILLO}" stroke-width="3"/>` +
+    puntosSvg +
+    '</svg>'
+  )
+}
+
+function htmlInforme({ j, criterios, evals, nombresEval, stats, escudo, modo, periodo, anio }) {
+  const mias = evals.filter((e) => mismo(e.jugador_id, j.id))
+  const periodoSel = modo === 'final' ? 'final-' + anio : periodo
+  const anioRef = modo === 'final' ? anio : Number(String(periodo).slice(0, 4))
+  const actuales = mias.filter((e) => e.periodo === periodoSel)
+  const r = resumenJugador(actuales, criterios)
+  const nombreEv = (id) => nombresEval[id] || 'Evaluador'
+
+  const titulo = modo === 'final' ? 'Evaluación final de temporada ' + anio : 'Evaluación del período ' + periodo
+  const foto = j.foto_url && String(j.foto_url).startsWith('http') ? j.foto_url : ''
+  let cuerpo = cabecera(escudo, nombreJ(j), titulo + ' · Club Comunicaciones', foto)
+
+  cuerpo += '<h2>Evaluación del cuerpo técnico</h2>'
+  if (!actuales.length) {
+    cuerpo += '<p class="vacio">Todavía no hay evaluaciones cargadas para este período.</p>'
+  } else {
+    cuerpo +=
+      '<p><b>Promedio general: ' + f1(r.general) + ' / 5</b> · ' + actuales.length + ' evaluador(es)</p>'
+    cuerpo += r.porCrit
+      .map(
+        (x) =>
+          '<div class="fila"><span class="lab">' + esc(x.c.nombre) + '</span><div class="barra"><i style="width:' +
+          (x.prom ? (x.prom / 5) * 100 : 0) + '%"></i></div><b>' + f1(x.prom) + '</b></div>'
+      )
+      .join('')
+
+    cuerpo += '<h2>Detalle por evaluador</h2><table><tr><th>Evaluador</th>' +
+      criterios.map((c) => '<th>' + esc(c.nombre) + '</th>').join('') + '</tr>' +
+      actuales
+        .map(
+          (e) =>
+            '<tr><td>' + esc(nombreEv(e.evaluador_id)) + '</td>' +
+            criterios.map((c) => '<td>' + esc(e.puntajes && e.puntajes[c.id] != null ? e.puntajes[c.id] : '—') + '</td>').join('') +
+            '</tr>'
+        )
+        .join('') +
+      '</table>'
+
+    if (modo === 'final') {
+      const cuenta = {}
+      actuales.forEach((e) => {
+        if (e.recomendacion) cuenta[e.recomendacion] = (cuenta[e.recomendacion] || 0) + 1
+      })
+      const txt = Object.keys(cuenta).map((k) => (REC[k] || k) + ': ' + cuenta[k]).join(' · ')
+      cuerpo += '<h2>Recomendación</h2><p>' + (txt ? esc(txt) : '<span class="vacio">Sin recomendaciones cargadas.</span>') + '</p>'
+    }
+
+    const coment = actuales
+      .map((e) => {
+        const partes = [
+          ['Fortalezas', e.fortalezas],
+          ['A mejorar', e.a_mejorar],
+          ['Comentario', e.comentario],
+          ['Proyección próxima temporada', e.proyeccion],
+        ].filter((p) => p[1])
+        const rec = e.recomendacion
+          ? '<span class="tag">' + esc(REC[e.recomendacion] || e.recomendacion) + '</span>'
+          : ''
+        if (!partes.length && !rec) return ''
+        return (
+          '<div class="coment"><b>' + esc(nombreEv(e.evaluador_id)) + '</b>' + rec +
+          partes.map((p) => '<p><u>' + p[0] + ':</u> ' + esc(p[1]) + '</p>').join('') +
+          '</div>'
+        )
+      })
+      .join('')
+    if (coment) cuerpo += '<h2>Comentarios</h2>' + coment
+  }
+
+  const porMes = {}
+  mias
+    .filter((e) => !String(e.periodo).startsWith('final') && String(e.periodo).startsWith(String(anioRef)))
+    .forEach((e) => {
+      porMes[e.periodo] = porMes[e.periodo] || []
+      porMes[e.periodo].push(e)
+    })
+  const puntos = Object.keys(porMes)
+    .sort()
+    .map((p) => ({
+      label: MESES[Number(p.slice(5, 7)) - 1] || p,
+      v: resumenJugador(porMes[p], criterios).general,
+    }))
+    .filter((p) => p.v != null)
+  if (puntos.length) {
+    cuerpo += '<h2>Evolución durante el año (promedio mensual)</h2>' + svgLinea(puntos)
+  }
+
+  if (modo === 'final') {
+    const st = calcStats(stats, j.id)
+    const kpi = (lab, v) => '<div class="kpi"><b>' + v + '</b>' + lab + '</div>'
+    cuerpo +=
+      '<h2>Rendimiento en la temporada</h2><div class="kpis">' +
+      kpi('Partidos', st.pj) + kpi('Titular', st.titular) + kpi('Minutos', st.min) +
+      kpi('Goles', st.goles) + kpi('Asistencias', st.asist) + kpi('Amarillas', st.am) + kpi('Rojas', st.ro) +
+      '</div>'
+  }
+
+  cuerpo += '<div class="pie">Informe generado el ' + new Date().toLocaleDateString('es-AR') + ' · Uso interno del cuerpo técnico</div>'
+  return docHtml('Informe ' + nombreJ(j), cuerpo)
+}
+
+function htmlPlantel({ jugadores, criterios, evals, stats, escudo, anio }) {
+  const filas = jugadores
+    .map((j) => {
+      const actuales = evals.filter((e) => mismo(e.jugador_id, j.id) && e.periodo === 'final-' + anio)
+      const r = resumenJugador(actuales, criterios)
+      return { j, n: actuales.length, g: r.general, st: calcStats(stats, j.id), rec: recPredominante(actuales) }
+    })
+    .sort((a, b) => (b.g == null ? -1 : b.g) - (a.g == null ? -1 : a.g))
+  const cuerpo =
+    cabecera(escudo, 'Evaluación final de temporada ' + anio, 'Resumen del plantel · Club Comunicaciones', '') +
+    '<table><tr><th>Jugadora</th><th>Prom. final</th><th>Evaluadores</th><th>PJ</th><th>Min</th><th>Goles</th><th>Asist.</th><th>Recomendación</th></tr>' +
+    filas
+      .map(
+        (f) =>
+          '<tr><td>' + esc(nombreJ(f.j)) + '</td><td><b>' + f1(f.g) + '</b></td><td>' + f.n + '</td><td>' + f.st.pj +
+          '</td><td>' + f.st.min + '</td><td>' + f.st.goles + '</td><td>' + f.st.asist + '</td><td>' + esc(f.rec) + '</td></tr>'
+      )
+      .join('') +
+    '</table><div class="pie">Generado el ' + new Date().toLocaleDateString('es-AR') + ' · Uso interno del cuerpo técnico</div>'
+  return docHtml('Resumen plantel ' + anio, cuerpo)
+}
+
+/* ------------------------------- estilos ------------------------------- */
+
+const card = { background: C.fondoTarjeta, border: '1px solid ' + C.borde, borderRadius: 12, padding: 16 }
+const inputSt = { background: '#fff', color: '#111', border: '1px solid #ccc', borderRadius: 8, padding: '8px 10px', width: '100%' }
+const btnPrim = { background: AMARILLO, color: '#111', fontWeight: 700, borderRadius: 8, padding: '8px 14px', border: 0, cursor: 'pointer' }
+const btnSec = { background: 'transparent', color: C.texto, border: '1px solid ' + C.borde, borderRadius: 8, padding: '8px 14px', cursor: 'pointer' }
+const etiqueta = { color: C.textoSecundario, fontSize: 13, marginBottom: 4, display: 'block' }
+
+/* ------------------------------ componentes ------------------------------ */
+
+function Visor({ visor, onCerrar }) {
+  const ref = useRef(null)
+  return (
+    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: 0, background: 'rgba(0,0,0,.88)', zIndex: 100, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', gap: 8, padding: 12 }}>
+        <button
+          type="button"
+          style={btnPrim}
+          onClick={() => {
+            if (ref.current && ref.current.contentWindow) {
+              ref.current.contentWindow.focus()
+              ref.current.contentWindow.print()
+            }
+          }}
+        >
+          Imprimir / Guardar PDF
+        </button>
+        <button type="button" style={btnSec} onClick={onCerrar}>
+          Cerrar
+        </button>
+      </div>
+      <iframe
+        ref={ref}
+        title={visor.titulo}
+        srcDoc={visor.html}
+        style={{ flex: 1, border: 0, background: '#fff', margin: '0 12px 12px', borderRadius: 8 }}
+      />
+    </div>
+  )
+}
+
+function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuardado }) {
+  const [mes, setMes] = useState(hoyMes())
+  const [anio, setAnio] = useState(anioActual())
+  const [sel, setSel] = useState(null)
+  const [form, setForm] = useState(null)
+  const [msg, setMsg] = useState('')
+  const [guardando, setGuardando] = useState(false)
+
+  const esFinal = tipo === 'final'
+  const periodo = esFinal ? 'final-' + anio : mes
+  const mias = evals.filter((e) => e.evaluador_id === user.id && e.periodo === periodo)
+  const hechas = mias.length
+
+  function abrir(j) {
+    const ex = mias.find((e) => mismo(e.jugador_id, j.id))
+    setSel(j)
+    setMsg('')
+    setForm({
+      puntajes: (ex && ex.puntajes) || {},
+      fortalezas: (ex && ex.fortalezas) || '',
+      a_mejorar: (ex && ex.a_mejorar) || '',
+      comentario: (ex && ex.comentario) || '',
+      recomendacion: (ex && ex.recomendacion) || '',
+      proyeccion: (ex && ex.proyeccion) || '',
+    })
+  }
+
+  function cambiarPeriodo(fn) {
+    fn()
+    setSel(null)
+    setForm(null)
+    setMsg('')
+  }
+
+  async function guardar() {
+    const puntuados = criterios.filter((c) => form.puntajes[c.id])
+    if (!puntuados.length) {
+      setMsg('Puntuá al menos un criterio (los que no te corresponden, dejalos sin puntuar)')
+      return
+    }
+    if (esFinal && !form.recomendacion) {
+      setMsg('Elegí una recomendación para la próxima temporada')
+      return
+    }
+    setGuardando(true)
+    const fila = {
+      jugador_id: sel.id,
+      evaluador_id: user.id,
+      evaluador_nombre: (perfil && perfil.nombre) || user.email,
+      periodo,
+      tipo: esFinal ? 'final' : 'periodica',
+      puntajes: form.puntajes,
+      fortalezas: form.fortalezas || null,
+      a_mejorar: form.a_mejorar || null,
+      comentario: form.comentario || null,
+      recomendacion: esFinal ? form.recomendacion : null,
+      proyeccion: esFinal ? form.proyeccion || null : null,
+    }
+    const { error } = await supabase
+      .from('evaluaciones')
+      .upsert(fila, { onConflict: 'jugador_id,evaluador_id,periodo' })
+    setGuardando(false)
+    if (error) {
+      setMsg('Error al guardar: ' + error.message)
+    } else {
+      setMsg('Guardado ✓')
+      await onGuardado()
+    }
+  }
+
+  return (
+    <div>
+      <div style={{ ...card, marginBottom: 16, display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        {esFinal ? (
+          <div>
+            <label style={etiqueta}>Temporada (año)</label>
+            <input
+              type="number"
+              style={{ ...inputSt, width: 120 }}
+              value={anio}
+              onChange={(e) => cambiarPeriodo(() => setAnio(Number(e.target.value)))}
+            />
+          </div>
+        ) : (
+          <div>
+            <label style={etiqueta}>Mes</label>
+            <input
+              type="month"
+              style={{ ...inputSt, width: 180 }}
+              value={mes}
+              onChange={(e) => cambiarPeriodo(() => setMes(e.target.value))}
+            />
+          </div>
+        )}
+        <div style={{ color: C.textoSecundario }}>
+          Evaluadas por vos: <b style={{ color: C.texto }}>{hechas}</b> de {jugadores.length}
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div style={card}>
+          <div style={{ maxHeight: 520, overflowY: 'auto' }}>
+            {jugadores.map((j) => {
+              const hecha = mias.some((e) => mismo(e.jugador_id, j.id))
+              const activa = sel && mismo(sel.id, j.id)
+              return (
+                <button
+                  type="button"
+                  key={j.id}
+                  onClick={() => abrir(j)}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '10px 12px',
+                    marginBottom: 6,
+                    borderRadius: 8,
+                    border: '1px solid ' + (activa ? AMARILLO : C.borde),
+                    background: 'transparent',
+                    color: C.texto,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span>{nombreJ(j)}</span>
+                  <span style={{ fontSize: 12, color: hecha ? C.exito : C.textoMuted }}>
+                    {hecha ? 'Evaluada ✓' : 'Pendiente'}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div style={card}>
+          {!sel || !form ? (
+            <p style={{ color: C.textoSecundario }}>Elegí una jugadora para evaluarla.</p>
+          ) : (
+            <div>
+              <h3 style={{ color: C.texto, fontWeight: 700, fontSize: 18, marginBottom: 4 }}>{nombreJ(sel)}</h3>
+              <p style={{ color: C.textoMuted, fontSize: 12, marginBottom: 12 }}>
+                Puntuá solo lo que te corresponde evaluar. Podés dejar criterios sin puntuar.
+              </p>
+              {criterios.map((c) => (
+                <div key={c.id} style={{ marginBottom: 12 }}>
+                  <label style={etiqueta}>{c.nombre}</label>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                    {[1, 2, 3, 4, 5].map((n) => {
+                      const activo = form.puntajes[c.id] === n
+                      return (
+                        <button
+                          type="button"
+                          key={n}
+                          onClick={() => setForm((f) => ({ ...f, puntajes: { ...f.puntajes, [c.id]: n } }))}
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 8,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            border: '1px solid ' + (activo ? AMARILLO : C.borde),
+                            background: activo ? AMARILLO : 'transparent',
+                            color: activo ? '#111' : C.texto,
+                          }}
+                        >
+                          {n}
+                        </button>
+                      )
+                    })}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((f) => {
+                          const pj = { ...f.puntajes }
+                          delete pj[c.id]
+                          return { ...f, puntajes: pj }
+                        })
+                      }
+                      style={{ ...btnSec, padding: '0 10px', height: 40, fontSize: 12 }}
+                    >
+                      No evalúo
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {[
+                ['fortalezas', 'Fortalezas'],
+                ['a_mejorar', 'A mejorar'],
+                ['comentario', 'Comentario'],
+              ].map(([k, lab]) => (
+                <div key={k} style={{ marginBottom: 10 }}>
+                  <label style={etiqueta}>{lab}</label>
+                  <textarea
+                    rows={2}
+                    style={inputSt}
+                    value={form[k]}
+                    onChange={(e) => setForm((f) => ({ ...f, [k]: e.target.value }))}
+                  />
+                </div>
+              ))}
+
+              {esFinal && (
+                <div>
+                  <div style={{ marginBottom: 10 }}>
+                    <label style={etiqueta}>Recomendación para la próxima temporada</label>
+                    <select
+                      style={inputSt}
+                      value={form.recomendacion}
+                      onChange={(e) => setForm((f) => ({ ...f, recomendacion: e.target.value }))}
+                    >
+                      <option value="">— Elegir —</option>
+                      <option value="continuidad">Continuidad</option>
+                      <option value="a_evaluar">A evaluar</option>
+                      <option value="no_continuidad">No continuidad</option>
+                    </select>
+                  </div>
+                  <div style={{ marginBottom: 10 }}>
+                    <label style={etiqueta}>Rol y proyección para la próxima temporada</label>
+                    <textarea
+                      rows={2}
+                      style={inputSt}
+                      value={form.proyeccion}
+                      onChange={(e) => setForm((f) => ({ ...f, proyeccion: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <button type="button" style={btnPrim} onClick={guardar} disabled={guardando}>
+                {guardando ? 'Guardando…' : 'Guardar evaluación'}
+              </button>
+              {msg && (
+                <p style={{ marginTop: 8, color: msg.startsWith('Guardado') ? C.exito : C.peligro }}>{msg}</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PanelInformes({ jugadores, criterios, evals, nombresEval, escudo }) {
+  const [modo, setModo] = useState('mensual')
+  const [mes, setMes] = useState(hoyMes())
+  const [anio, setAnio] = useState(anioActual())
+  const [stats, setStats] = useState([])
+  const [visor, setVisor] = useState(null)
+
+  useEffect(() => {
+    if (modo === 'final') traerTodo('estadisticas_jugador').then(setStats)
+  }, [modo])
+
+  const periodoSel = modo === 'final' ? 'final-' + anio : mes
+  const delPeriodo = evals.filter((e) => e.periodo === periodoSel)
+
+  const filas = jugadores
+    .map((j) => {
+      const act = delPeriodo.filter((e) => mismo(e.jugador_id, j.id))
+      const r = resumenJugador(act, criterios)
+      return { j, n: act.length, r, rec: recPredominante(act) }
+    })
+    .sort((a, b) => (b.r.general == null ? -1 : b.r.general) - (a.r.general == null ? -1 : a.r.general))
+
+  return (
+    <div>
+      <div style={{ ...card, marginBottom: 16, display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <div>
+          <label style={etiqueta}>Tipo de informe</label>
+          <select
+            style={{ ...inputSt, width: 200 }}
+            value={modo}
+            onChange={(e) => setModo(e.target.value)}
+          >
+            <option value="mensual">Evaluación mensual</option>
+            <option value="final">Final de temporada</option>
+          </select>
+        </div>
+        {modo === 'final' ? (
+          <div>
+            <label style={etiqueta}>Temporada</label>
+            <input
+              type="number"
+              style={{ ...inputSt, width: 120 }}
+              value={anio}
+              onChange={(e) => setAnio(Number(e.target.value))}
+            />
+          </div>
+        ) : (
+          <div>
+            <label style={etiqueta}>Mes</label>
+            <input
+              type="month"
+              style={{ ...inputSt, width: 180 }}
+              value={mes}
+              onChange={(e) => setMes(e.target.value)}
+            />
+          </div>
+        )}
+        <button
+          type="button"
+          style={btnPrim}
+          onClick={() =>
+            setVisor({
+              titulo: 'Resumen plantel',
+              html: modo === 'final'
+                ? htmlPlantel({ jugadores, criterios, evals, stats, escudo, anio })
+                : docHtml('Resumen ' + mes, '<p>Reporte mensual de evaluaciones.</p>'),
+            })
+          }
+        >
+          Ver reporte general (PDF)
+        </button>
+      </div>
+
+      <div style={card}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#111', color: AMARILLO, textAlign: 'left' }}>
+                <th style={{ padding: '8px' }}>Jugadora</th>
+                <th style={{ padding: '8px' }}>Promedio</th>
+                <th style={{ padding: '8px' }}>Evaluadores</th>
+                {modo === 'final' && <th style={{ padding: '8px' }}>Recomendación</th>}
+                <th style={{ padding: '8px' }}>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filas.map((f) => (
+                <tr key={f.j.id} style={{ borderBottom: '1px solid ' + C.borde }}>
+                  <td style={{ padding: '8px', color: C.texto }}>{nombreJ(f.j)}</td>
+                  <td style={{ padding: '8px', color: C.texto, fontWeight: 700 }}>{f1(f.r.general)}</td>
+                  <td style={{ padding: '8px', color: C.textoSecundario }}>{f.n}</td>
+                  {modo === 'final' && <td style={{ padding: '8px', color: C.textoSecundario }}>{f.rec}</td>}
+                  <td style={{ padding: '8px' }}>
+                    <button
+                      type="button"
+                      style={{ ...btnSec, padding: '4px 10px', fontSize: 12 }}
+                      onClick={() =>
+                        setVisor({
+                          titulo: 'Informe ' + nombreJ(f.j),
+                          html: htmlInforme({
+                            j: f.j,
+                            criterios,
+                            evals,
+                            nombresEval,
+                            stats,
+                            escudo,
+                            modo,
+                            periodo: mes,
+                            anio,
+                          }),
+                        })
+                      }
+                    >
+                      Ver informe
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {visor && <Visor visor={visor} onCerrar={() => setVisor(null)} />}
+    </div>
+  )
+}
+
+export default function EvaluacionesSection({ user, perfil }) {
+  const [tab, setTab] = useState('mensual')
+  const [jugadores, setJugadores] = useState([])
+  const [criterios, setCriterios] = useState([])
+  const [evals, setEvals] = useState([])
+  const [cargando, setCargando] = useState(true)
+
+  async function cargarDatos() {
+    setCargando(true)
+
+    const [cat, critData, evalsData] = await Promise.all([
+      obtenerCategoriaPrimeraDivision(),
+      traerTodo('criterios_evaluacion'),
+      traerTodo('evaluaciones'),
+    ])
+
+    const jugs = cat ? await obtenerJugadoresDeCategoria(cat.id) : []
+    setJugadores(jugs)
+    setCriterios(critData.sort((a, b) => (a.orden || 0) - (b.orden || 0)))
+    setEvals(evalsData)
+    setCargando(false)
+  }
+
+  useEffect(() => {
+    cargarDatos()
+  }, [])
+
+  const nombresEval = armarNombres(evals)
+
+  if (cargando) {
+    return <div style={{ padding: 24, color: C.texto }}>Cargando evaluaciones…</div>
+  }
+
+  return (
+    <div style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }}>
+      <h2 style={{ color: C.texto, fontSize: 22, fontWeight: 700, marginBottom: 16 }}>Evaluaciones</h2>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={() => setTab('mensual')}
+          style={{
+            ...(tab === 'mensual' ? btnPrim : btnSec),
+          }}
+        >
+          Evaluación mensual
+        </button>
+        {MOSTRAR_FINAL && (
+          <button
+            type="button"
+            onClick={() => setTab('final')}
+            style={{
+              ...(tab === 'final' ? btnPrim : btnSec),
+            }}
+          >
+            Final de temporada
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setTab('informes')}
+          style={{
+            ...(tab === 'informes' ? btnPrim : btnSec),
+          }}
+        >
+          Informes
+        </button>
+      </div>
+
+      {tab === 'mensual' && (
+        <PanelEvaluar
+          tipo="mensual"
+          perfil={perfil}
+          user={user}
+          jugadores={jugadores}
+          criterios={criterios}
+          evals={evals}
+          onGuardado={cargarDatos}
+        />
+      )}
+
+      {tab === 'final' && MOSTRAR_FINAL && (
+        <PanelEvaluar
+          tipo="final"
+          perfil={perfil}
+          user={user}
+          jugadores={jugadores}
+          criterios={criterios}
+          evals={evals}
+          onGuardado={cargarDatos}
+        />
+      )}
+
+      {tab === 'informes' && (
+        <PanelInformes
+          jugadores={jugadores}
+          criterios={criterios}
+          evals={evals}
+          nombresEval={nombresEval}
+          escudo={ESCUDO_CLUB_URL}
+        />
+      )}
+    </div>
+  )
+}
