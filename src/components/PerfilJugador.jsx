@@ -576,7 +576,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
       filtro: (e) => !!e.titular,
       valor: (e) =>
         e.minutos_jugados !== null && e.minutos_jugados !== undefined
-          ? `${e.minutos_jugados}'`
+          ? String(e.minutos_jugados) + "'"
           : null,
     },
     goles: {
