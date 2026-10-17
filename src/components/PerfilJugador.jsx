@@ -458,7 +458,8 @@ function PerfilJugador({
 
   async function handleEliminarJugador() {
     const confirmar = window.confirm(
-      `¿Seguro que querés eliminar a ${jugador.apellido}, ${jugador.nombre}? Esto también borra sus fichas médicas y videos asociados. Esta acción no se puede deshacer.`
+      '¿Seguro que querés eliminar a ' + jugador.apellido + ', ' +
+jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. Esta acción no se puede deshacer.'
     )
 
     if (!confirmar) return
