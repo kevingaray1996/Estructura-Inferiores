@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
@@ -6,7 +7,6 @@ import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
 const ESCUDO_CLUB_URL =
   'https://qvjviyjkxyngiggoeqlj.supabase.co/storage/v1/object/public/Biblioteca/escudos/Escudo%20simplificado.png'
 
-// Paleta del club (la misma que usa InicioSection.jsx)
 const AMARILLO = '#F2C230'
 const C = {
   fondoTarjeta: '#242422',
@@ -19,8 +19,6 @@ const C = {
   peligro: '#E24B4A',
 }
 
-// Deben coincidir con las listas del SQL (puede_evaluar / ve_todas_evaluaciones).
-// La seguridad real la da Supabase (RLS); esto solo decide qué pestañas se muestran.
 const ROLES_EVALUAN = ['tecnico', 'coordinacion', 'preparador_fisico']
 const ROLES_VEN_TODO = ['coordinacion']
 
@@ -29,26 +27,40 @@ const REC = {
   a_evaluar: 'A evaluar',
   no_continuidad: 'No continuidad',
 }
-const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
-/* ------------------------------ helpers ------------------------------ */
+const PUNTAJE_NO_EVALUADO = 'no_evaluo'
+
+const ESCALA_EVALUACION = [
+  { valor: 1, titulo: 'Muy bajo', descripcion: 'Presenta muchas dificultades y está muy por debajo de lo esperado.' },
+  { valor: 2, titulo: 'Bajo', descripcion: 'Presenta dificultades frecuentes y necesita mejorar.' },
+  { valor: 3, titulo: 'Adecuado', descripcion: 'Cumple con lo esperado para su categoría y función.' },
+  { valor: 4, titulo: 'Muy bueno', descripcion: 'Supera lo esperado y demuestra un buen nivel sostenido.' },
+  { valor: 5, titulo: 'Excelente', descripcion: 'Se destaca claramente y demuestra un nivel sobresaliente.' },
+]
+
+const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
 const hoyMes = () => {
   const d = new Date()
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
 }
+
 const anioActual = () => new Date().getFullYear()
+
 const esc = (s) =>
   String(s == null ? '' : s)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
+
 const prom = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null)
 const f1 = (n) => (n == null ? '—' : n.toFixed(1))
 const mismo = (a, b) => String(a) === String(b)
+
 const nombreJ = (j) =>
   j.nombre_completo || [j.apellido, j.nombre].filter(Boolean).join(', ') || 'Jugadora ' + j.id
+
 const num = (r, keys) => {
   for (const k of keys) {
     if (r[k] != null && r[k] !== '') return Number(r[k]) || 0
@@ -67,34 +79,53 @@ const armarNombres = (lista) => {
 async function traerTodo(tabla) {
   let todo = []
   let desde = 0
+
   while (true) {
     const { data, error } = await supabase
       .from(tabla)
       .select('*')
       .order('id')
       .range(desde, desde + 999)
+
     if (error || !data) break
+
     todo = todo.concat(data)
+
     if (data.length < 1000) break
+
     desde += 1000
   }
+
   return todo
 }
 
 function resumenJugador(evals, criterios) {
   const porCrit = criterios.map((c) => {
     const vals = evals
-      .map((e) => Number(e.puntajes && e.puntajes[c.id]))
-      .filter((n) => n > 0)
+      .map((e) => {
+        const valor = e.puntajes && e.puntajes[c.id]
+
+        if (valor === PUNTAJE_NO_EVALUADO || valor == null || valor === '') {
+          return null
+        }
+
+        const n = Number(valor)
+        return Number.isFinite(n) && n >= 1 && n <= 5 ? n : null
+      })
+      .filter((n) => n != null)
+
     return { c, prom: prom(vals) }
   })
+
   const general = prom(porCrit.map((x) => x.prom).filter((n) => n != null))
+
   return { porCrit, general }
 }
 
 function calcStats(rows, jugadorId) {
   const mine = rows.filter((r) => mismo(r.jugador_id, jugadorId))
   const mins = (r) => num(r, ['minutos', 'minutos_jugados'])
+
   return {
     pj: mine.filter((r) => mins(r) > 0 || r.titular === true).length,
     titular: mine.filter((r) => r.titular === true).length,
@@ -108,17 +139,27 @@ function calcStats(rows, jugadorId) {
 
 function recPredominante(actuales) {
   const cuenta = {}
+
   actuales.forEach((e) => {
-    if (e.recomendacion) cuenta[e.recomendacion] = (cuenta[e.recomendacion] || 0) + 1
+    if (e.recomendacion) {
+      cuenta[e.recomendacion] = (cuenta[e.recomendacion] || 0) + 1
+    }
   })
+
   const claves = Object.keys(cuenta)
+
   if (!claves.length) return '—'
+
   claves.sort((a, b) => cuenta[b] - cuenta[a])
-  if (claves.length > 1 && cuenta[claves[0]] === cuenta[claves[1]]) return 'Dividida'
+
+  if (claves.length > 1 && cuenta[claves[0]] === cuenta[claves[1]]) {
+    return 'Dividida'
+  }
+
   return REC[claves[0]] || claves[0]
 }
 
-/* --------------------------- informes (HTML) --------------------------- */
+/* ------------------------------ informes HTML ------------------------------ */
 
 const CSS = `
 @page{size:A4;margin:12mm}
@@ -171,9 +212,11 @@ function svgLinea(puntos) {
   const n = puntos.length
   const x = (i) => P + (n === 1 ? (W - 2 * P) / 2 : (i * (W - 2 * P)) / (n - 1))
   const y = (v) => H - P - (v / 5) * (H - 2 * P)
+
   const path = puntos
     .map((p, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.v).toFixed(1))
     .join(' ')
+
   const puntosSvg = puntos
     .map(
       (p, i) =>
@@ -182,6 +225,7 @@ function svgLinea(puntos) {
         '<text x="' + x(i).toFixed(1) + '" y="' + (H - 8) + '" font-size="10" text-anchor="middle" fill="#555">' + esc(p.label) + '</text>'
     )
     .join('')
+
   return (
     '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%">' +
     '<line x1="' + P + '" y1="' + y(0) + '" x2="' + (W - P) + '" y2="' + y(0) + '" stroke="#ccc"/>' +
@@ -202,49 +246,71 @@ function htmlInforme({ j, criterios, evals, nombresEval, stats, escudo, modo, pe
   const r = resumenJugador(actuales, criterios)
   const nombreEv = (id) => nombresEval[id] || 'Evaluador'
 
-  const titulo = modo === 'final' ? 'Evaluación final de temporada ' + anio : 'Evaluación del período ' + periodo
+  const titulo = modo === 'final'
+    ? 'Evaluación final de temporada ' + anio
+    : 'Evaluación del período ' + periodo
+
   const foto = j.foto_url && String(j.foto_url).startsWith('http') ? j.foto_url : ''
   let cuerpo = cabecera(escudo, nombreJ(j), titulo + ' · Club Comunicaciones', foto)
 
-  // Promedios por criterio
   cuerpo += '<h2>Evaluación del cuerpo técnico</h2>'
+
   if (!actuales.length) {
     cuerpo += '<p class="vacio">Todavía no hay evaluaciones cargadas para este período.</p>'
   } else {
     cuerpo +=
       '<p><b>Promedio general: ' + f1(r.general) + ' / 5</b> · ' + actuales.length + ' evaluador(es)</p>'
+
     cuerpo += r.porCrit
       .map(
         (x) =>
-          '<div class="fila"><span class="lab">' + esc(x.c.nombre) + '</span><div class="barra"><i style="width:' +
-          (x.prom ? (x.prom / 5) * 100 : 0) + '%"></i></div><b>' + f1(x.prom) + '</b></div>'
+          '<div class="fila"><span class="lab">' + esc(x.c.nombre) +
+          '</span><div class="barra"><i style="width:' +
+          (x.prom ? (x.prom / 5) * 100 : 0) +
+          '%"></i></div><b>' + f1(x.prom) + '</b></div>'
       )
       .join('')
 
-    // Detalle por evaluador
     cuerpo += '<h2>Detalle por evaluador</h2><table><tr><th>Evaluador</th>' +
       criterios.map((c) => '<th>' + esc(c.nombre) + '</th>').join('') + '</tr>' +
       actuales
         .map(
           (e) =>
             '<tr><td>' + esc(nombreEv(e.evaluador_id)) + '</td>' +
-            criterios.map((c) => '<td>' + esc(e.puntajes && e.puntajes[c.id] != null ? e.puntajes[c.id] : '—') + '</td>').join('') +
+            criterios.map((c) => {
+              const valor = e.puntajes && e.puntajes[c.id]
+              const visible =
+                valor === PUNTAJE_NO_EVALUADO
+                  ? 'No evalúo'
+                  : valor != null
+                    ? valor
+                    : '—'
+
+              return '<td>' + esc(visible) + '</td>'
+            }).join('') +
             '</tr>'
         )
         .join('') +
       '</table>'
 
-    // Recomendaciones (solo final)
     if (modo === 'final') {
       const cuenta = {}
+
       actuales.forEach((e) => {
-        if (e.recomendacion) cuenta[e.recomendacion] = (cuenta[e.recomendacion] || 0) + 1
+        if (e.recomendacion) {
+          cuenta[e.recomendacion] = (cuenta[e.recomendacion] || 0) + 1
+        }
       })
-      const txt = Object.keys(cuenta).map((k) => (REC[k] || k) + ': ' + cuenta[k]).join(' · ')
-      cuerpo += '<h2>Recomendación</h2><p>' + (txt ? esc(txt) : '<span class="vacio">Sin recomendaciones cargadas.</span>') + '</p>'
+
+      const txt = Object.keys(cuenta)
+        .map((k) => (REC[k] || k) + ': ' + cuenta[k])
+        .join(' · ')
+
+      cuerpo += '<h2>Recomendación</h2><p>' +
+        (txt ? esc(txt) : '<span class="vacio">Sin recomendaciones cargadas.</span>') +
+        '</p>'
     }
 
-    // Comentarios
     const coment = actuales
       .map((e) => {
         const partes = [
@@ -253,10 +319,13 @@ function htmlInforme({ j, criterios, evals, nombresEval, stats, escudo, modo, pe
           ['Comentario', e.comentario],
           ['Proyección próxima temporada', e.proyeccion],
         ].filter((p) => p[1])
+
         const rec = e.recomendacion
           ? '<span class="tag">' + esc(REC[e.recomendacion] || e.recomendacion) + '</span>'
           : ''
+
         if (!partes.length && !rec) return ''
+
         return (
           '<div class="coment"><b>' + esc(nombreEv(e.evaluador_id)) + '</b>' + rec +
           partes.map((p) => '<p><u>' + p[0] + ':</u> ' + esc(p[1]) + '</p>').join('') +
@@ -264,17 +333,19 @@ function htmlInforme({ j, criterios, evals, nombresEval, stats, escudo, modo, pe
         )
       })
       .join('')
+
     if (coment) cuerpo += '<h2>Comentarios</h2>' + coment
   }
 
-  // Evolución durante el año
   const porMes = {}
+
   mias
     .filter((e) => !String(e.periodo).startsWith('final') && String(e.periodo).startsWith(String(anioRef)))
     .forEach((e) => {
       porMes[e.periodo] = porMes[e.periodo] || []
       porMes[e.periodo].push(e)
     })
+
   const puntos = Object.keys(porMes)
     .sort()
     .map((p) => ({
@@ -282,61 +353,137 @@ function htmlInforme({ j, criterios, evals, nombresEval, stats, escudo, modo, pe
       v: resumenJugador(porMes[p], criterios).general,
     }))
     .filter((p) => p.v != null)
+
   if (puntos.length) {
     cuerpo += '<h2>Evolución durante el año (promedio mensual)</h2>' + svgLinea(puntos)
   }
 
-  // Rendimiento (solo final)
   if (modo === 'final') {
     const st = calcStats(stats, j.id)
     const kpi = (lab, v) => '<div class="kpi"><b>' + v + '</b>' + lab + '</div>'
+
     cuerpo +=
       '<h2>Rendimiento en la temporada</h2><div class="kpis">' +
-      kpi('Partidos', st.pj) + kpi('Titular', st.titular) + kpi('Minutos', st.min) +
-      kpi('Goles', st.goles) + kpi('Asistencias', st.asist) + kpi('Amarillas', st.am) + kpi('Rojas', st.ro) +
+      kpi('Partidos', st.pj) +
+      kpi('Titular', st.titular) +
+      kpi('Minutos', st.min) +
+      kpi('Goles', st.goles) +
+      kpi('Asistencias', st.asist) +
+      kpi('Amarillas', st.am) +
+      kpi('Rojas', st.ro) +
       '</div>'
   }
 
-  cuerpo += '<div class="pie">Informe generado el ' + new Date().toLocaleDateString('es-AR') + ' · Uso interno del cuerpo técnico</div>'
+  cuerpo += '<div class="pie">Informe generado el ' +
+    new Date().toLocaleDateString('es-AR') +
+    ' · Uso interno del cuerpo técnico</div>'
+
   return docHtml('Informe ' + nombreJ(j), cuerpo)
 }
 
 function htmlPlantel({ jugadores, criterios, evals, stats, escudo, anio }) {
   const filas = jugadores
     .map((j) => {
-      const actuales = evals.filter((e) => mismo(e.jugador_id, j.id) && e.periodo === 'final-' + anio)
+      const actuales = evals.filter(
+        (e) => mismo(e.jugador_id, j.id) && e.periodo === 'final-' + anio
+      )
       const r = resumenJugador(actuales, criterios)
-      return { j, n: actuales.length, g: r.general, st: calcStats(stats, j.id), rec: recPredominante(actuales) }
+
+      return {
+        j,
+        n: actuales.length,
+        g: r.general,
+        st: calcStats(stats, j.id),
+        rec: recPredominante(actuales),
+      }
     })
     .sort((a, b) => (b.g == null ? -1 : b.g) - (a.g == null ? -1 : a.g))
+
   const cuerpo =
     cabecera(escudo, 'Evaluación final de temporada ' + anio, 'Resumen del plantel · Club Comunicaciones', '') +
     '<table><tr><th>Jugadora</th><th>Prom. final</th><th>Evaluadores</th><th>PJ</th><th>Min</th><th>Goles</th><th>Asist.</th><th>Recomendación</th></tr>' +
     filas
       .map(
         (f) =>
-          '<tr><td>' + esc(nombreJ(f.j)) + '</td><td><b>' + f1(f.g) + '</b></td><td>' + f.n + '</td><td>' + f.st.pj +
-          '</td><td>' + f.st.min + '</td><td>' + f.st.goles + '</td><td>' + f.st.asist + '</td><td>' + esc(f.rec) + '</td></tr>'
+          '<tr><td>' + esc(nombreJ(f.j)) +
+          '</td><td><b>' + f1(f.g) +
+          '</b></td><td>' + f.n +
+          '</td><td>' + f.st.pj +
+          '</td><td>' + f.st.min +
+          '</td><td>' + f.st.goles +
+          '</td><td>' + f.st.asist +
+          '</td><td>' + esc(f.rec) +
+          '</td></tr>'
       )
       .join('') +
-    '</table><div class="pie">Generado el ' + new Date().toLocaleDateString('es-AR') + ' · Uso interno del cuerpo técnico</div>'
+    '</table><div class="pie">Generado el ' +
+    new Date().toLocaleDateString('es-AR') +
+    ' · Uso interno del cuerpo técnico</div>'
+
   return docHtml('Resumen plantel ' + anio, cuerpo)
 }
 
 /* ------------------------------- estilos ------------------------------- */
 
-const card = { background: C.fondoTarjeta, border: '1px solid ' + C.borde, borderRadius: 12, padding: 16 }
-const inputSt = { background: '#fff', color: '#111', border: '1px solid #ccc', borderRadius: 8, padding: '8px 10px', width: '100%' }
-const btnPrim = { background: AMARILLO, color: '#111', fontWeight: 700, borderRadius: 8, padding: '8px 14px', border: 0, cursor: 'pointer' }
-const btnSec = { background: 'transparent', color: C.texto, border: '1px solid ' + C.borde, borderRadius: 8, padding: '8px 14px', cursor: 'pointer' }
-const etiqueta = { color: C.textoSecundario, fontSize: 13, marginBottom: 4, display: 'block' }
+const card = {
+  background: C.fondoTarjeta,
+  border: '1px solid ' + C.borde,
+  borderRadius: 12,
+  padding: 16,
+}
 
-/* ------------------------------ componentes ------------------------------ */
+const inputSt = {
+  background: '#fff',
+  color: '#111',
+  border: '1px solid #ccc',
+  borderRadius: 8,
+  padding: '8px 10px',
+  width: '100%',
+}
+
+const btnPrim = {
+  background: AMARILLO,
+  color: '#111',
+  fontWeight: 700,
+  borderRadius: 8,
+  padding: '8px 14px',
+  border: 0,
+  cursor: 'pointer',
+}
+
+const btnSec = {
+  background: 'transparent',
+  color: C.texto,
+  border: '1px solid ' + C.borde,
+  borderRadius: 8,
+  padding: '8px 14px',
+  cursor: 'pointer',
+}
+
+const etiqueta = {
+  color: C.textoSecundario,
+  fontSize: 13,
+  marginBottom: 4,
+  display: 'block',
+}
+
+/* ------------------------------ visor de informes ------------------------------ */
 
 function Visor({ visor, onCerrar }) {
   const ref = useRef(null)
+
   return (
-    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: 0, background: 'rgba(0,0,0,.88)', zIndex: 100, display: 'flex', flexDirection: 'column' }}>
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      background: 'rgba(0,0,0,.88)',
+      zIndex: 100,
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
       <div style={{ display: 'flex', gap: 8, padding: 12 }}>
         <button
           type="button"
@@ -350,19 +497,29 @@ function Visor({ visor, onCerrar }) {
         >
           Imprimir / Guardar PDF
         </button>
+
         <button type="button" style={btnSec} onClick={onCerrar}>
           Cerrar
         </button>
       </div>
+
       <iframe
         ref={ref}
         title={visor.titulo}
         srcDoc={visor.html}
-        style={{ flex: 1, border: 0, background: '#fff', margin: '0 12px 12px', borderRadius: 8 }}
+        style={{
+          flex: 1,
+          border: 0,
+          background: '#fff',
+          margin: '0 12px 12px',
+          borderRadius: 8,
+        }}
       />
     </div>
   )
 }
+
+/* ------------------------------ panel de evaluación ------------------------------ */
 
 function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuardado }) {
   const [mes, setMes] = useState(hoyMes())
@@ -379,8 +536,10 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
 
   function abrir(j) {
     const ex = mias.find((e) => mismo(e.jugador_id, j.id))
+
     setSel(j)
     setMsg('')
+
     setForm({
       puntajes: (ex && ex.puntajes) || {},
       fortalezas: (ex && ex.fortalezas) || '',
@@ -399,16 +558,23 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
   }
 
   async function guardar() {
-    const faltan = criterios.filter((c) => !form.puntajes[c.id])
+    const faltan = criterios.filter((c) => {
+      const valor = form.puntajes[c.id]
+      return valor == null || valor === ''
+    })
+
     if (faltan.length) {
-      setMsg('Falta puntuar: ' + faltan.map((c) => c.nombre).join(', '))
+      setMsg('Falta puntuar o seleccionar «No evalúo»: ' + faltan.map((c) => c.nombre).join(', '))
       return
     }
+
     if (esFinal && !form.recomendacion) {
       setMsg('Elegí una recomendación para la próxima temporada')
       return
     }
+
     setGuardando(true)
+
     const fila = {
       jugador_id: sel.id,
       evaluador_id: user.id,
@@ -422,10 +588,13 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
       recomendacion: esFinal ? form.recomendacion : null,
       proyeccion: esFinal ? form.proyeccion || null : null,
     }
+
     const { error } = await supabase
       .from('evaluaciones')
       .upsert(fila, { onConflict: 'jugador_id,evaluador_id,periodo' })
+
     setGuardando(false)
+
     if (error) {
       setMsg('Error al guardar: ' + error.message)
     } else {
@@ -436,7 +605,14 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
 
   return (
     <div>
-      <div style={{ ...card, marginBottom: 16, display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+      <div style={{
+        ...card,
+        marginBottom: 16,
+        display: 'flex',
+        gap: 16,
+        alignItems: 'flex-end',
+        flexWrap: 'wrap',
+      }}>
         {esFinal ? (
           <div>
             <label style={etiqueta}>Temporada (año)</label>
@@ -458,6 +634,7 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
             />
           </div>
         )}
+
         <div style={{ color: C.textoSecundario }}>
           Evaluadas por vos: <b style={{ color: C.texto }}>{hechas}</b> de {jugadores.length}
         </div>
@@ -469,6 +646,7 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
             {jugadores.map((j) => {
               const hecha = mias.some((e) => mismo(e.jugador_id, j.id))
               const activa = sel && mismo(sel.id, j.id)
+
               return (
                 <button
                   type="button"
@@ -504,18 +682,33 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
             <p style={{ color: C.textoSecundario }}>Elegí una jugadora para evaluarla.</p>
           ) : (
             <div>
-              <h3 style={{ color: C.texto, fontWeight: 700, fontSize: 18, marginBottom: 12 }}>{nombreJ(sel)}</h3>
+              <h3 style={{
+                color: C.texto,
+                fontWeight: 700,
+                fontSize: 18,
+                marginBottom: 12,
+              }}>
+                {nombreJ(sel)}
+              </h3>
+
               {criterios.map((c) => (
-                <div key={c.id} style={{ marginBottom: 12 }}>
+                <div key={c.id} style={{ marginBottom: 18 }}>
                   <label style={etiqueta}>{c.nombre}</label>
-                  <div style={{ display: 'flex', gap: 6 }}>
+
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {[1, 2, 3, 4, 5].map((n) => {
                       const activo = form.puntajes[c.id] === n
+
                       return (
                         <button
                           type="button"
                           key={n}
-                          onClick={() => setForm((f) => ({ ...f, puntajes: { ...f.puntajes, [c.id]: n } }))}
+                          onClick={() =>
+                            setForm((f) => ({
+                              ...f,
+                              puntajes: { ...f.puntajes, [c.id]: n },
+                            }))
+                          }
                           style={{
                             width: 40,
                             height: 40,
@@ -531,6 +724,71 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
                         </button>
                       )
                     })}
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          puntajes: {
+                            ...f.puntajes,
+                            [c.id]: PUNTAJE_NO_EVALUADO,
+                          },
+                        }))
+                      }
+                      style={{
+                        minHeight: 40,
+                        padding: '0 10px',
+                        borderRadius: 8,
+                        fontWeight: 600,
+                        fontSize: 12,
+                        cursor: 'pointer',
+                        border: '1px solid ' +
+                          (form.puntajes[c.id] === PUNTAJE_NO_EVALUADO ? AMARILLO : C.borde),
+                        background:
+                          form.puntajes[c.id] === PUNTAJE_NO_EVALUADO ? AMARILLO : 'transparent',
+                        color:
+                          form.puntajes[c.id] === PUNTAJE_NO_EVALUADO ? '#111' : C.texto,
+                      }}
+                    >
+                      No evalúo
+                    </button>
+                  </div>
+
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(125px, 1fr))',
+                    gap: 6,
+                    marginTop: 10,
+                  }}>
+                    {ESCALA_EVALUACION.map((nivel) => (
+                      <div
+                        key={nivel.valor}
+                        style={{
+                          border: '1px solid ' + C.borde,
+                          borderRadius: 8,
+                          padding: 8,
+                          background: '#1C1C1A',
+                        }}
+                      >
+                        <div style={{
+                          color: AMARILLO,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          marginBottom: 4,
+                        }}>
+                          {nivel.valor} · {nivel.titulo}
+                        </div>
+
+                        <div style={{
+                          color: C.textoSecundario,
+                          fontSize: 11,
+                          lineHeight: 1.4,
+                        }}>
+                          {nivel.descripcion}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
@@ -566,6 +824,7 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
                       <option value="no_continuidad">No continuidad</option>
                     </select>
                   </div>
+
                   <div style={{ marginBottom: 10 }}>
                     <label style={etiqueta}>Rol y proyección para la próxima temporada</label>
                     <textarea
@@ -578,11 +837,22 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
                 </div>
               )}
 
-              <button type="button" style={btnPrim} onClick={guardar} disabled={guardando}>
+              <button
+                type="button"
+                style={btnPrim}
+                onClick={guardar}
+                disabled={guardando}
+              >
                 {guardando ? 'Guardando…' : 'Guardar evaluación'}
               </button>
+
               {msg && (
-                <p style={{ marginTop: 8, color: msg.startsWith('Guardado') ? C.exito : C.peligro }}>{msg}</p>
+                <p style={{
+                  marginTop: 8,
+                  color: msg.startsWith('Guardado') ? C.exito : C.peligro,
+                }}>
+                  {msg}
+                </p>
               )}
             </div>
           )}
@@ -591,6 +861,8 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
     </div>
   )
 }
+
+/* ------------------------------ panel de informes ------------------------------ */
 
 function PanelInformes({ jugadores, criterios, evals, nombresEval, escudo }) {
   const [modo, setModo] = useState('final')
@@ -614,8 +886,8 @@ function PanelInformes({ jugadores, criterios, evals, nombresEval, escudo }) {
     })
     .sort((a, b) => (b.r.general == null ? -1 : b.r.general) - (a.r.general == null ? -1 : a.r.general))
 
-  // Avance por evaluador (solo cuenta quienes ya cargaron algo)
   const avance = {}
+
   delPeriodo.forEach((e) => {
     avance[e.evaluador_id] = avance[e.evaluador_id] || new Set()
     avance[e.evaluador_id].add(String(e.jugador_id))
@@ -624,7 +896,17 @@ function PanelInformes({ jugadores, criterios, evals, nombresEval, escudo }) {
   const abrirInforme = (j) =>
     setVisor({
       titulo: 'Informe ' + nombreJ(j),
-      html: htmlInforme({ j, criterios, evals, nombresEval, stats, escudo, modo, periodo: mes, anio }),
+      html: htmlInforme({
+        j,
+        criterios,
+        evals,
+        nombresEval,
+        stats,
+        escudo,
+        modo,
+        periodo: mes,
+        anio,
+      }),
     })
 
   const abrirPlantel = () =>
@@ -633,30 +915,65 @@ function PanelInformes({ jugadores, criterios, evals, nombresEval, escudo }) {
       html: htmlPlantel({ jugadores, criterios, evals, stats, escudo, anio }),
     })
 
-  const th = { textAlign: 'left', padding: '8px 6px', color: C.textoSecundario, fontSize: 12, borderBottom: '1px solid ' + C.borde }
-  const td = { padding: '8px 6px', borderBottom: '1px solid ' + C.borde, color: C.texto, fontSize: 14 }
+  const th = {
+    textAlign: 'left',
+    padding: '8px 6px',
+    color: C.textoSecundario,
+    fontSize: 12,
+    borderBottom: '1px solid ' + C.borde,
+  }
+
+  const td = {
+    padding: '8px 6px',
+    borderBottom: '1px solid ' + C.borde,
+    color: C.texto,
+    fontSize: 14,
+  }
 
   return (
     <div>
-      <div style={{ ...card, marginBottom: 16, display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+      <div style={{
+        ...card,
+        marginBottom: 16,
+        display: 'flex',
+        gap: 16,
+        alignItems: 'flex-end',
+        flexWrap: 'wrap',
+      }}>
         <div>
           <label style={etiqueta}>Tipo</label>
-          <select style={{ ...inputSt, width: 200 }} value={modo} onChange={(e) => setModo(e.target.value)}>
+          <select
+            style={{ ...inputSt, width: 200 }}
+            value={modo}
+            onChange={(e) => setModo(e.target.value)}
+          >
             <option value="final">Final de temporada</option>
             <option value="mensual">Mensual</option>
           </select>
         </div>
+
         {modo === 'final' ? (
           <div>
             <label style={etiqueta}>Temporada (año)</label>
-            <input type="number" style={{ ...inputSt, width: 120 }} value={anio} onChange={(e) => setAnio(Number(e.target.value))} />
+            <input
+              type="number"
+              style={{ ...inputSt, width: 120 }}
+              value={anio}
+              onChange={(e) => setAnio(Number(e.target.value))}
+            />
           </div>
         ) : (
           <div>
             <label style={etiqueta}>Mes</label>
-            <input type="month" style={{ ...inputSt, width: 180 }} value={mes} onChange={(e) => setMes(e.target.value)} />
+            <input
+              type="month"
+              style={{ ...inputSt, width: 180 }}
+              value={mes}
+              onChange={(e) => setMes(e.target.value)}
+            />
           </div>
         )}
+
         {modo === 'final' && (
           <button type="button" style={btnPrim} onClick={abrirPlantel}>
             Resumen del plantel (PDF)
@@ -665,9 +982,18 @@ function PanelInformes({ jugadores, criterios, evals, nombresEval, escudo }) {
       </div>
 
       <div style={{ ...card, marginBottom: 16 }}>
-        <div style={{ color: C.textoSecundario, fontSize: 13, marginBottom: 6 }}>Avance por evaluador</div>
+        <div style={{
+          color: C.textoSecundario,
+          fontSize: 13,
+          marginBottom: 6,
+        }}>
+          Avance por evaluador
+        </div>
+
         {Object.keys(avance).length === 0 ? (
-          <span style={{ color: C.textoMuted }}>Todavía no hay evaluaciones en este período.</span>
+          <span style={{ color: C.textoMuted }}>
+            Todavía no hay evaluaciones en este período.
+          </span>
         ) : (
           Object.keys(avance).map((id) => (
             <div key={id} style={{ color: C.texto }}>
@@ -684,25 +1010,35 @@ function PanelInformes({ jugadores, criterios, evals, nombresEval, escudo }) {
               <th style={th}>Jugadora</th>
               <th style={th}>Eval.</th>
               <th style={th}>Prom.</th>
+
               {criterios.map((c) => (
                 <th key={c.id} style={th}>{c.nombre}</th>
               ))}
+
               {modo === 'final' && <th style={th}>Recomendación</th>}
               <th style={th}></th>
             </tr>
           </thead>
+
           <tbody>
             {filas.map((f) => (
               <tr key={f.j.id}>
                 <td style={td}>{nombreJ(f.j)}</td>
                 <td style={td}>{f.n}</td>
                 <td style={{ ...td, fontWeight: 700 }}>{f1(f.r.general)}</td>
+
                 {f.r.porCrit.map((x) => (
                   <td key={x.c.id} style={td}>{f1(x.prom)}</td>
                 ))}
+
                 {modo === 'final' && <td style={td}>{f.rec}</td>}
+
                 <td style={td}>
-                  <button type="button" style={btnSec} onClick={() => abrirInforme(f.j)}>
+                  <button
+                    type="button"
+                    style={btnSec}
+                    onClick={() => abrirInforme(f.j)}
+                  >
                     Informe
                   </button>
                 </td>
@@ -717,7 +1053,7 @@ function PanelInformes({ jugadores, criterios, evals, nombresEval, escudo }) {
   )
 }
 
-/* --------------------------------- principal --------------------------------- */
+/* ------------------------------ componente principal ------------------------------ */
 
 export default function EvaluacionesSection({ perfil }) {
   const [cargando, setCargando] = useState(true)
@@ -735,37 +1071,60 @@ export default function EvaluacionesSection({ perfil }) {
   async function cargar() {
     setCargando(true)
     setError('')
+
     const { data: ud } = await supabase.auth.getUser()
     const u = ud && ud.user
+
     if (!u) {
       setError('No hay una sesión iniciada.')
       setCargando(false)
       return
     }
+
     setUser(u)
-    const c = await supabase.from('evaluacion_criterios').select('*').eq('activo', true).order('orden')
+
+    const c = await supabase
+      .from('evaluacion_criterios')
+      .select('*')
+      .eq('activo', true)
+      .order('orden')
+
     if (c.error) {
       setError('Error al cargar los criterios: ' + c.error.message + ' (¿ya corriste el SQL en Supabase?)')
       setCargando(false)
       return
     }
+
     let lista = []
+
     try {
       const categoriaPrimera = await obtenerCategoriaPrimeraDivision()
+
       if (categoriaPrimera) {
-        const { data: categoriasData } = await supabase.from('categorias').select('id, es_reserva')
-        const res = await obtenerJugadoresDeCategoria(supabase, categoriaPrimera.id, categoriasData)
+        const { data: categoriasData } = await supabase
+          .from('categorias')
+          .select('id, es_reserva')
+
+        const res = await obtenerJugadoresDeCategoria(
+          supabase,
+          categoriaPrimera.id,
+          categoriasData
+        )
+
         lista = (res && res.data) || []
       }
     } catch (e) {
       lista = []
     }
+
     if (!lista.length) {
       const { data } = await supabase.from('jugadores').select('*')
       lista = data || []
     }
+
     setJugadores([...lista].sort((a, b) => nombreJ(a).localeCompare(nombreJ(b))))
     setCriterios(c.data || [])
+
     const todas = await traerTodo('evaluaciones')
     setEvals(todas)
     setNombresEval(armarNombres(todas))
@@ -777,17 +1136,27 @@ export default function EvaluacionesSection({ perfil }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  if (cargando) return <p style={{ color: C.textoSecundario }}>Cargando…</p>
-  if (error) return <p style={{ color: C.peligro }}>{error}</p>
+  if (cargando) {
+    return <p style={{ color: C.textoSecundario }}>Cargando…</p>
+  }
+
+  if (error) {
+    return <p style={{ color: C.peligro }}>{error}</p>
+  }
 
   const puedeEvaluar = ROLES_EVALUAN.includes(rol)
   const verTodo = ROLES_VEN_TODO.includes(rol)
   const tabs = []
+
   if (puedeEvaluar) {
     tabs.push(['mensual', 'Evaluación mensual'])
     tabs.push(['final', 'Final de temporada'])
   }
-  if (verTodo) tabs.push(['informes', 'Informes'])
+
+  if (verTodo) {
+    tabs.push(['informes', 'Informes'])
+  }
+
   const activa = tab || (tabs[0] && tabs[0][0])
 
   if (!tabs.length) {
@@ -802,8 +1171,21 @@ export default function EvaluacionesSection({ perfil }) {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <h1 style={{ color: C.texto, fontSize: 24, fontWeight: 700, marginBottom: 12 }}>Evaluaciones</h1>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+      <h1 style={{
+        color: C.texto,
+        fontSize: 24,
+        fontWeight: 700,
+        marginBottom: 12,
+      }}>
+        Evaluaciones
+      </h1>
+
+      <div style={{
+        display: 'flex',
+        gap: 8,
+        marginBottom: 16,
+        flexWrap: 'wrap',
+      }}>
         {tabs.map(([id, lab]) => (
           <button
             type="button"
@@ -825,13 +1207,37 @@ export default function EvaluacionesSection({ perfil }) {
       </div>
 
       {activa === 'mensual' && (
-        <PanelEvaluar tipo="mensual" perfil={perfil} user={user} jugadores={jugadores} criterios={criterios} evals={evals} onGuardado={recargarEvals} />
+        <PanelEvaluar
+          tipo="mensual"
+          perfil={perfil}
+          user={user}
+          jugadores={jugadores}
+          criterios={criterios}
+          evals={evals}
+          onGuardado={recargarEvals}
+        />
       )}
+
       {activa === 'final' && (
-        <PanelEvaluar tipo="final" perfil={perfil} user={user} jugadores={jugadores} criterios={criterios} evals={evals} onGuardado={recargarEvals} />
+        <PanelEvaluar
+          tipo="final"
+          perfil={perfil}
+          user={user}
+          jugadores={jugadores}
+          criterios={criterios}
+          evals={evals}
+          onGuardado={recargarEvals}
+        />
       )}
+
       {activa === 'informes' && (
-        <PanelInformes jugadores={jugadores} criterios={criterios} evals={evals} nombresEval={nombresEval} escudo={escudo} />
+        <PanelInformes
+          jugadores={jugadores}
+          criterios={criterios}
+          evals={evals}
+          nombresEval={nombresEval}
+          escudo={escudo}
+        />
       )}
     </div>
   )
