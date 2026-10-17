@@ -562,49 +562,50 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
     }, {})
   ).sort((a, b) => b.anio.localeCompare(a.anio))
 
-    const statConfig = {
-    partidos: {
-      titulo: 'Partidos jugados',
-      filtro: () => true,
-      valor: (e) =>
-        e.minutos_jugados !== null && e.minutos_jugados !== undefined
-          ? String(e.minutos_jugados) + "'"
-          : null,
-    },
-    titularidades: {
-      titulo: 'Titularidades',
-      filtro: (e) => !!e.titular,
-      valor: (e) =>
-        e.minutos_jugados !== null && e.minutos_jugados !== undefined
-          ? String(e.minutos_jugados) + "'"
-          : null,
-    },
-    goles: {
-      titulo: 'Goles',
-      filtro: (e) => (Number(e.goles) || 0) > 0,
-      valor: (e) =>
-        String(e.goles) + ' gol' + (e.goles > 1 ? 'es' : ''),
-    },
-    asistencias: {
-      titulo: 'Asistencias',
-      filtro: (e) => (Number(e.asistencias) || 0) > 0,
-      valor: (e) => String(e.asistencias) + ' asist.',
-    },
-    amarillas: {
-      titulo: 'Tarjetas amarillas',
-      filtro: (e) => (Number(e.tarjetas_amarillas) || 0) > 0,
-      valor: (e) =>
-        String(e.tarjetas_amarillas) +
-        ' amarilla' +
-        (e.tarjetas_amarillas > 1 ? 's' : ''),
-    },
-    rojas: {
-      titulo: 'Tarjetas rojas',
-      filtro: (e) => (Number(e.tarjetas_rojas) || 0) > 0,
-      valor: (e) =>
-        String(e.tarjetas_rojas) + ' roja' + (e.tarjetas_rojas > 1 ? 's' : ''),
-    },
-  }
+    
+const statConfig = {
+  partidos: {
+    titulo: 'Partidos jugados',
+    filtro: () => true,
+    valor: (e) =>
+      e.minutos_jugados !== null && e.minutos_jugados !== undefined
+        ? String(e.minutos_jugados) + "'"
+        : null,
+  },
+  titularidades: {
+    titulo: 'Titularidades',
+    filtro: (e) => !!e.titular,
+    valor: (e) =>
+      e.minutos_jugados !== null && e.minutos_jugados !== undefined
+        ? String(e.minutos_jugados) + "'"
+        : null,
+  },
+  goles: {
+    titulo: 'Goles',
+    filtro: (e) => (Number(e.goles) || 0) > 0,
+    valor: (e) =>
+      String(e.goles) + ' gol' + (e.goles > 1 ? 'es' : ''),
+  },
+  asistencias: {
+    titulo: 'Asistencias',
+    filtro: (e) => (Number(e.asistencias) || 0) > 0,
+    valor: (e) => String(e.asistencias) + ' asist.',
+  },
+  amarillas: {
+    titulo: 'Tarjetas amarillas',
+    filtro: (e) => (Number(e.tarjetas_amarillas) || 0) > 0,
+    valor: (e) =>
+      String(e.tarjetas_amarillas) +
+      ' amarilla' +
+      (e.tarjetas_amarillas > 1 ? 's' : ''),
+  },
+  rojas: {
+    titulo: 'Tarjetas rojas',
+    filtro: (e) => (Number(e.tarjetas_rojas) || 0) > 0,
+    valor: (e) =>
+      String(e.tarjetas_rojas) + ' roja' + (e.tarjetas_rojas > 1 ? 's' : ''),
+  },
+}
 
   const ultimaFicha = fichasMedicas[0]
   const lesionesActivas = fichasMedicas.filter((f) => !f.recuperado).length
