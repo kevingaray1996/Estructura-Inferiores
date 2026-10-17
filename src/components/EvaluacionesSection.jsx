@@ -24,10 +24,6 @@ const C = {
 const ROLES_EVALUAN = ['tecnico', 'coordinacion', 'preparador_fisico']
 const ROLES_VEN_TODO = ['coordinacion']
 
-// La evaluación final de temporada queda guardada pero oculta (para usarla el año que viene).
-// Para reactivarla, cambiá false por true.
-const MOSTRAR_FINAL = false
-
 const REC = {
   continuidad: 'Continuidad',
   a_evaluar: 'A evaluar',
@@ -150,9 +146,6 @@ td{padding:5px 6px;border-bottom:1px solid #ddd}
 .tag{background:${AMARILLO};padding:1px 7px;border-radius:10px;font-weight:700;font-size:10px;margin-left:6px}
 .pie{margin-top:18px;color:#777;font-size:10px;text-align:center}
 .vacio{color:#777;font-style:italic}
-.up{color:#2e7d32;font-weight:700}
-.down{color:#c62828;font-weight:700}
-.eq{color:#777}
 `
 
 const docHtml = (titulo, cuerpo) =>
@@ -213,7 +206,6 @@ function htmlInforme({ j, criterios, evals, nombresEval, stats, escudo, modo, pe
   const foto = j.foto_url && String(j.foto_url).startsWith('http') ? j.foto_url : ''
   let cuerpo = cabecera(escudo, nombreJ(j), titulo + ' · Club Comunicaciones', foto)
 
-  // Promedios por criterio
   cuerpo += '<h2>Evaluación del cuerpo técnico</h2>'
   if (!actuales.length) {
     cuerpo += '<p class="vacio">Todavía no hay evaluaciones cargadas para este período.</p>'
@@ -228,7 +220,6 @@ function htmlInforme({ j, criterios, evals, nombresEval, stats, escudo, modo, pe
       )
       .join('')
 
-    // Detalle por evaluador
     cuerpo += '<h2>Detalle por evaluador</h2><table><tr><th>Evaluador</th>' +
       criterios.map((c) => '<th>' + esc(c.nombre) + '</th>').join('') + '</tr>' +
       actuales
@@ -241,7 +232,6 @@ function htmlInforme({ j, criterios, evals, nombresEval, stats, escudo, modo, pe
         .join('') +
       '</table>'
 
-    // Recomendaciones (solo final)
     if (modo === 'final') {
       const cuenta = {}
       actuales.forEach((e) => {
@@ -251,7 +241,6 @@ function htmlInforme({ j, criterios, evals, nombresEval, stats, escudo, modo, pe
       cuerpo += '<h2>Recomendación</h2><p>' + (txt ? esc(txt) : '<span class="vacio">Sin recomendaciones cargadas.</span>') + '</p>'
     }
 
-    // Comentarios
     const coment = actuales
       .map((e) => {
         const partes = [
@@ -274,7 +263,6 @@ function htmlInforme({ j, criterios, evals, nombresEval, stats, escudo, modo, pe
     if (coment) cuerpo += '<h2>Comentarios</h2>' + coment
   }
 
-  // Evolución durante el año
   const porMes = {}
   mias
     .filter((e) => !String(e.periodo).startsWith('final') && String(e.periodo).startsWith(String(anioRef)))
@@ -293,7 +281,6 @@ function htmlInforme({ j, criterios, evals, nombresEval, stats, escudo, modo, pe
     cuerpo += '<h2>Evolución durante el año (promedio mensual)</h2>' + svgLinea(puntos)
   }
 
-  // Rendimiento (solo final)
   if (modo === 'final') {
     const st = calcStats(stats, j.id)
     const kpi = (lab, v) => '<div class="kpi"><b>' + v + '</b>' + lab + '</div>'
@@ -328,161 +315,6 @@ function htmlPlantel({ jugadores, criterios, evals, stats, escudo, anio }) {
       .join('') +
     '</table><div class="pie">Generado el ' + new Date().toLocaleDateString('es-AR') + ' · Uso interno del cuerpo técnico</div>'
   return docHtml('Resumen plantel ' + anio, cuerpo)
-}
-
-/* ------------------------ comparativa inicio vs. fin ------------------------ */
-
-const etiquetaPeriodo = (p) =>
-  /^\d{4}-\d{2}$/.test(String(p))
-    ? MESES[Number(String(p).slice(5, 7)) - 1] + ' ' + String(p).slice(0, 4)
-    : String(p)
-const delta = (a, b) => (a == null || b == null ? null : b - a)
-const claseDelta = (d) => (d == null ? 'eq' : d > 0.19 ? 'up' : d < -0.19 ? 'down' : 'eq')
-const txtDelta = (d) => {
-  if (d == null) return '—'
-  if (d > 0.19) return '▲ +' + d.toFixed(1)
-  if (d < -0.19) return '▼ ' + d.toFixed(1)
-  return '= ' + d.toFixed(1)
-}
-const kpiHtml = (lab, v) => '<div class="kpi"><b>' + v + '</b>' + lab + '</div>'
-
-function filasComparativa(jugadores, criterios, evals, pA, pB) {
-  return jugadores
-    .map((j) => {
-      const actA = evals.filter((e) => mismo(e.jugador_id, j.id) && e.periodo === pA)
-      const actB = evals.filter((e) => mismo(e.jugador_id, j.id) && e.periodo === pB)
-      const rA = resumenJugador(actA, criterios)
-      const rB = resumenJugador(actB, criterios)
-      return {
-        j,
-        nA: actA.length,
-        nB: actB.length,
-        rA,
-        rB,
-        d: delta(rA.general, rB.general),
-        dCrit: criterios.map((c, i) => delta(rA.porCrit[i].prom, rB.porCrit[i].prom)),
-      }
-    })
-    .sort((a, b) => (b.d == null ? -99 : b.d) - (a.d == null ? -99 : a.d))
-}
-
-function resumenVariacion(filas) {
-  return {
-    mejoran: filas.filter((f) => f.d != null && f.d > 0.19).length,
-    bajan: filas.filter((f) => f.d != null && f.d < -0.19).length,
-    igual: filas.filter((f) => f.d != null && f.d >= -0.19 && f.d <= 0.19).length,
-    sin: filas.filter((f) => f.d == null).length,
-  }
-}
-
-function htmlComentarios(actuales, nombreEv) {
-  return actuales
-    .map((e) => {
-      const partes = [
-        ['Fortalezas', e.fortalezas],
-        ['A mejorar', e.a_mejorar],
-        ['Comentario', e.comentario],
-      ].filter((x) => x[1])
-      if (!partes.length) return ''
-      return (
-        '<div class="coment"><b>' + esc(nombreEv(e.evaluador_id)) + '</b>' +
-        partes.map((x) => '<p><u>' + x[0] + ':</u> ' + esc(x[1]) + '</p>').join('') +
-        '</div>'
-      )
-    })
-    .join('')
-}
-
-function htmlComparativa({ j, criterios, evals, nombresEval, escudo, pA, pB }) {
-  const mias = evals.filter((e) => mismo(e.jugador_id, j.id))
-  const actA = mias.filter((e) => e.periodo === pA)
-  const actB = mias.filter((e) => e.periodo === pB)
-  const rA = resumenJugador(actA, criterios)
-  const rB = resumenJugador(actB, criterios)
-  const dG = delta(rA.general, rB.general)
-  const nombreEv = (id) => nombresEval[id] || 'Evaluador'
-  const foto = j.foto_url && String(j.foto_url).startsWith('http') ? j.foto_url : ''
-
-  let cuerpo = cabecera(
-    escudo,
-    nombreJ(j),
-    'Evolución ' + etiquetaPeriodo(pA) + ' → ' + etiquetaPeriodo(pB) + ' · Club Comunicaciones',
-    foto
-  )
-
-  cuerpo +=
-    '<h2>Resumen</h2><div class="kpis">' +
-    kpiHtml('Inicio · ' + etiquetaPeriodo(pA) + ' (' + actA.length + ' eval.)', f1(rA.general)) +
-    kpiHtml('Final · ' + etiquetaPeriodo(pB) + ' (' + actB.length + ' eval.)', f1(rB.general)) +
-    '<div class="kpi"><b class="' + claseDelta(dG) + '">' + txtDelta(dG) + '</b>Variación</div></div>'
-  if (!actA.length || !actB.length) {
-    cuerpo += '<p class="vacio">Falta evaluación en alguno de los dos períodos, por eso no se puede calcular la variación completa.</p>'
-  }
-
-  cuerpo +=
-    '<h2>Detalle por criterio</h2><table><tr><th>Criterio</th><th>Inicio</th><th>Final</th><th>Variación</th></tr>' +
-    criterios
-      .map((c, i) => {
-        const a = rA.porCrit[i].prom
-        const b = rB.porCrit[i].prom
-        const d = delta(a, b)
-        return (
-          '<tr><td>' + esc(c.nombre) + '</td><td>' + f1(a) + '</td><td>' + f1(b) +
-          '</td><td class="' + claseDelta(d) + '">' + txtDelta(d) + '</td></tr>'
-        )
-      })
-      .join('') +
-    '</table>'
-
-  const porMes = {}
-  mias
-    .filter((e) => !String(e.periodo).startsWith('final') && e.periodo >= pA && e.periodo <= pB)
-    .forEach((e) => {
-      porMes[e.periodo] = porMes[e.periodo] || []
-      porMes[e.periodo].push(e)
-    })
-  const puntos = Object.keys(porMes)
-    .sort()
-    .map((p) => ({
-      label: MESES[Number(p.slice(5, 7)) - 1] || p,
-      v: resumenJugador(porMes[p], criterios).general,
-    }))
-    .filter((p) => p.v != null)
-  if (puntos.length > 1) {
-    cuerpo += '<h2>Evolución mes a mes (promedio general)</h2>' + svgLinea(puntos)
-  }
-
-  const comA = htmlComentarios(actA, nombreEv)
-  if (comA) cuerpo += '<h2>Impresión inicial · ' + etiquetaPeriodo(pA) + '</h2>' + comA
-  const comB = htmlComentarios(actB, nombreEv)
-  if (comB) cuerpo += '<h2>Cierre · ' + etiquetaPeriodo(pB) + '</h2>' + comB
-
-  cuerpo +=
-    '<div class="pie">Variación = diferencia entre promedios (se considera "igual" hasta ±0,2). Informe generado el ' +
-    new Date().toLocaleDateString('es-AR') + ' · Uso interno del cuerpo técnico</div>'
-  return docHtml('Evolución ' + nombreJ(j), cuerpo)
-}
-
-function htmlComparativaPlantel({ jugadores, criterios, evals, escudo, pA, pB }) {
-  const filas = filasComparativa(jugadores, criterios, evals, pA, pB)
-  const res = resumenVariacion(filas)
-  const cuerpo =
-    cabecera(escudo, 'Evolución del plantel', etiquetaPeriodo(pA) + ' → ' + etiquetaPeriodo(pB) + ' · Club Comunicaciones', '') +
-    '<p><b>Mejoraron ' + res.mejoran + '</b> · Igual ' + res.igual + ' · Bajaron ' + res.bajan + ' · Sin datos para comparar ' + res.sin + '</p>' +
-    '<table><tr><th>Jugadora</th><th>Inicio</th><th>Final</th><th>Variación</th>' +
-    criterios.map((c) => '<th>' + esc(c.nombre) + '</th>').join('') + '</tr>' +
-    filas
-      .map(
-        (f) =>
-          '<tr><td>' + esc(nombreJ(f.j)) + '</td><td>' + f1(f.rA.general) + '</td><td>' + f1(f.rB.general) +
-          '</td><td class="' + claseDelta(f.d) + '">' + txtDelta(f.d) + '</td>' +
-          f.dCrit.map((d) => '<td class="' + claseDelta(d) + '">' + txtDelta(d) + '</td>').join('') +
-          '</tr>'
-      )
-      .join('') +
-    '</table><div class="pie">Variación = diferencia entre promedios (se considera "igual" hasta ±0,2). Generado el ' +
-    new Date().toLocaleDateString('es-AR') + ' · Uso interno del cuerpo técnico</div>'
-  return docHtml('Evolución del plantel', cuerpo)
 }
 
 /* ------------------------------- estilos ------------------------------- */
@@ -771,23 +603,15 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
 }
 
 function PanelInformes({ jugadores, criterios, evals, nombresEval, escudo }) {
-  const [modo, setModo] = useState('comparativa')
+  const [modo, setModo] = useState('mensual')
   const [mes, setMes] = useState(hoyMes())
   const [anio, setAnio] = useState(anioActual())
-  const [selA, setSelA] = useState('')
-  const [selB, setSelB] = useState('')
   const [stats, setStats] = useState([])
   const [visor, setVisor] = useState(null)
 
   useEffect(() => {
     if (modo === 'final') traerTodo('estadisticas_jugador').then(setStats)
   }, [modo])
-
-  const periodos = Array.from(
-    new Set(evals.filter((e) => !String(e.periodo).startsWith('final')).map((e) => e.periodo))
-  ).sort()
-  const pA = selA || periodos[0] || ''
-  const pB = selB || periodos[periodos.length - 1] || ''
 
   const periodoSel = modo === 'final' ? 'final-' + anio : mes
   const delPeriodo = evals.filter((e) => e.periodo === periodoSel)
@@ -800,342 +624,215 @@ function PanelInformes({ jugadores, criterios, evals, nombresEval, escudo }) {
     })
     .sort((a, b) => (b.r.general == null ? -1 : b.r.general) - (a.r.general == null ? -1 : a.r.general))
 
-  const avance = {}
-  delPeriodo.forEach((e) => {
-    avance[e.evaluador_id] = avance[e.evaluador_id] || new Set()
-    avance[e.evaluador_id].add(String(e.jugador_id))
-  })
-
-  const filasComp = filasComparativa(jugadores, criterios, evals, pA, pB)
-  const resComp = resumenVariacion(filasComp)
-
-  const abrirInforme = (j) =>
-    setVisor({
-      titulo: 'Informe ' + nombreJ(j),
-      html: htmlInforme({ j, criterios, evals, nombresEval, stats, escudo, modo, periodo: mes, anio }),
-    })
-  const abrirPlantel = () =>
-    setVisor({ titulo: 'Resumen plantel', html: htmlPlantel({ jugadores, criterios, evals, stats, escudo, anio }) })
-  const abrirComp = (j) =>
-    setVisor({
-      titulo: 'Evolución ' + nombreJ(j),
-      html: htmlComparativa({ j, criterios, evals, nombresEval, escudo, pA, pB }),
-    })
-  const abrirCompPlantel = () =>
-    setVisor({
-      titulo: 'Evolución del plantel',
-      html: htmlComparativaPlantel({ jugadores, criterios, evals, escudo, pA, pB }),
-    })
-
-  const th = { textAlign: 'left', padding: '8px 6px', color: C.textoSecundario, fontSize: 12, borderBottom: '1px solid ' + C.borde }
-  const td = { padding: '8px 6px', borderBottom: '1px solid ' + C.borde, color: C.texto, fontSize: 14 }
-  const colorDelta = (d) => (d == null ? C.textoMuted : d > 0.19 ? C.exito : d < -0.19 ? C.peligro : C.textoSecundario)
-
-  const modos = [
-    ['comparativa', 'Inicio vs. fin'],
-    ['mensual', 'Mensual'],
-  ]
-  if (MOSTRAR_FINAL) modos.push(['final', 'Final de temporada'])
-
   return (
     <div>
       <div style={{ ...card, marginBottom: 16, display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <div>
           <label style={etiqueta}>Tipo de informe</label>
-          <select style={{ ...inputSt, width: 200 }} value={modo} onChange={(e) => setModo(e.target.value)}>
-            {modos.map(([id, lab]) => (
-              <option key={id} value={id}>
-                {lab}
-              </option>
-            ))}
+          <select
+            style={{ ...inputSt, width: 200 }}
+            value={modo}
+            onChange={(e) => setModo(e.target.value)}
+          >
+            <option value="mensual">Evaluación mensual</option>
+            <option value="final">Final de temporada</option>
           </select>
         </div>
-
-        {modo === 'comparativa' && (
-          <>
-            <div>
-              <label style={etiqueta}>Inicio</label>
-              <select style={{ ...inputSt, width: 160 }} value={pA} onChange={(e) => setSelA(e.target.value)}>
-                {periodos.map((p) => (
-                  <option key={p} value={p}>
-                    {etiquetaPeriodo(p)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label style={etiqueta}>Final / actual</label>
-              <select style={{ ...inputSt, width: 160 }} value={pB} onChange={(e) => setSelB(e.target.value)}>
-                {periodos.map((p) => (
-                  <option key={p} value={p}>
-                    {etiquetaPeriodo(p)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button type="button" style={btnPrim} onClick={abrirCompPlantel} disabled={periodos.length < 2}>
-              Evolución del plantel (PDF)
-            </button>
-          </>
-        )}
-
-        {modo === 'mensual' && (
+        {modo === 'final' ? (
+          <div>
+            <label style={etiqueta}>Temporada</label>
+            <input
+              type="number"
+              style={{ ...inputSt, width: 120 }}
+              value={anio}
+              onChange={(e) => setAnio(Number(e.target.value))}
+            />
+          </div>
+        ) : (
           <div>
             <label style={etiqueta}>Mes</label>
-            <input type="month" style={{ ...inputSt, width: 180 }} value={mes} onChange={(e) => setMes(e.target.value)} />
+            <input
+              type="month"
+              style={{ ...inputSt, width: 180 }}
+              value={mes}
+              onChange={(e) => setMes(e.target.value)}
+            />
           </div>
         )}
-
-        {modo === 'final' && (
-          <>
-            <div>
-              <label style={etiqueta}>Temporada (año)</label>
-              <input type="number" style={{ ...inputSt, width: 120 }} value={anio} onChange={(e) => setAnio(Number(e.target.value))} />
-            </div>
-            <button type="button" style={btnPrim} onClick={abrirPlantel}>
-              Resumen del plantel (PDF)
-            </button>
-          </>
-        )}
+        <button
+          type="button"
+          style={btnPrim}
+          onClick={() =>
+            setVisor({
+              titulo: 'Resumen plantel',
+              html: modo === 'final'
+                ? htmlPlantel({ jugadores, criterios, evals, stats, escudo, anio })
+                : docHtml('Resumen ' + mes, '<p>Reporte mensual de evaluaciones.</p>'),
+            })
+          }
+        >
+          Ver reporte general (PDF)
+        </button>
       </div>
 
-      {modo === 'comparativa' && (
-        <div>
-          {periodos.length < 2 ? (
-            <div style={card}>
-              <p style={{ color: C.textoSecundario }}>
-                Para comparar necesitás evaluaciones de al menos dos meses distintos. Cuando haya más meses cargados,
-                acá vas a ver quién mejoró y quién no.
-              </p>
-            </div>
-          ) : (
-            <div>
-              <div style={{ ...card, marginBottom: 16, color: C.texto }}>
-                Mejoraron <b style={{ color: C.exito }}>{resComp.mejoran}</b> · Igual <b>{resComp.igual}</b> · Bajaron{' '}
-                <b style={{ color: C.peligro }}>{resComp.bajan}</b> · Sin datos para comparar {resComp.sin}
-                <div style={{ color: C.textoMuted, fontSize: 12, marginTop: 4 }}>
-                  Variación = diferencia de promedios. Hasta ±0,2 se considera igual.
-                </div>
-              </div>
-              <div style={{ ...card, overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={th}>Jugadora</th>
-                      <th style={th}>{etiquetaPeriodo(pA)}</th>
-                      <th style={th}>{etiquetaPeriodo(pB)}</th>
-                      <th style={th}>Variación</th>
-                      {criterios.map((c) => (
-                        <th key={c.id} style={th}>
-                          {c.nombre}
-                        </th>
-                      ))}
-                      <th style={th}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filasComp.map((f) => (
-                      <tr key={f.j.id}>
-                        <td style={td}>{nombreJ(f.j)}</td>
-                        <td style={td}>{f1(f.rA.general)}</td>
-                        <td style={td}>{f1(f.rB.general)}</td>
-                        <td style={{ ...td, fontWeight: 700, color: colorDelta(f.d) }}>{txtDelta(f.d)}</td>
-                        {f.dCrit.map((d, i) => (
-                          <td key={criterios[i].id} style={{ ...td, color: colorDelta(d) }}>
-                            {txtDelta(d)}
-                          </td>
-                        ))}
-                        <td style={td}>
-                          <button type="button" style={btnSec} onClick={() => abrirComp(f.j)}>
-                            Informe
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {modo !== 'comparativa' && (
-        <div>
-          <div style={{ ...card, marginBottom: 16 }}>
-            <div style={{ color: C.textoSecundario, fontSize: 13, marginBottom: 6 }}>Avance por evaluador</div>
-            {Object.keys(avance).length === 0 ? (
-              <span style={{ color: C.textoMuted }}>Todavía no hay evaluaciones en este período.</span>
-            ) : (
-              Object.keys(avance).map((id) => (
-                <div key={id} style={{ color: C.texto }}>
-                  {nombresEval[id] || 'Evaluador'}: {avance[id].size}/{jugadores.length} jugadoras
-                </div>
-              ))
-            )}
-          </div>
-
-          <div style={{ ...card, overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  <th style={th}>Jugadora</th>
-                  <th style={th}>Eval.</th>
-                  <th style={th}>Prom.</th>
-                  {criterios.map((c) => (
-                    <th key={c.id} style={th}>
-                      {c.nombre}
-                    </th>
-                  ))}
-                  {modo === 'final' && <th style={th}>Recomendación</th>}
-                  <th style={th}></th>
+      <div style={card}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#111', color: AMARILLO, textAlign: 'left' }}>
+                <th style={{ padding: '8px' }}>Jugadora</th>
+                <th style={{ padding: '8px' }}>Promedio</th>
+                <th style={{ padding: '8px' }}>Evaluadores</th>
+                {modo === 'final' && <th style={{ padding: '8px' }}>Recomendación</th>}
+                <th style={{ padding: '8px' }}>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filas.map((f) => (
+                <tr key={f.j.id} style={{ borderBottom: '1px solid ' + C.borde }}>
+                  <td style={{ padding: '8px', color: C.texto }}>{nombreJ(f.j)}</td>
+                  <td style={{ padding: '8px', color: C.texto, fontWeight: 700 }}>{f1(f.r.general)}</td>
+                  <td style={{ padding: '8px', color: C.textoSecundario }}>{f.n}</td>
+                  {modo === 'final' && <td style={{ padding: '8px', color: C.textoSecundario }}>{f.rec}</td>}
+                  <td style={{ padding: '8px' }}>
+                    <button
+                      type="button"
+                      style={{ ...btnSec, padding: '4px 10px', fontSize: 12 }}
+                      onClick={() =>
+                        setVisor({
+                          titulo: 'Informe ' + nombreJ(f.j),
+                          html: htmlInforme({
+                            j: f.j,
+                            criterios,
+                            evals,
+                            nombresEval,
+                            stats,
+                            escudo,
+                            modo,
+                            periodo: mes,
+                            anio,
+                          }),
+                        })
+                      }
+                    >
+                      Ver informe
+                    </button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filas.map((f) => (
-                  <tr key={f.j.id}>
-                    <td style={td}>{nombreJ(f.j)}</td>
-                    <td style={td}>{f.n}</td>
-                    <td style={{ ...td, fontWeight: 700 }}>{f1(f.r.general)}</td>
-                    {f.r.porCrit.map((x) => (
-                      <td key={x.c.id} style={td}>
-                        {f1(x.prom)}
-                      </td>
-                    ))}
-                    {modo === 'final' && <td style={td}>{f.rec}</td>}
-                    <td style={td}>
-                      <button type="button" style={btnSec} onClick={() => abrirInforme(f.j)}>
-                        Informe
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
-
+      </div>
       {visor && <Visor visor={visor} onCerrar={() => setVisor(null)} />}
     </div>
   )
 }
 
-/* --------------------------------- principal --------------------------------- */
-
-export default function EvaluacionesSection({ perfil }) {
-  const [cargando, setCargando] = useState(true)
-  const [error, setError] = useState('')
-  const [user, setUser] = useState(null)
+export default function EvaluacionesSection({ user, perfil }) {
+  const [tab, setTab] = useState('mensual')
   const [jugadores, setJugadores] = useState([])
   const [criterios, setCriterios] = useState([])
   const [evals, setEvals] = useState([])
-  const [nombresEval, setNombresEval] = useState({})
-  const [tab, setTab] = useState('')
+  const [cargando, setCargando] = useState(true)
 
-  const escudo = ESCUDO_CLUB_URL
-  const rol = (perfil && perfil.rol) || ''
+  const rol = perfil && perfil.rol
+  const puedeEvaluar = ROLES_EVALUAN.includes(rol)
+  const veTodo = ROLES_VEN_TODO.includes(rol)
 
-  async function cargar() {
+  async function cargarDatos() {
     setCargando(true)
-    setError('')
-    const { data: ud } = await supabase.auth.getUser()
-    const u = ud && ud.user
-    if (!u) {
-      setError('No hay una sesión iniciada.')
-      setCargando(false)
-      return
-    }
-    setUser(u)
-    const c = await supabase.from('evaluacion_criterios').select('*').eq('activo', true).order('orden')
-    if (c.error) {
-      setError('Error al cargar los criterios: ' + c.error.message + ' (¿ya corriste el SQL en Supabase?)')
-      setCargando(false)
-      return
-    }
-    let lista = []
-    try {
-      const categoriaPrimera = await obtenerCategoriaPrimeraDivision()
-      if (categoriaPrimera) {
-        const { data: categoriasData } = await supabase.from('categorias').select('id, es_reserva')
-        const res = await obtenerJugadoresDeCategoria(supabase, categoriaPrimera.id, categoriasData)
-        lista = (res && res.data) || []
-      }
-    } catch (e) {
-      lista = []
-    }
-    if (!lista.length) {
-      const { data } = await supabase.from('jugadores').select('*')
-      lista = data || []
-    }
-    setJugadores([...lista].sort((a, b) => nombreJ(a).localeCompare(nombreJ(b))))
-    setCriterios(c.data || [])
-    const todas = await traerTodo('evaluaciones')
-    setEvals(todas)
-    setNombresEval(armarNombres(todas))
+    const cat = await obtenerCategoriaPrimeraDivision()
+    const jugs = cat ? await obtenerJugadoresDeCategoria(cat.id) : []
+    setJugadores(jugs)
+
+    const [critData, evalsData] = await Promise.all([
+      traerTodo('criterios_evaluacion'),
+      traerTodo('evaluaciones'),
+    ])
+    setCriterios(critData.sort((a, b) => (a.orden || 0) - (b.orden || 0)))
+    setEvals(evalsData)
     setCargando(false)
   }
 
   useEffect(() => {
-    cargar()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    cargarDatos()
   }, [])
 
-  if (cargando) return <p style={{ color: C.textoSecundario }}>Cargando…</p>
-  if (error) return <p style={{ color: C.peligro }}>{error}</p>
+  const nombresEval = armarNombres(evals)
 
-  const puedeEvaluar = ROLES_EVALUAN.includes(rol)
-  const verTodo = ROLES_VEN_TODO.includes(rol)
-  const tabs = []
-  if (puedeEvaluar) {
-    tabs.push(['mensual', 'Evaluación mensual'])
-    if (MOSTRAR_FINAL) tabs.push(['final', 'Final de temporada'])
-  }
-  if (verTodo) tabs.push(['informes', 'Informes'])
-  const activa = tab || (tabs[0] && tabs[0][0])
-
-  if (!tabs.length) {
-    return <p style={{ color: C.textoSecundario }}>Tu rol no tiene acceso a las evaluaciones.</p>
-  }
-
-  const recargarEvals = async () => {
-    const todas = await traerTodo('evaluaciones')
-    setEvals(todas)
-    setNombresEval(armarNombres(todas))
+  if (cargando) {
+    return <div style={{ padding: 24, color: C.texto }}>Cargando evaluaciones…</div>
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
-      <h1 style={{ color: C.texto, fontSize: 24, fontWeight: 700, marginBottom: 12 }}>Evaluaciones</h1>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        {tabs.map(([id, lab]) => (
+    <div style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }}>
+      <h2 style={{ color: C.texto, fontSize: 22, fontWeight: 700, marginBottom: 16 }}>Evaluaciones</h2>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={() => setTab('mensual')}
+          style={{
+            ...(tab === 'mensual' ? btnPrim : btnSec),
+          }}
+        >
+          Evaluación mensual
+        </button>
+        {MOSTRAR_FINAL && (
           <button
             type="button"
-            key={id}
-            onClick={() => setTab(id)}
+            onClick={() => setTab('final')}
             style={{
-              padding: '8px 14px',
-              borderRadius: 8,
-              cursor: 'pointer',
-              fontWeight: 600,
-              border: '1px solid ' + (activa === id ? AMARILLO : C.borde),
-              background: activa === id ? AMARILLO : 'transparent',
-              color: activa === id ? '#111' : C.texto,
+              ...(tab === 'final' ? btnPrim : btnSec),
             }}
           >
-            {lab}
+            Final de temporada
           </button>
-        ))}
+        )}
+        <button
+          type="button"
+          onClick={() => setTab('informes')}
+          style={{
+            ...(tab === 'informes' ? btnPrim : btnSec),
+          }}
+        >
+          Informes
+        </button>
       </div>
 
-      {activa === 'mensual' && (
-        <PanelEvaluar tipo="mensual" perfil={perfil} user={user} jugadores={jugadores} criterios={criterios} evals={evals} onGuardado={recargarEvals} />
+      {tab === 'mensual' && (
+        <PanelEvaluar
+          tipo="mensual"
+          perfil={perfil}
+          user={user}
+          jugadores={jugadores}
+          criterios={criterios}
+          evals={evals}
+          onGuardado={cargarDatos}
+        />
       )}
-      {activa === 'final' && (
-        <PanelEvaluar tipo="final" perfil={perfil} user={user} jugadores={jugadores} criterios={criterios} evals={evals} onGuardado={recargarEvals} />
+
+      {tab === 'final' && MOSTRAR_FINAL && (
+        <PanelEvaluar
+          tipo="final"
+          perfil={perfil}
+          user={user}
+          jugadores={jugadores}
+          criterios={criterios}
+          evals={evals}
+          onGuardado={cargarDatos}
+        />
       )}
-      {activa === 'informes' && (
-        <PanelInformes jugadores={jugadores} criterios={criterios} evals={evals} nombresEval={nombresEval} escudo={escudo} />
+
+      {tab === 'informes' && (
+        <PanelInformes
+          jugadores={jugadores}
+          criterios={criterios}
+          evals={evals}
+          nombresEval={nombresEval}
+          escudo={ESCUDO_CLUB_URL}
+        />
       )}
     </div>
   )
