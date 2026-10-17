@@ -30,7 +30,10 @@ const pieHabilLabel = {
 }
 
 function iniciales(nombre, apellido) {
-  return `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
+  const primera = nombre ? nombre.charAt(0) : ''
+  const segunda = apellido ? apellido.charAt(0) : ''
+  return (primera + segunda).toUpperCase()
+}
 }
 
 function formatearFecha(fecha) {
