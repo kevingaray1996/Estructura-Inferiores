@@ -1,4 +1,3 @@
-```jsx
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import PdfPerfilModal from './PdfPerfilModal'
@@ -116,7 +115,7 @@ function obtenerResultado(partido) {
       visitante !== null &&
       visitante !== undefined
     ) {
-     return String(local) + ' - ' + String(visitante)
+      return String(local) + ' - ' + String(visitante)
     }
   }
 
@@ -458,8 +457,11 @@ function PerfilJugador({
 
   async function handleEliminarJugador() {
     const confirmar = window.confirm(
-      '¿Seguro que querés eliminar a ' + jugador.apellido + ', ' +
-jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. Esta acción no se puede deshacer.'
+      '¿Seguro que querés eliminar a ' +
+        jugador.apellido +
+        ', ' +
+        jugador.nombre +
+        '? Esto también borra sus fichas médicas y videos asociados. Esta acción no se puede deshacer.'
     )
 
     if (!confirmar) return
@@ -482,7 +484,9 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
 
       if (error) {
         console.error('Error eliminando jugadora:', error)
-        window.alert('No se pudo eliminar la jugadora. Revisá los permisos e intentá nuevamente.')
+        window.alert(
+          'No se pudo eliminar la jugadora. Revisá los permisos e intentá nuevamente.'
+        )
         return
       }
 
@@ -562,50 +566,48 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
     }, {})
   ).sort((a, b) => b.anio.localeCompare(a.anio))
 
-    
-const statConfig = {
-  partidos: {
-    titulo: 'Partidos jugados',
-    filtro: () => true,
-    valor: (e) =>
-      e.minutos_jugados !== null && e.minutos_jugados !== undefined
-        ? String(e.minutos_jugados) + "'"
-        : null,
-  },
-  titularidades: {
-    titulo: 'Titularidades',
-    filtro: (e) => !!e.titular,
-    valor: (e) =>
-      e.minutos_jugados !== null && e.minutos_jugados !== undefined
-        ? String(e.minutos_jugados) + "'"
-        : null,
-  },
-  goles: {
-    titulo: 'Goles',
-    filtro: (e) => (Number(e.goles) || 0) > 0,
-    valor: (e) =>
-      String(e.goles) + ' gol' + (e.goles > 1 ? 'es' : ''),
-  },
-  asistencias: {
-    titulo: 'Asistencias',
-    filtro: (e) => (Number(e.asistencias) || 0) > 0,
-    valor: (e) => String(e.asistencias) + ' asist.',
-  },
-  amarillas: {
-    titulo: 'Tarjetas amarillas',
-    filtro: (e) => (Number(e.tarjetas_amarillas) || 0) > 0,
-    valor: (e) =>
-      String(e.tarjetas_amarillas) +
-      ' amarilla' +
-      (e.tarjetas_amarillas > 1 ? 's' : ''),
-  },
-  rojas: {
-    titulo: 'Tarjetas rojas',
-    filtro: (e) => (Number(e.tarjetas_rojas) || 0) > 0,
-    valor: (e) =>
-      String(e.tarjetas_rojas) + ' roja' + (e.tarjetas_rojas > 1 ? 's' : ''),
-  },
-}
+  const statConfig = {
+    partidos: {
+      titulo: 'Partidos jugados',
+      filtro: () => true,
+      valor: (e) =>
+        e.minutos_jugados !== null && e.minutos_jugados !== undefined
+          ? String(e.minutos_jugados) + "'"
+          : null,
+    },
+    titularidades: {
+      titulo: 'Titularidades',
+      filtro: (e) => !!e.titular,
+      valor: (e) =>
+        e.minutos_jugados !== null && e.minutos_jugados !== undefined
+          ? String(e.minutos_jugados) + "'"
+          : null,
+    },
+    goles: {
+      titulo: 'Goles',
+      filtro: (e) => (Number(e.goles) || 0) > 0,
+      valor: (e) => String(e.goles) + ' gol' + (e.goles > 1 ? 'es' : ''),
+    },
+    asistencias: {
+      titulo: 'Asistencias',
+      filtro: (e) => (Number(e.asistencias) || 0) > 0,
+      valor: (e) => String(e.asistencias) + ' asist.',
+    },
+    amarillas: {
+      titulo: 'Tarjetas amarillas',
+      filtro: (e) => (Number(e.tarjetas_amarillas) || 0) > 0,
+      valor: (e) =>
+        String(e.tarjetas_amarillas) +
+        ' amarilla' +
+        (e.tarjetas_amarillas > 1 ? 's' : ''),
+    },
+    rojas: {
+      titulo: 'Tarjetas rojas',
+      filtro: (e) => (Number(e.tarjetas_rojas) || 0) > 0,
+      valor: (e) =>
+        String(e.tarjetas_rojas) + ' roja' + (e.tarjetas_rojas > 1 ? 's' : ''),
+    },
+  }
 
   const ultimaFicha = fichasMedicas[0]
   const lesionesActivas = fichasMedicas.filter((f) => !f.recuperado).length
@@ -671,58 +673,57 @@ const statConfig = {
       nombre: 'Área médica',
       icono: '🩺',
       resumen:
-  fichasMedicas.length === 0
-    ? 'Sin datos cargados'
-    : String(fichasMedicas.length) +
-      ' registro' +
-      (fichasMedicas.length !== 1 ? 's' : '') +
-      (lesionesActivas > 0
-        ? ' · ' +
-          String(lesionesActivas) +
-          ' activa' +
-          (lesionesActivas !== 1 ? 's' : '')
-        : ''),
-detalle: ultimaFicha
-  ? 'Último registro: ' +
-    (ultimaFicha.descripcion || formatearFecha(ultimaFicha.fecha))
-  : null,
+        fichasMedicas.length === 0
+          ? 'Sin datos cargados'
+          : String(fichasMedicas.length) +
+            ' registro' +
+            (fichasMedicas.length !== 1 ? 's' : '') +
+            (lesionesActivas > 0
+              ? ' · ' +
+                String(lesionesActivas) +
+                ' activa' +
+                (lesionesActivas !== 1 ? 's' : '')
+              : ''),
+      detalle: ultimaFicha
+        ? 'Último registro: ' +
+          (ultimaFicha.descripcion || formatearFecha(ultimaFicha.fecha))
+        : null,
       onClick: () => onVerFichaMedica?.(jugadorId),
     },
     {
       nombre: 'Nutrición',
       icono: '🥗',
-     resumen:
-  fichasNutricion.length === 0
-    ? 'Sin datos cargados'
-    : String(fichasNutricion.length) +
-      ' registro' +
-      (fichasNutricion.length !== 1 ? 's' : '') +
-      (fichasNutricion[0]?.alerta_peso ? ' · alerta de peso' : ''),
+      resumen:
+        fichasNutricion.length === 0
+          ? 'Sin datos cargados'
+          : String(fichasNutricion.length) +
+            ' registro' +
+            (fichasNutricion.length !== 1 ? 's' : '') +
+            (fichasNutricion[0]?.alerta_peso ? ' · alerta de peso' : ''),
       onClick: () => onVerNutricion?.(jugadorId),
     },
     {
-     nombre: 'Psicología',
-icono: '🧠',
-resumen:
-  fichasPsicologicas.length === 0
-    ? 'Sin datos cargados'
-    : String(fichasPsicologicas.length) +
-      ' registro' +
-      (fichasPsicologicas.length !== 1 ? 's' : ''),
-onClick: () => onVerPsicologia?.(jugadorId),
-},
-   
- {
-  nombre: 'Videoanálisis',
-  icono: '🎥',
-  resumen:
-    videos.length === 0
-      ? 'Sin datos cargados'
-      : String(videos.length) +
-        ' video' +
-        (videos.length !== 1 ? 's' : ''),
-  onClick: () => onVerVideos?.(jugadorId),
-},
+      nombre: 'Psicología',
+      icono: '🧠',
+      resumen:
+        fichasPsicologicas.length === 0
+          ? 'Sin datos cargados'
+          : String(fichasPsicologicas.length) +
+            ' registro' +
+            (fichasPsicologicas.length !== 1 ? 's' : ''),
+      onClick: () => onVerPsicologia?.(jugadorId),
+    },
+    {
+      nombre: 'Videoanálisis',
+      icono: '🎥',
+      resumen:
+        videos.length === 0
+          ? 'Sin datos cargados'
+          : String(videos.length) +
+            ' video' +
+            (videos.length !== 1 ? 's' : ''),
+      onClick: () => onVerVideos?.(jugadorId),
+    },
   ]
 
   if (filtroStat) {
@@ -899,12 +900,12 @@ onClick: () => onVerPsicologia?.(jugadorId),
           <div
             className="h-1.5"
             style={{
-             background:
-  'linear-gradient(90deg, ' +
-  AMARILLO +
-  ' 0%, ' +
-  AMARILLO +
-  ' 35%, #3B3F36 35%, #3B3F36 100%)',
+              background:
+                'linear-gradient(90deg, ' +
+                AMARILLO +
+                ' 0%, ' +
+                AMARILLO +
+                ' 35%, #3B3F36 35%, #3B3F36 100%)',
             }}
           />
 
@@ -966,16 +967,16 @@ onClick: () => onVerPsicologia?.(jugadorId),
                       className="text-xs px-2.5 py-1.5 rounded-lg"
                       style={{
                         backgroundColor: FONDO,
-color: TEXTO,
-border: '1px solid ' + BORDE,
-}}
->
-  {jugador.posicion}
-  {jugador.posicion_secundaria
-    ? ' · ' + jugador.posicion_secundaria
-    : ''}
-</span>
-)}
+                        color: TEXTO,
+                        border: '1px solid ' + BORDE,
+                      }}
+                    >
+                      {jugador.posicion}
+                      {jugador.posicion_secundaria
+                        ? ' · ' + jugador.posicion_secundaria
+                        : ''}
+                    </span>
+                  )}
 
                   {dorsal !== null && dorsal !== '' && (
                     <span
@@ -1175,7 +1176,8 @@ border: '1px solid ' + BORDE,
                   className="text-2xl md:text-3xl leading-none mb-2 break-words"
                   style={{
                     fontFamily: "'Archivo Black', sans-serif",
-                    color: stat.color || (stat.key === 'goles' ? AMARILLO : TEXTO),
+                    color:
+                      stat.color || (stat.key === 'goles' ? AMARILLO : TEXTO),
                   }}
                 >
                   {formatearNumero(stat.valor)}
@@ -1224,18 +1226,23 @@ border: '1px solid ' + BORDE,
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                   <tr style={{ borderBottom: '1px solid ' + BORDE }}>
-                      {['Rival / fecha', 'Resultado', 'Min.', 'Goles', 'Asist.', 'Tarjetas'].map(
-                        (titulo) => (
-                          <th
-                            key={titulo}
-                            className="text-left font-medium text-xs px-2 py-3 whitespace-nowrap"
-                            style={{ color: MUTED }}
-                          >
-                            {titulo}
-                          </th>
-                        )
-                      )}
+                    <tr style={{ borderBottom: '1px solid ' + BORDE }}>
+                      {[
+                        'Rival / fecha',
+                        'Resultado',
+                        'Min.',
+                        'Goles',
+                        'Asist.',
+                        'Tarjetas',
+                      ].map((titulo) => (
+                        <th
+                          key={titulo}
+                          className="text-left font-medium text-xs px-2 py-3 whitespace-nowrap"
+                          style={{ color: MUTED }}
+                        >
+                          {titulo}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
@@ -1581,8 +1588,7 @@ border: '1px solid ' + BORDE,
                       >
                         {flecha}{' '}
                         {Math.abs(
-                          (m.promedioActual ?? 0) -
-                            (m.promedioAnterior ?? 0)
+                          (m.promedioActual ?? 0) - (m.promedioAnterior ?? 0)
                         ).toFixed(1)}
                       </p>
                     )}
@@ -1739,10 +1745,7 @@ border: '1px solid ' + BORDE,
                     Distancia total (m) · Últimas sesiones
                   </p>
                   <div className="overflow-x-auto">
-                    <MiniBarras
-                      datos={datosDistanciaChart}
-                      color={AMARILLO}
-                    />
+                    <MiniBarras datos={datosDistanciaChart} color={AMARILLO} />
                   </div>
                 </div>
               )}
@@ -1758,13 +1761,9 @@ border: '1px solid ' + BORDE,
               <select
                 id="sesion-fisica"
                 value={
-                  sesionFisicaSeleccionadaId ||
-                  idSesionFisicaPorDefecto ||
-                  ''
+                  sesionFisicaSeleccionadaId || idSesionFisicaPorDefecto || ''
                 }
-                onChange={(e) =>
-                  setSesionFisicaSeleccionadaId(e.target.value)
-                }
+                onChange={(e) => setSesionFisicaSeleccionadaId(e.target.value)}
                 className="w-full p-3 rounded-xl outline-none text-sm mb-4"
                 style={{
                   backgroundColor: FONDO,
@@ -1849,9 +1848,7 @@ border: '1px solid ' + BORDE,
                     {item.label}
                   </p>
                   <p className="text-2xl font-semibold" style={{ color: TEXTO }}>
-                    {item.promedio !== null
-                      ? item.promedio.toFixed(1)
-                      : '—'}
+                    {item.promedio !== null ? item.promedio.toFixed(1) : '—'}
                   </p>
                 </div>
               ))}
@@ -1893,7 +1890,7 @@ border: '1px solid ' + BORDE,
         />
       )}
     </div>
- )
+  )
 }
 
 export default PerfilJugador
