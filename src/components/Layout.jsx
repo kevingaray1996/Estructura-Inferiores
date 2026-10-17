@@ -48,6 +48,7 @@ function seccionesParaRol(rol) {
       { id: 'nutricion', label: 'Nutrición' },
       { id: 'psicologia', label: 'Psicología' },
       { id: 'bienestar', label: 'Bienestar' },
+      { id: 'evaluaciones', label: 'Evaluaciones' },
     ]
   }
 
@@ -60,6 +61,7 @@ function seccionesParaRol(rol) {
       { id: 'partidos', label: 'Partidos' },
       { id: 'entrenamientos', label: 'Entrenamientos' },
       { id: 'fisico', label: 'Físico' },
+      { id: 'evaluaciones', label: 'Evaluaciones' },
     ]
   }
 
@@ -76,6 +78,7 @@ function seccionesParaRol(rol) {
     { id: 'pensiones', label: 'Pensión' },
     { id: 'seleccion', label: 'Selección' },
     { id: 'contratos', label: 'Contratos' },
+    { id: 'evaluaciones', label: 'Evaluaciones' },
   ]
 }
 
