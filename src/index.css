@@ -1,6 +1,56 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
+/* MODO OSCURO */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --fondo-pagina: #171715;
+  --fondo-sidebar: #0A0A0A;
+  --fondo-tarjeta: #242422;
+  --fondo-secundario: #292925;
+  --borde: #383831;
+
+  --texto: #F7F7F2;
+  --texto-secundario: #B4B2A9;
+  --texto-muted: #8A8A82;
+
+  --exito: #97C459;
+  --peligro: #E77970;
+}
+
+/* MODO CLARO */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --fondo-pagina: #F3F4F6;
+  --fondo-sidebar: #FFFFFF;
+  --fondo-tarjeta: #FFFFFF;
+  --fondo-secundario: #F8F9FB;
+  --borde: #E2E5EA;
+
+  --texto: #202124;
+  --texto-secundario: #454B56;
+  --texto-muted: #687080;
+
+  --exito: #39845A;
+  --peligro: #D64B4B;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 body {
+  margin: 0;
   font-family: 'Inter', sans-serif;
+  background-color: var(--fondo-pagina);
+  color: var(--texto);
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
 }
