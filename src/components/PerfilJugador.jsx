@@ -116,7 +116,7 @@ function obtenerResultado(partido) {
       visitante !== null &&
       visitante !== undefined
     ) {
-      return `${local} - ${visitante}`
+     return String(local) + ' - ' + String(visitante)
     }
   }
 
