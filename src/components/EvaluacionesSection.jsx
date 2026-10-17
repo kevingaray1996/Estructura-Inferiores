@@ -1,11 +1,23 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-// ⚠️ AJUSTAR estas dos rutas copiando las líneas equivalentes de InicioSection.jsx
-import * as sbMod from '../lib/supabase'
-import * as temaMod from '../theme'
+import { useEffect, useRef, useState } from 'react'
+import { supabase } from '../supabaseClient'
+import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
+import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
 
-const supabase = sbMod.supabase || sbMod.default
-const C = temaMod.COLORES || temaMod.default || {}
-const AMARILLO = C.acento || '#FFC400'
+const ESCUDO_CLUB_URL =
+  'https://qvjviyjkxyngiggoeqlj.supabase.co/storage/v1/object/public/Biblioteca/escudos/Escudo%20simplificado.png'
+
+// Paleta del club (la misma que usa InicioSection.jsx)
+const AMARILLO = '#F2C230'
+const C = {
+  fondoTarjeta: '#242422',
+  borde: '#2C2C2A',
+  texto: '#FFFFFF',
+  textoSecundario: '#B4B2A9',
+  textoMuted: '#8A8A82',
+  acento: '#F2C230',
+  exito: '#97C459',
+  peligro: '#E24B4A',
+}
 
 // Deben coincidir con las listas del SQL (puede_evaluar / ve_todas_evaluaciones).
 // La seguridad real la da Supabase (RLS); esto solo decide qué pestañas se muestran.
@@ -698,24 +710,18 @@ function PanelInformes({ jugadores, criterios, evals, nombresEval, escudo }) {
 
 /* --------------------------------- principal --------------------------------- */
 
-export default function EvaluacionesSection() {
+export default function EvaluacionesSection({ perfil }) {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
   const [user, setUser] = useState(null)
-  const [rol, setRol] = useState('')
   const [jugadores, setJugadores] = useState([])
   const [criterios, setCriterios] = useState([])
   const [evals, setEvals] = useState([])
   const [nombresEval, setNombresEval] = useState({})
   const [tab, setTab] = useState('')
 
-  const escudo = useMemo(() => {
-    try {
-      return supabase.storage.from('Biblioteca').getPublicUrl('escudos/Escudo simplificado.png').data.publicUrl
-    } catch (e) {
-      return ''
-    }
-  }, [])
+  const escudo = ESCUDO_CLUB_URL
+  const rol = (perfil && perfil.rol) || ''
 
   async function cargar() {
     setCargando(true)
@@ -728,24 +734,31 @@ export default function EvaluacionesSection() {
       return
     }
     setUser(u)
-    const [p, j, c, pf] = await Promise.all([
-      supabase.from('perfiles').select('*').eq('id', u.id).maybeSingle(),
-      supabase.from('jugadores').select('*'),
+    const [c, pf] = await Promise.all([
       supabase.from('evaluacion_criterios').select('*').eq('activo', true).order('orden'),
       supabase.from('perfiles').select('id, nombre'),
     ])
-    const fallo = [p, j, c].find((r) => r.error)
-    if (fallo) {
-      setError('Error al cargar datos: ' + fallo.error.message)
+    if (c.error) {
+      setError('Error al cargar los criterios: ' + c.error.message + ' (¿ya corriste el SQL en Supabase?)')
       setCargando(false)
       return
     }
-    setRol((p.data && p.data.rol) || '')
-    setJugadores(
-      (j.data || [])
-        .filter((x) => x.activo !== false)
-        .sort((a, b) => nombreJ(a).localeCompare(nombreJ(b)))
-    )
+    let lista = []
+    try {
+      const categoriaPrimera = await obtenerCategoriaPrimeraDivision()
+      if (categoriaPrimera) {
+        const { data: categoriasData } = await supabase.from('categorias').select('id, es_reserva')
+        const res = await obtenerJugadoresDeCategoria(supabase, categoriaPrimera.id, categoriasData)
+        lista = (res && res.data) || []
+      }
+    } catch (e) {
+      lista = []
+    }
+    if (!lista.length) {
+      const { data } = await supabase.from('jugadores').select('*')
+      lista = data || []
+    }
+    setJugadores([...lista].sort((a, b) => nombreJ(a).localeCompare(nombreJ(b))))
     setCriterios(c.data || [])
     const mapa = {}
     ;(pf.data || []).forEach((x) => {
