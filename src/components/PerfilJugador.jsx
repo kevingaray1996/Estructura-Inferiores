@@ -562,7 +562,7 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
     }, {})
   ).sort((a, b) => b.anio.localeCompare(a.anio))
 
-  const statConfig = {
+    const statConfig = {
     partidos: {
       titulo: 'Partidos jugados',
       filtro: () => true,
@@ -582,29 +582,29 @@ jugador.nombre + '? Esto también borra sus fichas médicas y videos asociados. 
     goles: {
       titulo: 'Goles',
       filtro: (e) => (Number(e.goles) || 0) > 0,
-     valor: (e) => String(e.goles) + ' gol' + (e.goles > 1 ? 'es' : ''),
+      valor: (e) =>
+        String(e.goles) + ' gol' + (e.goles > 1 ? 'es' : ''),
     },
     asistencias: {
-  titulo: 'Asistencias',
-  filtro: (e) => (Number(e.asistencias) || 0) > 0,
-  valor: (e) => String(e.asistencias) + ' asist.',
-},
+      titulo: 'Asistencias',
+      filtro: (e) => (Number(e.asistencias) || 0) > 0,
+      valor: (e) => String(e.asistencias) + ' asist.',
     },
     amarillas: {
-  titulo: 'Tarjetas amarillas',
-  filtro: (e) => (Number(e.tarjetas_amarillas) || 0) > 0,
-  valor: (e) =>
-    String(e.tarjetas_amarillas) +
-    ' amarilla' +
-    (e.tarjetas_amarillas > 1 ? 's' : ''),
-},
+      titulo: 'Tarjetas amarillas',
+      filtro: (e) => (Number(e.tarjetas_amarillas) || 0) > 0,
+      valor: (e) =>
+        String(e.tarjetas_amarillas) +
+        ' amarilla' +
+        (e.tarjetas_amarillas > 1 ? 's' : ''),
+    },
     rojas: {
-  titulo: 'Tarjetas rojas',
-  filtro: (e) => (Number(e.tarjetas_rojas) || 0) > 0,
-  valor: (e) =>
-    String(e.tarjetas_rojas) + ' roja' + (e.tarjetas_rojas > 1 ? 's' : ''),
-},
-}
+      titulo: 'Tarjetas rojas',
+      filtro: (e) => (Number(e.tarjetas_rojas) || 0) > 0,
+      valor: (e) =>
+        String(e.tarjetas_rojas) + ' roja' + (e.tarjetas_rojas > 1 ? 's' : ''),
+    },
+  }
 
   const ultimaFicha = fichasMedicas[0]
   const lesionesActivas = fichasMedicas.filter((f) => !f.recuperado).length
@@ -710,16 +710,18 @@ resumen:
       (fichasPsicologicas.length !== 1 ? 's' : ''),
 onClick: () => onVerPsicologia?.(jugadorId),
 },
-    {
-      nombre: 'Videoanálisis',
-      icono: '🎥',
-      resumen:
-  fichasPsicologicas.length === 0
-    ? 'Sin datos cargados'
-    : String(fichasPsicologicas.length) +
-      ' registro' +
-      (fichasPsicologicas.length !== 1 ? 's' : ''),
-    },
+   {
+ {
+  nombre: 'Videoanálisis',
+  icono: '🎥',
+  resumen:
+    videos.length === 0
+      ? 'Sin datos cargados'
+      : String(videos.length) +
+        ' video' +
+        (videos.length !== 1 ? 's' : ''),
+  onClick: () => onVerVideos?.(jugadorId),
+},
   ]
 
   if (filtroStat) {
