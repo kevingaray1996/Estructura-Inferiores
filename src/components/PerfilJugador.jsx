@@ -68,7 +68,7 @@ function fechaISO(date) {
   const anio = date.getFullYear()
   const mes = String(date.getMonth() + 1).padStart(2, '0')
   const dia = String(date.getDate()).padStart(2, '0')
-  return `${anio}-${mes}-${dia}`
+  return anio + '-' + mes + '-' + dia
 }
 
 function formatearNumero(valor) {
