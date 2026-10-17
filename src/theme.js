@@ -1,13 +1,14 @@
+
 export const COLORES = {
-  fondoPagina: '#1A1A18',
-  fondoSidebar: '#0A0A0A',
-  fondoTarjeta: '#242422',
-  borde: '#2C2C2A',
-  texto: '#FFFFFF',
-  textoSecundario: '#B4B2A9',
-  textoMuted: '#8A8A82',
+  fondoPagina: 'var(--fondo-pagina)',
+  fondoSidebar: 'var(--fondo-sidebar)',
+  fondoTarjeta: 'var(--fondo-tarjeta)',
+  borde: 'var(--borde)',
+  texto: 'var(--texto)',
+  textoSecundario: 'var(--texto-secundario)',
+  textoMuted: 'var(--texto-muted)',
   acento: '#F2C230',
-  exito: '#97C459',
-  peligro: '#E24B4A',
-  neutro: '#B4B2A9',
-};
+  exito: 'var(--exito)',
+  peligro: 'var(--peligro)',
+  neutro: 'var(--texto-secundario)',
+}
