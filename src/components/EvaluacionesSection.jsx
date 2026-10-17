@@ -56,6 +56,14 @@ const num = (r, keys) => {
   return 0
 }
 
+const armarNombres = (lista) => {
+  const m = {}
+  lista.forEach((e) => {
+    if (e.evaluador_nombre) m[e.evaluador_id] = e.evaluador_nombre
+  })
+  return m
+}
+
 async function traerTodo(tabla) {
   let todo = []
   let desde = 0
@@ -356,7 +364,7 @@ function Visor({ visor, onCerrar }) {
   )
 }
 
-function PanelEvaluar({ tipo, user, jugadores, criterios, evals, onGuardado }) {
+function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuardado }) {
   const [mes, setMes] = useState(hoyMes())
   const [anio, setAnio] = useState(anioActual())
   const [sel, setSel] = useState(null)
@@ -404,6 +412,7 @@ function PanelEvaluar({ tipo, user, jugadores, criterios, evals, onGuardado }) {
     const fila = {
       jugador_id: sel.id,
       evaluador_id: user.id,
+      evaluador_nombre: (perfil && perfil.nombre) || user.email,
       periodo,
       tipo: esFinal ? 'final' : 'periodica',
       puntajes: form.puntajes,
@@ -734,10 +743,7 @@ export default function EvaluacionesSection({ perfil }) {
       return
     }
     setUser(u)
-    const [c, pf] = await Promise.all([
-      supabase.from('evaluacion_criterios').select('*').eq('activo', true).order('orden'),
-      supabase.from('perfiles').select('id, nombre'),
-    ])
+    const c = await supabase.from('evaluacion_criterios').select('*').eq('activo', true).order('orden')
     if (c.error) {
       setError('Error al cargar los criterios: ' + c.error.message + ' (¿ya corriste el SQL en Supabase?)')
       setCargando(false)
@@ -760,12 +766,9 @@ export default function EvaluacionesSection({ perfil }) {
     }
     setJugadores([...lista].sort((a, b) => nombreJ(a).localeCompare(nombreJ(b))))
     setCriterios(c.data || [])
-    const mapa = {}
-    ;(pf.data || []).forEach((x) => {
-      mapa[x.id] = x.nombre
-    })
-    setNombresEval(mapa)
-    setEvals(await traerTodo('evaluaciones'))
+    const todas = await traerTodo('evaluaciones')
+    setEvals(todas)
+    setNombresEval(armarNombres(todas))
     setCargando(false)
   }
 
@@ -791,7 +794,11 @@ export default function EvaluacionesSection({ perfil }) {
     return <p style={{ color: C.textoSecundario }}>Tu rol no tiene acceso a las evaluaciones.</p>
   }
 
-  const recargarEvals = async () => setEvals(await traerTodo('evaluaciones'))
+  const recargarEvals = async () => {
+    const todas = await traerTodo('evaluaciones')
+    setEvals(todas)
+    setNombresEval(armarNombres(todas))
+  }
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -818,10 +825,10 @@ export default function EvaluacionesSection({ perfil }) {
       </div>
 
       {activa === 'mensual' && (
-        <PanelEvaluar tipo="mensual" user={user} jugadores={jugadores} criterios={criterios} evals={evals} onGuardado={recargarEvals} />
+        <PanelEvaluar tipo="mensual" perfil={perfil} user={user} jugadores={jugadores} criterios={criterios} evals={evals} onGuardado={recargarEvals} />
       )}
       {activa === 'final' && (
-        <PanelEvaluar tipo="final" user={user} jugadores={jugadores} criterios={criterios} evals={evals} onGuardado={recargarEvals} />
+        <PanelEvaluar tipo="final" perfil={perfil} user={user} jugadores={jugadores} criterios={criterios} evals={evals} onGuardado={recargarEvals} />
       )}
       {activa === 'informes' && (
         <PanelInformes jugadores={jugadores} criterios={criterios} evals={evals} nombresEval={nombresEval} escudo={escudo} />
