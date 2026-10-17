@@ -8,6 +8,7 @@ const ESCUDO_CLUB_URL =
   'https://qvjviyjkxyngiggoeqlj.supabase.co/storage/v1/object/public/Biblioteca/escudos/Escudo%20simplificado.png'
 
 const AMARILLO = '#F2C230'
+
 const C = {
   fondoTarjeta: '#242422',
   borde: '#2C2C2A',
@@ -31,11 +32,11 @@ const REC = {
 const PUNTAJE_NO_EVALUADO = 'no_evaluo'
 
 const ESCALA_EVALUACION = [
-  { valor: 1, titulo: 'Muy bajo', descripcion: 'Presenta muchas dificultades y está muy por debajo de lo esperado.' },
-  { valor: 2, titulo: 'Bajo', descripcion: 'Presenta dificultades frecuentes y necesita mejorar.' },
-  { valor: 3, titulo: 'Adecuado', descripcion: 'Cumple con lo esperado para su categoría y función.' },
-  { valor: 4, titulo: 'Muy bueno', descripcion: 'Supera lo esperado y demuestra un buen nivel sostenido.' },
-  { valor: 5, titulo: 'Excelente', descripcion: 'Se destaca claramente y demuestra un nivel sobresaliente.' },
+  { valor: 1, titulo: 'Muy bajo', descripcion: 'Muchas dificultades.' },
+  { valor: 2, titulo: 'Bajo', descripcion: 'Necesita mejorar.' },
+  { valor: 3, titulo: 'Adecuado', descripcion: 'Cumple lo esperado.' },
+  { valor: 4, titulo: 'Muy bueno', descripcion: 'Supera lo esperado.' },
+  { valor: 5, titulo: 'Excelente', descripcion: 'Nivel sobresaliente.' },
 ]
 
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
@@ -528,17 +529,31 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
   const [form, setForm] = useState(null)
   const [msg, setMsg] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const [escalaAbierta, setEscalaAbierta] = useState(false)
 
   const esFinal = tipo === 'final'
   const periodo = esFinal ? 'final-' + anio : mes
   const mias = evals.filter((e) => e.evaluador_id === user.id && e.periodo === periodo)
   const hechas = mias.length
 
+  // Busca Técnica individual para mostrar allí la escala general.
+  // Si no existe ese criterio, usa el primero como alternativa.
+  const indiceEscalaEncontrado = criterios.findIndex((c) =>
+    String(c.nombre || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .includes('tecnica individual')
+  )
+
+  const indiceEscala = indiceEscalaEncontrado >= 0 ? indiceEscalaEncontrado : 0
+
   function abrir(j) {
     const ex = mias.find((e) => mismo(e.jugador_id, j.id))
 
     setSel(j)
     setMsg('')
+    setEscalaAbierta(false)
 
     setForm({
       puntajes: (ex && ex.puntajes) || {},
@@ -555,6 +570,7 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
     setSel(null)
     setForm(null)
     setMsg('')
+    setEscalaAbierta(false)
   }
 
   async function guardar() {
@@ -691,107 +707,184 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
                 {nombreJ(sel)}
               </h3>
 
-              {criterios.map((c) => (
-                <div key={c.id} style={{ marginBottom: 18 }}>
-                  <label style={etiqueta}>{c.nombre}</label>
+              {criterios.map((c, indice) => {
+                const esEscalaGeneral = indice === indiceEscala
 
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {[1, 2, 3, 4, 5].map((n) => {
-                      const activo = form.puntajes[c.id] === n
-
-                      return (
-                        <button
-                          type="button"
-                          key={n}
-                          onClick={() =>
-                            setForm((f) => ({
-                              ...f,
-                              puntajes: { ...f.puntajes, [c.id]: n },
-                            }))
-                          }
-                          style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: 8,
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            border: '1px solid ' + (activo ? AMARILLO : C.borde),
-                            background: activo ? AMARILLO : 'transparent',
-                            color: activo ? '#111' : C.texto,
-                          }}
-                        >
-                          {n}
-                        </button>
-                      )
-                    })}
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setForm((f) => ({
-                          ...f,
-                          puntajes: {
-                            ...f.puntajes,
-                            [c.id]: PUNTAJE_NO_EVALUADO,
-                          },
-                        }))
-                      }
-                      style={{
-                        minHeight: 40,
-                        padding: '0 10px',
-                        borderRadius: 8,
-                        fontWeight: 600,
-                        fontSize: 12,
-                        cursor: 'pointer',
-                        border: '1px solid ' +
-                          (form.puntajes[c.id] === PUNTAJE_NO_EVALUADO ? AMARILLO : C.borde),
-                        background:
-                          form.puntajes[c.id] === PUNTAJE_NO_EVALUADO ? AMARILLO : 'transparent',
-                        color:
-                          form.puntajes[c.id] === PUNTAJE_NO_EVALUADO ? '#111' : C.texto,
-                      }}
-                    >
-                      No evalúo
-                    </button>
-                  </div>
-
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(125px, 1fr))',
-                    gap: 6,
-                    marginTop: 10,
-                  }}>
-                    {ESCALA_EVALUACION.map((nivel) => (
-                      <div
-                        key={nivel.valor}
+                return (
+                  <div key={c.id} style={{ marginBottom: 16 }}>
+                    {esEscalaGeneral ? (
+                      <button
+                        type="button"
+                        onClick={() => setEscalaAbierta((abierta) => !abierta)}
+                        aria-expanded={escalaAbierta}
                         style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: 8,
+                          width: '100%',
+                          textAlign: 'left',
+                          color: C.texto,
+                          background: 'transparent',
                           border: '1px solid ' + C.borde,
                           borderRadius: 8,
-                          padding: 8,
-                          background: '#1C1C1A',
+                          padding: '10px 12px',
+                          marginBottom: 8,
+                          cursor: 'pointer',
+                          fontWeight: 700,
+                          fontSize: 14,
                         }}
                       >
+                        <span>{c.nombre}</span>
+                        <span style={{ color: AMARILLO, whiteSpace: 'nowrap' }}>
+                          {escalaAbierta ? 'Ocultar ▲' : 'Ver escala ▼'}
+                        </span>
+                      </button>
+                    ) : (
+                      <label style={etiqueta}>{c.nombre}</label>
+                    )}
+
+                    {esEscalaGeneral && escalaAbierta && (
+                      <div style={{
+                        background: '#1C1C1A',
+                        border: '1px solid ' + C.borde,
+                        borderRadius: 8,
+                        padding: 10,
+                        marginBottom: 10,
+                      }}>
                         <div style={{
-                          color: AMARILLO,
                           fontSize: 12,
-                          fontWeight: 700,
-                          marginBottom: 4,
+                          color: C.textoSecundario,
+                          marginBottom: 8,
                         }}>
-                          {nivel.valor} · {nivel.titulo}
+                          Escala general para todos los criterios
                         </div>
 
                         <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(115px, 1fr))',
+                          gap: 6,
+                        }}>
+                          {ESCALA_EVALUACION.map((nivel) => (
+                            <div
+                              key={nivel.valor}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: 7,
+                                padding: '6px 7px',
+                                borderRadius: 6,
+                                background: '#242422',
+                              }}
+                            >
+                              <span style={{
+                                color: AMARILLO,
+                                fontWeight: 800,
+                                fontSize: 14,
+                                minWidth: 12,
+                              }}>
+                                {nivel.valor}
+                              </span>
+
+                              <div>
+                                <div style={{
+                                  color: C.texto,
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                }}>
+                                  {nivel.titulo}
+                                </div>
+                                <div style={{
+                                  color: C.textoSecundario,
+                                  fontSize: 11,
+                                  lineHeight: 1.3,
+                                }}>
+                                  {nivel.descripcion}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div style={{
+                          marginTop: 8,
                           color: C.textoSecundario,
                           fontSize: 11,
-                          lineHeight: 1.4,
                         }}>
-                          {nivel.descripcion}
+                          No evalúo: no se considera en el promedio.
                         </div>
                       </div>
-                    ))}
+                    )}
+
+                    <div style={{
+                      display: 'flex',
+                      gap: 6,
+                      flexWrap: 'wrap',
+                    }}>
+                      {[1, 2, 3, 4, 5].map((n) => {
+                        const activo = Number(form.puntajes[c.id]) === n
+
+                        return (
+                          <button
+                            type="button"
+                            key={n}
+                            aria-label={`${c.nombre}: puntaje ${n}`}
+                            aria-pressed={activo}
+                            onClick={() =>
+                              setForm((f) => ({
+                                ...f,
+                                puntajes: { ...f.puntajes, [c.id]: n },
+                              }))
+                            }
+                            style={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: 8,
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              border: '1px solid ' + (activo ? AMARILLO : C.borde),
+                              background: activo ? AMARILLO : 'transparent',
+                              color: activo ? '#111' : C.texto,
+                            }}
+                          >
+                            {n}
+                          </button>
+                        )
+                      })}
+
+                      <button
+                        type="button"
+                        aria-pressed={form.puntajes[c.id] === PUNTAJE_NO_EVALUADO}
+                        onClick={() =>
+                          setForm((f) => ({
+                            ...f,
+                            puntajes: {
+                              ...f.puntajes,
+                              [c.id]: PUNTAJE_NO_EVALUADO,
+                            },
+                          }))
+                        }
+                        style={{
+                          minHeight: 40,
+                          padding: '0 10px',
+                          borderRadius: 8,
+                          fontWeight: 600,
+                          fontSize: 12,
+                          cursor: 'pointer',
+                          border: '1px solid ' +
+                            (form.puntajes[c.id] === PUNTAJE_NO_EVALUADO ? AMARILLO : C.borde),
+                          background:
+                            form.puntajes[c.id] === PUNTAJE_NO_EVALUADO ? AMARILLO : 'transparent',
+                          color:
+                            form.puntajes[c.id] === PUNTAJE_NO_EVALUADO ? '#111' : C.texto,
+                        }}
+                      >
+                        No evalúo
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
 
               {[
                 ['fortalezas', 'Fortalezas'],
