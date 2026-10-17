@@ -711,7 +711,7 @@ resumen:
       (fichasPsicologicas.length !== 1 ? 's' : ''),
 onClick: () => onVerPsicologia?.(jugadorId),
 },
-   {
+   
  {
   nombre: 'Videoanálisis',
   icono: '🎥',
