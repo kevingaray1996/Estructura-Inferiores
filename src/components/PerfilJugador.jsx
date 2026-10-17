@@ -46,14 +46,18 @@ function calcularEdad(fechaNacimiento) {
   if (!fechaNacimiento) return null
 
   const hoy = new Date()
-  const nacimiento = new Date(`${fechaNacimiento}T00:00:00`)
-
-  if (Number.isNaN(nacimiento.getTime())) return null
+  const nacimiento = new Date(fechaNacimiento + 'T00:00:00')
 
   let edad = hoy.getFullYear() - nacimiento.getFullYear()
-  const mes = hoy.getMonth() - nacimiento.getMonth()
 
-  if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+  const mesActual = hoy.getMonth()
+  const mesNacimiento = nacimiento.getMonth()
+
+  if (
+    mesActual < mesNacimiento ||
+    (mesActual === mesNacimiento &&
+      hoy.getDate() < nacimiento.getDate())
+  ) {
     edad--
   }
 
