@@ -24,6 +24,10 @@ const C = {
 const ROLES_EVALUAN = ['tecnico', 'coordinacion', 'preparador_fisico']
 const ROLES_VEN_TODO = ['coordinacion']
 
+// La evaluación final de temporada queda guardada pero oculta (para usarla el año que viene).
+// Para reactivarla, cambiá false por true.
+const MOSTRAR_FINAL = false
+
 const REC = {
   continuidad: 'Continuidad',
   a_evaluar: 'A evaluar',
@@ -146,6 +150,9 @@ td{padding:5px 6px;border-bottom:1px solid #ddd}
 .tag{background:${AMARILLO};padding:1px 7px;border-radius:10px;font-weight:700;font-size:10px;margin-left:6px}
 .pie{margin-top:18px;color:#777;font-size:10px;text-align:center}
 .vacio{color:#777;font-style:italic}
+.up{color:#2e7d32;font-weight:700}
+.down{color:#c62828;font-weight:700}
+.eq{color:#777}
 `
 
 const docHtml = (titulo, cuerpo) =>
@@ -323,6 +330,161 @@ function htmlPlantel({ jugadores, criterios, evals, stats, escudo, anio }) {
   return docHtml('Resumen plantel ' + anio, cuerpo)
 }
 
+/* ------------------------ comparativa inicio vs. fin ------------------------ */
+
+const etiquetaPeriodo = (p) =>
+  /^\d{4}-\d{2}$/.test(String(p))
+    ? MESES[Number(String(p).slice(5, 7)) - 1] + ' ' + String(p).slice(0, 4)
+    : String(p)
+const delta = (a, b) => (a == null || b == null ? null : b - a)
+const claseDelta = (d) => (d == null ? 'eq' : d > 0.19 ? 'up' : d < -0.19 ? 'down' : 'eq')
+const txtDelta = (d) => {
+  if (d == null) return '—'
+  if (d > 0.19) return '▲ +' + d.toFixed(1)
+  if (d < -0.19) return '▼ ' + d.toFixed(1)
+  return '= ' + d.toFixed(1)
+}
+const kpiHtml = (lab, v) => '<div class="kpi"><b>' + v + '</b>' + lab + '</div>'
+
+function filasComparativa(jugadores, criterios, evals, pA, pB) {
+  return jugadores
+    .map((j) => {
+      const actA = evals.filter((e) => mismo(e.jugador_id, j.id) && e.periodo === pA)
+      const actB = evals.filter((e) => mismo(e.jugador_id, j.id) && e.periodo === pB)
+      const rA = resumenJugador(actA, criterios)
+      const rB = resumenJugador(actB, criterios)
+      return {
+        j,
+        nA: actA.length,
+        nB: actB.length,
+        rA,
+        rB,
+        d: delta(rA.general, rB.general),
+        dCrit: criterios.map((c, i) => delta(rA.porCrit[i].prom, rB.porCrit[i].prom)),
+      }
+    })
+    .sort((a, b) => (b.d == null ? -99 : b.d) - (a.d == null ? -99 : a.d))
+}
+
+function resumenVariacion(filas) {
+  return {
+    mejoran: filas.filter((f) => f.d != null && f.d > 0.19).length,
+    bajan: filas.filter((f) => f.d != null && f.d < -0.19).length,
+    igual: filas.filter((f) => f.d != null && f.d >= -0.19 && f.d <= 0.19).length,
+    sin: filas.filter((f) => f.d == null).length,
+  }
+}
+
+function htmlComentarios(actuales, nombreEv) {
+  return actuales
+    .map((e) => {
+      const partes = [
+        ['Fortalezas', e.fortalezas],
+        ['A mejorar', e.a_mejorar],
+        ['Comentario', e.comentario],
+      ].filter((x) => x[1])
+      if (!partes.length) return ''
+      return (
+        '<div class="coment"><b>' + esc(nombreEv(e.evaluador_id)) + '</b>' +
+        partes.map((x) => '<p><u>' + x[0] + ':</u> ' + esc(x[1]) + '</p>').join('') +
+        '</div>'
+      )
+    })
+    .join('')
+}
+
+function htmlComparativa({ j, criterios, evals, nombresEval, escudo, pA, pB }) {
+  const mias = evals.filter((e) => mismo(e.jugador_id, j.id))
+  const actA = mias.filter((e) => e.periodo === pA)
+  const actB = mias.filter((e) => e.periodo === pB)
+  const rA = resumenJugador(actA, criterios)
+  const rB = resumenJugador(actB, criterios)
+  const dG = delta(rA.general, rB.general)
+  const nombreEv = (id) => nombresEval[id] || 'Evaluador'
+  const foto = j.foto_url && String(j.foto_url).startsWith('http') ? j.foto_url : ''
+
+  let cuerpo = cabecera(
+    escudo,
+    nombreJ(j),
+    'Evolución ' + etiquetaPeriodo(pA) + ' → ' + etiquetaPeriodo(pB) + ' · Club Comunicaciones',
+    foto
+  )
+
+  cuerpo +=
+    '<h2>Resumen</h2><div class="kpis">' +
+    kpiHtml('Inicio · ' + etiquetaPeriodo(pA) + ' (' + actA.length + ' eval.)', f1(rA.general)) +
+    kpiHtml('Final · ' + etiquetaPeriodo(pB) + ' (' + actB.length + ' eval.)', f1(rB.general)) +
+    '<div class="kpi"><b class="' + claseDelta(dG) + '">' + txtDelta(dG) + '</b>Variación</div></div>'
+  if (!actA.length || !actB.length) {
+    cuerpo += '<p class="vacio">Falta evaluación en alguno de los dos períodos, por eso no se puede calcular la variación completa.</p>'
+  }
+
+  cuerpo +=
+    '<h2>Detalle por criterio</h2><table><tr><th>Criterio</th><th>Inicio</th><th>Final</th><th>Variación</th></tr>' +
+    criterios
+      .map((c, i) => {
+        const a = rA.porCrit[i].prom
+        const b = rB.porCrit[i].prom
+        const d = delta(a, b)
+        return (
+          '<tr><td>' + esc(c.nombre) + '</td><td>' + f1(a) + '</td><td>' + f1(b) +
+          '</td><td class="' + claseDelta(d) + '">' + txtDelta(d) + '</td></tr>'
+        )
+      })
+      .join('') +
+    '</table>'
+
+  const porMes = {}
+  mias
+    .filter((e) => !String(e.periodo).startsWith('final') && e.periodo >= pA && e.periodo <= pB)
+    .forEach((e) => {
+      porMes[e.periodo] = porMes[e.periodo] || []
+      porMes[e.periodo].push(e)
+    })
+  const puntos = Object.keys(porMes)
+    .sort()
+    .map((p) => ({
+      label: MESES[Number(p.slice(5, 7)) - 1] || p,
+      v: resumenJugador(porMes[p], criterios).general,
+    }))
+    .filter((p) => p.v != null)
+  if (puntos.length > 1) {
+    cuerpo += '<h2>Evolución mes a mes (promedio general)</h2>' + svgLinea(puntos)
+  }
+
+  const comA = htmlComentarios(actA, nombreEv)
+  if (comA) cuerpo += '<h2>Impresión inicial · ' + etiquetaPeriodo(pA) + '</h2>' + comA
+  const comB = htmlComentarios(actB, nombreEv)
+  if (comB) cuerpo += '<h2>Cierre · ' + etiquetaPeriodo(pB) + '</h2>' + comB
+
+  cuerpo +=
+    '<div class="pie">Variación = diferencia entre promedios (se considera "igual" hasta ±0,2). Informe generado el ' +
+    new Date().toLocaleDateString('es-AR') + ' · Uso interno del cuerpo técnico</div>'
+  return docHtml('Evolución ' + nombreJ(j), cuerpo)
+}
+
+function htmlComparativaPlantel({ jugadores, criterios, evals, escudo, pA, pB }) {
+  const filas = filasComparativa(jugadores, criterios, evals, pA, pB)
+  const res = resumenVariacion(filas)
+  const cuerpo =
+    cabecera(escudo, 'Evolución del plantel', etiquetaPeriodo(pA) + ' → ' + etiquetaPeriodo(pB) + ' · Club Comunicaciones', '') +
+    '<p><b>Mejoraron ' + res.mejoran + '</b> · Igual ' + res.igual + ' · Bajaron ' + res.bajan + ' · Sin datos para comparar ' + res.sin + '</p>' +
+    '<table><tr><th>Jugadora</th><th>Inicio</th><th>Final</th><th>Variación</th>' +
+    criterios.map((c) => '<th>' + esc(c.nombre) + '</th>').join('') + '</tr>' +
+    filas
+      .map(
+        (f) =>
+          '<tr><td>' + esc(nombreJ(f.j)) + '</td><td>' + f1(f.rA.general) + '</td><td>' + f1(f.rB.general) +
+          '</td><td class="' + claseDelta(f.d) + '">' + txtDelta(f.d) + '</td>' +
+          f.dCrit.map((d) => '<td class="' + claseDelta(d) + '">' + txtDelta(d) + '</td>').join('') +
+          '</tr>'
+      )
+      .join('') +
+    '</table><div class="pie">Variación = diferencia entre promedios (se considera "igual" hasta ±0,2). Generado el ' +
+    new Date().toLocaleDateString('es-AR') + ' · Uso interno del cuerpo técnico</div>'
+  return docHtml('Evolución del plantel', cuerpo)
+}
+
 /* ------------------------------- estilos ------------------------------- */
 
 const card = { background: C.fondoTarjeta, border: '1px solid ' + C.borde, borderRadius: 12, padding: 16 }
@@ -399,9 +561,9 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
   }
 
   async function guardar() {
-    const faltan = criterios.filter((c) => !form.puntajes[c.id])
-    if (faltan.length) {
-      setMsg('Falta puntuar: ' + faltan.map((c) => c.nombre).join(', '))
+    const puntuados = criterios.filter((c) => form.puntajes[c.id])
+    if (!puntuados.length) {
+      setMsg('Puntuá al menos un criterio (los que no te corresponden, dejalos sin puntuar)')
       return
     }
     if (esFinal && !form.recomendacion) {
@@ -504,11 +666,14 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
             <p style={{ color: C.textoSecundario }}>Elegí una jugadora para evaluarla.</p>
           ) : (
             <div>
-              <h3 style={{ color: C.texto, fontWeight: 700, fontSize: 18, marginBottom: 12 }}>{nombreJ(sel)}</h3>
+              <h3 style={{ color: C.texto, fontWeight: 700, fontSize: 18, marginBottom: 4 }}>{nombreJ(sel)}</h3>
+              <p style={{ color: C.textoMuted, fontSize: 12, marginBottom: 12 }}>
+                Puntuá solo lo que te corresponde evaluar. Podés dejar criterios sin puntuar.
+              </p>
               {criterios.map((c) => (
                 <div key={c.id} style={{ marginBottom: 12 }}>
                   <label style={etiqueta}>{c.nombre}</label>
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                     {[1, 2, 3, 4, 5].map((n) => {
                       const activo = form.puntajes[c.id] === n
                       return (
@@ -531,6 +696,19 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
                         </button>
                       )
                     })}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((f) => {
+                          const pj = { ...f.puntajes }
+                          delete pj[c.id]
+                          return { ...f, puntajes: pj }
+                        })
+                      }
+                      style={{ ...btnSec, padding: '0 10px', height: 40, fontSize: 12 }}
+                    >
+                      No evalúo
+                    </button>
                   </div>
                 </div>
               ))}
@@ -593,15 +771,23 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
 }
 
 function PanelInformes({ jugadores, criterios, evals, nombresEval, escudo }) {
-  const [modo, setModo] = useState('final')
+  const [modo, setModo] = useState('comparativa')
   const [mes, setMes] = useState(hoyMes())
   const [anio, setAnio] = useState(anioActual())
+  const [selA, setSelA] = useState('')
+  const [selB, setSelB] = useState('')
   const [stats, setStats] = useState([])
   const [visor, setVisor] = useState(null)
 
   useEffect(() => {
-    traerTodo('estadisticas_jugador').then(setStats)
-  }, [])
+    if (modo === 'final') traerTodo('estadisticas_jugador').then(setStats)
+  }, [modo])
+
+  const periodos = Array.from(
+    new Set(evals.filter((e) => !String(e.periodo).startsWith('final')).map((e) => e.periodo))
+  ).sort()
+  const pA = selA || periodos[0] || ''
+  const pB = selB || periodos[periodos.length - 1] || ''
 
   const periodoSel = modo === 'final' ? 'final-' + anio : mes
   const delPeriodo = evals.filter((e) => e.periodo === periodoSel)
@@ -614,103 +800,221 @@ function PanelInformes({ jugadores, criterios, evals, nombresEval, escudo }) {
     })
     .sort((a, b) => (b.r.general == null ? -1 : b.r.general) - (a.r.general == null ? -1 : a.r.general))
 
-  // Avance por evaluador (solo cuenta quienes ya cargaron algo)
   const avance = {}
   delPeriodo.forEach((e) => {
     avance[e.evaluador_id] = avance[e.evaluador_id] || new Set()
     avance[e.evaluador_id].add(String(e.jugador_id))
   })
 
+  const filasComp = filasComparativa(jugadores, criterios, evals, pA, pB)
+  const resComp = resumenVariacion(filasComp)
+
   const abrirInforme = (j) =>
     setVisor({
       titulo: 'Informe ' + nombreJ(j),
       html: htmlInforme({ j, criterios, evals, nombresEval, stats, escudo, modo, periodo: mes, anio }),
     })
-
   const abrirPlantel = () =>
+    setVisor({ titulo: 'Resumen plantel', html: htmlPlantel({ jugadores, criterios, evals, stats, escudo, anio }) })
+  const abrirComp = (j) =>
     setVisor({
-      titulo: 'Resumen plantel',
-      html: htmlPlantel({ jugadores, criterios, evals, stats, escudo, anio }),
+      titulo: 'Evolución ' + nombreJ(j),
+      html: htmlComparativa({ j, criterios, evals, nombresEval, escudo, pA, pB }),
+    })
+  const abrirCompPlantel = () =>
+    setVisor({
+      titulo: 'Evolución del plantel',
+      html: htmlComparativaPlantel({ jugadores, criterios, evals, escudo, pA, pB }),
     })
 
   const th = { textAlign: 'left', padding: '8px 6px', color: C.textoSecundario, fontSize: 12, borderBottom: '1px solid ' + C.borde }
   const td = { padding: '8px 6px', borderBottom: '1px solid ' + C.borde, color: C.texto, fontSize: 14 }
+  const colorDelta = (d) => (d == null ? C.textoMuted : d > 0.19 ? C.exito : d < -0.19 ? C.peligro : C.textoSecundario)
+
+  const modos = [
+    ['comparativa', 'Inicio vs. fin'],
+    ['mensual', 'Mensual'],
+  ]
+  if (MOSTRAR_FINAL) modos.push(['final', 'Final de temporada'])
 
   return (
     <div>
       <div style={{ ...card, marginBottom: 16, display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <div>
-          <label style={etiqueta}>Tipo</label>
+          <label style={etiqueta}>Tipo de informe</label>
           <select style={{ ...inputSt, width: 200 }} value={modo} onChange={(e) => setModo(e.target.value)}>
-            <option value="final">Final de temporada</option>
-            <option value="mensual">Mensual</option>
+            {modos.map(([id, lab]) => (
+              <option key={id} value={id}>
+                {lab}
+              </option>
+            ))}
           </select>
         </div>
-        {modo === 'final' ? (
-          <div>
-            <label style={etiqueta}>Temporada (año)</label>
-            <input type="number" style={{ ...inputSt, width: 120 }} value={anio} onChange={(e) => setAnio(Number(e.target.value))} />
-          </div>
-        ) : (
+
+        {modo === 'comparativa' && (
+          <>
+            <div>
+              <label style={etiqueta}>Inicio</label>
+              <select style={{ ...inputSt, width: 160 }} value={pA} onChange={(e) => setSelA(e.target.value)}>
+                {periodos.map((p) => (
+                  <option key={p} value={p}>
+                    {etiquetaPeriodo(p)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={etiqueta}>Final / actual</label>
+              <select style={{ ...inputSt, width: 160 }} value={pB} onChange={(e) => setSelB(e.target.value)}>
+                {periodos.map((p) => (
+                  <option key={p} value={p}>
+                    {etiquetaPeriodo(p)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button type="button" style={btnPrim} onClick={abrirCompPlantel} disabled={periodos.length < 2}>
+              Evolución del plantel (PDF)
+            </button>
+          </>
+        )}
+
+        {modo === 'mensual' && (
           <div>
             <label style={etiqueta}>Mes</label>
             <input type="month" style={{ ...inputSt, width: 180 }} value={mes} onChange={(e) => setMes(e.target.value)} />
           </div>
         )}
+
         {modo === 'final' && (
-          <button type="button" style={btnPrim} onClick={abrirPlantel}>
-            Resumen del plantel (PDF)
-          </button>
-        )}
-      </div>
-
-      <div style={{ ...card, marginBottom: 16 }}>
-        <div style={{ color: C.textoSecundario, fontSize: 13, marginBottom: 6 }}>Avance por evaluador</div>
-        {Object.keys(avance).length === 0 ? (
-          <span style={{ color: C.textoMuted }}>Todavía no hay evaluaciones en este período.</span>
-        ) : (
-          Object.keys(avance).map((id) => (
-            <div key={id} style={{ color: C.texto }}>
-              {nombresEval[id] || 'Evaluador'}: {avance[id].size}/{jugadores.length} jugadoras
+          <>
+            <div>
+              <label style={etiqueta}>Temporada (año)</label>
+              <input type="number" style={{ ...inputSt, width: 120 }} value={anio} onChange={(e) => setAnio(Number(e.target.value))} />
             </div>
-          ))
+            <button type="button" style={btnPrim} onClick={abrirPlantel}>
+              Resumen del plantel (PDF)
+            </button>
+          </>
         )}
       </div>
 
-      <div style={{ ...card, overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={th}>Jugadora</th>
-              <th style={th}>Eval.</th>
-              <th style={th}>Prom.</th>
-              {criterios.map((c) => (
-                <th key={c.id} style={th}>{c.nombre}</th>
-              ))}
-              {modo === 'final' && <th style={th}>Recomendación</th>}
-              <th style={th}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filas.map((f) => (
-              <tr key={f.j.id}>
-                <td style={td}>{nombreJ(f.j)}</td>
-                <td style={td}>{f.n}</td>
-                <td style={{ ...td, fontWeight: 700 }}>{f1(f.r.general)}</td>
-                {f.r.porCrit.map((x) => (
-                  <td key={x.c.id} style={td}>{f1(x.prom)}</td>
+      {modo === 'comparativa' && (
+        <div>
+          {periodos.length < 2 ? (
+            <div style={card}>
+              <p style={{ color: C.textoSecundario }}>
+                Para comparar necesitás evaluaciones de al menos dos meses distintos. Cuando haya más meses cargados,
+                acá vas a ver quién mejoró y quién no.
+              </p>
+            </div>
+          ) : (
+            <div>
+              <div style={{ ...card, marginBottom: 16, color: C.texto }}>
+                Mejoraron <b style={{ color: C.exito }}>{resComp.mejoran}</b> · Igual <b>{resComp.igual}</b> · Bajaron{' '}
+                <b style={{ color: C.peligro }}>{resComp.bajan}</b> · Sin datos para comparar {resComp.sin}
+                <div style={{ color: C.textoMuted, fontSize: 12, marginTop: 4 }}>
+                  Variación = diferencia de promedios. Hasta ±0,2 se considera igual.
+                </div>
+              </div>
+              <div style={{ ...card, overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={th}>Jugadora</th>
+                      <th style={th}>{etiquetaPeriodo(pA)}</th>
+                      <th style={th}>{etiquetaPeriodo(pB)}</th>
+                      <th style={th}>Variación</th>
+                      {criterios.map((c) => (
+                        <th key={c.id} style={th}>
+                          {c.nombre}
+                        </th>
+                      ))}
+                      <th style={th}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filasComp.map((f) => (
+                      <tr key={f.j.id}>
+                        <td style={td}>{nombreJ(f.j)}</td>
+                        <td style={td}>{f1(f.rA.general)}</td>
+                        <td style={td}>{f1(f.rB.general)}</td>
+                        <td style={{ ...td, fontWeight: 700, color: colorDelta(f.d) }}>{txtDelta(f.d)}</td>
+                        {f.dCrit.map((d, i) => (
+                          <td key={criterios[i].id} style={{ ...td, color: colorDelta(d) }}>
+                            {txtDelta(d)}
+                          </td>
+                        ))}
+                        <td style={td}>
+                          <button type="button" style={btnSec} onClick={() => abrirComp(f.j)}>
+                            Informe
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {modo !== 'comparativa' && (
+        <div>
+          <div style={{ ...card, marginBottom: 16 }}>
+            <div style={{ color: C.textoSecundario, fontSize: 13, marginBottom: 6 }}>Avance por evaluador</div>
+            {Object.keys(avance).length === 0 ? (
+              <span style={{ color: C.textoMuted }}>Todavía no hay evaluaciones en este período.</span>
+            ) : (
+              Object.keys(avance).map((id) => (
+                <div key={id} style={{ color: C.texto }}>
+                  {nombresEval[id] || 'Evaluador'}: {avance[id].size}/{jugadores.length} jugadoras
+                </div>
+              ))
+            )}
+          </div>
+
+          <div style={{ ...card, overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={th}>Jugadora</th>
+                  <th style={th}>Eval.</th>
+                  <th style={th}>Prom.</th>
+                  {criterios.map((c) => (
+                    <th key={c.id} style={th}>
+                      {c.nombre}
+                    </th>
+                  ))}
+                  {modo === 'final' && <th style={th}>Recomendación</th>}
+                  <th style={th}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filas.map((f) => (
+                  <tr key={f.j.id}>
+                    <td style={td}>{nombreJ(f.j)}</td>
+                    <td style={td}>{f.n}</td>
+                    <td style={{ ...td, fontWeight: 700 }}>{f1(f.r.general)}</td>
+                    {f.r.porCrit.map((x) => (
+                      <td key={x.c.id} style={td}>
+                        {f1(x.prom)}
+                      </td>
+                    ))}
+                    {modo === 'final' && <td style={td}>{f.rec}</td>}
+                    <td style={td}>
+                      <button type="button" style={btnSec} onClick={() => abrirInforme(f.j)}>
+                        Informe
+                      </button>
+                    </td>
+                  </tr>
                 ))}
-                {modo === 'final' && <td style={td}>{f.rec}</td>}
-                <td style={td}>
-                  <button type="button" style={btnSec} onClick={() => abrirInforme(f.j)}>
-                    Informe
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {visor && <Visor visor={visor} onCerrar={() => setVisor(null)} />}
     </div>
@@ -785,7 +1089,7 @@ export default function EvaluacionesSection({ perfil }) {
   const tabs = []
   if (puedeEvaluar) {
     tabs.push(['mensual', 'Evaluación mensual'])
-    tabs.push(['final', 'Final de temporada'])
+    if (MOSTRAR_FINAL) tabs.push(['final', 'Final de temporada'])
   }
   if (verTodo) tabs.push(['informes', 'Informes'])
   const activa = tab || (tabs[0] && tabs[0][0])
