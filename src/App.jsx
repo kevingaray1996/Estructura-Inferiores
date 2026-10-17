@@ -22,6 +22,7 @@ import RepresentantesSection from './components/RepresentantesSection'
 import PensionesSection from './components/PensionesSection'
 import ConvocatoriasSeleccionSection from './components/ConvocatoriasSeleccionSection'
 import ContratosSection from './components/ContratosSection'
+import EvaluacionesSection from './components/EvaluacionesSection'
 
 function App() {
   const [categoriaBienestarId] = useState(
@@ -225,6 +226,7 @@ function App() {
       {seccion === 'pensiones' && <PensionesSection onVolver={() => setSeccion('inicio')} />}
       {seccion === 'seleccion' && <ConvocatoriasSeleccionSection onVolver={() => setSeccion('inicio')} />}
       {seccion === 'contratos' && <ContratosSection onVolver={() => setSeccion('inicio')} />}
+      {seccion === 'evaluaciones' && <EvaluacionesSection perfil={perfil} />}
       {seccion === 'pases' && <PaseCategoriaSection />}
       {seccion === 'usuarios' && <UsuariosSection />}
     </Layout>
