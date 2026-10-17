@@ -135,7 +135,7 @@ function MiniBarras({ datos, color }) {
 
   return (
     <svg
-      viewBox={`0 0 ${svgAncho} ${alto + 16}`}
+      viewBox={'0 0 ' + svgAncho + ' ' + (alto + 16)}
       width={svgAncho}
       height={alto + 16}
       role="img"
