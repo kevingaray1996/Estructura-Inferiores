@@ -1893,8 +1893,7 @@ border: '1px solid ' + BORDE,
         />
       )}
     </div>
-  )
+ )
 }
 
 export default PerfilJugador
-```
