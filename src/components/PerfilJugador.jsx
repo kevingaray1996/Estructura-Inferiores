@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import PdfPerfilModal from './PdfPerfilModal'
@@ -179,12 +180,12 @@ function PerfilJugador({
   const [resumenBienestarMensual, setResumenBienestarMensual] = useState(null)
   const [asistenciaReciente, setAsistenciaReciente] = useState(null)
 
-  // Historial de evaluaciones ya guardadas en Supabase
   const [evaluaciones, setEvaluaciones] = useState([])
   const [criteriosEvaluacion, setCriteriosEvaluacion] = useState([])
   const [evaluacionesCargando, setEvaluacionesCargando] = useState(true)
   const [evaluacionesError, setEvaluacionesError] = useState('')
   const [periodoAbierto, setPeriodoAbierto] = useState(null)
+  const [mostrarEvaluaciones, setMostrarEvaluaciones] = useState(false)
 
   useEffect(() => {
     let cancelado = false
@@ -509,7 +510,8 @@ function PerfilJugador({
   )
 
   const datosPersonales = [
-    { label: 'Posición', valor: jugador.posicion, extra: jugador.posicion_secundaria },
+    { label: 'Posición principal', valor: jugador.posicion },
+    { label: 'Posición alternativa', valor: jugador.posicion_secundaria },
     {
       label: 'Fecha nac.',
       valor: formatearFecha(jugador.fecha_nacimiento),
@@ -558,7 +560,6 @@ function PerfilJugador({
     },
   ]
 
-  // Agrupa las evaluaciones mensuales y finales por período.
   const evaluacionesPorPeriodo = Object.values(
     evaluaciones.reduce((grupos, evaluacion) => {
       if (!evaluacion.periodo) return grupos
@@ -574,7 +575,18 @@ function PerfilJugador({
       grupos[evaluacion.periodo].evaluaciones.push(evaluacion)
       return grupos
     }, {})
-  ).sort((a, b) => b.periodo.localeCompare(a.periodo))
+  ).sort((a, b) => {
+    const periodoA = String(a.periodo)
+    const periodoB = String(b.periodo)
+    const esFinalA = periodoA.startsWith('final-')
+    const esFinalB = periodoB.startsWith('final-')
+
+    if (esFinalA && esFinalB) return periodoB.localeCompare(periodoA)
+    if (esFinalA) return periodoB.localeCompare(periodoA)
+    if (esFinalB) return periodoB.localeCompare(periodoA)
+
+    return periodoB.localeCompare(periodoA)
+  })
 
   if (filtroStat) {
     const config = statConfig[filtroStat]
@@ -659,7 +671,6 @@ function PerfilJugador({
   return (
     <div className="min-h-screen p-4 md:p-8" style={{ backgroundColor: COLORES.fondo }}>
       <div className="max-w-4xl mx-auto">
-        {/* Navegación y acciones */}
         <div className="flex items-center justify-between gap-3 mb-6">
           <button
             onClick={onVolver}
@@ -697,7 +708,7 @@ function PerfilJugador({
           </div>
         </div>
 
-        {/* Encabezado rediseñado */}
+        {/* Encabezado del perfil */}
         <div
           className="relative overflow-hidden rounded-2xl p-5 md:p-7 mb-5"
           style={{
@@ -705,10 +716,7 @@ function PerfilJugador({
             border: `1px solid ${COLORES.borde}`,
           }}
         >
-          <div
-            className="absolute left-0 top-0 bottom-0 w-1.5"
-            style={{ backgroundColor: COLORES.amarillo }}
-          />
+          <div className="absolute left-0 top-0 bottom-0 w-1.5" style={{ backgroundColor: COLORES.amarillo }} />
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-5">
             {jugador.foto_url ? (
@@ -736,19 +744,13 @@ function PerfilJugador({
             )}
 
             <div className="min-w-0 flex-1">
-              <p
-                className="text-[10px] uppercase tracking-[0.25em] mb-2"
-                style={{ color: COLORES.amarillo }}
-              >
+              <p className="text-[10px] uppercase tracking-[0.25em] mb-2" style={{ color: COLORES.amarillo }}>
                 Perfil de jugadora
               </p>
 
               <h1
                 className="text-2xl md:text-4xl leading-tight break-words"
-                style={{
-                  fontFamily: "'Archivo Black', sans-serif",
-                  color: COLORES.texto,
-                }}
+                style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
               >
                 {jugador.apellido}, {jugador.nombre}
               </h1>
@@ -785,7 +787,8 @@ function PerfilJugador({
               )}
 
               <div className="flex flex-wrap gap-x-4 gap-y-2 mt-4 text-xs" style={{ color: COLORES.secundario }}>
-                {jugador.posicion && <span>⚽ {jugador.posicion}</span>}
+                {jugador.posicion && <span>⚽ Principal: {jugador.posicion}</span>}
+                {jugador.posicion_secundaria && <span>↗ Alternativa: {jugador.posicion_secundaria}</span>}
                 {edad !== null && <span>◷ {edad} años</span>}
                 {pieHabilLabel[jugador.pie_habil] && <span>Pie {pieHabilLabel[jugador.pie_habil].toLowerCase()}</span>}
               </div>
@@ -793,13 +796,10 @@ function PerfilJugador({
           </div>
         </div>
 
-        {/* Datos secundarios desplegables */}
+        {/* Datos personales desplegables */}
         <details
           className="mb-5 rounded-xl overflow-hidden"
-          style={{
-            backgroundColor: COLORES.tarjeta,
-            border: `1px solid ${COLORES.borde}`,
-          }}
+          style={{ backgroundColor: COLORES.tarjeta, border: `1px solid ${COLORES.borde}` }}
         >
           <summary className="p-4 cursor-pointer flex items-center justify-between gap-3">
             <span>
@@ -878,7 +878,7 @@ function PerfilJugador({
           </a>
         )}
 
-        {/* Estadísticas */}
+        {/* Rendimiento deportivo */}
         <p className="text-xs tracking-widest uppercase mb-3" style={{ color: COLORES.amarillo }}>
           Rendimiento deportivo
         </p>
@@ -915,256 +915,279 @@ function PerfilJugador({
           ))}
         </div>
 
-        {/* Historial de evaluaciones */}
+        {/* Historial de evaluaciones desplegable */}
         <section className="mb-8">
-          <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
-            <div>
-              <p className="text-xs tracking-widest uppercase mb-1" style={{ color: COLORES.amarillo }}>
-                Seguimiento del cuerpo técnico
-              </p>
-              <h2 className="text-2xl font-bold" style={{ color: COLORES.texto }}>
-                Evaluaciones
-              </h2>
-            </div>
-
-            <span
-              className="text-xs px-3 py-1.5 rounded-full"
-              style={{ backgroundColor: COLORES.amarilloOscuro, color: COLORES.amarillo }}
+          <div
+            className="rounded-xl overflow-hidden"
+            style={{
+              backgroundColor: COLORES.tarjeta,
+              border: `1px solid ${mostrarEvaluaciones ? COLORES.amarillo : COLORES.borde}`,
+            }}
+          >
+            <button
+              type="button"
+              aria-expanded={mostrarEvaluaciones}
+              onClick={() => setMostrarEvaluaciones((actual) => !actual)}
+              className="w-full text-left p-4 flex items-center gap-3"
             >
-              {evaluacionesPorPeriodo.length} período{evaluacionesPorPeriodo.length !== 1 ? 's' : ''}
-            </span>
-          </div>
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0"
+                style={{ backgroundColor: COLORES.amarilloOscuro, color: COLORES.amarillo }}
+              >
+                ▤
+              </div>
 
-          {evaluacionesCargando ? (
-            <div className="p-5 rounded-xl" style={{ backgroundColor: COLORES.tarjeta, border: `1px solid ${COLORES.borde}` }}>
-              <p className="text-sm" style={{ color: COLORES.secundario }}>Cargando historial de evaluaciones...</p>
-            </div>
-          ) : evaluacionesError ? (
-            <div className="p-5 rounded-xl" style={{ backgroundColor: COLORES.tarjeta, border: `1px solid ${COLORES.borde}` }}>
-              <p className="text-sm" style={{ color: '#FBBF24' }}>{evaluacionesError}</p>
-            </div>
-          ) : evaluacionesPorPeriodo.length === 0 ? (
-            <div className="p-5 rounded-xl" style={{ backgroundColor: COLORES.tarjeta, border: `1px solid ${COLORES.borde}` }}>
-              <p className="text-sm font-semibold" style={{ color: COLORES.texto }}>
-                Todavía no hay evaluaciones registradas
-              </p>
-              <p className="text-xs mt-1" style={{ color: COLORES.secundario }}>
-                Cuando el cuerpo técnico guarde una evaluación mensual o final, aparecerá en este historial.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {evaluacionesPorPeriodo.map((grupo) => {
-                const abierto = periodoAbierto === grupo.periodo
-                const resumen = calcularResumenEvaluacion(grupo.evaluaciones, criteriosEvaluacion)
-                const esFinal = grupo.tipo === 'final' || grupo.periodo.startsWith('final-')
+              <div className="flex-1 min-w-0">
+                <p className="text-xs tracking-widest uppercase mb-1" style={{ color: COLORES.amarillo }}>
+                  Seguimiento del cuerpo técnico
+                </p>
+                <h2 className="text-lg font-bold" style={{ color: COLORES.texto }}>
+                  Evaluaciones
+                </h2>
+                <p className="text-xs mt-1" style={{ color: COLORES.secundario }}>
+                  {evaluacionesCargando
+                    ? 'Cargando historial...'
+                    : `${evaluacionesPorPeriodo.length} período${evaluacionesPorPeriodo.length !== 1 ? 's' : ''} registrado${evaluacionesPorPeriodo.length !== 1 ? 's' : ''}`}
+                </p>
+              </div>
 
-                return (
-                  <article
-                    key={grupo.periodo}
-                    className="rounded-xl overflow-hidden"
-                    style={{
-                      backgroundColor: COLORES.tarjeta,
-                      border: `1px solid ${abierto ? COLORES.amarillo : COLORES.borde}`,
-                    }}
-                  >
-                    <button
-                      type="button"
-                      aria-expanded={abierto}
-                      onClick={() => setPeriodoAbierto(abierto ? null : grupo.periodo)}
-                      className="w-full text-left p-4 flex items-center gap-3"
-                    >
-                      <div
-                        className="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0"
-                        style={{ backgroundColor: COLORES.amarilloOscuro, color: COLORES.amarillo }}
+              <span className="text-xl" style={{ color: COLORES.amarillo }}>
+                {mostrarEvaluaciones ? '−' : '+'}
+              </span>
+            </button>
+
+            {mostrarEvaluaciones && (
+              <div className="p-4 space-y-3" style={{ borderTop: `1px solid ${COLORES.borde}` }}>
+                {evaluacionesCargando ? (
+                  <p className="text-sm" style={{ color: COLORES.secundario }}>
+                    Cargando historial de evaluaciones...
+                  </p>
+                ) : evaluacionesError ? (
+                  <p className="text-sm" style={{ color: '#FBBF24' }}>
+                    {evaluacionesError}
+                  </p>
+                ) : evaluacionesPorPeriodo.length === 0 ? (
+                  <div className="p-3 rounded-xl" style={{ backgroundColor: COLORES.fondo }}>
+                    <p className="text-sm font-semibold" style={{ color: COLORES.texto }}>
+                      Todavía no hay evaluaciones registradas
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: COLORES.secundario }}>
+                      Cuando el cuerpo técnico guarde una evaluación mensual o final, aparecerá en este historial.
+                    </p>
+                  </div>
+                ) : (
+                  evaluacionesPorPeriodo.map((grupo) => {
+                    const abierto = periodoAbierto === grupo.periodo
+                    const resumen = calcularResumenEvaluacion(grupo.evaluaciones, criteriosEvaluacion)
+                    const esFinal = grupo.tipo === 'final' || grupo.periodo.startsWith('final-')
+
+                    return (
+                      <article
+                        key={grupo.periodo}
+                        className="rounded-xl overflow-hidden"
+                        style={{
+                          backgroundColor: COLORES.fondo,
+                          border: `1px solid ${abierto ? COLORES.amarillo : COLORES.borde}`,
+                        }}
                       >
-                        {esFinal ? '★' : '▤'}
-                      </div>
+                        <button
+                          type="button"
+                          aria-expanded={abierto}
+                          onClick={() => setPeriodoAbierto(abierto ? null : grupo.periodo)}
+                          className="w-full text-left p-4 flex items-center gap-3"
+                        >
+                          <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
+                            style={{ backgroundColor: COLORES.amarilloOscuro, color: COLORES.amarillo }}
+                          >
+                            {esFinal ? '★' : '▤'}
+                          </div>
 
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm" style={{ color: COLORES.texto }}>
-                          {esFinal ? `Evaluación final · ${nombrePeriodo(grupo.periodo, grupo.tipo)}` : nombrePeriodo(grupo.periodo, grupo.tipo)}
-                        </p>
-                        <p className="text-xs mt-1" style={{ color: COLORES.secundario }}>
-                          {grupo.evaluaciones.length} evaluador{grupo.evaluaciones.length !== 1 ? 'es' : ''}
-                        </p>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <p className="text-2xl font-bold" style={{ color: COLORES.amarillo }}>
-                          {resumen.general === null ? '—' : resumen.general.toFixed(1)}
-                        </p>
-                        <p className="text-[10px]" style={{ color: COLORES.tenue }}>
-                          Promedio / 5
-                        </p>
-                      </div>
-
-                      <span className="text-lg ml-1" style={{ color: COLORES.secundario }}>
-                        {abierto ? '−' : '+'}
-                      </span>
-                    </button>
-
-                    {abierto && (
-                      <div className="p-4 space-y-5" style={{ borderTop: `1px solid ${COLORES.borde}` }}>
-                        <div>
-                          <p className="text-xs tracking-widest uppercase mb-3" style={{ color: COLORES.amarillo }}>
-                            Promedio por criterio
-                          </p>
-
-                          {resumen.porCriterio.length === 0 ? (
-                            <p className="text-sm" style={{ color: COLORES.secundario }}>
-                              No hay criterios disponibles.
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm" style={{ color: COLORES.texto }}>
+                              {esFinal
+                                ? `Evaluación final · ${nombrePeriodo(grupo.periodo, grupo.tipo)}`
+                                : nombrePeriodo(grupo.periodo, grupo.tipo)}
                             </p>
-                          ) : (
-                            <div className="space-y-3">
-                              {resumen.porCriterio.map(({ criterio, promedio, cantidad }) => (
-                                <div key={criterio.id}>
-                                  <div className="flex justify-between gap-3 mb-1">
-                                    <span className="text-sm" style={{ color: COLORES.texto }}>
-                                      {criterio.nombre}
-                                    </span>
-                                    <span className="text-sm font-semibold shrink-0" style={{ color: COLORES.amarillo }}>
-                                      {promedio === null ? '—' : promedio.toFixed(1)}
-                                    </span>
-                                  </div>
+                            <p className="text-xs mt-1" style={{ color: COLORES.secundario }}>
+                              {grupo.evaluaciones.length} evaluador{grupo.evaluaciones.length !== 1 ? 'es' : ''}
+                            </p>
+                          </div>
 
-                                  <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: COLORES.borde }}>
-                                    <div
-                                      className="h-full rounded-full"
-                                      style={{
-                                        width: `${promedio === null ? 0 : (promedio / 5) * 100}%`,
-                                        backgroundColor: COLORES.amarillo,
-                                      }}
-                                    />
-                                  </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-2xl font-bold" style={{ color: COLORES.amarillo }}>
+                              {resumen.general === null ? '—' : resumen.general.toFixed(1)}
+                            </p>
+                            <p className="text-[10px]" style={{ color: COLORES.tenue }}>
+                              Promedio / 5
+                            </p>
+                          </div>
 
-                                  <p className="text-[10px] mt-1" style={{ color: COLORES.tenue }}>
-                                    {cantidad} puntuación{cantidad !== 1 ? 'es' : ''} válida{cantidad !== 1 ? 's' : ''}
-                                  </p>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                          <span className="text-lg ml-1" style={{ color: COLORES.secundario }}>
+                            {abierto ? '−' : '+'}
+                          </span>
+                        </button>
 
-                        <div>
-                          <p className="text-xs tracking-widest uppercase mb-3" style={{ color: COLORES.amarillo }}>
-                            Detalle por evaluador
-                          </p>
+                        {abierto && (
+                          <div className="p-4 space-y-5" style={{ borderTop: `1px solid ${COLORES.borde}` }}>
+                            <div>
+                              <p className="text-xs tracking-widest uppercase mb-3" style={{ color: COLORES.amarillo }}>
+                                Promedio por criterio
+                              </p>
 
-                          <div className="space-y-3">
-                            {grupo.evaluaciones.map((evaluacion, indice) => (
-                              <div
-                                key={evaluacion.id || `${evaluacion.evaluador_id}-${indice}`}
-                                className="rounded-xl p-4"
-                                style={{ backgroundColor: COLORES.fondo, border: `1px solid ${COLORES.borde}` }}
-                              >
-                                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                                  <p className="text-sm font-semibold" style={{ color: COLORES.texto }}>
-                                    {evaluacion.evaluador_nombre || 'Evaluador'}
-                                  </p>
-                                  <span
-                                    className="text-[10px] px-2 py-1 rounded-full"
-                                    style={{ backgroundColor: COLORES.tarjeta, color: COLORES.secundario }}
-                                  >
-                                    {esFinal ? 'Final de temporada' : 'Evaluación mensual'}
-                                  </span>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                  {criteriosEvaluacion.map((criterio) => (
-                                    <div
-                                      key={criterio.id}
-                                      className="p-3 rounded-lg"
-                                      style={{ backgroundColor: COLORES.tarjeta }}
-                                    >
-                                      <p className="text-xs mb-2" style={{ color: COLORES.secundario }}>
-                                        {criterio.nombre}
-                                      </p>
-
-                                      <div className="flex items-center gap-1.5">
-                                        {[1, 2, 3, 4, 5].map((numero) => {
-                                          const valor = evaluacion.puntajes?.[criterio.id]
-                                          const activo = valor !== 'no_evaluo' && Number(valor) === numero
-
-                                          return (
-                                            <span
-                                              key={numero}
-                                              className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold"
-                                              style={{
-                                                backgroundColor: activo ? COLORES.amarillo : COLORES.fondo,
-                                                color: activo ? '#111111' : COLORES.tenue,
-                                                border: `1px solid ${activo ? COLORES.amarillo : COLORES.borde}`,
-                                              }}
-                                            >
-                                              {numero}
-                                            </span>
-                                          )
-                                        })}
-
-                                        <span className="text-xs ml-1" style={{ color: COLORES.secundario }}>
-                                          {valorPuntaje(evaluacion.puntajes?.[criterio.id])}
+                              {resumen.porCriterio.length === 0 ? (
+                                <p className="text-sm" style={{ color: COLORES.secundario }}>
+                                  No hay criterios disponibles.
+                                </p>
+                              ) : (
+                                <div className="space-y-3">
+                                  {resumen.porCriterio.map(({ criterio, promedio, cantidad }) => (
+                                    <div key={criterio.id}>
+                                      <div className="flex justify-between gap-3 mb-1">
+                                        <span className="text-sm" style={{ color: COLORES.texto }}>
+                                          {criterio.nombre}
+                                        </span>
+                                        <span className="text-sm font-semibold shrink-0" style={{ color: COLORES.amarillo }}>
+                                          {promedio === null ? '—' : promedio.toFixed(1)}
                                         </span>
                                       </div>
+
+                                      <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: COLORES.borde }}>
+                                        <div
+                                          className="h-full rounded-full"
+                                          style={{
+                                            width: `${promedio === null ? 0 : (promedio / 5) * 100}%`,
+                                            backgroundColor: COLORES.amarillo,
+                                          }}
+                                        />
+                                      </div>
+
+                                      <p className="text-[10px] mt-1" style={{ color: COLORES.tenue }}>
+                                        {cantidad} puntuación{cantidad !== 1 ? 'es' : ''} válida{cantidad !== 1 ? 's' : ''}
+                                      </p>
                                     </div>
                                   ))}
                                 </div>
+                              )}
+                            </div>
 
-                                {[
-                                  ['Fortalezas', evaluacion.fortalezas],
-                                  ['A mejorar', evaluacion.a_mejorar],
-                                  ['Comentario', evaluacion.comentario],
-                                  ['Proyección próxima temporada', evaluacion.proyeccion],
-                                ].map(([titulo, contenido]) => (
-                                  contenido ? (
-                                    <div key={titulo} className="mt-4">
-                                      <p className="text-xs font-semibold mb-1" style={{ color: COLORES.amarillo }}>
-                                        {titulo}
+                            <div>
+                              <p className="text-xs tracking-widest uppercase mb-3" style={{ color: COLORES.amarillo }}>
+                                Detalle por evaluador
+                              </p>
+
+                              <div className="space-y-3">
+                                {grupo.evaluaciones.map((evaluacion, indice) => (
+                                  <div
+                                    key={evaluacion.id || `${evaluacion.evaluador_id}-${indice}`}
+                                    className="rounded-xl p-4"
+                                    style={{ backgroundColor: COLORES.tarjeta, border: `1px solid ${COLORES.borde}` }}
+                                  >
+                                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                      <p className="text-sm font-semibold" style={{ color: COLORES.texto }}>
+                                        {evaluacion.evaluador_nombre || 'Evaluador'}
                                       </p>
-                                      <p className="text-sm whitespace-pre-wrap break-words" style={{ color: COLORES.secundario }}>
-                                        {contenido}
-                                      </p>
+                                      <span
+                                        className="text-[10px] px-2 py-1 rounded-full"
+                                        style={{ backgroundColor: COLORES.fondo, color: COLORES.secundario }}
+                                      >
+                                        {esFinal ? 'Final de temporada' : 'Evaluación mensual'}
+                                      </span>
                                     </div>
-                                  ) : null
-                                ))}
 
-                                {evaluacion.recomendacion && (
-                                  <div className="mt-4 pt-3" style={{ borderTop: `1px solid ${COLORES.borde}` }}>
-                                    <p className="text-xs mb-1" style={{ color: COLORES.secundario }}>
-                                      Recomendación para la próxima temporada
-                                    </p>
-                                    <span
-                                      className="inline-block text-xs font-semibold px-3 py-1.5 rounded-full"
-                                      style={{
-                                        backgroundColor: COLORES.amarilloOscuro,
-                                        color: COLORES.amarillo,
-                                      }}
-                                    >
-                                      {recomendacionLabel[evaluacion.recomendacion] || evaluacion.recomendacion}
-                                    </span>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                      {criteriosEvaluacion.map((criterio) => (
+                                        <div
+                                          key={criterio.id}
+                                          className="p-3 rounded-lg"
+                                          style={{ backgroundColor: COLORES.fondo }}
+                                        >
+                                          <p className="text-xs mb-2" style={{ color: COLORES.secundario }}>
+                                            {criterio.nombre}
+                                          </p>
+
+                                          <div className="flex items-center gap-1.5 flex-wrap">
+                                            {[1, 2, 3, 4, 5].map((numero) => {
+                                              const valor = evaluacion.puntajes?.[criterio.id]
+                                              const activo = valor !== 'no_evaluo' && Number(valor) === numero
+
+                                              return (
+                                                <span
+                                                  key={numero}
+                                                  className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold"
+                                                  style={{
+                                                    backgroundColor: activo ? COLORES.amarillo : COLORES.tarjeta,
+                                                    color: activo ? '#111111' : COLORES.tenue,
+                                                    border: `1px solid ${activo ? COLORES.amarillo : COLORES.borde}`,
+                                                  }}
+                                                >
+                                                  {numero}
+                                                </span>
+                                              )
+                                            })}
+
+                                            <span className="text-xs ml-1" style={{ color: COLORES.secundario }}>
+                                              {valorPuntaje(evaluacion.puntajes?.[criterio.id])}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+
+                                    {[
+                                      ['Fortalezas', evaluacion.fortalezas],
+                                      ['A mejorar', evaluacion.a_mejorar],
+                                      ['Comentario', evaluacion.comentario],
+                                      ['Proyección próxima temporada', evaluacion.proyeccion],
+                                    ].map(([titulo, contenido]) => (
+                                      contenido ? (
+                                        <div key={titulo} className="mt-4">
+                                          <p className="text-xs font-semibold mb-1" style={{ color: COLORES.amarillo }}>
+                                            {titulo}
+                                          </p>
+                                          <p className="text-sm whitespace-pre-wrap break-words" style={{ color: COLORES.secundario }}>
+                                            {contenido}
+                                          </p>
+                                        </div>
+                                      ) : null
+                                    ))}
+
+                                    {evaluacion.recomendacion && (
+                                      <div className="mt-4 pt-3" style={{ borderTop: `1px solid ${COLORES.borde}` }}>
+                                        <p className="text-xs mb-1" style={{ color: COLORES.secundario }}>
+                                          Recomendación para la próxima temporada
+                                        </p>
+                                        <span
+                                          className="inline-block text-xs font-semibold px-3 py-1.5 rounded-full"
+                                          style={{ backgroundColor: COLORES.amarilloOscuro, color: COLORES.amarillo }}
+                                        >
+                                          {recomendacionLabel[evaluacion.recomendacion] || evaluacion.recomendacion}
+                                        </span>
+                                      </div>
+                                    )}
+
+                                    {!evaluacion.fortalezas &&
+                                      !evaluacion.a_mejorar &&
+                                      !evaluacion.comentario &&
+                                      !evaluacion.proyeccion &&
+                                      !evaluacion.recomendacion && (
+                                        <p className="text-xs mt-3" style={{ color: COLORES.tenue }}>
+                                          No se agregaron comentarios para esta evaluación.
+                                        </p>
+                                      )}
                                   </div>
-                                )}
-
-                                {!evaluacion.fortalezas &&
-                                  !evaluacion.a_mejorar &&
-                                  !evaluacion.comentario &&
-                                  !evaluacion.proyeccion &&
-                                  !evaluacion.recomendacion && (
-                                    <p className="text-xs mt-3" style={{ color: COLORES.tenue }}>
-                                      No se agregaron comentarios para esta evaluación.
-                                    </p>
-                                  )}
+                                ))}
                               </div>
-                            ))}
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    )}
-                  </article>
-                )
-              })}
-            </div>
-          )}
+                        )}
+                      </article>
+                    )
+                  })
+                )}
+              </div>
+            )}
+          </div>
         </section>
 
         {/* Comparativa por año */}
@@ -1206,7 +1229,7 @@ function PerfilJugador({
           </>
         )}
 
-        {/* Bienestar semanal */}
+        {/* Bienestar semanal: se conserva el diseño existente */}
         {resumenBienestar && (
           <>
             <div className="flex items-center justify-between mb-3">
@@ -1273,7 +1296,7 @@ function PerfilJugador({
           </>
         )}
 
-        {/* Áreas */}
+        {/* Áreas: se conserva el diseño existente */}
         <p className="text-xs tracking-widest uppercase mb-3" style={{ color: COLORES.amarillo }}>
           Áreas
         </p>
@@ -1417,7 +1440,7 @@ function PerfilJugador({
           </>
         )}
 
-        {/* PDF del perfil existente */}
+        {/* PDF existente: no se modifica */}
         <button
           onClick={() => setMostrarPdf(true)}
           className="w-full mt-8 p-3 rounded-xl font-medium text-sm transition-opacity hover:opacity-80"
