@@ -38,7 +38,7 @@ export async function obtenerEstadisticasCategoria(categoriaId) {
       }),
       { partidos: 0, titularidades: 0, minutos: 0, goles: 0, asistencias: 0, amarillas: 0, rojas: 0 }
     )
-    return { nombre: j.nombre, apellido: j.apellido, ...totales }
+    return { id: j.id, nombre: j.nombre, apellido: j.apellido, ...totales }
   })
 }
 
