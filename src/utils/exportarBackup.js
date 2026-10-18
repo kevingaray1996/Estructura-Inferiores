@@ -47,7 +47,7 @@ export async function exportarBackupCompleto() {
 
   XLSX.utils.book_append_sheet(libro, hojaDesdeFilas(filasPartidos), 'Partidos')
 
-  // --- Estadísticas por jugador y partido ---
+  // --- Estadísticas ---
   const { data: statsData } = await supabase
     .from('estadisticas_jugador')
     .select('*, jugadores(nombre, apellido), partidos(fecha, rival)')
@@ -90,3 +90,54 @@ export async function exportarBackupCompleto() {
     Fecha: b.fecha,
     Jugadora: b.jugadores ? `${b.jugadores.apellido}, ${b.jugadores.nombre}` : '',
     Sueño: b.sueno ?? '',
+    'Dolor muscular': b.dolor_muscular ?? '',
+    Fatiga: b.fatiga ?? '',
+    Estrés: b.estres ?? '',
+    'Ánimo entrenar': b.animo_entrenar ?? '',
+  }))
+
+  XLSX.utils.book_append_sheet(libro, hojaDesdeFilas(filasBienestar), 'Bienestar')
+
+  // --- RPE ---
+  const { data: rpeData, error: rpeError } = await supabase
+    .from('sesiones_fisicas')
+    .select('*, jugadores(nombre, apellido)')
+    .order('fecha', { ascending: false })
+
+  if (rpeError) throw rpeError
+
+  const filasRPE = (rpeData || []).map((r) => ({
+    Fecha: r.fecha,
+    Jugadora: r.jugadores ? `${r.jugadores.apellido}, ${r.jugadores.nombre}` : '',
+    Actividad: r.tipo || '',
+    RPE: r.rpe ?? '',
+    'ID partido': r.partido_id ?? '',
+  }))
+
+  XLSX.utils.book_append_sheet(libro, hojaDesdeFilas(filasRPE), 'RPE')
+
+  // --- CMJ ---
+  const { data: cmjData, error: cmjError } = await supabase
+    .from('cmj')
+    .select('*, jugadores(nombre, apellido)')
+    .order('fecha', { ascending: false })
+
+  if (cmjError) throw cmjError
+
+  const filasCMJ = (cmjData || []).map((c) => ({
+    Fecha: c.fecha,
+    Jugadora: c.jugadores ? `${c.jugadores.apellido}, ${c.jugadores.nombre}` : '',
+    'Valor CMJ (cm)': c.valor_cm ?? '',
+  }))
+
+  XLSX.utils.book_append_sheet(libro, hojaDesdeFilas(filasCMJ), 'CMJ')
+
+  // --- Wellness adicional ---
+  XLSX.utils.book_append_sheet(libro, hojaDesdeFilas(filasBienestar), 'Wellness')
+
+  // --- Descargar backup ---
+  const hoy = new Date()
+  const fechaArchivo = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
+
+  XLSX.writeFile(libro, `Backup_ClubComunicaciones_${fechaArchivo}.xlsx`)
+}
