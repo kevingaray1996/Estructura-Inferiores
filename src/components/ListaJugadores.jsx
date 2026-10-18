@@ -7,10 +7,26 @@ import { obtenerEstadisticasCategoria } from '../utils/exportarEstadisticas'
 import { COLORES } from '../theme'
 
 const estadoConfig = {
-  disponible: { color: COLORES.exito, label: 'Disponible' },
-  lesionado: { color: COLORES.acento, label: 'Lesionada' },
-  suspendido: { color: COLORES.peligro, label: 'Suspendida' },
-  no_disponible: { color: COLORES.textoMuted, label: 'No disponible' },
+  disponible: {
+    label: 'Disponible',
+    color: '#4ADE80',
+    fondo: '#163627',
+  },
+  lesionado: {
+    label: 'Lesionada',
+    color: '#F87171',
+    fondo: '#402326',
+  },
+  suspendido: {
+    label: 'Suspendida',
+    color: '#FBBF24',
+    fondo: '#40351B',
+  },
+  no_disponible: {
+    label: 'No disponible',
+    color: '#A1A1AA',
+    fondo: '#292B32',
+  },
 }
 
 const posiciones = [
@@ -23,6 +39,20 @@ const posiciones = [
   'Extremo derecho',
   'Extremo izquierdo',
   'Delantero centro',
+]
+
+const filtrosPuesto = [
+  { id: 'todas', label: 'Todas' },
+  { id: 'arquera', label: 'Arqueras' },
+  { id: 'defensa', label: 'Defensoras' },
+  { id: 'mediocampo', label: 'Mediocampistas' },
+  { id: 'delantera', label: 'Delanteras' },
+]
+
+const filtrosEstado = [
+  { id: 'disponible', label: 'Disponibles', color: '#4ADE80' },
+  { id: 'lesionado', label: 'Lesionadas', color: '#F87171' },
+  { id: 'no_disponible', label: 'No disponibles', color: '#A1A1AA' },
 ]
 
 const FORMACIONES = {
@@ -46,9 +76,7 @@ const FORMACIONES = {
     [{ id: 'ARQ', nombre: 'Arquera', acepta: ['Arquero'] }],
   ],
   '4-2-3-1': [
-    [
-      { id: 'DC', nombre: 'Delantera', acepta: ['Delantero centro'] },
-    ],
+    [{ id: 'DC', nombre: 'Delantera', acepta: ['Delantero centro'] }],
     [
       { id: 'EI', nombre: 'Extrema izquierda', acepta: ['Extremo izquierdo'] },
       { id: 'VO', nombre: 'Volante ofensiva', acepta: ['Volante ofensivo'] },
@@ -68,16 +96,61 @@ const FORMACIONES = {
   ],
 }
 
+const normalizar = (valor) =>
+  (valor || '').trim().toLocaleLowerCase('es-AR')
+
 function iniciales(nombre, apellido) {
   return `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
 }
 
-function normalizarPosicion(posicion) {
-  return (posicion || '').trim().toLocaleLowerCase('es-AR')
+function obtenerEstado(jugadora) {
+  return estadoConfig[jugadora.estado] || estadoConfig.disponible
+}
+
+function coincideEstado(jugadora, filtro) {
+  if (filtro === 'todos') return true
+
+  const estado = jugadora.estado || 'disponible'
+
+  if (filtro === 'no_disponible') {
+    return estado === 'no_disponible' || estado === 'suspendido'
+  }
+
+  return estado === filtro
+}
+
+function coincidePuesto(jugadora, filtro) {
+  if (filtro === 'todas') return true
+
+  const posicion = normalizar(jugadora.posicion)
+  const secundaria = normalizar(jugadora.posicion_secundaria)
+  const posicionesJugadora = [posicion, secundaria]
+
+  const grupos = {
+    arquera: ['arquero'],
+    defensa: [
+      'defensor central',
+      'lateral derecho',
+      'lateral izquierdo',
+    ],
+    mediocampo: [
+      'mediocampista central',
+      'volante ofensivo',
+      'extremo derecho',
+      'extremo izquierdo',
+    ],
+    delantera: ['delantero centro'],
+  }
+
+  return posicionesJugadora.some((p) => grupos[filtro]?.includes(p))
 }
 
 function obtenerMinutos(jugadora, estadisticas) {
   return Number(estadisticas[String(jugadora.id)]?.minutos || 0)
+}
+
+function obtenerDato(jugadora, estadisticas, campo) {
+  return Number(estadisticas[String(jugadora.id)]?.[campo] || 0)
 }
 
 function asignarOnce(jugadoras, estadisticas, formacion) {
@@ -86,8 +159,6 @@ function asignarOnce(jugadoras, estadisticas, formacion) {
   const asignadas = new Map()
   const usadas = new Set()
 
-  // Se priorizan los minutos acumulados de la temporada.
-  // En caso de igualdad, se mantiene el orden alfabético del plantel.
   const ordenadas = [...jugadoras].sort((a, b) => {
     const diferencia =
       obtenerMinutos(b, estadisticas) - obtenerMinutos(a, estadisticas)
@@ -100,30 +171,27 @@ function asignarOnce(jugadoras, estadisticas, formacion) {
     )
   })
 
-  // Primero se intenta la posición principal; después, la secundaria.
   for (const jugadora of ordenadas) {
-    const principal = normalizarPosicion(jugadora.posicion)
-    const secundaria = normalizarPosicion(jugadora.posicion_secundaria)
+    const principal = normalizar(jugadora.posicion)
+    const secundaria = normalizar(jugadora.posicion_secundaria)
 
-    const puestoElegido = puestos.find((puesto) => {
-      if (asignadas.has(puesto.id)) return false
-      return puesto.acepta.some(
-        (posicion) => normalizarPosicion(posicion) === principal
-      )
-    })
+    const puestoPrincipal = puestos.find(
+      (puesto) =>
+        !asignadas.has(puesto.id) &&
+        puesto.acepta.some((p) => normalizar(p) === principal)
+    )
 
-    if (puestoElegido) {
-      asignadas.set(puestoElegido.id, jugadora)
+    if (puestoPrincipal) {
+      asignadas.set(puestoPrincipal.id, jugadora)
       usadas.add(String(jugadora.id))
       continue
     }
 
-    const puestoSecundario = puestos.find((puesto) => {
-      if (asignadas.has(puesto.id)) return false
-      return puesto.acepta.some(
-        (posicion) => normalizarPosicion(posicion) === secundaria
-      )
-    })
+    const puestoSecundario = puestos.find(
+      (puesto) =>
+        !asignadas.has(puesto.id) &&
+        puesto.acepta.some((p) => normalizar(p) === secundaria)
+    )
 
     if (puestoSecundario) {
       asignadas.set(puestoSecundario.id, jugadora)
@@ -162,14 +230,130 @@ function FotoJugadora({ jugadora, className = '' }) {
 
   return (
     <div
-      className={`flex items-center justify-center rounded-full font-bold ${className}`}
+      className={`flex items-center justify-center rounded-full font-bold shrink-0 ${className}`}
       style={{
-        backgroundColor: COLORES.fondoSidebar,
-        color: COLORES.acento,
-        border: `1px solid ${COLORES.borde}`,
+        backgroundColor: '#292B32',
+        color: '#F4D21F',
+        border: '1px solid #41434B',
       }}
     >
       {iniciales(jugadora.nombre, jugadora.apellido)}
+    </div>
+  )
+}
+
+function TarjetaResumen({ titulo, valor, detalle, icono, color }) {
+  return (
+    <div
+      className="rounded-2xl p-4 md:p-5 min-w-0"
+      style={{
+        backgroundColor: '#191B21',
+        border: '1px solid #2D3038',
+      }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs md:text-sm" style={{ color: '#A1A1AA' }}>
+          {titulo}
+        </p>
+        <span style={{ color, fontSize: 20 }}>{icono}</span>
+      </div>
+      <p
+        className="text-2xl md:text-3xl font-bold mt-3 truncate"
+        style={{ color }}
+      >
+        {valor}
+      </p>
+      {detalle && (
+        <p className="text-xs mt-2" style={{ color: '#A1A1AA' }}>
+          {detalle}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function GraficoRanking({
+  titulo,
+  subtitulo,
+  jugadoras,
+  estadisticas,
+  campo,
+  sufijo,
+  color,
+}) {
+  const ranking = [...jugadoras]
+    .map((jugadora) => ({
+      jugadora,
+      valor: obtenerDato(jugadora, estadisticas, campo),
+    }))
+    .sort(
+      (a, b) =>
+        b.valor - a.valor ||
+        `${a.jugadora.apellido || ''}`.localeCompare(
+          `${b.jugadora.apellido || ''}`,
+          'es'
+        )
+    )
+    .filter((item) => item.valor > 0)
+    .slice(0, 5)
+
+  const maximo = Math.max(...ranking.map((item) => item.valor), 1)
+
+  return (
+    <div
+      className="rounded-2xl p-4 md:p-5"
+      style={{
+        backgroundColor: '#191B21',
+        border: '1px solid #2D3038',
+      }}
+    >
+      <div className="mb-5">
+        <h3 className="font-semibold" style={{ color: '#F4F4F5' }}>
+          {titulo}
+        </h3>
+        <p className="text-xs mt-1" style={{ color: '#A1A1AA' }}>
+          {subtitulo}
+        </p>
+      </div>
+
+      {ranking.length === 0 ? (
+        <p className="text-sm py-3" style={{ color: '#A1A1AA' }}>
+          Todavía no hay datos cargados.
+        </p>
+      ) : (
+        <div className="space-y-4">
+          {ranking.map(({ jugadora, valor }) => (
+            <div key={jugadora.id}>
+              <div className="flex justify-between items-center gap-3 mb-2">
+                <span
+                  className="text-sm truncate"
+                  style={{ color: '#E4E4E7' }}
+                >
+                  {jugadora.apellido}, {jugadora.nombre}
+                </span>
+                <span
+                  className="text-sm font-bold shrink-0"
+                  style={{ color }}
+                >
+                  {valor.toLocaleString('es-AR')} {sufijo}
+                </span>
+              </div>
+              <div
+                className="h-2 rounded-full overflow-hidden"
+                style={{ backgroundColor: '#30323A' }}
+              >
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${(valor / maximo) * 100}%`,
+                    backgroundColor: color,
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -186,45 +370,36 @@ function CanchaTactica({
     [jugadoras, estadisticas, formacion]
   )
 
-  const totalCubiertos = usadas.size
-
   return (
-    <div
-      className="rounded-2xl p-4 md:p-6 overflow-hidden"
+    <section
+      className="rounded-2xl p-4 md:p-6"
       style={{
-        backgroundColor: '#10251F',
-        border: '1px solid #285342',
+        backgroundColor: '#191B21',
+        border: '1px solid #2D3038',
       }}
     >
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
-          <h2
-            className="text-xl"
-            style={{
-              color: '#F0F2F5',
-              fontFamily: "'Archivo Black', sans-serif",
-            }}
-          >
+          <h2 className="text-lg md:text-xl font-bold text-white">
             Cancha táctica
           </h2>
-          <p className="text-xs mt-1" style={{ color: '#B6D1C3' }}>
-            Once ideal según minutos jugados y posiciones registradas
+          <p className="text-xs mt-1" style={{ color: '#A1A1AA' }}>
+            Once ideal según minutos y posiciones registradas
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2">
           {Object.keys(FORMACIONES).map((opcion) => (
             <button
               key={opcion}
               type="button"
               onClick={() => onCambiarFormacion(opcion)}
               aria-pressed={formacion === opcion}
-              className="px-4 py-2 rounded-lg text-sm font-bold transition-opacity"
+              className="px-3 py-2 rounded-lg text-sm font-bold"
               style={{
-                backgroundColor:
-                  formacion === opcion ? '#4ADE80' : '#214A39',
-                color: formacion === opcion ? '#10251F' : '#D7FBE7',
-                border: '1px solid #4B8065',
+                backgroundColor: formacion === opcion ? '#F4D21F' : '#292B32',
+                color: formacion === opcion ? '#171717' : '#E4E4E7',
+                border: `1px solid ${formacion === opcion ? '#F4D21F' : '#41434B'}`,
               }}
             >
               {opcion}
@@ -233,53 +408,48 @@ function CanchaTactica({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <span
-          className="text-xs px-3 py-1.5 rounded-full"
-          style={{ color: '#D7FBE7', backgroundColor: '#214A39' }}
-        >
-          {totalCubiertos} de 11 puestos cubiertos
+      <div className="flex justify-between items-center gap-2 mb-3">
+        <span className="text-xs" style={{ color: '#A1A1AA' }}>
+          {usadas.size} de 11 puestos cubiertos
         </span>
-        <span className="text-xs" style={{ color: '#B6D1C3' }}>
-          Formación {formacion}
+        <span className="text-xs" style={{ color: '#F4D21F' }}>
+          {formacion}
         </span>
       </div>
 
       <div
-        className="relative rounded-xl overflow-hidden px-1 py-5 md:px-3 md:py-6"
+        className="relative rounded-xl overflow-hidden px-1 py-4 md:px-3 md:py-5"
         style={{
           background:
-            'repeating-linear-gradient(0deg, #1B6849 0px, #1B6849 55px, #205F45 55px, #205F45 110px)',
-          border: '2px solid rgba(230,255,240,0.65)',
+            'repeating-linear-gradient(0deg, #194D38 0px, #194D38 45px, #20583F 45px, #20583F 90px)',
+          border: '1px solid #4A8065',
         }}
       >
-        <div className="absolute inset-3 border border-white/40 rounded-lg pointer-events-none" />
-        <div className="absolute left-0 right-0 top-1/2 border-t border-white/40 pointer-events-none" />
-        <div className="absolute w-20 h-20 rounded-full border border-white/40 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+        <div className="absolute inset-2 border border-white/30 rounded-lg pointer-events-none" />
+        <div className="absolute left-0 right-0 top-1/2 border-t border-white/30 pointer-events-none" />
+        <div className="absolute w-16 h-16 rounded-full border border-white/30 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col justify-around gap-5 md:gap-7 min-h-[520px]">
+        <div className="relative z-10 flex flex-col justify-around gap-3 md:gap-4 min-h-[390px] md:min-h-[420px]">
           {filas.map((fila, indiceFila) => (
             <div
               key={`${formacion}-${indiceFila}`}
-              className="flex flex-wrap justify-center items-start gap-x-1 gap-y-3 md:gap-x-5"
+              className="flex flex-wrap justify-center items-start gap-x-1 gap-y-2 md:gap-x-4"
             >
               {fila.map((puesto) => {
                 const j = puesto.jugadora
-                const estado = j
-                  ? estadoConfig[j.estado] || estadoConfig.disponible
-                  : null
+                const estado = j ? obtenerEstado(j) : null
 
                 return (
                   <div
                     key={puesto.id}
-                    className="flex flex-col items-center w-[76px] md:w-[94px] min-h-[130px]"
+                    className="flex flex-col items-center w-[65px] sm:w-[78px] md:w-[88px] min-h-[92px]"
                   >
                     {j ? (
                       <button
                         type="button"
                         onClick={() => onSelectJugador(j.id)}
                         title={`${j.nombre} ${j.apellido} — ${puesto.nombre}`}
-                        className="flex flex-col items-center w-full rounded-lg p-1 transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white"
+                        className="flex flex-col items-center w-full rounded-lg p-1 hover:scale-105 transition-transform focus:outline-none focus:ring-2 focus:ring-white"
                       >
                         <div
                           className="rounded-full p-0.5"
@@ -287,61 +457,29 @@ function CanchaTactica({
                         >
                           <FotoJugadora
                             jugadora={j}
-                            className="w-11 h-11 md:w-14 md:h-14"
+                            className="w-9 h-9 md:w-11 md:h-11"
                           />
                         </div>
-
-                        <span
-                          className="text-[11px] md:text-xs font-bold mt-1 text-center leading-tight"
-                          style={{
-                            color: '#FFFFFF',
-                            textShadow: '0 1px 3px #123B2A',
-                          }}
-                        >
+                        <span className="text-[10px] md:text-xs font-bold mt-1 text-center leading-tight text-white">
                           {j.apellido || j.nombre}
                         </span>
-
                         <span
-                          className="text-[10px] mt-1 font-bold px-1.5 py-0.5 rounded"
-                          style={{
-                            color: '#10251F',
-                            backgroundColor: '#D7FBE7',
-                          }}
+                          className="text-[9px] mt-1 px-1.5 py-0.5 rounded"
+                          style={{ backgroundColor: '#F4D21F', color: '#171717' }}
                         >
                           {obtenerMinutos(j, estadisticas)} min
-                        </span>
-
-                        <span
-                          className="text-[9px] text-center mt-1 leading-tight"
-                          style={{ color: '#D7FBE7' }}
-                        >
-                          {j.posicion || puesto.nombre}
                         </span>
                       </button>
                     ) : (
                       <div
-                        className="flex flex-col items-center justify-center w-full rounded-xl p-2 min-h-[112px]"
+                        className="flex flex-col items-center justify-center w-full rounded-lg p-1 min-h-[76px]"
                         style={{
-                          border: '1px dashed rgba(230,255,240,0.65)',
-                          backgroundColor: 'rgba(10,40,27,0.28)',
+                          border: '1px dashed rgba(255,255,255,0.45)',
+                          backgroundColor: 'rgba(10,25,18,0.25)',
                         }}
                       >
-                        <span
-                          className="text-2xl font-light"
-                          style={{ color: '#D7FBE7' }}
-                        >
-                          +
-                        </span>
-                        <span
-                          className="text-[10px] text-center font-semibold leading-tight"
-                          style={{ color: '#D7FBE7' }}
-                        >
-                          Puesto vacío
-                        </span>
-                        <span
-                          className="text-[9px] text-center mt-1 leading-tight"
-                          style={{ color: '#B6D1C3' }}
-                        >
+                        <span className="text-xl text-white/80">+</span>
+                        <span className="text-[9px] text-white/80 text-center leading-tight">
                           {puesto.nombre}
                         </span>
                       </div>
@@ -354,33 +492,21 @@ function CanchaTactica({
         </div>
       </div>
 
-      <p className="text-xs mt-3" style={{ color: '#B6D1C3' }}>
-        Tocá una jugadora para abrir su perfil. Los minutos corresponden a las
-        estadísticas cargadas. Los puestos sin una jugadora compatible quedan
-        vacíos.
+      <p className="text-xs mt-3" style={{ color: '#A1A1AA' }}>
+        Seleccioná una jugadora para abrir su perfil. Los puestos vacíos indican
+        que no se encontró una jugadora compatible con esa posición.
       </p>
-
-      <div className="flex flex-wrap gap-3 mt-3 text-xs" style={{ color: '#B6D1C3' }}>
-        {Object.entries(estadoConfig).map(([clave, estado]) => (
-          <span key={clave} className="flex items-center gap-1.5">
-            <span
-              className="inline-block w-2.5 h-2.5 rounded-full"
-              style={{ backgroundColor: estado.color }}
-            />
-            {estado.label}
-          </span>
-        ))}
-      </div>
-    </div>
+    </section>
   )
 }
 
 function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
   const [jugadores, setJugadores] = useState([])
-  const [categoriaId, setCategoriaId] = useState(null)
   const [estadisticas, setEstadisticas] = useState({})
   const [formacion, setFormacion] = useState('4-4-2')
   const [busqueda, setBusqueda] = useState('')
+  const [filtroPuesto, setFiltroPuesto] = useState('todas')
+  const [filtroEstado, setFiltroEstado] = useState('todos')
   const [cargando, setCargando] = useState(true)
   const [errorCarga, setErrorCarga] = useState('')
   const [errorEstadisticas, setErrorEstadisticas] = useState('')
@@ -402,11 +528,8 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
           setErrorCarga(
             'No se encontró la categoría Primera División. Revisá el nombre de la categoría en la base de datos.'
           )
-          setCargando(false)
           return
         }
-
-        setCategoriaId(categoria.id)
 
         const { data, error } = await supabase
           .from('jugadores')
@@ -421,7 +544,6 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
           setErrorCarga(
             'No se pudo cargar el plantel. Revisá la conexión y los permisos.'
           )
-          setCargando(false)
           return
         }
 
@@ -436,24 +558,20 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
 
           const mapa = {}
           ;(filasEstadisticas || []).forEach((fila) => {
-            if (fila.id != null) {
-              mapa[String(fila.id)] = fila
-            }
+            if (fila.id != null) mapa[String(fila.id)] = fila
           })
 
           setEstadisticas(mapa)
         } catch (error) {
           console.error('Error al cargar estadísticas:', error)
           setErrorEstadisticas(
-            'No se pudieron cargar las estadísticas. El plantel sigue disponible, pero los minutos podrían aparecer en cero.'
+            'No se pudieron cargar las estadísticas. El plantel sigue disponible, pero los indicadores podrían aparecer en cero.'
           )
           setEstadisticas({})
         }
       } catch (error) {
         console.error('Error al cargar el plantel:', error)
-        if (activo) {
-          setErrorCarga('Ocurrió un error al cargar el plantel.')
-        }
+        if (activo) setErrorCarga('Ocurrió un error al cargar el plantel.')
       } finally {
         if (activo) setCargando(false)
       }
@@ -467,122 +585,183 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
   }, [])
 
   const jugadorasFiltradas = useMemo(() => {
-    const texto = busqueda.trim().toLocaleLowerCase('es-AR')
-
-    if (!texto) return jugadores
+    const texto = normalizar(busqueda)
 
     return jugadores.filter((j) => {
-      const nombreCompleto =
-        `${j.nombre || ''} ${j.apellido || ''}`.toLocaleLowerCase('es-AR')
-      const apellidoNombre =
-        `${j.apellido || ''} ${j.nombre || ''}`.toLocaleLowerCase('es-AR')
-      const posicion = (j.posicion || '').toLocaleLowerCase('es-AR')
-      const posicionSecundaria = (j.posicion_secundaria || '').toLocaleLowerCase('es-AR')
+      const nombreCompleto = normalizar(`${j.nombre || ''} ${j.apellido || ''}`)
+      const apellidoNombre = normalizar(`${j.apellido || ''} ${j.nombre || ''}`)
+      const posicion = normalizar(j.posicion)
+      const secundaria = normalizar(j.posicion_secundaria)
 
-      return (
+      const coincideBusqueda =
+        !texto ||
         nombreCompleto.includes(texto) ||
         apellidoNombre.includes(texto) ||
         posicion.includes(texto) ||
-        posicionSecundaria.includes(texto)
+        secundaria.includes(texto)
+
+      return (
+        coincideBusqueda &&
+        coincidePuesto(j, filtroPuesto) &&
+        coincideEstado(j, filtroEstado)
       )
     })
-  }, [jugadores, busqueda])
+  }, [jugadores, busqueda, filtroPuesto, filtroEstado])
 
-  const grupos = useMemo(
-    () =>
-      posiciones.reduce((resultado, posicion) => {
-        resultado[posicion] = jugadorasFiltradas.filter(
-          (j) => j.posicion === posicion
-        )
-        return resultado
-      }, {}),
-    [jugadorasFiltradas]
-  )
+  const resumen = useMemo(() => {
+    const total = jugadorasFiltradas.length
+    const disponibles = jugadorasFiltradas.filter(
+      (j) => (j.estado || 'disponible') === 'disponible'
+    ).length
+    const lesionadas = jugadorasFiltradas.filter(
+      (j) => j.estado === 'lesionado'
+    ).length
+    const noDisponibles = jugadorasFiltradas.filter(
+      (j) => j.estado === 'no_disponible' || j.estado === 'suspendido'
+    ).length
+
+    const totales = jugadorasFiltradas.reduce(
+      (acc, j) => ({
+        goles: acc.goles + obtenerDato(j, estadisticas, 'goles'),
+        minutos: acc.minutos + obtenerDato(j, estadisticas, 'minutos'),
+        titularidades:
+          acc.titularidades + obtenerDato(j, estadisticas, 'titularidades'),
+      }),
+      { goles: 0, minutos: 0, titularidades: 0 }
+    )
+
+    return {
+      total,
+      disponibles,
+      lesionadas,
+      noDisponibles,
+      ...totales,
+    }
+  }, [jugadorasFiltradas, estadisticas])
+
+  const grupos = useMemo(() => {
+    const gruposBase = {
+      Arquera: ['Arquero'],
+      Defensoras: [
+        'Defensor central',
+        'Lateral derecho',
+        'Lateral izquierdo',
+      ],
+      Mediocampistas: [
+        'Mediocampista central',
+        'Volante ofensivo',
+        'Extremo derecho',
+        'Extremo izquierdo',
+      ],
+      Delanteras: ['Delantero centro'],
+    }
+
+    return Object.entries(gruposBase).map(([nombre, posicionesGrupo]) => ({
+      nombre,
+      cantidad: jugadorasFiltradas.filter((j) =>
+        posicionesGrupo.includes(j.posicion)
+      ).length,
+    }))
+  }, [jugadorasFiltradas])
+
+  const limpiarFiltros = () => {
+    setBusqueda('')
+    setFiltroPuesto('todas')
+    setFiltroEstado('todos')
+  }
+
+  const hayFiltrosActivos =
+    busqueda.trim() !== '' ||
+    filtroPuesto !== 'todas' ||
+    filtroEstado !== 'todos'
 
   return (
-    <div className="p-6 md:p-10">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6">
-          <div>
-            <h1
-              className="text-3xl md:text-4xl"
-              style={{
-                fontFamily: "'Archivo Black', sans-serif",
-                color: COLORES.texto,
-              }}
+    <div
+      className="min-h-full p-4 md:p-8"
+      style={{ backgroundColor: '#101115' }}
+    >
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Encabezado */}
+        <header className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+              style={{ backgroundColor: '#F4D21F', color: '#171717' }}
             >
-              Plantel
-            </h1>
-            <p className="text-sm mt-2" style={{ color: COLORES.textoMuted }}>
-              Primera División femenina
-            </p>
+              <span className="text-xl font-black">C</span>
+            </div>
+            <div>
+              <p
+                className="text-[10px] md:text-xs font-bold tracking-[0.18em] uppercase"
+                style={{ color: '#F4D21F' }}
+              >
+                Comunicaciones · Fútbol femenino
+              </p>
+              <h1 className="text-3xl md:text-4xl font-black text-white mt-1">
+                Plantel
+              </h1>
+              <p className="text-sm mt-1" style={{ color: '#A1A1AA' }}>
+                Primera División
+              </p>
+            </div>
           </div>
 
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex flex-wrap gap-2">
             <button
+              type="button"
               onClick={generarPlantelPDF}
-              className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
+              className="text-sm font-semibold px-3 py-2.5 rounded-xl"
               style={{
-                backgroundColor: COLORES.fondoTarjeta,
-                color: COLORES.textoSecundario,
-                border: `1px solid ${COLORES.borde}`,
+                backgroundColor: '#191B21',
+                color: '#E4E4E7',
+                border: '1px solid #34363F',
               }}
             >
-              📄 Descargar plantel PDF
+              ↓ Descargar PDF
             </button>
 
             <button
+              type="button"
               onClick={onCargaMasiva}
-              className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
+              className="text-sm font-semibold px-3 py-2.5 rounded-xl"
               style={{
-                backgroundColor: COLORES.fondoTarjeta,
-                color: COLORES.texto,
-                border: `1px solid ${COLORES.borde}`,
+                backgroundColor: '#191B21',
+                color: '#E4E4E7',
+                border: '1px solid #34363F',
               }}
             >
-              📋 Carga masiva
+              Carga masiva
             </button>
 
             <button
+              type="button"
               onClick={onNuevoJugador}
-              className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
-              style={{
-                backgroundColor: COLORES.acento,
-                color: '#1A1A1A',
-              }}
+              className="text-sm font-bold px-4 py-2.5 rounded-xl"
+              style={{ backgroundColor: '#F4D21F', color: '#171717' }}
             >
               + Nueva jugadora
             </button>
           </div>
-        </div>
-
-        <input
-          type="text"
-          placeholder="Buscar por nombre, apellido o posición..."
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          className="w-full p-3 rounded-xl outline-none text-sm mb-6"
-          style={{
-            backgroundColor: '#1A2332',
-            border: '1px solid #2A3548',
-            color: '#F0F2F5',
-          }}
-        />
+        </header>
 
         {cargando ? (
-          <p
-            className="text-sm py-8 text-center"
-            style={{ color: COLORES.textoMuted }}
+          <div
+            className="rounded-2xl p-12 text-center"
+            style={{
+              backgroundColor: '#191B21',
+              border: '1px solid #2D3038',
+              color: '#A1A1AA',
+            }}
           >
             Cargando plantel...
-          </p>
+          </div>
         ) : errorCarga ? (
           <div
-            className="rounded-xl p-4 mb-6 text-sm"
+            className="rounded-xl p-4 text-sm"
             style={{
-              backgroundColor: COLORES.fondoTarjeta,
-              color: COLORES.acento,
-              border: `1px solid ${COLORES.borde}`,
+              backgroundColor: '#402326',
+              color: '#FCA5A5',
+              border: '1px solid #653337',
             }}
           >
             {errorCarga}
@@ -591,72 +770,188 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
           <>
             {errorEstadisticas && (
               <div
-                className="rounded-xl p-3 mb-4 text-sm"
+                className="rounded-xl p-3 text-sm"
                 style={{
-                  backgroundColor: COLORES.fondoTarjeta,
-                  color: COLORES.acento,
-                  border: `1px solid ${COLORES.borde}`,
+                  backgroundColor: '#29251A',
+                  color: '#FBBF24',
+                  border: '1px solid #514323',
                 }}
               >
                 {errorEstadisticas}
               </div>
             )}
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-              {posiciones.map((posicion) => (
-                <div
-                  key={posicion}
-                  className="rounded-xl p-3"
-                  style={{
-                    backgroundColor: COLORES.fondoTarjeta,
-                    border: `1px solid ${COLORES.borde}`,
-                  }}
-                >
-                  <p
-                    className="text-xs leading-snug"
-                    style={{ color: COLORES.textoMuted }}
-                  >
-                    {posicion}
-                  </p>
-                  <p
-                    className="text-2xl font-bold mt-1"
-                    style={{
-                      color: COLORES.texto,
-                      fontFamily: "'Archivo Black', sans-serif",
-                    }}
-                  >
-                    {grupos[posicion]?.length || 0}
+            {/* Resumen del plantel */}
+            <section className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+              <TarjetaResumen
+                titulo="Jugadoras"
+                valor={resumen.total}
+                detalle="Según los filtros activos"
+                icono="◉"
+                color="#F4D21F"
+              />
+              <TarjetaResumen
+                titulo="Disponibles"
+                valor={resumen.disponibles}
+                detalle="En condiciones de jugar"
+                icono="✓"
+                color="#4ADE80"
+              />
+              <TarjetaResumen
+                titulo="Lesionadas"
+                valor={resumen.lesionadas}
+                detalle="Estado registrado"
+                icono="＋"
+                color="#F87171"
+              />
+              <TarjetaResumen
+                titulo="No disponibles"
+                valor={resumen.noDisponibles}
+                detalle="Incluye suspendidas"
+                icono="—"
+                color="#A1A1AA"
+              />
+            </section>
+
+            {/* Buscador y filtros */}
+            <section
+              className="rounded-2xl p-4 md:p-5 space-y-5"
+              style={{
+                backgroundColor: '#191B21',
+                border: '1px solid #2D3038',
+              }}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <h2 className="text-lg font-bold text-white">
+                    Listado de jugadoras
+                  </h2>
+                  <p className="text-xs mt-1" style={{ color: '#A1A1AA' }}>
+                    Buscá, filtrá y accedé a cada perfil.
                   </p>
                 </div>
-              ))}
-            </div>
+                <span className="text-sm" style={{ color: '#F4D21F' }}>
+                  {jugadorasFiltradas.length} resultado
+                  {jugadorasFiltradas.length === 1 ? '' : 's'}
+                </span>
+              </div>
 
-            <div className="mb-8">
-              <CanchaTactica
-                jugadoras={jugadores}
-                estadisticas={estadisticas}
-                formacion={formacion}
-                onCambiarFormacion={setFormacion}
-                onSelectJugador={onSelectJugador}
-              />
-            </div>
+              <div className="relative">
+                <span
+                  className="absolute left-3 top-1/2 -translate-y-1/2"
+                  style={{ color: '#A1A1AA' }}
+                >
+                  ⌕
+                </span>
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre, apellido o posición..."
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                  className="w-full rounded-xl py-3 pl-10 pr-4 outline-none text-sm"
+                  style={{
+                    backgroundColor: '#101115',
+                    border: '1px solid #34363F',
+                    color: '#F4F4F5',
+                  }}
+                />
+              </div>
 
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <h2
-                className="text-xl font-semibold"
-                style={{ color: COLORES.texto }}
-              >
-                Jugadoras
-              </h2>
-              <span className="text-sm" style={{ color: COLORES.textoMuted }}>
-                {jugadorasFiltradas.length} de {jugadores.length}
-              </span>
-            </div>
+              <div className="space-y-2">
+                <p
+                  className="text-[10px] font-bold tracking-[0.15em] uppercase"
+                  style={{ color: '#A1A1AA' }}
+                >
+                  Filtrar por puesto
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {filtrosPuesto.map((filtro) => {
+                    const activo = filtroPuesto === filtro.id
 
-            <div className="space-y-3">
+                    return (
+                      <button
+                        key={filtro.id}
+                        type="button"
+                        onClick={() => setFiltroPuesto(filtro.id)}
+                        aria-pressed={activo}
+                        className="px-3 py-2 rounded-lg text-xs md:text-sm font-semibold transition-colors"
+                        style={{
+                          backgroundColor: activo ? '#F4D21F' : '#292B32',
+                          color: activo ? '#171717' : '#D4D4D8',
+                          border: `1px solid ${activo ? '#F4D21F' : '#41434B'}`,
+                        }}
+                      >
+                        {filtro.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p
+                  className="text-[10px] font-bold tracking-[0.15em] uppercase"
+                  style={{ color: '#A1A1AA' }}
+                >
+                  Disponibilidad
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFiltroEstado('todos')}
+                    aria-pressed={filtroEstado === 'todos'}
+                    className="px-3 py-2 rounded-lg text-xs md:text-sm font-semibold"
+                    style={{
+                      backgroundColor:
+                        filtroEstado === 'todos' ? '#34363F' : '#202127',
+                      color: '#F4F4F5',
+                      border: `1px solid ${filtroEstado === 'todos' ? '#777984' : '#34363F'}`,
+                    }}
+                  >
+                    Todos los estados
+                  </button>
+
+                  {filtrosEstado.map((filtro) => {
+                    const activo = filtroEstado === filtro.id
+
+                    return (
+                      <button
+                        key={filtro.id}
+                        type="button"
+                        onClick={() => setFiltroEstado(filtro.id)}
+                        aria-pressed={activo}
+                        className="px-3 py-2 rounded-lg text-xs md:text-sm font-semibold"
+                        style={{
+                          backgroundColor: activo ? `${filtro.color}20` : '#202127',
+                          color: filtro.color,
+                          border: `1px solid ${activo ? filtro.color : '#34363F'}`,
+                        }}
+                      >
+                        {filtro.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {hayFiltrosActivos && (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={limpiarFiltros}
+                    className="text-xs font-semibold underline underline-offset-4"
+                    style={{ color: '#F4D21F' }}
+                  >
+                    Limpiar filtros
+                  </button>
+                </div>
+              )}
+            </section>
+
+            {/* Lista compacta: prioridad de la pantalla */}
+            <section className="space-y-2">
               {jugadorasFiltradas.map((j) => {
-                const estado =
-                  estadoConfig[j.estado] || estadoConfig.disponible
+                const estado = obtenerEstado(j)
                 const minutos = obtenerMinutos(j, estadisticas)
 
                 return (
@@ -664,66 +959,227 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                     key={j.id}
                     type="button"
                     onClick={() => onSelectJugador(j.id)}
-                    title={j.estado_detalle || ''}
-                    className="w-full text-left group flex items-center gap-4 p-4 rounded-xl transition-all duration-200 hover:-translate-y-0.5"
+                    title={j.estado_detalle || 'Abrir perfil'}
+                    className="w-full text-left group flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-xl transition-colors hover:bg-white/[0.03]"
                     style={{
-                      backgroundColor: COLORES.fondoTarjeta,
-                      border: `1px solid ${COLORES.borde}`,
+                      backgroundColor: '#191B21',
+                      border: '1px solid #2D3038',
                       borderLeft: `3px solid ${estado.color}`,
                     }}
                   >
                     <FotoJugadora
                       jugadora={j}
-                      className="w-12 h-12 shrink-0"
+                      className="w-11 h-11 md:w-12 md:h-12"
                     />
 
                     <div className="flex-1 min-w-0">
-                      <p
-                        className="font-semibold truncate"
-                        style={{ color: COLORES.texto }}
-                      >
+                      <p className="font-semibold text-sm md:text-base truncate text-white">
                         {j.apellido}, {j.nombre}
                       </p>
                       <p
-                        className="text-xs mt-1"
-                        style={{ color: COLORES.textoMuted }}
+                        className="text-xs mt-1 truncate"
+                        style={{ color: '#A1A1AA' }}
                       >
-                        {j.posicion || 'Posición sin cargar'} · {estado.label}
+                        {j.posicion || 'Posición sin cargar'}
                       </p>
                     </div>
 
-                    <div className="text-right shrink-0">
+                    <div className="hidden sm:block text-right shrink-0">
                       <p
                         className="text-sm font-bold"
-                        style={{ color: COLORES.texto }}
+                        style={{ color: '#F4D21F' }}
                       >
-                        {minutos} min
+                        {minutos.toLocaleString('es-AR')} min
                       </p>
-                      <span
-                        className="text-xs font-mono px-2.5 py-1 rounded-full inline-block mt-1"
-                        style={{
-                          backgroundColor: COLORES.fondoSidebar,
-                          color: estado.color,
-                        }}
-                      >
-                        Ver perfil →
-                      </span>
+                      <p className="text-[10px] mt-1" style={{ color: '#A1A1AA' }}>
+                        {obtenerDato(j, estadisticas, 'goles')} goles ·{' '}
+                        {obtenerDato(j, estadisticas, 'titularidades')} titularidades
+                      </p>
                     </div>
+
+                    <div
+                      className="hidden md:inline-flex items-center px-2.5 py-1.5 rounded-full text-[11px] font-semibold shrink-0"
+                      style={{
+                        color: estado.color,
+                        backgroundColor: estado.fondo,
+                      }}
+                    >
+                      {estado.label}
+                    </div>
+
+                    <span
+                      className="sm:hidden text-[10px] font-bold shrink-0"
+                      style={{ color: estado.color }}
+                    >
+                      {estado.label === 'No disponible'
+                        ? 'No disp.'
+                        : estado.label}
+                    </span>
+
+                    <span
+                      className="text-lg shrink-0 transition-transform group-hover:translate-x-0.5"
+                      style={{ color: '#F4D21F' }}
+                    >
+                      ›
+                    </span>
                   </button>
                 )
               })}
-            </div>
 
-            {jugadorasFiltradas.length === 0 && (
-              <p
-                className="text-sm py-8 text-center"
-                style={{ color: COLORES.textoMuted }}
+              {jugadorasFiltradas.length === 0 && (
+                <div
+                  className="rounded-xl p-8 text-center"
+                  style={{
+                    backgroundColor: '#191B21',
+                    border: '1px solid #2D3038',
+                  }}
+                >
+                  <p className="font-semibold text-white">
+                    No hay jugadoras para mostrar
+                  </p>
+                  <p className="text-sm mt-2" style={{ color: '#A1A1AA' }}>
+                    Probá cambiar los filtros o la búsqueda.
+                  </p>
+                  {hayFiltrosActivos && (
+                    <button
+                      type="button"
+                      onClick={limpiarFiltros}
+                      className="mt-4 text-sm font-semibold"
+                      style={{ color: '#F4D21F' }}
+                    >
+                      Limpiar filtros
+                    </button>
+                  )}
+                </div>
+              )}
+            </section>
+
+            {/* Distribución por puesto debajo del listado */}
+            <section
+              className="rounded-2xl p-4 md:p-5"
+              style={{
+                backgroundColor: '#191B21',
+                border: '1px solid #2D3038',
+              }}
+            >
+              <div className="mb-4">
+                <h2 className="text-lg font-bold text-white">
+                  Distribución por puesto
+                </h2>
+                <p className="text-xs mt-1" style={{ color: '#A1A1AA' }}>
+                  Cantidad según las jugadoras que estás viendo.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {grupos.map((grupo) => (
+                  <div
+                    key={grupo.nombre}
+                    className="rounded-xl p-4"
+                    style={{
+                      backgroundColor: '#101115',
+                      border: '1px solid #2D3038',
+                    }}
+                  >
+                    <p className="text-xs" style={{ color: '#A1A1AA' }}>
+                      {grupo.nombre}
+                    </p>
+                    <p className="text-2xl font-bold text-white mt-2">
+                      {grupo.cantidad}
+                    </p>
+                    <div
+                      className="h-1 rounded-full mt-3 overflow-hidden"
+                      style={{ backgroundColor: '#30323A' }}
+                    >
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${jugadorasFiltradas.length ? (grupo.cantidad / jugadorasFiltradas.length) * 100 : 0}%`,
+                          backgroundColor: '#F4D21F',
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Rendimiento con estadísticas reales */}
+            <section className="space-y-3">
+              <div>
+                <h2 className="text-lg font-bold text-white">
+                  Rendimiento del plantel
+                </h2>
+                <p className="text-xs mt-1" style={{ color: '#A1A1AA' }}>
+                  Datos registrados para las jugadoras que estás viendo.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <GraficoRanking
+                  titulo="Minutos jugados"
+                  subtitulo="Top 5 por minutos acumulados"
+                  jugadoras={jugadorasFiltradas}
+                  estadisticas={estadisticas}
+                  campo="minutos"
+                  sufijo="min"
+                  color="#F4D21F"
+                />
+                <GraficoRanking
+                  titulo="Goleadoras"
+                  subtitulo="Top 5 por goles registrados"
+                  jugadoras={jugadorasFiltradas}
+                  estadisticas={estadisticas}
+                  campo="goles"
+                  sufijo="goles"
+                  color="#4ADE80"
+                />
+              </div>
+
+              <div
+                className="rounded-xl p-4 flex flex-wrap items-center gap-x-6 gap-y-3"
+                style={{
+                  backgroundColor: '#191B21',
+                  border: '1px solid #2D3038',
+                }}
               >
-                {busqueda
-                  ? 'No se encontraron jugadoras con esa búsqueda.'
-                  : 'Todavía no hay jugadoras cargadas en Primera División.'}
-              </p>
-            )}
+                <div>
+                  <p className="text-xs" style={{ color: '#A1A1AA' }}>
+                    Goles
+                  </p>
+                  <p className="text-xl font-bold text-white mt-1">
+                    {resumen.goles}
+                  </p>
+                </div>
+                <div className="h-8 w-px" style={{ backgroundColor: '#34363F' }} />
+                <div>
+                  <p className="text-xs" style={{ color: '#A1A1AA' }}>
+                    Minutos acumulados
+                  </p>
+                  <p className="text-xl font-bold text-white mt-1">
+                    {resumen.minutos.toLocaleString('es-AR')}
+                  </p>
+                </div>
+                <div className="h-8 w-px" style={{ backgroundColor: '#34363F' }} />
+                <div>
+                  <p className="text-xs" style={{ color: '#A1A1AA' }}>
+                    Titularidades
+                  </p>
+                  <p className="text-xl font-bold text-white mt-1">
+                    {resumen.titularidades}
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            {/* Cancha táctica al final */}
+            <CanchaTactica
+              jugadoras={jugadores}
+              estadisticas={estadisticas}
+              formacion={formacion}
+              onCambiarFormacion={setFormacion}
+              onSelectJugador={onSelectJugador}
+            />
           </>
         )}
       </div>
