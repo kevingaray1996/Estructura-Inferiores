@@ -1,10 +1,26 @@
+
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
+import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
 import { cargarDatosBienestar } from '../utils/bienestar'
 import { generarBienestarPDF } from '../utils/generarBienestarPDF'
 import { generarBienestarCategoriaPDF } from '../utils/generarBienestarCategoriaPDF'
 import { calcularWellnessZScore } from '../utils/semaforoRiesgo'
+
+const UI = {
+  fondo: '#191917',
+  tarjeta: '#242422',
+  tarjetaAlternativa: '#1E1E1C',
+  borde: '#393934',
+  acento: '#F2C230',
+  texto: '#F4F2EA',
+  secundario: '#B5B3AA',
+  muted: '#85847C',
+  exito: '#97C459',
+  peligro: '#E77970',
+  advertencia: '#F2C230',
+}
 
 function iniciales(nombre, apellido) {
   return `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
@@ -32,7 +48,7 @@ function restarDias(fecha, dias) {
 function MiniLinea({ serie, escalaMax, color }) {
   if (serie.length === 0) {
     return (
-      <p className="text-xs" style={{ color: '#5B6B85' }}>
+      <p className="text-xs py-4" style={{ color: UI.muted }}>
         Sin registros en este período.
       </p>
     )
@@ -44,7 +60,9 @@ function MiniLinea({ serie, escalaMax, color }) {
   const paddingY = 10
 
   const puntos = serie.map((s, i) => {
-    const x = serie.length === 1 ? ancho / 2 : paddingX + (i / (serie.length - 1)) * (ancho - paddingX * 2)
+    const x = serie.length === 1
+      ? ancho / 2
+      : paddingX + (i / (serie.length - 1)) * (ancho - paddingX * 2)
     const y = paddingY + (1 - s.valor / escalaMax) * (alto - paddingY * 2)
     return { x, y, valor: s.valor, fecha: s.fecha }
   })
@@ -53,12 +71,26 @@ function MiniLinea({ serie, escalaMax, color }) {
 
   return (
     <svg viewBox={`0 0 ${ancho} ${alto + 16}`} width="100%" height={alto + 16}>
-      <path d={pathD} fill="none" stroke={color} strokeWidth="2" />
+      <path
+        d={pathD}
+        fill="none"
+        stroke={color}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
       {puntos.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r="3" fill={color} />
+        <circle key={i} cx={p.x} cy={p.y} r="3.5" fill={color} />
       ))}
       {puntos.map((p, i) => (
-        <text key={`t-${i}`} x={p.x} y={alto + 14} fontSize="7" fill="#5B6B85" textAnchor="middle">
+        <text
+          key={`t-${i}`}
+          x={p.x}
+          y={alto + 14}
+          fontSize="7"
+          fill={UI.muted}
+          textAnchor="middle"
+        >
           {p.fecha.slice(5).replace('-', '/')}
         </text>
       ))}
@@ -96,27 +128,39 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
 
   useEffect(() => {
     if (esTecnico) return
-    async function cargarCategorias() {
-      const { data } = await supabase.from('categorias').select('*').order('orden')
-      setCategorias(data || [])
+
+    async function cargarCategoriaPrimera() {
+      const [{ data }, primera] = await Promise.all([
+        supabase.from('categorias').select('*').order('orden'),
+        obtenerCategoriaPrimeraDivision(),
+      ])
+
+      const lista = data || []
+      setCategorias(lista)
+      setCategoriaId(primera?.id || '')
     }
-    cargarCategorias()
+
+    cargarCategoriaPrimera()
   }, [esTecnico])
 
   useEffect(() => {
     async function aplicarJugadorInicial() {
       if (!jugadorInicialId) return
+
       const { data: jugadorData } = await supabase
         .from('jugadores')
         .select('id, categoria_id')
         .eq('id', jugadorInicialId)
         .single()
+
       if (jugadorData) {
         setCategoriaId(jugadorData.categoria_id)
         setJugadorId(jugadorData.id)
       }
+
       onConsumirJugadorInicial?.()
     }
+
     aplicarJugadorInicial()
   }, [jugadorInicialId, onConsumirJugadorInicial])
 
@@ -126,15 +170,21 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
         setJugadores([])
         return
       }
-      const { data: categoriasData } = await supabase.from('categorias').select('id, es_reserva')
+
+      const { data: categoriasData } = await supabase
+        .from('categorias')
+        .select('id, es_reserva')
+
       const { data } = await obtenerJugadoresDeCategoria(
         supabase,
         categoriaId,
         categoriasData,
         { soloDisponibles: true }
       )
+
       setJugadores(data || [])
     }
+
     cargarJugadores()
   }, [categoriaId])
 
@@ -144,11 +194,13 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
         setMetricas(null)
         return
       }
+
       setCargando(true)
       const { metricas: m } = await cargarDatosBienestar(jugadorId, periodo)
       setMetricas(m)
       setCargando(false)
     }
+
     cargar()
   }, [jugadorId, periodo])
 
@@ -158,6 +210,7 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
         setResumenGeneral([])
         return
       }
+
       setCargandoGeneral(true)
 
       const hoy = new Date()
@@ -166,6 +219,7 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
       const hoyISO = fechaISO(hoy)
 
       const ids = jugadores.map((j) => j.id)
+
       const { data: bienestarData } = await supabase
         .from('bienestar')
         .select('jugador_id, fecha, sueno, dolor_muscular, fatiga, estres, animo_entrenar')
@@ -174,18 +228,34 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
         .lte('fecha', hoyISO)
 
       const porJugador = {}
+
       ;(bienestarData || []).forEach((b) => {
         if (!porJugador[b.jugador_id]) porJugador[b.jugador_id] = []
-        const prom = promedio([b.sueno, b.dolor_muscular, b.fatiga, b.estres, b.animo_entrenar])
-        if (prom !== null) porJugador[b.jugador_id].push({ fecha: b.fecha, valor: prom })
+
+        const prom = promedio([
+          b.sueno,
+          b.dolor_muscular,
+          b.fatiga,
+          b.estres,
+          b.animo_entrenar,
+        ])
+
+        if (prom !== null) {
+          porJugador[b.jugador_id].push({ fecha: b.fecha, valor: prom })
+        }
       })
 
-      const resultadosNivel = await Promise.all(jugadores.map((j) => calcularWellnessZScore(j.id)))
+      const resultadosNivel = await Promise.all(
+        jugadores.map((j) => calcularWellnessZScore(j.id))
+      )
 
       const filas = jugadores.map((j, i) => {
         const registros = porJugador[j.id] || []
-        const promedioSemanal = promedio(registros.filter((r) => r.fecha >= desdeSemana).map((r) => r.valor))
+        const promedioSemanal = promedio(
+          registros.filter((r) => r.fecha >= desdeSemana).map((r) => r.valor)
+        )
         const promedioMensual = promedio(registros.map((r) => r.valor))
+
         return {
           jugador: j,
           respuestas: registros.length,
@@ -198,181 +268,323 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
       setResumenGeneral(filas)
       setCargandoGeneral(false)
     }
+
     cargarGeneral()
   }, [jugadorId, jugadores])
 
-  const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
-  }
-
   const jugadorSeleccionado = jugadores.find((j) => j.id === jugadorId)
 
-  return (
-    <div className="p-6 md:p-10">
-      <div className="max-w-3xl mx-auto">
-        <h1
-          className="text-3xl md:text-4xl mb-1"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
-        >
-          Bienestar
-        </h1>
-        <p className="text-sm mb-6" style={{ color: '#5B6B85' }}>
-          Comparativo semanal y mensual de sueño, dolor muscular, fatiga, estrés y esfuerzo percibido (RPE).
-        </p>
+  const inputStyle = {
+    backgroundColor: UI.fondo,
+    border: `1px solid ${UI.borde}`,
+    color: UI.texto,
+  }
 
-        <div className="grid sm:grid-cols-2 gap-3 mb-6">
-          {!esTecnico && (
-            <select
-              value={categoriaId}
-              onChange={(e) => {
-                setCategoriaId(e.target.value)
-                setJugadorId('')
+  const tarjetaStyle = {
+    backgroundColor: UI.tarjeta,
+    border: `1px solid ${UI.borde}`,
+  }
+
+  const botonSecundario = {
+    backgroundColor: UI.fondo,
+    border: `1px solid ${UI.borde}`,
+    color: UI.secundario,
+  }
+
+  return (
+    <div className="px-4 py-5 sm:px-6 lg:px-8 lg:py-8" style={{ color: UI.texto }}>
+      <div className="max-w-7xl mx-auto space-y-6">
+
+        {/* Encabezado */}
+        <div
+          className="relative overflow-hidden rounded-2xl p-5 sm:p-7"
+          style={{
+            background: 'linear-gradient(125deg, #292925 0%, #20201D 58%, #302A19 100%)',
+            border: `1px solid ${UI.borde}`,
+          }}
+        >
+          <div
+            className="absolute -right-8 -top-12 w-48 h-48 rounded-full pointer-events-none"
+            style={{
+              background: 'radial-gradient(circle, rgba(242,194,48,0.15) 0%, rgba(242,194,48,0) 70%)',
+            }}
+          />
+
+          <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <p
+                className="text-[11px] font-bold tracking-[0.2em] uppercase mb-2"
+                style={{ color: UI.acento }}
+              >
+                Comunicaciones · Rendimiento
+              </p>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                Bienestar
+              </h2>
+              <p className="text-sm mt-2 max-w-2xl leading-relaxed" style={{ color: UI.secundario }}>
+                Seguimiento individual y comparativo del plantel: sueño, dolor muscular,
+                fatiga, estrés y esfuerzo percibido.
+              </p>
+            </div>
+
+            <div
+              className="shrink-0 inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-medium self-start sm:self-auto"
+              style={{
+                backgroundColor: 'rgba(151,196,89,0.10)',
+                border: '1px solid rgba(151,196,89,0.25)',
+                color: UI.exito,
               }}
-              className="w-full p-2.5 rounded-xl outline-none text-sm"
-              style={inputStyle}
             >
-              <option value="">Elegí una categoría</option>
-              {categorias.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
-                </option>
-              ))}
-            </select>
-          )}
-          <select
-            value={jugadorId}
-            onChange={(e) => setJugadorId(e.target.value)}
-            disabled={!categoriaId}
-            className="w-full p-2.5 rounded-xl outline-none text-sm disabled:opacity-50"
-            style={inputStyle}
-          >
-            <option value="">Todo el plantel (general)</option>
-            {jugadores.map((j) => (
-              <option key={j.id} value={j.id}>
-                {j.apellido}, {j.nombre}
-              </option>
-            ))}
-          </select>
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: UI.exito }} />
+              Primera División
+            </div>
+          </div>
+
+          <div
+            className="absolute bottom-0 left-0 h-[3px] w-24"
+            style={{ backgroundColor: UI.acento }}
+          />
         </div>
 
-        {!categoriaId && (
-          <p className="text-sm" style={{ color: '#5B6B85' }}>
-            Elegí una categoría para ver el comparativo.
-          </p>
-        )}
+        {/* Filtros */}
+        <div className="rounded-2xl p-4 sm:p-5" style={tarjetaStyle}>
+          <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+            <div className="flex-1 min-w-0">
+              <label
+                className="block text-xs font-semibold uppercase tracking-wider mb-2"
+                style={{ color: UI.secundario }}
+              >
+                Jugadora
+              </label>
 
-        {categoriaId && (
-          <div className="flex gap-2 mb-6">
-            {jugadorId && (
-              <>
-                {[
-                  { key: 'semana', label: 'Última semana' },
-                  { key: 'mes', label: 'Último mes' },
-                ].map((p) => (
-                  <button
-                    key={p.key}
-                    onClick={() => setPeriodo(p.key)}
-                    className="flex-1 p-2.5 rounded-xl text-sm font-medium transition-opacity"
-                    style={
-                      periodo === p.key
-                        ? { backgroundColor: '#4ADE80', color: '#0F1419' }
-                        : { backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#8A9BB8' }
-                    }
-                  >
-                    {p.label}
-                  </button>
+              <select
+                value={jugadorId}
+                onChange={(e) => setJugadorId(e.target.value)}
+                disabled={!categoriaId}
+                className="w-full p-3 rounded-xl outline-none text-sm disabled:opacity-50"
+                style={inputStyle}
+              >
+                <option value="">Todo el plantel · Vista general</option>
+                {jugadores.map((j) => (
+                  <option key={j.id} value={j.id}>
+                    {j.apellido}, {j.nombre}
+                  </option>
                 ))}
-              </>
-            )}
-            <button
-              onClick={handleDescargarPdf}
-              disabled={generandoPdf}
-              className="px-4 rounded-xl text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: '#1A2332', color: '#F0F2F5', border: '1px solid #2A3548' }}
-            >
-              {generandoPdf ? '...' : '📄 PDF'}
-            </button>
-          </div>
-        )}
+              </select>
+            </div>
 
+            <div className="text-xs sm:text-right" style={{ color: UI.muted }}>
+              <span className="block uppercase tracking-wider mb-1">Plantel</span>
+              <span className="text-lg font-semibold" style={{ color: UI.texto }}>
+                {jugadores.length}
+              </span>
+              <span className="ml-1">jugadoras disponibles</span>
+            </div>
+          </div>
+
+          {!categoriaId && (
+            <p className="text-sm mt-4" style={{ color: UI.peligro }}>
+              No se pudo determinar la categoría para mostrar el comparativo.
+            </p>
+          )}
+
+          {categoriaId && (
+            <div className="flex flex-col sm:flex-row gap-3 mt-4 pt-4" style={{ borderTop: `1px solid ${UI.borde}` }}>
+              {jugadorId && (
+                <div className="flex flex-1 gap-2">
+                  {[
+                    { key: 'semana', label: 'Última semana' },
+                    { key: 'mes', label: 'Último mes' },
+                  ].map((p) => {
+                    const activo = periodo === p.key
+
+                    return (
+                      <button
+                        key={p.key}
+                        onClick={() => setPeriodo(p.key)}
+                        className="flex-1 p-2.5 rounded-xl text-sm font-semibold transition-all"
+                        style={
+                          activo
+                            ? {
+                                background: `linear-gradient(135deg, ${UI.acento}, #E5AE1E)`,
+                                color: '#1A1914',
+                                border: `1px solid ${UI.acento}`,
+                              }
+                            : botonSecundario
+                        }
+                      >
+                        {p.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              <button
+                onClick={handleDescargarPdf}
+                disabled={generandoPdf}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-85 disabled:opacity-50"
+                style={{
+                  backgroundColor: UI.fondo,
+                  border: `1px solid ${UI.borde}`,
+                  color: UI.texto,
+                }}
+              >
+                {generandoPdf ? 'Generando PDF…' : '↓ Descargar PDF'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Perfil de jugadora */}
         {jugadorSeleccionado && (
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 rounded-2xl p-4" style={tarjetaStyle}>
             {jugadorSeleccionado.foto_url ? (
               <img
                 src={jugadorSeleccionado.foto_url}
                 alt={jugadorSeleccionado.apellido}
-                className="w-10 h-10 rounded-full object-cover shrink-0"
+                className="w-12 h-12 rounded-xl object-cover shrink-0"
               />
             ) : (
               <span
-                className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                style={{ backgroundColor: '#1A2332', color: '#8A9BB8' }}
+                className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold shrink-0"
+                style={{
+                  backgroundColor: 'rgba(242,194,48,0.12)',
+                  color: UI.acento,
+                  border: '1px solid rgba(242,194,48,0.25)',
+                }}
               >
                 {iniciales(jugadorSeleccionado.nombre, jugadorSeleccionado.apellido)}
               </span>
             )}
-            <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
-              {jugadorSeleccionado.apellido}, {jugadorSeleccionado.nombre}
-            </p>
+
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-widest font-semibold mb-1" style={{ color: UI.muted }}>
+                Análisis individual
+              </p>
+              <p className="text-base font-semibold truncate">
+                {jugadorSeleccionado.apellido}, {jugadorSeleccionado.nombre}
+              </p>
+            </div>
+
+            <div
+              className="ml-auto shrink-0 rounded-full px-3 py-1 text-xs font-medium"
+              style={{
+                backgroundColor: 'rgba(242,194,48,0.10)',
+                color: UI.acento,
+              }}
+            >
+              {periodo === 'semana' ? '7 días' : '28 días'}
+            </div>
           </div>
         )}
 
+        {/* Resumen general */}
         {categoriaId && !jugadorId && (
-          <>
-            {cargandoGeneral && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
-            {!cargandoGeneral && (
-              <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #2A3548' }}>
+          <div className="rounded-2xl overflow-hidden" style={tarjetaStyle}>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 sm:px-5" style={{ borderBottom: `1px solid ${UI.borde}` }}>
+              <div>
+                <h3 className="font-semibold">Estado general del plantel</h3>
+                <p className="text-xs mt-1" style={{ color: UI.muted }}>
+                  Respuestas y promedios de los últimos 28 días
+                </p>
+              </div>
+              <span
+                className="self-start rounded-full px-3 py-1 text-xs"
+                style={{ backgroundColor: UI.fondo, color: UI.secundario, border: `1px solid ${UI.borde}` }}
+              >
+                Vista colectiva
+              </span>
+            </div>
+
+            {cargandoGeneral && (
+              <div className="p-8 text-center text-sm" style={{ color: UI.secundario }}>
+                Cargando datos del plantel…
+              </div>
+            )}
+
+            {!cargandoGeneral && resumenGeneral.length === 0 && (
+              <div className="p-8 text-center text-sm" style={{ color: UI.muted }}>
+                Todavía no hay datos para mostrar en este período.
+              </div>
+            )}
+
+            {!cargandoGeneral && resumenGeneral.length > 0 && (
+              <div className="overflow-x-auto">
                 <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ backgroundColor: '#1A2332' }}>
-                      <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>
-                        Jugadora
-                      </th>
-                      <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>
-                        Respuestas (28d)
-                      </th>
-                      <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>
-                        Prom. semanal
-                      </th>
-                      <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>
-                        Prom. mensual
-                      </th>
-                      <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>
-                        Estado
-                      </th>
+                    <tr style={{ backgroundColor: UI.fondo }}>
+                      {['Jugadora', 'Respuestas (28d)', 'Prom. semanal', 'Prom. mensual', 'Estado'].map((label) => (
+                        <th
+                          key={label}
+                          className="text-left p-3 sm:p-4 whitespace-nowrap text-[11px] uppercase tracking-wider font-semibold"
+                          style={{ color: UI.secundario, borderBottom: `1px solid ${UI.borde}` }}
+                        >
+                          {label}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
                     {resumenGeneral.map((f, i) => (
-                      <tr key={f.jugador.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#151D2A' }}>
-                        <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                      <tr
+                        key={f.jugador.id}
+                        className="transition-colors"
+                        style={{
+                          backgroundColor: i % 2 === 0 ? 'transparent' : UI.tarjetaAlternativa,
+                          borderBottom: `1px solid ${UI.borde}`,
+                        }}
+                      >
+                        <td className="p-3 sm:p-4 whitespace-nowrap font-medium">
                           {f.jugador.apellido}, {f.jugador.nombre}
                         </td>
-                        <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                        <td className="p-3 sm:p-4 tabular-nums" style={{ color: UI.secundario }}>
                           {f.respuestas}
                         </td>
-                        <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                        <td className="p-3 sm:p-4 tabular-nums font-semibold">
                           {f.promedioSemanal !== null ? f.promedioSemanal.toFixed(1) : '—'}
                         </td>
-                        <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                        <td className="p-3 sm:p-4 tabular-nums font-semibold">
                           {f.promedioMensual !== null ? f.promedioMensual.toFixed(1) : '—'}
                         </td>
-                        <td className="p-2.5">
+                        <td className="p-3 sm:p-4">
                           {f.nivel ? (
                             <span
-                              className="text-xs font-medium px-2 py-1 rounded-full"
+                              className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
                               style={{
                                 backgroundColor:
-                                  f.nivel === 'alerta' ? '#F87171' : f.nivel === 'moderado' ? '#FBBF24' : '#4ADE80',
-                                color: '#0F1419',
+                                  f.nivel === 'alerta'
+                                    ? 'rgba(231,121,112,0.13)'
+                                    : f.nivel === 'moderado'
+                                    ? 'rgba(242,194,48,0.13)'
+                                    : 'rgba(151,196,89,0.13)',
+                                color:
+                                  f.nivel === 'alerta'
+                                    ? UI.peligro
+                                    : f.nivel === 'moderado'
+                                    ? UI.advertencia
+                                    : UI.exito,
+                                border: `1px solid ${
+                                  f.nivel === 'alerta'
+                                    ? 'rgba(231,121,112,0.28)'
+                                    : f.nivel === 'moderado'
+                                    ? 'rgba(242,194,48,0.28)'
+                                    : 'rgba(151,196,89,0.28)'
+                                }`,
                               }}
                             >
+                              <span className="w-1.5 h-1.5 rounded-full" style={{
+                                backgroundColor:
+                                  f.nivel === 'alerta'
+                                    ? UI.peligro
+                                    : f.nivel === 'moderado'
+                                    ? UI.advertencia
+                                    : UI.exito,
+                              }} />
                               {f.nivel === 'alerta' ? 'Alerta' : f.nivel === 'moderado' ? 'Moderado' : 'Normal'}
                             </span>
                           ) : (
-                            <span className="text-xs" style={{ color: '#5B6B85' }}>
+                            <span className="text-xs" style={{ color: UI.muted }}>
                               Sin datos
                             </span>
                           )}
@@ -383,25 +595,35 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
                 </table>
               </div>
             )}
-          </>
+          </div>
         )}
 
-        {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
+        {/* Cargando análisis individual */}
+        {cargando && (
+          <div className="rounded-2xl p-8 text-center" style={tarjetaStyle}>
+            <p className="text-sm" style={{ color: UI.secundario }}>
+              Cargando análisis individual…
+            </p>
+          </div>
+        )}
 
+        {/* Métricas individuales */}
         {!cargando && jugadorId && metricas && (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {metricas.map((m) => {
-              const colorLinea = m.clave === 'rpe' ? '#FBBF24' : '#7DD3FC'
+              const colorLinea = m.clave === 'rpe' ? UI.acento : UI.exito
+
               const colorTendencia =
                 m.tendencia === null
-                  ? '#5B6B85'
+                  ? UI.muted
                   : m.tendencia === 'estable'
-                  ? '#8A9BB8'
+                  ? UI.secundario
                   : m.clave === 'rpe'
-                  ? '#FBBF24'
+                  ? UI.acento
                   : m.tendencia === 'sube'
-                  ? '#F87171'
-                  : '#4ADE80'
+                  ? UI.peligro
+                  : UI.exito
+
               const flecha =
                 m.tendencia === 'sube'
                   ? '↑ subió'
@@ -414,30 +636,58 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
               return (
                 <div
                   key={m.clave}
-                  className="p-4 rounded-xl"
-                  style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+                  className="rounded-2xl p-4 sm:p-5 transition-colors"
+                  style={tarjetaStyle}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-medium" style={{ color: '#F0F2F5' }}>
-                      {m.label}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-mono" style={{ color: '#F0F2F5' }}>
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold">{m.label}</p>
+                      <p className="text-xs mt-1" style={{ color: UI.muted }}>
+                        Evolución del período seleccionado
+                      </p>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span className="text-2xl font-semibold tabular-nums">
                         {m.promedioActual !== null ? m.promedioActual.toFixed(1) : '—'}
-                        <span className="text-xs" style={{ color: '#5B6B85' }}>
-                          {' '}
-                          / {m.escalaMax}
-                        </span>
                       </span>
-                      {flecha && (
-                        <span className="text-xs" style={{ color: colorTendencia }}>
-                          {flecha}
-                          {m.promedioAnterior !== null && ` (antes ${m.promedioAnterior.toFixed(1)})`}
-                        </span>
-                      )}
+                      <span className="text-xs ml-1" style={{ color: UI.muted }}>
+                        / {m.escalaMax}
+                      </span>
                     </div>
                   </div>
-                  <MiniLinea serie={m.serie} escalaMax={m.escalaMax} color={colorLinea} />
+
+                  <div className="rounded-xl px-2 pt-3 pb-1 mb-3" style={{ backgroundColor: UI.fondo }}>
+                    <MiniLinea serie={m.serie} escalaMax={m.escalaMax} color={colorLinea} />
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs" style={{ color: UI.muted }}>
+                      Promedio del período
+                    </span>
+
+                    {flecha ? (
+                      <span
+                        className="text-xs font-semibold rounded-full px-2.5 py-1"
+                        style={{
+                          backgroundColor:
+                            m.tendencia === 'estable'
+                              ? 'rgba(181,179,170,0.10)'
+                              : m.tendencia === 'sube'
+                              ? 'rgba(231,121,112,0.12)'
+                              : 'rgba(151,196,89,0.12)',
+                          color: colorTendencia,
+                        }}
+                      >
+                        {flecha}
+                        {m.promedioAnterior !== null && ` · antes ${m.promedioAnterior.toFixed(1)}`}
+                      </span>
+                    ) : (
+                      <span className="text-xs" style={{ color: UI.muted }}>
+                        Sin tendencia disponible
+                      </span>
+                    )}
+                  </div>
                 </div>
               )
             })}
