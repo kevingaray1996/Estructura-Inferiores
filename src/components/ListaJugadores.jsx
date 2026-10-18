@@ -684,11 +684,15 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
         {/* Encabezado */}
         <header className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-              style={{ backgroundColor: '#F4D21F', color: '#171717' }}
-            >
-              <span className="text-xl font-black">C</span>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden bg-white p-1">
+              <img
+                src="/escudo%20simplificado.png"
+                alt="Escudo de Comunicaciones"
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                }}
+              />
             </div>
             <div>
               <p
