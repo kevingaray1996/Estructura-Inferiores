@@ -684,15 +684,27 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
         {/* Encabezado */}
         <header className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden bg-white p-1">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden"
+              style={{ backgroundColor: '#292B32' }}
+            >
               <img
                 src="/escudo%20simplificado.png"
                 alt="Escudo de Comunicaciones"
-                className="w-full h-full object-contain"
+                className="w-full h-full object-contain p-1"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none'
+                  const fallback = e.currentTarget.nextElementSibling
+                  if (fallback) fallback.style.display = 'flex'
                 }}
               />
+              <div
+                className="w-full h-full items-center justify-center font-black text-2xl"
+                style={{ display: 'none', color: '#F4D21F' }}
+                aria-label="Comunicaciones"
+              >
+                C
+              </div>
             </div>
             <div>
               <p
