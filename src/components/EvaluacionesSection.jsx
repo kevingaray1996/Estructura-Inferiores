@@ -699,7 +699,7 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
                         <button
                           type="button"
                           key={n}
-                          aria-label={${c.nombre}: puntaje ${n}}
+                         aria-label={`${c.nombre}: puntaje ${n}`}
                           aria-pressed={activo}
                           onClick={() =>
                             setForm((f) => ({
