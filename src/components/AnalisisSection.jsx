@@ -1,110 +1,96 @@
-                        backgroundColor:
-                          z.total === 0
-                            ? '#233A36'
-                            : `rgba(242, 194, 48, ${0.18 + intensidad * 0.72})`,
-                        color: z.total === 0 ? TEXTO : '#171717',
-                      }}
-                    >
-                      <span className="text-xs font-semibold">{z.nombre}</span>
-                      <span className="mt-2 text-2xl font-bold">{z.total}</span>
-                      <span className="text-xs">acciones</span>
-                    </div>
-                  )
-                })}
-              </div>
 
-              <p className="mt-4 text-xs" style={{ color: SECUNDARIO }}>
-                Para que el mapa sea representativo, mantené el mismo criterio
-                al etiquetar las zonas en todos los partidos.
-              </p>
-            </section>
-          )}
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { supabase } from '../supabaseClient'
 
-          {seccion === 'informe' && (
-            <section
-              className="space-y-5 rounded-2xl border p-5"
-              style={{ backgroundColor: PANEL, borderColor: BORDE }}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-xl font-bold">Informe del partido</h2>
-                  <p className="mt-1 text-sm" style={{ color: SECUNDARIO }}>
-                    {partidoActual.rival} · {partidoActual.fecha || 'Sin fecha'}
-                  </p>
-                </div>
-                <Boton onClick={imprimirInforme}>Imprimir / Guardar PDF</Boton>
-              </div>
+const AMARILLO = '#F2C230'
+const PANEL = '#151D29'
+const BORDE = '#2A3548'
+const TEXTO = '#F0F2F5'
+const SECUNDARIO = '#8A9BB8'
+const FONDO = '#0F1419'
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div
-                  className="rounded-xl border p-4"
-                  style={{ backgroundColor: FONDO, borderColor: BORDE }}
-                >
-                  <p className="text-sm" style={{ color: SECUNDARIO }}>
-                    Total de acciones
-                  </p>
-                  <p className="mt-1 text-3xl font-bold" style={{ color: AMARILLO }}>
-                    {eventosPartido.length}
-                  </p>
-                </div>
-                <div
-                  className="rounded-xl border p-4"
-                  style={{ backgroundColor: FONDO, borderColor: BORDE }}
-                >
-                  <p className="text-sm" style={{ color: SECUNDARIO }}>
-                    Acciones con jugadora asignada
-                  </p>
-                  <p className="mt-1 text-3xl font-bold" style={{ color: AMARILLO }}>
-                    {eventosPartido.filter((e) => e.jugador_id).length}
-                  </p>
-                </div>
-              </div>
+const CATEGORIA_ID = '438874e7-e59f-460b-bec4-3c0ef5b44016'
 
-              <div>
-                <h3 className="mb-2 font-bold">Resumen por acción</h3>
-                {estadisticas.length ? (
-                  <ul className="space-y-2 text-sm">
-                    {estadisticas.map(([nombre, datos]) => (
-                      <li
-                        key={nombre}
-                        className="flex justify-between gap-3 border-b pb-2"
-                        style={{ borderColor: BORDE }}
-                      >
-                        <span>{nombre}</span>
-                        <span className="font-bold">{datos.total}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm" style={{ color: SECUNDARIO }}>
-                    No hay información suficiente para generar el resumen.
-                  </p>
-                )}
-              </div>
+const TIPOS = [
+  'Pase correcto',
+  'Pase incorrecto',
+  'Pérdida',
+  'Recuperación',
+  'Remate',
+  'Centro',
+  'Duelo ofensivo',
+  'Duelo defensivo',
+  'Duelo aéreo',
+  'Atajada',
+  'Salida de arquera',
+  'Gol',
+  'Falta cometida',
+  'Falta recibida',
+  'Intercepción',
+]
 
-              {partidoActual.notas && (
-                <div>
-                  <h3 className="mb-2 font-bold">Observaciones generales</h3>
-                  <p className="whitespace-pre-wrap text-sm" style={{ color: SECUNDARIO }}>
-                    {partidoActual.notas}
-                  </p>
-                </div>
-              )}
+const ZONAS = [
+  'Defensa izquierda',
+  'Defensa centro',
+  'Defensa derecha',
+  'Medio izquierda',
+  'Medio centro',
+  'Medio derecha',
+  'Ataque izquierda',
+  'Ataque centro',
+  'Ataque derecha',
+]
 
-              <p className="text-xs" style={{ color: SECUNDARIO }}>
-                Este informe utiliza los eventos guardados en la base de datos.
-                La impresión permite guardarlo como PDF desde el navegador.
-              </p>
-            </section>
-          )}
-        </>
-      )}
+const RESULTADOS = [
+  'Exitoso',
+  'Fallido',
+  'Neutro',
+  'Gol',
+  'Atajada',
+  'Fuera',
+  'Bloqueado',
+]
 
-      <footer className="border-t pt-4 text-xs" style={{ borderColor: BORDE, color: SECUNDARIO }}>
-        {esAdmin
-          ? 'Administrador: Kevin Garay · Gestión de análisis'
-          : 'Modo consulta · Los cambios en los análisis están restringidos'}
-      </footer>
-    </div>
+const inputClass =
+  'w-full rounded-xl border p-3 text-sm outline-none focus:ring-1'
+
+const inputStyle = {
+  backgroundColor: FONDO,
+  borderColor: BORDE,
+  color: TEXTO,
+}
+
+// CORREGIDO: permite botones normales y botones de envío de formularios.
+function Boton({
+  children,
+  onClick,
+  disabled = false,
+  secundario = false,
+  submit = false,
+}) {
+  return (
+    <button
+      type={submit ? 'submit' : 'button'}
+      onClick={onClick}
+      disabled={disabled}
+      className="rounded-xl px-4 py-3 text-sm font-bold transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+      style={
+        secundario
+          ? {
+              backgroundColor: '#202A38',
+              color: TEXTO,
+              border: `1px solid ${BORDE}`,
+            }
+          : { backgroundColor: AMARILLO, color: '#171717' }
+      }
+    >
+      {children}
+    </button>
   )
 }
+
+function Campo({ label, children }) {
+  return (
+    <label className="block space-y-2 text-sm">
+      <span className="font-medium">{label}</span>
+      {children}
