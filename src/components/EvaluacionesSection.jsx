@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
@@ -180,8 +179,6 @@ td{padding:5px 6px;border-bottom:1px solid #ddd}
 .tag{background:${AMARILLO};padding:1px 7px;border-radius:10px;font-weight:700;font-size:10px;margin-left:6px}
 .pie{margin-top:18px;color:#777;font-size:10px;text-align:center}
 .vacio{color:#777;font-style:italic}
-.resultado{border:1px solid #ddd;border-radius:8px;padding:14px;margin:12px 0}
-.resultado b{font-size:16px}
 `
 
 const docHtml = (titulo, cuerpo) =>
@@ -233,56 +230,20 @@ function svgLinea(puntos) {
   )
 }
 
-/*
- * Los informes para otros roles se generan desde esta rama resumida.
- * No deben incluir puntajes, promedios, estadísticas ni comentarios.
- */
-function htmlInforme({
-  j,
-  criterios,
-  evals,
-  nombresEval,
-  stats,
-  escudo,
-  modo,
-  periodo,
-  anio,
-  esCoordinador = false,
-}) {
+function htmlInforme({ j, criterios, evals, nombresEval, stats, escudo, modo, periodo, anio }) {
   const mias = evals.filter((e) => mismo(e.jugador_id, j.id))
   const periodoSel = modo === 'final' ? 'final-' + anio : periodo
+  const anioRef = modo === 'final' ? anio : Number(String(periodo).slice(0, 4))
   const actuales = mias.filter((e) => e.periodo === periodoSel)
+  const r = resumenJugador(actuales, criterios)
+  const nombreEv = (id) => nombresEval[id] || 'Evaluador'
+
   const titulo = modo === 'final'
     ? 'Evaluación final de temporada ' + anio
     : 'Evaluación del período ' + periodo
 
   const foto = j.foto_url && String(j.foto_url).startsWith('http') ? j.foto_url : ''
   let cuerpo = cabecera(escudo, nombreJ(j), titulo + ' · Club Comunicaciones', foto)
-
-  if (!esCoordinador) {
-    cuerpo += '<h2>Resumen de evaluación</h2>'
-
-    if (modo === 'final') {
-      const decision = recPredominante(actuales)
-
-      cuerpo += actuales.length
-        ? '<div class="resultado"><b>Resultado: ' + esc(decision) + '</b></div>'
-        : '<p class="vacio">No hay una decisión registrada para esta jugadora en la temporada seleccionada.</p>'
-    } else {
-      cuerpo += actuales.length
-        ? '<div class="resultado"><b>Evaluación mensual registrada</b><p>Hay una evaluación cargada para el período seleccionado.</p></div>'
-        : '<p class="vacio">No hay una evaluación registrada para el período seleccionado.</p>'
-    }
-
-    cuerpo += '<div class="pie">Informe generado el ' +
-      new Date().toLocaleDateString('es-AR') +
-      ' · Uso interno del club</div>'
-
-    return docHtml('Informe ' + nombreJ(j), cuerpo)
-  }
-
-  const r = resumenJugador(actuales, criterios)
-  const nombreEv = (id) => nombresEval[id] || 'Evaluador'
 
   cuerpo += '<h2>Evaluación del cuerpo técnico</h2>'
 
@@ -371,7 +332,7 @@ function htmlInforme({
   const porMes = {}
 
   mias
-    .filter((e) => !String(e.periodo).startsWith('final') && String(e.periodo).startsWith(String(anio)))
+    .filter((e) => !String(e.periodo).startsWith('final') && String(e.periodo).startsWith(String(anioRef)))
     .forEach((e) => {
       porMes[e.periodo] = porMes[e.periodo] || []
       porMes[e.periodo].push(e)
@@ -431,7 +392,7 @@ function htmlPlantel({ jugadores, criterios, evals, stats, escudo, anio }) {
     .sort((a, b) => (b.g == null ? -1 : b.g) - (a.g == null ? -1 : a.g))
 
   const cuerpo =
-    cabecera(escudo, 'Evaluación final de temporada ' + anio, 'Resumen detallado del plantel · Club Comunicaciones', '') +
+    cabecera(escudo, 'Evaluación final de temporada ' + anio, 'Resumen del plantel · Club Comunicaciones', '') +
     '<table><tr><th>Jugadora</th><th>Prom. final</th><th>Evaluadores</th><th>PJ</th><th>Min</th><th>Goles</th><th>Asist.</th><th>Recomendación</th></tr>' +
     filas
       .map(
@@ -452,42 +413,6 @@ function htmlPlantel({ jugadores, criterios, evals, stats, escudo, anio }) {
     ' · Uso interno del cuerpo técnico</div>'
 
   return docHtml('Resumen plantel ' + anio, cuerpo)
-}
-
-/* PDF resumido para roles que no son Coordinación */
-function htmlPlantelResultados({ jugadores, evals, escudo, anio }) {
-  const filas = jugadores.map((j) => {
-    const actuales = evals.filter(
-      (e) => mismo(e.jugador_id, j.id) && e.periodo === 'final-' + anio
-    )
-
-    return {
-      nombre: nombreJ(j),
-      decision: actuales.length ? recPredominante(actuales) : 'Sin decisión registrada',
-    }
-  })
-
-  const cuerpo =
-    cabecera(
-      escudo,
-      'Evaluación final de temporada ' + anio,
-      'Resumen de decisiones del plantel · Club Comunicaciones',
-      ''
-    ) +
-    '<table><tr><th>Jugadora</th><th>Resultado</th></tr>' +
-    filas
-      .map(
-        (f) =>
-          '<tr><td>' + esc(f.nombre) +
-          '</td><td>' + esc(f.decision) +
-          '</td></tr>'
-      )
-      .join('') +
-    '</table><div class="pie">Generado el ' +
-    new Date().toLocaleDateString('es-AR') +
-    ' · Uso interno del club</div>'
-
-  return docHtml('Resumen de decisiones ' + anio, cuerpo)
 }
 
 /* ------------------------------- estilos ------------------------------- */
@@ -774,7 +699,7 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
                         <button
                           type="button"
                           key={n}
-                          aria-label={`${c.nombre}: puntaje ${n}`}
+                          aria-label={${c.nombre}: puntaje ${n}}
                           aria-pressed={activo}
                           onClick={() =>
                             setForm((f) => ({
@@ -902,14 +827,7 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
 
 /* ------------------------------ panel de informes ------------------------------ */
 
-function PanelInformes({
-  jugadores,
-  criterios,
-  evals,
-  nombresEval,
-  escudo,
-  esCoordinador,
-}) {
+function PanelInformes({ jugadores, criterios, evals, nombresEval, escudo }) {
   const [modo, setModo] = useState('final')
   const [mes, setMes] = useState(hoyMes())
   const [anio, setAnio] = useState(anioActual())
@@ -917,35 +835,26 @@ function PanelInformes({
   const [visor, setVisor] = useState(null)
 
   useEffect(() => {
-    if (esCoordinador) {
-      traerTodo('estadisticas_jugador').then(setStats)
-    }
-  }, [esCoordinador])
+    traerTodo('estadisticas_jugador').then(setStats)
+  }, [])
 
   const periodoSel = modo === 'final' ? 'final-' + anio : mes
   const delPeriodo = evals.filter((e) => e.periodo === periodoSel)
 
-  const filas = jugadores.map((j) => {
-    const act = delPeriodo.filter((e) => mismo(e.jugador_id, j.id))
-    const r = esCoordinador ? resumenJugador(act, criterios) : null
-
-    return {
-      j,
-      n: act.length,
-      r,
-      rec: recPredominante(act),
-      registrada: act.length > 0,
-    }
-  })
+  const filas = jugadores
+    .map((j) => {
+      const act = delPeriodo.filter((e) => mismo(e.jugador_id, j.id))
+      const r = resumenJugador(act, criterios)
+      return { j, n: act.length, r, rec: recPredominante(act) }
+    })
+    .sort((a, b) => (b.r.general == null ? -1 : b.r.general) - (a.r.general == null ? -1 : a.r.general))
 
   const avance = {}
 
-  if (esCoordinador) {
-    delPeriodo.forEach((e) => {
-      avance[e.evaluador_id] = avance[e.evaluador_id] || new Set()
-      avance[e.evaluador_id].add(String(e.jugador_id))
-    })
-  }
+  delPeriodo.forEach((e) => {
+    avance[e.evaluador_id] = avance[e.evaluador_id] || new Set()
+    avance[e.evaluador_id].add(String(e.jugador_id))
+  })
 
   const abrirInforme = (j) =>
     setVisor({
@@ -960,16 +869,13 @@ function PanelInformes({
         modo,
         periodo: mes,
         anio,
-        esCoordinador,
       }),
     })
 
   const abrirPlantel = () =>
     setVisor({
       titulo: 'Resumen plantel',
-      html: esCoordinador
-        ? htmlPlantel({ jugadores, criterios, evals, stats, escudo, anio })
-        : htmlPlantelResultados({ jugadores, evals, escudo, anio }),
+      html: htmlPlantel({ jugadores, criterios, evals, stats, escudo, anio }),
     })
 
   const th = {
@@ -1031,57 +937,48 @@ function PanelInformes({
           </div>
         )}
 
-        <button type="button" style={btnPrim} onClick={abrirPlantel}>
-          {modo === 'final' ? 'Resumen del plantel (PDF)' : 'Informes del período'}
-        </button>
+        {modo === 'final' && (
+          <button type="button" style={btnPrim} onClick={abrirPlantel}>
+            Resumen del plantel (PDF)
+          </button>
+        )}
       </div>
 
-      {esCoordinador && (
-        <div style={{ ...card, marginBottom: 16 }}>
-          <div style={{
-            color: C.textoSecundario,
-            fontSize: 13,
-            marginBottom: 6,
-          }}>
-            Avance por evaluador
-          </div>
-
-          {Object.keys(avance).length === 0 ? (
-            <span style={{ color: C.textoMuted }}>
-              Todavía no hay evaluaciones en este período.
-            </span>
-          ) : (
-            Object.keys(avance).map((id) => (
-              <div key={id} style={{ color: C.texto }}>
-                {nombresEval[id] || 'Evaluador'}: {avance[id].size}/{jugadores.length} jugadoras
-              </div>
-            ))
-          )}
+      <div style={{ ...card, marginBottom: 16 }}>
+        <div style={{
+          color: C.textoSecundario,
+          fontSize: 13,
+          marginBottom: 6,
+        }}>
+          Avance por evaluador
         </div>
-      )}
+
+        {Object.keys(avance).length === 0 ? (
+          <span style={{ color: C.textoMuted }}>
+            Todavía no hay evaluaciones en este período.
+          </span>
+        ) : (
+          Object.keys(avance).map((id) => (
+            <div key={id} style={{ color: C.texto }}>
+              {nombresEval[id] || 'Evaluador'}: {avance[id].size}/{jugadores.length} jugadoras
+            </div>
+          ))
+        )}
+      </div>
 
       <div style={{ ...card, overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
               <th style={th}>Jugadora</th>
+              <th style={th}>Eval.</th>
+              <th style={th}>Prom.</th>
 
-              {esCoordinador && (
-                <>
-                  <th style={th}>Eval.</th>
-                  <th style={th}>Prom.</th>
-                  {criterios.map((c) => (
-                    <th key={c.id} style={th}>{c.nombre}</th>
-                  ))}
-                </>
-              )}
+              {criterios.map((c) => (
+                <th key={c.id} style={th}>{c.nombre}</th>
+              ))}
 
-              {modo === 'final' ? (
-                <th style={th}>Resultado</th>
-              ) : (
-                <th style={th}>Estado</th>
-              )}
-
+              {modo === 'final' && <th style={th}>Recomendación</th>}
               <th style={th}></th>
             </tr>
           </thead>
@@ -1090,31 +987,14 @@ function PanelInformes({
             {filas.map((f) => (
               <tr key={f.j.id}>
                 <td style={td}>{nombreJ(f.j)}</td>
+                <td style={td}>{f.n}</td>
+                <td style={{ ...td, fontWeight: 700 }}>{f1(f.r.general)}</td>
 
-                {esCoordinador && (
-                  <>
-                    <td style={td}>{f.n}</td>
-                    <td style={{ ...td, fontWeight: 700 }}>{f1(f.r.general)}</td>
+                {f.r.porCrit.map((x) => (
+                  <td key={x.c.id} style={td}>{f1(x.prom)}</td>
+                ))}
 
-                    {f.r.porCrit.map((x) => (
-                      <td key={x.c.id} style={td}>{f1(x.prom)}</td>
-                    ))}
-                  </>
-                )}
-
-                {modo === 'final' ? (
-                  <td style={td}>
-                    {esCoordinador
-                      ? f.rec
-                      : f.registrada
-                        ? f.rec
-                        : 'Sin decisión registrada'}
-                  </td>
-                ) : (
-                  <td style={td}>
-                    {f.registrada ? 'Evaluación registrada' : 'Sin evaluación registrada'}
-                  </td>
-                )}
+                {modo === 'final' && <td style={td}>{f.rec}</td>}
 
                 <td style={td}>
                   <button
@@ -1122,7 +1002,7 @@ function PanelInformes({
                     style={btnSec}
                     onClick={() => abrirInforme(f.j)}
                   >
-                    Descargar informe
+                    Informe
                   </button>
                 </td>
               </tr>
@@ -1150,7 +1030,6 @@ export default function EvaluacionesSection({ perfil }) {
 
   const escudo = ESCUDO_CLUB_URL
   const rol = (perfil && perfil.rol) || ''
-  const esCoordinador = rol === 'coordinacion'
 
   async function cargar() {
     setCargando(true)
@@ -1321,7 +1200,6 @@ export default function EvaluacionesSection({ perfil }) {
           evals={evals}
           nombresEval={nombresEval}
           escudo={escudo}
-          esCoordinador={esCoordinador}
         />
       )}
     </div>
