@@ -1,3 +1,4 @@
+
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 import Layout from './components/Layout'
@@ -161,6 +162,7 @@ function App() {
   return (
     <Layout seccionActiva={seccion} onCambiarSeccion={setSeccion} perfil={perfil}>
       {seccion === 'inicio' && <InicioSection perfil={perfil} onCambiarSeccion={setSeccion} />}
+
       {seccion === 'buscar' && (
         <BuscadorGlobal
           onIrAJugador={irAJugadorDesdeBusqueda}
@@ -170,7 +172,9 @@ function App() {
           onIrABiblioteca={() => setSeccion('entrenamientos')}
         />
       )}
+
       {seccion === 'calendario' && <CalendarioSection perfil={perfil} />}
+
       {seccion === 'plantel' && (
         <PlantelSection
           onVerFichaMedica={irAMedicosDesdePerfil}
@@ -183,24 +187,28 @@ function App() {
           perfil={perfil}
         />
       )}
+
       {seccion === 'medicos' && (
         <MedicosSection
           jugadorInicialId={jugadorParaMedicos}
           onConsumirJugadorInicial={consumirJugadorParaMedicos}
         />
       )}
+
       {seccion === 'nutricion' && (
         <NutricionSection
           jugadorInicialId={jugadorParaNutricion}
           onConsumirJugadorInicial={consumirJugadorParaNutricion}
         />
       )}
+
       {seccion === 'psicologia' && (
         <PsicologiaSection
           jugadorInicialId={jugadorParaPsicologia}
           onConsumirJugadorInicial={consumirJugadorParaPsicologia}
         />
       )}
+
       {seccion === 'video' && (
         <VideoSection
           jugadorInicialId={jugadorParaVideo}
@@ -210,9 +218,16 @@ function App() {
         />
       )}
 
-      {seccion === 'partidos' && <PartidosSection perfil={perfil} onIrAFisico={irAFisicoDesdePartido} />}
+      {/* Nuevo módulo independiente de análisis de partidos */}
+      {seccion === 'analisis' && <AnalisisSection />}
+
+      {seccion === 'partidos' && (
+        <PartidosSection perfil={perfil} onIrAFisico={irAFisicoDesdePartido} />
+      )}
+
       {seccion === 'entrenamientos' && <EntrenamientosSection />}
       {seccion === 'asistencia' && <AsistenciaSection perfil={perfil} />}
+
       {seccion === 'fisico' && (
         <FisicoSection
           perfil={perfil}
@@ -222,6 +237,7 @@ function App() {
           onConsumirJugadorParaBienestar={consumirJugadorParaBienestar}
         />
       )}
+
       {seccion === 'captacion' && <CaptacionSection perfil={perfil} />}
       {seccion === 'representantes' && <RepresentantesSection onVolver={() => setSeccion('inicio')} />}
       {seccion === 'pensiones' && <PensionesSection onVolver={() => setSeccion('inicio')} />}
