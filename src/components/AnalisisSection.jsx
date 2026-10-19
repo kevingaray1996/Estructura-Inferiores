@@ -60,16 +60,27 @@ const inputStyle = {
   color: TEXTO,
 }
 
-function Boton({ children, onClick, disabled = false, secundario = false }) {
+// CORREGIDO: permite botones normales y botones de envío de formularios.
+function Boton({
+  children,
+  onClick,
+  disabled = false,
+  secundario = false,
+  submit = false,
+}) {
   return (
     <button
-      type="button"
+      type={submit ? 'submit' : 'button'}
       onClick={onClick}
       disabled={disabled}
       className="rounded-xl px-4 py-3 text-sm font-bold transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
       style={
         secundario
-          ? { backgroundColor: '#202A38', color: TEXTO, border: `1px solid ${BORDE}` }
+          ? {
+              backgroundColor: '#202A38',
+              color: TEXTO,
+              border: `1px solid ${BORDE}`,
+            }
           : { backgroundColor: AMARILLO, color: '#171717' }
       }
     >
@@ -317,14 +328,15 @@ export default function AnalisisSection() {
     }
 
     return Object.entries(resultado)
-      .map(([id, datos]) => ({
-        id,
-        ...datos,
-        nombre:
-          jugadoras.find((j) => j.id === id)?.nombre +
-          ' ' +
-          (jugadoras.find((j) => j.id === id)?.apellido || ''),
-      }))
+      .map(([id, datos]) => {
+        const jugadora = jugadoras.find((j) => j.id === id)
+
+        return {
+          id,
+          ...datos,
+          nombre: `${jugadora?.nombre || ''} ${jugadora?.apellido || ''}`.trim(),
+        }
+      })
       .sort((a, b) => b.total - a.total)
   }, [eventosPartido, jugadoras])
 
@@ -404,13 +416,15 @@ export default function AnalisisSection() {
       if (respuesta.error) throw respuesta.error
 
       const idGuardado = respuesta.data.id
+      const estabaEditando = Boolean(editandoId)
 
       limpiarFormulario()
       setMostrarFormulario(false)
       await cargarDatos()
       setPartidoId(idGuardado)
-      setMensaje(editandoId ? 'Partido actualizado.' : 'Partido creado.')
+      setMensaje(estabaEditando ? 'Partido actualizado.' : 'Partido creado.')
     } catch (e) {
+      console.error('Error al guardar partido:', e)
       setError(e.message || 'No se pudo guardar el partido.')
     } finally {
       setGuardando(false)
@@ -486,11 +500,13 @@ export default function AnalisisSection() {
         .order('segundo', { ascending: true })
 
       if (refreshError) throw refreshError
+
       setEventos((actuales) => [
         ...actuales.filter((ev) => ev.partido_id !== partidoId),
         ...(listaEventos || []),
       ])
     } catch (e) {
+      console.error('Error al registrar acción:', e)
       setError(e.message || 'No se pudo registrar la acción.')
     } finally {
       setGuardando(false)
@@ -656,7 +672,7 @@ export default function AnalisisSection() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Boton disabled={guardando}>
+              <Boton submit disabled={guardando}>
                 {guardando ? 'Guardando...' : 'Guardar partido'}
               </Boton>
               <Boton
@@ -942,7 +958,7 @@ export default function AnalisisSection() {
                       />
                     </Campo>
 
-                    <Boton disabled={guardando}>
+                    <Boton submit disabled={guardando}>
                       {guardando ? 'Guardando...' : 'Registrar acción'}
                     </Boton>
                   </form>
@@ -1075,7 +1091,12 @@ export default function AnalisisSection() {
                         .filter(Boolean),
                     ).size,
                   ],
-                  ['Zonas utilizadas', new Set(eventosPartido.map((e) => e.zona).filter(Boolean)).size],
+                  [
+                    'Zonas utilizadas',
+                    new Set(
+                      eventosPartido.map((e) => e.zona).filter(Boolean),
+                    ).size,
+                  ],
                 ].map(([label, valor]) => (
                   <div
                     key={label}
@@ -1233,9 +1254,7 @@ export default function AnalisisSection() {
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-xl font-bold">
-                    Informe del partido
-                  </h2>
+                  <h2 className="text-xl font-bold">Informe del partido</h2>
                   <p className="mt-1 text-sm" style={{ color: SECUNDARIO }}>
                     {partidoActual.rival} · {partidoActual.fecha || 'Sin fecha'}
                   </p>
