@@ -94,3 +94,6 @@ function Campo({ label, children }) {
     <label className="block space-y-2 text-sm">
       <span className="font-medium">{label}</span>
       {children}
+    </label>
+  )
+}
