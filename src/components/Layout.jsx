@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { COLORES } from '../theme'
@@ -25,6 +26,7 @@ function seccionesParaRol(rol) {
       { id: 'nutricion', label: 'Nutrición' },
       { id: 'psicologia', label: 'Psicología' },
       { id: 'video', label: 'Videoanálisis' },
+      { id: 'analisis', label: 'Análisis' },
       { id: 'partidos', label: 'Partidos' },
       { id: 'entrenamientos', label: 'Entrenamientos' },
       { id: 'asistencia', label: 'Asistencia' },
@@ -39,6 +41,7 @@ function seccionesParaRol(rol) {
       { id: 'evaluaciones', label: 'Evaluaciones' },
     ]
   }
+
   if (rol === 'medico') {
     return [
       { id: 'inicio', label: 'Inicio' },
@@ -49,6 +52,7 @@ function seccionesParaRol(rol) {
       { id: 'evaluaciones', label: 'Evaluaciones' },
     ]
   }
+
   if (rol === 'preparador_fisico') {
     return [
       { id: 'inicio', label: 'Inicio' },
@@ -61,11 +65,13 @@ function seccionesParaRol(rol) {
       { id: 'evaluaciones', label: 'Evaluaciones' },
     ]
   }
-  // tecnico
+
+  // Cuerpo técnico
   return [
     { id: 'inicio', label: 'Inicio' },
     { id: 'plantel', label: 'Plantel' },
     { id: 'video', label: 'Videoanálisis' },
+    { id: 'analisis', label: 'Análisis' },
     { id: 'partidos', label: 'Partidos' },
     { id: 'entrenamientos', label: 'Entrenamientos' },
     { id: 'asistencia', label: 'Asistencia' },
@@ -81,6 +87,7 @@ function seccionesParaRol(rol) {
 
 function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
   const secciones = seccionesParaRol(perfil?.rol)
+
   const subtitulo =
     perfil?.rol === 'tecnico' && perfil?.categorias?.nombre
       ? `${rolLabel[perfil.rol]} · ${perfil.categorias.nombre}`
@@ -112,10 +119,12 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
       copiarLink(perfil.categoria_id, perfil?.categorias?.nombre || 'tu categoría')
       return
     }
+
     if (!mostrarLinkBienestar && categoriasLink.length === 0) {
       const { data } = await supabase.from('categorias').select('*').order('orden')
       setCategoriasLink(data || [])
     }
+
     setMostrarLinkBienestar((v) => !v)
   }
 
@@ -135,7 +144,10 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
       {/* Barra superior solo mobile */}
       <div
         className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center gap-3 px-4 h-14"
-        style={{ backgroundColor: COLORES.fondoSidebar, borderBottom: `1px solid ${COLORES.borde}` }}
+        style={{
+          backgroundColor: COLORES.fondoSidebar,
+          borderBottom: `1px solid ${COLORES.borde}`,
+        }}
       >
         <button
           onClick={() => setMenuAbierto(true)}
@@ -145,7 +157,10 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
         >
           ☰
         </button>
-        <p className="text-xs tracking-widest uppercase font-medium truncate" style={{ color: COLORES.texto }}>
+        <p
+          className="text-xs tracking-widest uppercase font-medium truncate"
+          style={{ color: COLORES.texto }}
+        >
           Club Comunicaciones
         </p>
       </div>
@@ -164,11 +179,20 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
         className={`w-64 md:w-56 shrink-0 min-h-screen flex flex-col fixed md:static inset-y-0 left-0 z-50 transition-transform duration-200 ${
           menuAbierto ? 'translate-x-0' : '-translate-x-full'
         } md:translate-x-0`}
-        style={{ backgroundColor: COLORES.fondoSidebar, borderRight: `1px solid ${COLORES.borde}` }}
+        style={{
+          backgroundColor: COLORES.fondoSidebar,
+          borderRight: `1px solid ${COLORES.borde}`,
+        }}
       >
-        <div className="px-5 pt-6 pb-4 flex items-start justify-between" style={{ borderBottom: `1px solid ${COLORES.borde}` }}>
+        <div
+          className="px-5 pt-6 pb-4 flex items-start justify-between"
+          style={{ borderBottom: `1px solid ${COLORES.borde}` }}
+        >
           <div>
-            <p className="text-xs tracking-widest uppercase font-medium" style={{ color: COLORES.texto }}>
+            <p
+              className="text-xs tracking-widest uppercase font-medium"
+              style={{ color: COLORES.texto }}
+            >
               Club Comunicaciones
             </p>
             {subtitulo && (
@@ -190,6 +214,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
         <nav className="flex-1 overflow-y-auto py-3 px-2">
           {secciones.map((s) => {
             const activa = seccionActiva === s.id
+
             return (
               <button
                 key={s.id}
@@ -198,7 +223,9 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
                 style={{
                   color: activa ? COLORES.acento : COLORES.textoSecundario,
                   backgroundColor: activa ? 'rgba(242,194,48,0.08)' : 'transparent',
-                  borderLeft: activa ? `3px solid ${COLORES.acento}` : '3px solid transparent',
+                  borderLeft: activa
+                    ? `3px solid ${COLORES.acento}`
+                    : '3px solid transparent',
                   fontWeight: activa ? 500 : 400,
                 }}
               >
@@ -208,7 +235,10 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
           })}
         </nav>
 
-        <div className="px-3 py-3" style={{ borderTop: `1px solid ${COLORES.borde}` }}>
+        <div
+          className="px-3 py-3"
+          style={{ borderTop: `1px solid ${COLORES.borde}` }}
+        >
           <div className="flex items-center gap-2 mb-3">
             {perfil?.rol !== 'medico' && (
               <button
@@ -220,6 +250,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
                 📅
               </button>
             )}
+
             <button
               onClick={() => seleccionarSeccion('buscar')}
               aria-label="Buscar"
@@ -228,6 +259,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
             >
               🔍
             </button>
+
             {(perfil?.rol === 'tecnico' || perfil?.rol === 'coordinacion') && (
               <div className="relative">
                 <button
@@ -239,14 +271,23 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
                 >
                   🔗
                 </button>
+
                 {mostrarLinkBienestar && perfil?.rol === 'coordinacion' && (
                   <div
                     className="absolute left-0 bottom-10 p-2 rounded-xl z-10"
-                    style={{ backgroundColor: COLORES.fondoPagina, border: `1px solid ${COLORES.borde}`, minWidth: '180px' }}
+                    style={{
+                      backgroundColor: COLORES.fondoPagina,
+                      border: `1px solid ${COLORES.borde}`,
+                      minWidth: '180px',
+                    }}
                   >
-                    <p className="text-[10px] uppercase px-2 pb-1.5" style={{ color: COLORES.textoMuted }}>
+                    <p
+                      className="text-[10px] uppercase px-2 pb-1.5"
+                      style={{ color: COLORES.textoMuted }}
+                    >
                       Copiar link por categoría
                     </p>
+
                     {categoriasLink.map((c) => (
                       <button
                         key={c.id}
@@ -262,6 +303,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
               </div>
             )}
           </div>
+
           {linkCopiado && (
             <p className="text-xs mb-2" style={{ color: COLORES.exito }}>
               ✓ Link de {linkCopiado} copiado
@@ -275,6 +317,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
             >
               {iniciales(perfil?.nombre || rolLabel[perfil?.rol])}
             </div>
+
             <div className="min-w-0">
               <p className="text-xs truncate" style={{ color: COLORES.texto }}>
                 {perfil?.nombre || rolLabel[perfil?.rol] || 'Usuario'}
@@ -284,10 +327,15 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
               </p>
             </div>
           </div>
+
           <button
             onClick={() => supabase.auth.signOut()}
             className="w-full text-xs px-3 py-2 rounded-lg hover:opacity-80 text-left"
-            style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario, border: `1px solid ${COLORES.borde}` }}
+            style={{
+              backgroundColor: COLORES.fondoPagina,
+              color: COLORES.textoSecundario,
+              border: `1px solid ${COLORES.borde}`,
+            }}
           >
             Cerrar sesión
           </button>
