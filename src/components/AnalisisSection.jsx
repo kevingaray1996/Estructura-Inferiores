@@ -11,10 +11,39 @@ const FONDO = '#0F1419'
 const CATEGORIA_ID = '438874e7-e59f-460b-bec4-3c0ef5b44016'
 
 const TIPOS = [
-  'Pase correcto', 'Pase incorrecto', 'Pérdida', 'Recuperación',
-  'Remate', 'Centro', 'Duelo ofensivo', 'Duelo defensivo', 'Duelo aéreo',
-  'Atajada', 'Salida de arquera', 'Gol', 'Falta cometida',
-  'Falta recibida', 'Intercepción',
+  'Pase correcto',
+  'Pase incorrecto',
+  'Pérdida',
+  'Recuperación',
+  'Remate',
+  'Centro',
+  'Duelo ofensivo',
+  'Duelo defensivo',
+  'Duelo aéreo',
+  'Atajada',
+  'Salida de arquera',
+  'Gol',
+  'Falta cometida',
+  'Falta recibida',
+  'Intercepción',
+]
+
+const TIPOS_RAPIDOS = [
+  { nombre: 'Pase correcto', corto: 'Pase +', icono: '↗', color: '#4ADE80' },
+  { nombre: 'Pase incorrecto', corto: 'Pase −', icono: '↘', color: '#F87171' },
+  { nombre: 'Pérdida', corto: 'Pérdida', icono: '×', color: '#F87171' },
+  { nombre: 'Recuperación', corto: 'Recuperación', icono: '↺', color: '#4ADE80' },
+  { nombre: 'Remate', corto: 'Remate', icono: '◎', color: '#F2C230' },
+  { nombre: 'Centro', corto: 'Centro', icono: '⌁', color: '#F2C230' },
+  { nombre: 'Duelo ofensivo', corto: 'Duelo of.', icono: '⚔', color: '#F2C230' },
+  { nombre: 'Duelo defensivo', corto: 'Duelo def.', icono: '◆', color: '#60A5FA' },
+  { nombre: 'Duelo aéreo', corto: 'Duelo aéreo', icono: '↑', color: '#60A5FA' },
+  { nombre: 'Atajada', corto: 'Atajada', icono: '⊙', color: '#4ADE80' },
+  { nombre: 'Salida de arquera', corto: 'Salida', icono: '↗', color: '#60A5FA' },
+  { nombre: 'Gol', corto: 'Gol', icono: '⚽', color: '#F2C230' },
+  { nombre: 'Falta cometida', corto: 'Falta com.', icono: '!', color: '#F87171' },
+  { nombre: 'Falta recibida', corto: 'Falta rec.', icono: '+', color: '#4ADE80' },
+  { nombre: 'Intercepción', corto: 'Intercepción', icono: '↯', color: '#60A5FA' },
 ]
 
 const ZONAS = [
@@ -27,7 +56,9 @@ const RESULTADOS = [
   'Exitoso', 'Fallido', 'Neutro', 'Gol', 'Atajada', 'Fuera', 'Bloqueado',
 ]
 
-const inputClass = 'w-full rounded-xl border p-3 text-sm outline-none focus:ring-1'
+const inputClass =
+  'w-full rounded-lg border p-3 text-sm outline-none focus:ring-1 focus:ring-yellow-400'
+
 const inputStyle = {
   backgroundColor: FONDO,
   borderColor: BORDE,
@@ -46,19 +77,10 @@ function Boton({
       type={submit ? 'submit' : 'button'}
       onClick={onClick}
       disabled={disabled}
-      className="rounded-xl px-4 py-3 text-sm font-bold transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
-      style={
-        secundario
-          ? {
-              backgroundColor: '#202A38',
-              color: TEXTO,
-              border: `1px solid ${BORDE}`,
-            }
-          : {
-              backgroundColor: AMARILLO,
-              color: '#171717',
-            }
-      }
+      className="rounded-lg px-4 py-2.5 text-sm font-bold transition hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+      style={secundario
+        ? { backgroundColor: '#202A38', color: TEXTO, border: `1px solid ${BORDE}` }
+        : { backgroundColor: AMARILLO, color: '#171717' }}
     >
       {children}
     </button>
@@ -68,9 +90,20 @@ function Boton({
 function Campo({ label, children }) {
   return (
     <label className="block space-y-2 text-sm">
-      <span className="font-medium">{label}</span>
+      <span className="font-medium" style={{ color: TEXTO }}>{label}</span>
       {children}
     </label>
+  )
+}
+
+function Panel({ children, className = '', style = {} }) {
+  return (
+    <section
+      className={`rounded-xl border p-4 md:p-5 ${className}`}
+      style={{ backgroundColor: PANEL, borderColor: BORDE, ...style }}
+    >
+      {children}
+    </section>
   )
 }
 
@@ -91,7 +124,6 @@ function youtubeEmbed(url) {
         id = parsed.searchParams.get('v') || ''
       } else {
         const parts = parsed.pathname.split('/').filter(Boolean)
-
         if (['embed', 'shorts', 'live'].includes(parts[0])) {
           id = parts[1] || ''
         }
@@ -100,10 +132,9 @@ function youtubeEmbed(url) {
 
     if (!/^[a-zA-Z0-9_-]{11}$/.test(id)) return ''
 
-    const origen =
-      typeof window !== 'undefined'
-        ? `&origin=${encodeURIComponent(window.location.origin)}`
-        : ''
+    const origen = typeof window !== 'undefined'
+      ? `&origin=${encodeURIComponent(window.location.origin)}`
+      : ''
 
     return `https://www.youtube.com/embed/${id}?enablejsapi=1${origen}`
   } catch {
@@ -112,59 +143,72 @@ function youtubeEmbed(url) {
 }
 
 function formatearTiempo(segundos) {
-  const total = Math.max(0, Number(segundos) || 0)
-
-  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(
-    total % 60,
-  ).padStart(2, '0')}`
+  const total = Math.max(0, Math.floor(Number(segundos) || 0))
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
 }
 
 function fechaLegible(fecha) {
   if (!fecha) return 'Fecha sin definir'
-
   const [anio, mes, dia] = fecha.slice(0, 10).split('-')
   return `${dia}/${mes}/${anio}`
 }
 
 function datosEncuentro(partido) {
   if (!partido) return ''
-
   const calendario = partido.partido_calendario || null
-  const fecha = calendario?.fecha || partido.fecha
-  const localVisitante = calendario?.local_visitante
-  const numeroFecha = calendario?.numero_fecha
 
   return [
-    fechaLegible(fecha),
-    localVisitante
-      ? localVisitante.charAt(0).toUpperCase() + localVisitante.slice(1)
+    fechaLegible(calendario?.fecha || partido.fecha),
+    calendario?.local_visitante
+      ? calendario.local_visitante.charAt(0).toUpperCase() +
+        calendario.local_visitante.slice(1)
       : '',
-    numeroFecha || '',
-  ]
-    .filter(Boolean)
-    .join(' · ')
+    calendario?.numero_fecha || '',
+  ].filter(Boolean).join(' · ')
 }
 
 function videoCalendario(partido) {
   if (!partido) return ''
 
-  return (
-    partido.video_partido_completo ||
+  return partido.video_partido_completo ||
     partido.video_analisis_propio ||
     partido.video_resumen ||
     partido.video_analisis_rival ||
     partido.link ||
     ''
-  )
+}
+
+function nombreJugadora(jugadora) {
+  if (!jugadora) return 'Sin jugadora asignada'
+  return `${jugadora.nombre || ''} ${jugadora.apellido || ''}`.trim() || 'Sin nombre'
+}
+
+function iniciales(jugadora) {
+  const nombre = jugadora?.nombre?.trim()?.[0] || ''
+  const apellido = jugadora?.apellido?.trim()?.[0] || ''
+  return `${nombre}${apellido}`.toUpperCase() || '?'
+}
+
+function obtenerCoordenadas(posicion) {
+  if (!posicion || typeof posicion !== 'string') return null
+
+  const [xStr, yStr] = posicion.split(',')
+  const x = Number(xStr)
+  const y = Number(yStr)
+
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null
+
+  return {
+    x: Math.max(0, Math.min(100, x)),
+    y: Math.max(0, Math.min(100, y)),
+  }
 }
 
 let youtubeApiPromise = null
 
 function cargarYouTubeAPI() {
   if (typeof window === 'undefined') {
-    return Promise.reject(
-      new Error('YouTube solo puede iniciarse en el navegador.'),
-    )
+    return Promise.reject(new Error('YouTube solo puede iniciarse en el navegador.'))
   }
 
   if (window.YT?.Player) return Promise.resolve(window.YT)
@@ -195,11 +239,7 @@ function cargarYouTubeAPI() {
 
       script.onerror = () => {
         youtubeApiPromise = null
-        reject(
-          new Error(
-            'No se pudo cargar la API de YouTube. Revisá la conexión.',
-          ),
-        )
+        reject(new Error('No se pudo cargar la API de YouTube.'))
       }
 
       document.head.appendChild(script)
@@ -221,6 +261,8 @@ export default function AnalisisSection() {
   const [partidosCalendario, setPartidosCalendario] = useState([])
   const [eventos, setEventos] = useState([])
   const [jugadoras, setJugadoras] = useState([])
+  const [citaciones, setCitaciones] = useState([])
+
   const [partidoId, setPartidoId] = useState('')
   const [partidoCalendarioId, setPartidoCalendarioId] = useState('')
 
@@ -238,7 +280,21 @@ export default function AnalisisSection() {
 
   const [filtroJugador, setFiltroJugador] = useState('todos')
   const [filtroTipo, setFiltroTipo] = useState('todos')
+  const [filtroResultado, setFiltroResultado] = useState('todos')
   const [seccion, setSeccion] = useState('video')
+
+  const [tipoRapido, setTipoRapido] = useState('')
+  const [busquedaJugadora, setBusquedaJugadora] = useState('')
+  const [mostrarEdicionEvento, setMostrarEdicionEvento] = useState(false)
+  const [editandoEventoId, setEditandoEventoId] = useState(null)
+  const [edicionEvento, setEdicionEvento] = useState({
+    tipo: 'Pase correcto',
+    jugador_id: '',
+    segundo: '0',
+    zona: '',
+    resultado: '',
+    observaciones: '',
+  })
 
   const iframeRef = useRef(null)
   const playerRef = useRef(null)
@@ -266,9 +322,7 @@ export default function AnalisisSection() {
     setError('')
 
     try {
-      const { data: authData, error: authError } =
-        await supabase.auth.getUser()
-
+      const { data: authData, error: authError } = await supabase.auth.getUser()
       if (authError) throw authError
 
       const authUser = authData?.user
@@ -280,6 +334,7 @@ export default function AnalisisSection() {
         setPartidosCalendario([])
         setEventos([])
         setJugadoras([])
+        setCitaciones([])
         setPartidoId('')
         setError('Iniciá sesión para consultar Análisis.')
         return
@@ -309,7 +364,7 @@ export default function AnalisisSection() {
           numero_fecha, video_partido_completo, video_resumen,
           video_analisis_propio, video_analisis_rival, video_pelota_parada,
           video_gps, video_charla_dt, video_arenga, video_resumen_vigilancias,
-          link
+          link, formacion
         `)
         .eq('categoria_id', CATEGORIA_ID)
         .order('fecha', { ascending: false })
@@ -327,13 +382,10 @@ export default function AnalisisSection() {
 
       if (partidosError) throw partidosError
 
-      // Vincula por ID cuando existe. En análisis antiguos sin ID,
-      // asocia solo cuando rival y fecha producen una coincidencia única.
       const listaPartidos = (lista || []).map((analisis) => {
-        let calendarioPartido =
-          calendarioLista.find(
-            (p) => p.id === analisis.partido_calendario_id,
-          ) || null
+        let calendarioPartido = calendarioLista.find(
+          (p) => p.id === analisis.partido_calendario_id,
+        ) || null
 
         if (!calendarioPartido && analisis.fecha && analisis.rival) {
           const coincidencias = calendarioLista.filter(
@@ -368,7 +420,6 @@ export default function AnalisisSection() {
           .order('segundo', { ascending: true })
 
         if (eventosError) throw eventosError
-
         setEventos(listaEventos || [])
       }
 
@@ -381,18 +432,14 @@ export default function AnalisisSection() {
       let listaJugadoras = []
 
       if (categoriaIds.length) {
-        const { data: jugadoresData, error: jugadoresError } =
-          await supabase
-            .from('jugadores')
-            .select('id, nombre, apellido, categoria_id, estado')
-            .in('categoria_id', categoriaIds)
-            .order('apellido', { ascending: true })
+        const { data: jugadoresData, error: jugadoresError } = await supabase
+          .from('jugadores')
+          .select('id, nombre, apellido, categoria_id, estado')
+          .in('categoria_id', categoriaIds)
+          .order('apellido', { ascending: true })
 
         if (jugadoresError) {
-          console.warn(
-            'No se pudieron cargar las jugadoras:',
-            jugadoresError,
-          )
+          console.warn('No se pudieron cargar las jugadoras:', jugadoresError)
         } else {
           listaJugadoras = jugadoresData || []
         }
@@ -417,6 +464,75 @@ export default function AnalisisSection() {
     cargarDatos()
   }, [cargarDatos])
 
+  // Convocadas del encuentro seleccionado: se obtienen desde la pestaña Convocados.
+  useEffect(() => {
+    let cancelado = false
+
+    async function cargarCitaciones() {
+      setCitaciones([])
+      setJugadorId('')
+
+      const calendarioId =
+        partidoActual?.partido_calendario_id ||
+        partidoActual?.partido_calendario?.id
+
+      if (!calendarioId) return
+
+      const { data, error: citacionesError } = await supabase
+        .from('citaciones')
+        .select('*')
+        .eq('partido_id', calendarioId)
+
+      if (cancelado) return
+
+      if (citacionesError) {
+        console.error('Error al cargar convocadas:', citacionesError)
+        setError(
+          'No se pudieron cargar las convocadas. Revisá los permisos de la tabla citaciones.',
+        )
+        return
+      }
+
+      const filas = (data || []).map((c) => {
+        const jugadora = jugadoras.find((j) => j.id === c.jugador_id)
+        const coordenadas = obtenerCoordenadas(c.posicion_cancha)
+
+        return {
+          ...c,
+          jugadora: jugadora || null,
+          coordenadas,
+          titular: Boolean(c.titular || coordenadas),
+        }
+      }).filter((c) => c.jugadora)
+
+      filas.sort((a, b) => {
+        const dorsalA = Number(a.dorsal)
+        const dorsalB = Number(b.dorsal)
+
+        if (Number.isFinite(dorsalA) && Number.isFinite(dorsalB)) {
+          return dorsalA - dorsalB
+        }
+
+        return nombreJugadora(a.jugadora).localeCompare(
+          nombreJugadora(b.jugadora),
+          'es',
+        )
+      })
+
+      setCitaciones(filas)
+    }
+
+    cargarCitaciones()
+
+    return () => {
+      cancelado = true
+    }
+  }, [
+    partidoActual?.partido_calendario_id,
+    partidoActual?.partido_calendario?.id,
+    jugadoras,
+  ])
+
   useEffect(() => {
     const iframe = iframeRef.current
 
@@ -438,7 +554,6 @@ export default function AnalisisSection() {
           events: {
             onReady: (evento) => {
               if (cancelado) return
-
               setVideoListo(true)
               setTiempoVideo(
                 Math.floor(evento.target.getCurrentTime() || 0),
@@ -464,8 +579,7 @@ export default function AnalisisSection() {
       .catch((e) => {
         if (!cancelado) {
           setError(
-            e.message ||
-              'No se pudo conectar el reproductor de YouTube.',
+            e.message || 'No se pudo conectar el reproductor de YouTube.',
           )
         }
       })
@@ -477,10 +591,7 @@ export default function AnalisisSection() {
         try {
           playerRef.current.destroy()
         } catch (e) {
-          console.warn(
-            'No se pudo cerrar el reproductor de YouTube:',
-            e,
-          )
+          console.warn('No se pudo cerrar el reproductor:', e)
         }
 
         playerRef.current = null
@@ -496,25 +607,140 @@ export default function AnalisisSection() {
 
     const intervalo = window.setInterval(() => {
       try {
-        const tiempoActual =
-          playerRef.current?.getCurrentTime?.()
+        const tiempoActual = playerRef.current?.getCurrentTime?.()
 
         if (Number.isFinite(tiempoActual)) {
           setTiempoVideo(Math.floor(tiempoActual))
         }
       } catch {
-        // El reproductor puede cambiar de estado mientras se inicializa.
+        // El reproductor puede estar cambiando de estado.
       }
     }, 500)
 
     return () => window.clearInterval(intervalo)
   }, [videoListo, partidoId])
 
+  const eventosPartido = useMemo(
+    () => eventos.filter((e) => e.partido_id === partidoId),
+    [eventos, partidoId],
+  )
+
+  const eventosFiltrados = useMemo(
+    () => eventosPartido.filter((e) =>
+      (filtroJugador === 'todos' || e.jugador_id === filtroJugador) &&
+      (filtroTipo === 'todos' || e.tipo === filtroTipo) &&
+      (filtroResultado === 'todos' ||
+        (filtroResultado === 'Pendiente'
+          ? !e.resultado
+          : e.resultado === filtroResultado)),
+    ),
+    [eventosPartido, filtroJugador, filtroTipo, filtroResultado],
+  )
+
+  const estadisticas = useMemo(() => {
+    const acumulado = {}
+
+    for (const evento of eventosPartido) {
+      if (!acumulado[evento.tipo]) {
+        acumulado[evento.tipo] = {
+          total: 0,
+          exitosos: 0,
+          fallidos: 0,
+          pendientes: 0,
+        }
+      }
+
+      acumulado[evento.tipo].total += 1
+
+      if (['Exitoso', 'Gol', 'Atajada'].includes(evento.resultado)) {
+        acumulado[evento.tipo].exitosos += 1
+      }
+
+      if (['Fallido', 'Fuera', 'Bloqueado'].includes(evento.resultado)) {
+        acumulado[evento.tipo].fallidos += 1
+      }
+
+      if (!evento.resultado) {
+        acumulado[evento.tipo].pendientes += 1
+      }
+    }
+
+    return Object.entries(acumulado).sort(
+      (a, b) => b[1].total - a[1].total,
+    )
+  }, [eventosPartido])
+
+  const estadisticasJugadoras = useMemo(() => {
+    const acumulado = {}
+
+    for (const evento of eventosPartido) {
+      if (!evento.jugador_id) continue
+
+      if (!acumulado[evento.jugador_id]) {
+        acumulado[evento.jugador_id] = { total: 0, tipos: {} }
+      }
+
+      acumulado[evento.jugador_id].total += 1
+      acumulado[evento.jugador_id].tipos[evento.tipo] =
+        (acumulado[evento.jugador_id].tipos[evento.tipo] || 0) + 1
+    }
+
+    return Object.entries(acumulado)
+      .map(([id, datos]) => {
+        const jugadora = jugadoras.find((j) => j.id === id)
+
+        return {
+          id,
+          ...datos,
+          nombre: nombreJugadora(jugadora),
+        }
+      })
+      .sort((a, b) => b.total - a.total)
+  }, [eventosPartido, jugadoras])
+
+  const estadisticasZonas = useMemo(
+    () => ZONAS.map((nombre) => ({
+      nombre,
+      total: eventosPartido.filter((e) => e.zona === nombre).length,
+    })),
+    [eventosPartido],
+  )
+
+  const partidosDisponibles = useMemo(
+    () => [...partidosCalendario].sort((a, b) =>
+      (b.fecha || '').localeCompare(a.fecha || ''),
+    ),
+    [partidosCalendario],
+  )
+
+  const titulares = useMemo(
+    () => citaciones.filter((c) => c.titular || c.coordenadas),
+    [citaciones],
+  )
+
+  const suplentes = useMemo(
+    () => citaciones.filter((c) => !c.titular && !c.coordenadas),
+    [citaciones],
+  )
+
+  const jugadorasVisibles = useMemo(() => {
+    const busqueda = busquedaJugadora.trim().toLowerCase()
+
+    if (!busqueda) return citaciones
+
+    return citaciones.filter((c) => {
+      const nombre = nombreJugadora(c.jugadora).toLowerCase()
+      const dorsal = String(c.dorsal ?? '').toLowerCase()
+
+      return nombre.includes(busqueda) || dorsal.includes(busqueda)
+    })
+  }, [citaciones, busquedaJugadora])
+
   function irAlSegundo(valor) {
     const tiempo = Number(valor)
 
     if (!Number.isFinite(tiempo) || tiempo < 0) {
-      setError('Ingresá un segundo válido para ir a ese momento del video.')
+      setError('Ingresá un segundo válido.')
       return
     }
 
@@ -528,12 +754,9 @@ export default function AnalisisSection() {
       playerRef.current.playVideo()
       setTiempoVideo(Math.floor(tiempo))
       setError('')
-      setMensaje(`Reproduciendo desde ${formatearTiempo(tiempo)}.`)
     } catch (e) {
-      console.error('No se pudo saltar al tiempo del video:', e)
-      setError(
-        'No se pudo ir a ese momento. Esperá a que el reproductor esté listo.',
-      )
+      console.error('No se pudo saltar al tiempo:', e)
+      setError('No se pudo ir a ese momento del video.')
     }
   }
 
@@ -543,14 +766,11 @@ export default function AnalisisSection() {
       return
     }
 
-    const tiempo = Math.floor(
-      playerRef.current.getCurrentTime() || 0,
-    )
+    const tiempo = Math.floor(playerRef.current.getCurrentTime() || 0)
 
     setSegundo(String(tiempo))
     setSegundoIr(String(tiempo))
     setError('')
-    setMensaje('Tiempo actual del video copiado al formulario de acción.')
   }
 
   function alternarReproduccion() {
@@ -559,109 +779,149 @@ export default function AnalisisSection() {
       return
     }
 
-    if (videoReproduciendo) {
-      playerRef.current.pauseVideo()
-    } else {
-      playerRef.current.playVideo()
+    if (videoReproduciendo) playerRef.current.pauseVideo()
+    else playerRef.current.playVideo()
+  }
+
+  async function registrarAccionRapida(tipoSeleccionado, idJugadora) {
+    if (!esAdmin || !partidoActual || guardando) return
+
+    if (!videoListo || !playerRef.current) {
+      setError('Esperá a que el video esté conectado antes de etiquetar.')
+      return
+    }
+
+    setGuardando(true)
+    setError('')
+    setMensaje('')
+
+    try {
+      const tiempo = Math.floor(playerRef.current.getCurrentTime() || 0)
+
+      const { data, error: insertError } = await supabase
+        .from('analisis_eventos')
+        .insert({
+          partido_id: partidoId,
+          jugador_id: idJugadora,
+          segundo: tiempo,
+          tipo: tipoSeleccionado,
+          zona: null,
+          resultado: null,
+          observaciones: null,
+        })
+        .select()
+        .single()
+
+      if (insertError) throw insertError
+
+      setEventos((actuales) =>
+        [...actuales, data].sort(
+          (a, b) => Number(a.segundo) - Number(b.segundo),
+        ),
+      )
+
+      setTipoRapido('')
+      setMensaje(
+        `${tipoSeleccionado} registrada para ${nombreJugadora(
+          jugadoras.find((j) => j.id === idJugadora),
+        )}. Resultado pendiente.`,
+      )
+    } catch (e) {
+      console.error('Error al etiquetar acción:', e)
+      setError(
+        e.message ||
+        'No se pudo guardar la acción rápida. Verificá que la base de datos permita resultado y zona nulos.',
+      )
+    } finally {
+      setGuardando(false)
     }
   }
 
-  const eventosPartido = useMemo(
-    () => eventos.filter((e) => e.partido_id === partidoId),
-    [eventos, partidoId],
-  )
+  function abrirEdicionEvento(evento) {
+    if (!esAdmin) return
 
-  const eventosFiltrados = useMemo(
-    () =>
-      eventosPartido.filter(
-        (e) =>
-          (filtroJugador === 'todos' ||
-            e.jugador_id === filtroJugador) &&
-          (filtroTipo === 'todos' || e.tipo === filtroTipo),
-      ),
-    [eventosPartido, filtroJugador, filtroTipo],
-  )
+    setEditandoEventoId(evento.id)
+    setEdicionEvento({
+      tipo: evento.tipo || TIPOS[0],
+      jugador_id: evento.jugador_id || '',
+      segundo: String(evento.segundo ?? 0),
+      zona: evento.zona || '',
+      resultado: evento.resultado || '',
+      observaciones: evento.observaciones || '',
+    })
 
-  const estadisticas = useMemo(() => {
-    const resultadoStats = {}
+    setMostrarEdicionEvento(true)
+    setError('')
+    setMensaje('')
+  }
 
-    for (const evento of eventosPartido) {
-      if (!resultadoStats[evento.tipo]) {
-        resultadoStats[evento.tipo] = {
-          total: 0,
-          exitosos: 0,
-          fallidos: 0,
-        }
+  async function guardarEdicionEvento(e) {
+    e.preventDefault()
+
+    if (!esAdmin || !editandoEventoId || guardando) return
+
+    setGuardando(true)
+    setError('')
+    setMensaje('')
+
+    try {
+      const tiempo = Number(edicionEvento.segundo)
+
+      if (!Number.isInteger(tiempo) || tiempo < 0) {
+        throw new Error('El tiempo debe ser un número entero de segundos.')
       }
 
-      resultadoStats[evento.tipo].total += 1
+      const { data, error: updateError } = await supabase
+        .from('analisis_eventos')
+        .update({
+          tipo: edicionEvento.tipo,
+          jugador_id: edicionEvento.jugador_id || null,
+          segundo: tiempo,
+          zona: edicionEvento.zona || null,
+          resultado: edicionEvento.resultado || null,
+          observaciones: edicionEvento.observaciones.trim() || null,
+        })
+        .eq('id', editandoEventoId)
+        .select()
+        .single()
 
-      if (['Exitoso', 'Gol', 'Atajada'].includes(evento.resultado)) {
-        resultadoStats[evento.tipo].exitosos += 1
-      }
+      if (updateError) throw updateError
 
-      if (['Fallido', 'Fuera', 'Bloqueado'].includes(evento.resultado)) {
-        resultadoStats[evento.tipo].fallidos += 1
-      }
+      setEventos((actuales) =>
+        actuales.map((ev) => ev.id === data.id ? data : ev).sort(
+          (a, b) => Number(a.segundo) - Number(b.segundo),
+        ),
+      )
+
+      setMostrarEdicionEvento(false)
+      setEditandoEventoId(null)
+      setMensaje('Acción actualizada correctamente.')
+    } catch (e) {
+      console.error('Error al editar acción:', e)
+      setError(e.message || 'No se pudo actualizar la acción.')
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  async function eliminarEvento(evento) {
+    if (!esAdmin) return
+
+    if (!window.confirm('¿Querés eliminar esta acción etiquetada?')) return
+
+    const { error: deleteError } = await supabase
+      .from('analisis_eventos')
+      .delete()
+      .eq('id', evento.id)
+
+    if (deleteError) {
+      setError(deleteError.message)
+      return
     }
 
-    return Object.entries(resultadoStats).sort(
-      (a, b) => b[1].total - a[1].total,
-    )
-  }, [eventosPartido])
-
-  const estadisticasJugadoras = useMemo(() => {
-    const resultadoStats = {}
-
-    for (const evento of eventosPartido) {
-      if (!evento.jugador_id) continue
-
-      if (!resultadoStats[evento.jugador_id]) {
-        resultadoStats[evento.jugador_id] = {
-          total: 0,
-          tipos: {},
-        }
-      }
-
-      resultadoStats[evento.jugador_id].total += 1
-
-      resultadoStats[evento.jugador_id].tipos[evento.tipo] =
-        (resultadoStats[evento.jugador_id].tipos[evento.tipo] || 0) + 1
-    }
-
-    return Object.entries(resultadoStats)
-      .map(([id, datos]) => {
-        const jugadora = jugadoras.find((j) => j.id === id)
-
-        return {
-          id,
-          ...datos,
-          nombre: `${jugadora?.nombre || ''} ${
-            jugadora?.apellido || ''
-          }`.trim(),
-        }
-      })
-      .sort((a, b) => b.total - a.total)
-  }, [eventosPartido, jugadoras])
-
-  const estadisticasZonas = useMemo(
-    () =>
-      ZONAS.map((nombre) => ({
-        nombre,
-        total: eventosPartido.filter((e) => e.zona === nombre).length,
-      })),
-    [eventosPartido],
-  )
-
-  const partidosDisponibles = useMemo(
-    () =>
-      [...partidosCalendario].sort((a, b) => {
-        const fechaA = a.fecha || ''
-        const fechaB = b.fecha || ''
-        return fechaB.localeCompare(fechaA)
-      }),
-    [partidosCalendario],
-  )
+    setEventos((actuales) => actuales.filter((e) => e.id !== evento.id))
+    setMensaje('Acción eliminada.')
+  }
 
   function limpiarFormulario() {
     setVideoUrl('')
@@ -688,14 +948,9 @@ export default function AnalisisSection() {
       return
     }
 
-    const analisisExistente = partidos.find((p) => {
-      const calendarioVinculado =
-        p.partido_calendario_id ||
-        p.partido_calendario?.id ||
-        ''
-
-      return calendarioVinculado === id
-    })
+    const analisisExistente = partidos.find(
+      (p) => p.partido_calendario_id === id,
+    )
 
     setVideoUrl(
       analisisExistente?.video_url || videoCalendario(seleccionado),
@@ -706,19 +961,13 @@ export default function AnalisisSection() {
   function editarPartido(partido) {
     if (!esAdmin) return
 
-    const encuentro =
-      partido.partido_calendario ||
-      partidosCalendario.find(
-        (p) => p.id === partido.partido_calendario_id,
-      )
-
     setEditandoId(partido.id)
     setPartidoCalendarioId(
-      partido.partido_calendario_id || encuentro?.id || '',
+      partido.partido_calendario_id ||
+      partido.partido_calendario?.id ||
+      '',
     )
-
-    // Si el análisis no tiene video propio, recupera el del calendario.
-    setVideoUrl(partido.video_url || videoCalendario(encuentro))
+    setVideoUrl(partido.video_url || '')
     setNotas(partido.notas || '')
     setMostrarFormulario(true)
     setError('')
@@ -747,18 +996,11 @@ export default function AnalisisSection() {
         throw new Error('Ingresá un enlace válido de YouTube.')
       }
 
-      // Comprueba tanto el ID guardado como el vínculo recuperado
-      // por rival y fecha para análisis antiguos.
-      const duplicado = partidos.find((p) => {
-        if (p.id === editandoId) return false
-
-        const calendarioVinculado =
-          p.partido_calendario_id ||
-          p.partido_calendario?.id ||
-          ''
-
-        return calendarioVinculado === encuentro.id
-      })
+      const duplicado = partidos.find(
+        (p) =>
+          p.partido_calendario_id === encuentro.id &&
+          p.id !== editandoId,
+      )
 
       if (duplicado) {
         throw new Error(
@@ -805,7 +1047,6 @@ export default function AnalisisSection() {
 
       setPartidoId(idGuardado)
       setSeccion('video')
-
       setMensaje(
         estabaEditando
           ? 'Análisis actualizado.'
@@ -841,10 +1082,7 @@ export default function AnalisisSection() {
       return
     }
 
-    setMensaje(
-      'Análisis eliminado. El partido del calendario se conserva.',
-    )
-
+    setMensaje('Análisis eliminado. El partido del calendario se conserva.')
     await cargarDatos()
   }
 
@@ -861,75 +1099,43 @@ export default function AnalisisSection() {
       const tiempo = Number(segundo)
 
       if (!Number.isInteger(tiempo) || tiempo < 0) {
-        throw new Error(
-          'El tiempo debe ser un número entero de segundos.',
-        )
+        throw new Error('El tiempo debe ser un número entero de segundos.')
       }
 
       if (jugadorId && !jugadoras.some((j) => j.id === jugadorId)) {
         throw new Error('La jugadora seleccionada no está disponible.')
       }
 
-      const { error: insertError } = await supabase
+      const { data, error: insertError } = await supabase
         .from('analisis_eventos')
         .insert({
-          // Debe ser el ID del análisis, no el ID del calendario.
           partido_id: partidoId,
           jugador_id: jugadorId || null,
           segundo: tiempo,
           tipo,
-          zona,
-          resultado,
+          zona: zona || null,
+          resultado: resultado || null,
           observaciones: observaciones.trim() || null,
         })
+        .select()
+        .single()
 
       if (insertError) throw insertError
 
+      setEventos((actuales) =>
+        [...actuales, data].sort(
+          (a, b) => Number(a.segundo) - Number(b.segundo),
+        ),
+      )
+
       setMensaje('Acción registrada correctamente.')
       setObservaciones('')
-
-      const { data: listaEventos, error: refreshError } = await supabase
-        .from('analisis_eventos')
-        .select('*')
-        .eq('partido_id', partidoId)
-        .order('segundo', { ascending: true })
-
-      if (refreshError) throw refreshError
-
-      setEventos((actuales) => [
-        ...actuales.filter((ev) => ev.partido_id !== partidoId),
-        ...(listaEventos || []),
-      ])
     } catch (e) {
       console.error('Error al registrar acción:', e)
       setError(e.message || 'No se pudo registrar la acción.')
     } finally {
       setGuardando(false)
     }
-  }
-
-  async function eliminarEvento(evento) {
-    if (!esAdmin) return
-
-    if (!window.confirm('¿Querés eliminar esta acción etiquetada?')) {
-      return
-    }
-
-    const { error: deleteError } = await supabase
-      .from('analisis_eventos')
-      .delete()
-      .eq('id', evento.id)
-
-    if (deleteError) {
-      setError(deleteError.message)
-      return
-    }
-
-    setEventos((actuales) =>
-      actuales.filter((e) => e.id !== evento.id),
-    )
-
-    setMensaje('Acción eliminada.')
   }
 
   function imprimirInforme() {
@@ -945,32 +1151,34 @@ export default function AnalisisSection() {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6" style={{ color: TEXTO }}>
+    <div
+      className="min-h-screen space-y-5 p-3 md:p-6"
+      style={{ backgroundColor: FONDO, color: TEXTO }}
+    >
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p
-            className="mb-2 text-xs font-bold uppercase tracking-widest"
+            className="mb-2 text-xs font-bold uppercase tracking-[0.2em]"
             style={{ color: AMARILLO }}
           >
-            VIDEOANÁLISIS · COMUNICACIONES
+            COMUNICACIONES · PERFORMANCE
           </p>
-
-          <h1 className="text-3xl font-bold">Análisis</h1>
-
+          <h1 className="text-3xl font-black tracking-tight md:text-4xl">
+            Videoanálisis
+          </h1>
           <p className="mt-2 text-sm" style={{ color: SECUNDARIO }}>
-            Partidos del calendario, etiquetado, estadísticas e informes.
+            Etiquetado de acciones, formación y análisis del rendimiento.
           </p>
-
           <p className="mt-2 text-xs" style={{ color: SECUNDARIO }}>
             {esAdmin
-              ? 'Modo administrador · Podés gestionar los análisis.'
-              : 'Modo consulta · Solo lectura.'}
+              ? 'Modo administrador · Gestión habilitada'
+              : 'Modo consulta · Solo lectura'}
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <Boton secundario onClick={cargarDatos}>
-            Actualizar
+            ↻ Actualizar
           </Boton>
 
           {esAdmin && (
@@ -984,7 +1192,7 @@ export default function AnalisisSection() {
                 }
               }}
             >
-              {mostrarFormulario ? 'Cancelar' : '+ Agregar análisis'}
+              {mostrarFormulario ? 'Cancelar' : '+ Nuevo análisis'}
             </Boton>
           )}
         </div>
@@ -992,7 +1200,7 @@ export default function AnalisisSection() {
 
       {error && (
         <div
-          className="rounded-xl border p-4 text-sm"
+          className="rounded-lg border p-3 text-sm"
           style={{
             backgroundColor: '#351D22',
             borderColor: '#85404B',
@@ -1005,7 +1213,7 @@ export default function AnalisisSection() {
 
       {mensaje && (
         <div
-          className="rounded-xl border p-4 text-sm"
+          className="rounded-lg border p-3 text-sm"
           style={{
             backgroundColor: '#203326',
             borderColor: '#3B714A',
@@ -1017,19 +1225,14 @@ export default function AnalisisSection() {
       )}
 
       {mostrarFormulario && esAdmin && (
-        <section
-          className="rounded-2xl border p-5"
-          style={{ backgroundColor: PANEL, borderColor: BORDE }}
-        >
+        <Panel>
           <h2 className="mb-2 text-lg font-bold">
-            {editandoId
-              ? 'Editar análisis'
-              : 'Agregar análisis a un partido del calendario'}
+            {editandoId ? 'Editar análisis' : 'Vincular análisis a un partido'}
           </h2>
 
           <p className="mb-4 text-sm" style={{ color: SECUNDARIO }}>
-            No se crea un nuevo partido del calendario. Elegí un encuentro
-            existente y guardá los datos específicos de su análisis.
+            Seleccioná un encuentro existente del calendario. No se creará otro
+            partido en el calendario.
           </p>
 
           <form onSubmit={guardarPartido} className="space-y-4">
@@ -1038,83 +1241,32 @@ export default function AnalisisSection() {
                 className={inputClass}
                 style={inputStyle}
                 value={partidoCalendarioId}
-                onChange={(e) =>
-                  seleccionarPartidoCalendario(e.target.value)
-                }
+                onChange={(e) => seleccionarPartidoCalendario(e.target.value)}
                 required
                 disabled={Boolean(editandoId)}
               >
                 <option value="">Seleccioná un partido...</option>
 
                 {partidosDisponibles.map((p) => {
-                  const analisisExistente = partidos.find((a) => {
-                    if (a.id === editandoId) return false
-
-                    const calendarioVinculado =
-                      a.partido_calendario_id ||
-                      a.partido_calendario?.id ||
-                      ''
-
-                    return calendarioVinculado === p.id
-                  })
-
-                  const descripcion = [
-                    fechaLegible(p.fecha),
-                    p.local_visitante,
-                    p.numero_fecha,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')
+                  const yaExiste = partidos.find(
+                    (a) =>
+                      a.partido_calendario_id === p.id &&
+                      a.id !== editandoId,
+                  )
 
                   return (
                     <option key={p.id} value={p.id}>
-                      {p.rival} — {descripcion}
-                      {analisisExistente ? ' (ya tiene análisis)' : ''}
+                      {p.rival} — {fechaLegible(p.fecha)}
+                      {p.local_visitante ? ` · ${p.local_visitante}` : ''}
+                      {p.numero_fecha ? ` · ${p.numero_fecha}` : ''}
+                      {yaExiste ? ' (ya tiene análisis)' : ''}
                     </option>
                   )
                 })}
               </select>
             </Campo>
 
-            {partidoCalendarioId && (
-              <div
-                className="rounded-xl border p-4 text-sm"
-                style={{ backgroundColor: FONDO, borderColor: BORDE }}
-              >
-                {(() => {
-                  const p = partidosCalendario.find(
-                    (item) => item.id === partidoCalendarioId,
-                  )
-
-                  if (!p) return null
-
-                  return (
-                    <>
-                      <p className="font-bold">{p.rival}</p>
-
-                      <p className="mt-1" style={{ color: SECUNDARIO }}>
-                        {fechaLegible(p.fecha)}
-                        {p.hora
-                          ? ` · ${String(p.hora).slice(0, 5)} hs`
-                          : ''}
-                        {p.local_visitante
-                          ? ` · ${p.local_visitante}`
-                          : ''}
-                        {p.numero_fecha ? ` · ${p.numero_fecha}` : ''}
-                      </p>
-
-                      <p className="mt-1" style={{ color: SECUNDARIO }}>
-                        {videoCalendario(p)
-                          ? 'El calendario tiene un video disponible.'
-                          : 'El calendario todavía no tiene un video cargado.'}
-                      </p>
-                    </>
-                  )
-                })()}
-              </div>
-            )}
-
-            <Campo label="Enlace de YouTube para este análisis">
+            <Campo label="Enlace de YouTube específico del análisis">
               <input
                 className={inputClass}
                 style={inputStyle}
@@ -1123,18 +1275,13 @@ export default function AnalisisSection() {
                 onChange={(e) => setVideoUrl(e.target.value)}
                 placeholder="https://www.youtube.com/watch?v=..."
               />
-
-              <span
-                className="block text-xs"
-                style={{ color: SECUNDARIO }}
-              >
-                Se propone primero el video guardado en el análisis o el
-                video del calendario. Podés usar otro enlace específico
-                para el análisis.
+              <span className="text-xs" style={{ color: SECUNDARIO }}>
+                Si lo dejás vacío, se utilizará el video disponible en el
+                calendario.
               </span>
             </Campo>
 
-            <Campo label="Notas del análisis">
+            <Campo label="Notas generales">
               <textarea
                 className={inputClass}
                 style={inputStyle}
@@ -1146,10 +1293,7 @@ export default function AnalisisSection() {
             </Campo>
 
             <div className="flex flex-wrap gap-2">
-              <Boton
-                submit
-                disabled={guardando || !partidoCalendarioId}
-              >
+              <Boton submit disabled={guardando || !partidoCalendarioId}>
                 {guardando ? 'Guardando...' : 'Guardar análisis'}
               </Boton>
 
@@ -1164,50 +1308,49 @@ export default function AnalisisSection() {
               </Boton>
             </div>
           </form>
-        </section>
+        </Panel>
       )}
 
-      <section
-        className="rounded-2xl border p-5"
+      <Panel
+        className="overflow-hidden"
         style={{
           background:
-            'linear-gradient(135deg, #202A38 0%, #151D29 100%)',
-          borderColor: BORDE,
+            'linear-gradient(120deg, #202A38 0%, #151D29 70%, #242B30 100%)',
         }}
       >
         <div className="flex flex-wrap items-center gap-4">
           <div
-            className="flex h-14 w-14 items-center justify-center rounded-2xl text-2xl"
+            className="flex h-12 w-12 items-center justify-center rounded-xl text-xl font-black"
             style={{ backgroundColor: AMARILLO, color: '#171717' }}
           >
             ▶
           </div>
 
           <div className="min-w-0 flex-1">
-            <h2 className="text-xl font-bold">Biblioteca de análisis</h2>
-
+            <h2 className="text-lg font-bold">Biblioteca de análisis</h2>
             <p className="mt-1 text-sm" style={{ color: SECUNDARIO }}>
-              {partidos.length} análisis guardado
-              {partidos.length === 1 ? '' : 's'} ·{' '}
-              {partidosCalendario.length} partidos en el calendario.
+              {partidos.length} análisis · {partidosCalendario.length} partidos
+              en el calendario
             </p>
           </div>
-        </div>
-      </section>
 
-      <section
-        className="rounded-2xl border p-5"
-        style={{ backgroundColor: PANEL, borderColor: BORDE }}
-      >
-        <h2 className="mb-4 font-bold">Partidos analizados</h2>
+          {partidoActual && (
+            <div className="text-right">
+              <p className="text-xs" style={{ color: SECUNDARIO }}>
+                PARTIDO ACTIVO
+              </p>
+              <p className="font-bold">{partidoActual.rival}</p>
+            </div>
+          )}
+        </div>
 
         {partidos.length === 0 ? (
-          <p className="text-sm" style={{ color: SECUNDARIO }}>
-            Todavía no hay análisis guardados. Usá «Agregar análisis» para
-            elegir un partido del calendario.
+          <p className="mt-4 text-sm" style={{ color: SECUNDARIO }}>
+            Todavía no hay análisis guardados. Usá «Nuevo análisis» para elegir
+            un partido del calendario.
           </p>
         ) : (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
             {partidos.map((partido) => {
               const encuentro =
                 partido.partido_calendario ||
@@ -1215,103 +1358,84 @@ export default function AnalisisSection() {
                   (p) => p.id === partido.partido_calendario_id,
                 )
 
+              const activo = partido.id === partidoId
+
               return (
-                <article
+                <button
                   key={partido.id}
-                  className="rounded-xl border p-4"
+                  type="button"
+                  onClick={() => {
+                    setPartidoId(partido.id)
+                    setFiltroJugador('todos')
+                    setFiltroTipo('todos')
+                    setFiltroResultado('todos')
+                    setSeccion('video')
+                    setTipoRapido('')
+                    setError('')
+                    setMensaje('')
+                  }}
+                  className="min-w-[190px] rounded-lg border p-3 text-left transition hover:border-yellow-400"
                   style={{
-                    backgroundColor:
-                      partido.id === partidoId ? '#263449' : FONDO,
-                    borderColor:
-                      partido.id === partidoId ? AMARILLO : BORDE,
+                    backgroundColor: activo ? '#303B4D' : FONDO,
+                    borderColor: activo ? AMARILLO : BORDE,
                   }}
                 >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPartidoId(partido.id)
-                      setFiltroJugador('todos')
-                      setFiltroTipo('todos')
-                      setSeccion('video')
-                      setError('')
-                      setMensaje('')
-                    }}
-                    className="w-full text-left"
-                  >
-                    <h3 className="font-bold">
-                      {encuentro?.rival || partido.rival}
-                    </h3>
-
-                    <p
-                      className="mt-1 text-xs"
-                      style={{ color: SECUNDARIO }}
-                    >
-                      {datosEncuentro({
-                        ...partido,
-                        partido_calendario: encuentro,
-                      })}
-                    </p>
-
-                    <p
-                      className="mt-2 text-xs"
-                      style={{ color: SECUNDARIO }}
-                    >
-                      {
-                        eventos.filter(
-                          (e) => e.partido_id === partido.id,
-                        ).length
-                      }{' '}
-                      acciones etiquetadas
-                    </p>
-                  </button>
-
-                  {esAdmin && (
-                    <div className="mt-3 flex flex-wrap gap-3">
-                      <button
-                        type="button"
-                        onClick={() => editarPartido(partido)}
-                        className="text-xs font-bold"
-                        style={{ color: AMARILLO }}
-                      >
-                        Editar
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => eliminarPartido(partido)}
-                        className="text-xs font-bold text-red-300"
-                      >
-                        Eliminar análisis
-                      </button>
-                    </div>
-                  )}
-                </article>
+                  <p className="font-bold">{encuentro?.rival || partido.rival}</p>
+                  <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
+                    {datosEncuentro({
+                      ...partido,
+                      partido_calendario: encuentro,
+                    })}
+                  </p>
+                  <p className="mt-2 text-xs" style={{ color: AMARILLO }}>
+                    {eventos.filter((e) => e.partido_id === partido.id).length}{' '}
+                    acciones
+                  </p>
+                </button>
               )
             })}
           </div>
         )}
-      </section>
+
+        {esAdmin && partidoActual && (
+          <div className="mt-4 flex flex-wrap gap-3 border-t pt-3" style={{ borderColor: BORDE }}>
+            <button
+              type="button"
+              className="text-xs font-bold"
+              style={{ color: AMARILLO }}
+              onClick={() => editarPartido(partidoActual)}
+            >
+              Editar datos del análisis
+            </button>
+            <button
+              type="button"
+              className="text-xs font-bold text-red-300"
+              onClick={() => eliminarPartido(partidoActual)}
+            >
+              Eliminar análisis
+            </button>
+          </div>
+        )}
+      </Panel>
 
       {partidoActual && (
         <>
           <nav className="flex flex-wrap gap-2">
             {[
-              ['video', 'Video y etiquetas'],
-              ['estadisticas', 'Estadísticas'],
-              ['mapa', 'Mapa de zonas'],
-              ['informe', 'Informe'],
+              ['video', '▶ Video y etiquetas'],
+              ['estadisticas', '▥ Estadísticas'],
+              ['mapa', '▦ Mapa de zonas'],
+              ['informe', '▤ Informe'],
             ].map(([id, texto]) => (
               <button
-                type="button"
                 key={id}
+                type="button"
                 onClick={() => setSeccion(id)}
-                className="rounded-xl border px-4 py-3 text-sm font-bold"
+                className="rounded-lg border px-4 py-2.5 text-sm font-bold"
                 style={{
-                  backgroundColor:
-                    seccion === id ? AMARILLO : PANEL,
+                  backgroundColor: seccion === id ? AMARILLO : PANEL,
                   color: seccion === id ? '#171717' : TEXTO,
-                  borderColor:
-                    seccion === id ? AMARILLO : BORDE,
+                  borderColor: seccion === id ? AMARILLO : BORDE,
                 }}
               >
                 {texto}
@@ -1320,336 +1444,633 @@ export default function AnalisisSection() {
           </nav>
 
           {seccion === 'video' && (
-            <div className="grid gap-5 xl:grid-cols-2">
-              <section
-                className="rounded-2xl border p-4 md:p-5"
-                style={{ backgroundColor: PANEL, borderColor: BORDE }}
-              >
-                <h2 className="text-lg font-bold">
-                  {partidoActual.rival}
-                </h2>
+            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.3fr)_minmax(350px,0.9fr)]">
+              <div className="space-y-5">
+                <Panel>
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p
+                        className="text-xs font-bold uppercase tracking-widest"
+                        style={{ color: AMARILLO }}
+                      >
+                        PARTIDO EN ANÁLISIS
+                      </p>
+                      <h2 className="mt-1 text-xl font-black">
+                        {partidoActual.rival}
+                      </h2>
+                      <p className="mt-1 text-sm" style={{ color: SECUNDARIO }}>
+                        {datosEncuentro(partidoActual)}
+                      </p>
+                    </div>
 
-                {partidoCalendarioActual && (
-                  <p
-                    className="mb-3 mt-1 text-sm"
-                    style={{ color: SECUNDARIO }}
-                  >
-                    {datosEncuentro(partidoActual)}
-                  </p>
-                )}
-
-                {videoActual ? (
-                  <div className="aspect-video overflow-hidden rounded-xl">
-                    <iframe
-                      key={`${partidoActual.id}-${videoActual}`}
-                      ref={iframeRef}
-                      title={`Video del partido contra ${partidoActual.rival}`}
-                      src={videoActual}
-                      className="h-full w-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      referrerPolicy="strict-origin-when-cross-origin"
-                      allowFullScreen
-                    />
+                    <div
+                      className="rounded-lg border px-3 py-2 text-xs"
+                      style={{
+                        backgroundColor: FONDO,
+                        borderColor: BORDE,
+                        color: videoListo ? '#4ADE80' : SECUNDARIO,
+                      }}
+                    >
+                      {videoListo ? '● Video conectado' : '○ Conectando video'}
+                    </div>
                   </div>
-                ) : (
-                  <p
-                    className="rounded-xl border p-5 text-sm"
-                    style={{
-                      backgroundColor: FONDO,
-                      borderColor: BORDE,
-                      color: SECUNDARIO,
-                    }}
-                  >
-                    Este partido no tiene un enlace de YouTube válido.
-                    Podés agregarlo desde «Editar».
-                  </p>
-                )}
 
-                {videoActual && (
-                  <div
-                    className="mt-4 space-y-3 rounded-xl border p-3"
-                    style={{
-                      backgroundColor: FONDO,
-                      borderColor: BORDE,
-                    }}
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p
-                          className="text-xs"
-                          style={{ color: SECUNDARIO }}
-                        >
-                          Tiempo actual del video
-                        </p>
+                  {videoActual ? (
+                    <div className="aspect-video overflow-hidden rounded-lg bg-black">
+                      <iframe
+                        key={`${partidoActual.id}-${videoActual}`}
+                        ref={iframeRef}
+                        title={`Video del partido contra ${partidoActual.rival}`}
+                        src={videoActual}
+                        className="h-full w-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerPolicy="strict-origin-when-cross-origin"
+                        allowFullScreen
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      className="flex aspect-video flex-col items-center justify-center rounded-lg border p-5 text-center"
+                      style={{ backgroundColor: FONDO, borderColor: BORDE }}
+                    >
+                      <span className="text-4xl">▶</span>
+                      <p className="mt-3 font-bold">No hay video disponible</p>
+                      <p className="mt-1 text-sm" style={{ color: SECUNDARIO }}>
+                        Agregá un enlace de YouTube desde los datos del análisis.
+                      </p>
+                      {esAdmin && (
+                        <div className="mt-4">
+                          <Boton onClick={() => editarPartido(partidoActual)}>
+                            Agregar video
+                          </Boton>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                        <p
-                          className="font-mono text-2xl font-bold"
+                  {videoActual && (
+                    <div className="mt-4 space-y-3">
+                      <div
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+                        style={{ backgroundColor: FONDO, borderColor: BORDE }}
+                      >
+                        <div>
+                          <p className="text-xs" style={{ color: SECUNDARIO }}>
+                            TIEMPO ACTUAL
+                          </p>
+                          <p
+                            className="font-mono text-3xl font-black"
+                            style={{ color: AMARILLO }}
+                          >
+                            {formatearTiempo(tiempoVideo)}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <Boton secundario disabled={!videoListo} onClick={alternarReproduccion}>
+                            {videoReproduciendo ? 'Ⅱ Pausar' : '▶ Reproducir'}
+                          </Boton>
+                          <Boton secundario disabled={!videoListo} onClick={tomarTiempoActual}>
+                            Tomar tiempo
+                          </Boton>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                        <Campo label="Ir a un segundo del video">
+                          <input
+                            className={inputClass}
+                            style={inputStyle}
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={segundoIr}
+                            onChange={(e) => setSegundoIr(e.target.value)}
+                            placeholder="Ej.: 754"
+                          />
+                        </Campo>
+                        <div className="flex items-end">
+                          <Boton
+                            secundario
+                            disabled={!videoListo}
+                            onClick={() => irAlSegundo(segundoIr)}
+                          >
+                            Ir al momento
+                          </Boton>
+                        </div>
+                      </div>
+
+                      {videoUrlActual && (
+                        <a
+                          href={videoUrlActual}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-block text-sm font-bold"
                           style={{ color: AMARILLO }}
                         >
-                          {formatearTiempo(tiempoVideo)}
-                        </p>
-                      </div>
+                          Abrir video en YouTube ↗
+                        </a>
+                      )}
+                    </div>
+                  )}
 
-                      <span
-                        className="rounded-lg px-3 py-2 text-xs font-bold"
+                  {partidoActual.notas && (
+                    <div
+                      className="mt-4 rounded-lg border p-3"
+                      style={{ backgroundColor: FONDO, borderColor: BORDE }}
+                    >
+                      <p className="mb-1 text-xs font-bold uppercase" style={{ color: SECUNDARIO }}>
+                        Notas generales
+                      </p>
+                      <p className="whitespace-pre-wrap text-sm">
+                        {partidoActual.notas}
+                      </p>
+                    </div>
+                  )}
+                </Panel>
+
+                <Panel>
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p
+                        className="text-xs font-bold uppercase tracking-widest"
+                        style={{ color: AMARILLO }}
+                      >
+                        CONVOCATORIA DEL PARTIDO
+                      </p>
+                      <h2 className="mt-1 text-lg font-bold">Formación y banco</h2>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-black">{citaciones.length}</p>
+                      <p className="text-xs" style={{ color: SECUNDARIO }}>
+                        convocadas
+                      </p>
+                    </div>
+                  </div>
+
+                  {citaciones.length === 0 ? (
+                    <div
+                      className="rounded-lg border p-4 text-sm"
+                      style={{
+                        backgroundColor: FONDO,
+                        borderColor: BORDE,
+                        color: SECUNDARIO,
+                      }}
+                    >
+                      No se encontraron convocadas para este encuentro. Revisá
+                      la pestaña Convocados del partido seleccionado.
+                    </div>
+                  ) : (
+                    <>
+                      <div
+                        className="relative overflow-hidden rounded-lg border p-3"
                         style={{
-                          backgroundColor: videoListo
-                            ? '#203326'
-                            : '#303B4D',
-                          color: videoListo
-                            ? '#D5F5DE'
-                            : SECUNDARIO,
+                          backgroundColor: '#173C32',
+                          borderColor: '#3C7562',
                         }}
                       >
-                        {videoListo
-                          ? 'Reproductor conectado'
-                          : 'Conectando reproductor...'}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <Boton
-                        secundario
-                        disabled={!videoListo}
-                        onClick={alternarReproduccion}
-                      >
-                        {videoReproduciendo
-                          ? 'Pausar video'
-                          : 'Reproducir video'}
-                      </Boton>
-
-                      <Boton
-                        secundario
-                        disabled={!videoListo}
-                        onClick={tomarTiempoActual}
-                      >
-                        Usar tiempo en acción
-                      </Boton>
-                    </div>
-
-                    <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-                      <Campo label="Ir al segundo">
-                        <input
-                          className={inputClass}
-                          style={inputStyle}
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={segundoIr}
-                          onChange={(e) =>
-                            setSegundoIr(e.target.value)
-                          }
-                          placeholder="Ej.: 754"
+                        <div
+                          className="pointer-events-none absolute inset-2 rounded border opacity-40"
+                          style={{ borderColor: '#B8D9C7' }}
                         />
-                      </Campo>
-
-                      <div className="flex items-end">
-                        <Boton
-                          secundario
-                          disabled={!videoListo}
-                          onClick={() => irAlSegundo(segundoIr)}
-                        >
-                          Ir al momento
-                        </Boton>
+                        <div
+                          className="pointer-events-none absolute left-1/2 top-2 bottom-2 border-l opacity-30"
+                          style={{ borderColor: '#B8D9C7' }}
+                        />
+                        <div
+                          className="pointer-events-none absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full border opacity-30"
+                          style={{ borderColor: '#B8D9C7' }}
+                        />
+                        <div className="relative grid min-h-[280px] grid-cols-3 gap-2 sm:min-h-[320px]">
+                          {titulares.length > 0 && titulares.some((c) => c.coordenadas) ? (
+                            citaciones
+                              .filter((c) => c.titular || c.coordenadas)
+                              .map((c) => {
+                                const pos = c.coordenadas
+                                return (
+                                  <div
+                                    key={c.id}
+                                    className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
+                                    style={{
+                                      left: `${pos?.x ?? 50}%`,
+                                      top: `${pos?.y ?? 50}%`,
+                                      maxWidth: '30%',
+                                    }}
+                                  >
+                                    <button
+                                      type="button"
+                                      disabled={!esAdmin}
+                                      onClick={() => setJugadorId(c.jugador_id)}
+                                      title={nombreJugadora(c.jugadora)}
+                                      className="flex h-9 w-9 items-center justify-center rounded-full border-2 text-xs font-black shadow-lg"
+                                      style={{
+                                        backgroundColor: jugadorId === c.jugador_id ? '#FFFFFF' : AMARILLO,
+                                        borderColor: jugadorId === c.jugador_id ? '#171717' : '#FFF0B2',
+                                        color: '#171717',
+                                      }}
+                                    >
+                                      {c.dorsal ?? '—'}
+                                    </button>
+                                    <span
+                                      className="mt-1 max-w-full truncate rounded px-1 text-center text-[10px] font-bold"
+                                      style={{
+                                        backgroundColor: '#0F1419DD',
+                                        color: '#FFFFFF',
+                                      }}
+                                    >
+                                      {c.jugadora?.apellido || c.jugadora?.nombre}
+                                    </span>
+                                  </div>
+                                )
+                              })
+                          ) : (
+                            <div className="col-span-3 flex flex-wrap content-center justify-center gap-3">
+                              {titulares.map((c) => (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  disabled={!esAdmin}
+                                  onClick={() => setJugadorId(c.jugador_id)}
+                                  className="flex w-24 flex-col items-center rounded-lg p-2"
+                                  style={{
+                                    backgroundColor: jugadorId === c.jugador_id ? '#40513B' : '#205344',
+                                    border: `1px solid ${jugadorId === c.jugador_id ? AMARILLO : '#568675'}`,
+                                  }}
+                                >
+                                  <span
+                                    className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-black"
+                                    style={{ backgroundColor: AMARILLO, color: '#171717' }}
+                                  >
+                                    {c.dorsal ?? '—'}
+                                  </span>
+                                  <span className="mt-2 max-w-full truncate text-xs font-semibold">
+                                    {c.jugadora?.apellido || c.jugadora?.nombre}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
+                      <div className="mt-4">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <h3 className="text-sm font-bold">Suplentes</h3>
+                          <span className="text-xs" style={{ color: SECUNDARIO }}>
+                            {suplentes.length} jugadoras
+                          </span>
+                        </div>
+
+                        {suplentes.length ? (
+                          <div className="flex flex-wrap gap-2">
+                            {suplentes.map((c) => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                disabled={!esAdmin}
+                                onClick={() => setJugadorId(c.jugador_id)}
+                                className="flex items-center gap-2 rounded-lg border px-3 py-2 text-left"
+                                style={{
+                                  backgroundColor: jugadorId === c.jugador_id ? '#3A3522' : FONDO,
+                                  borderColor: jugadorId === c.jugador_id ? AMARILLO : BORDE,
+                                }}
+                              >
+                                <span
+                                  className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-black"
+                                  style={{ backgroundColor: '#303B4D', color: TEXTO }}
+                                >
+                                  {c.dorsal ?? '—'}
+                                </span>
+                                <span className="text-xs font-semibold">
+                                  {nombreJugadora(c.jugadora)}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm" style={{ color: SECUNDARIO }}>
+                            No hay suplentes cargadas o todas tienen posición guardada en cancha.
+                          </p>
+                        )}
+                      </div>
+
+                      <p className="mt-3 text-xs" style={{ color: SECUNDARIO }}>
+                        Seleccioná una jugadora para asignarla al próximo evento.
+                        Las posiciones se muestran cuando están guardadas en Convocados.
+                      </p>
+                    </>
+                  )}
+                </Panel>
+              </div>
+
+              <div className="space-y-5">
+                <Panel>
+                  <div className="mb-4">
                     <p
-                      className="text-xs"
-                      style={{ color: SECUNDARIO }}
+                      className="text-xs font-bold uppercase tracking-widest"
+                      style={{ color: AMARILLO }}
                     >
-                      El registro se guarda en segundos y se muestra en
-                      minutos:segundos.
+                      LIVE TAGGING
+                    </p>
+                    <h2 className="mt-1 text-xl font-black">Etiquetado rápido</h2>
+                    <p className="mt-2 text-sm" style={{ color: SECUNDARIO }}>
+                      1. Elegí una acción. 2. Elegí la jugadora. 3. Completá el
+                      resultado cuando revises el evento.
                     </p>
                   </div>
-                )}
 
-                {partidoActual.notas && (
-                  <p
-                    className="mt-4 whitespace-pre-wrap text-sm"
-                    style={{ color: SECUNDARIO }}
-                  >
-                    {partidoActual.notas}
-                  </p>
-                )}
+                  {!esAdmin ? (
+                    <p className="text-sm" style={{ color: SECUNDARIO }}>
+                      Solo el administrador puede registrar acciones.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-2">
+                        {TIPOS_RAPIDOS.map((accion) => {
+                          const activa = tipoRapido === accion.nombre
 
-                {videoUrlActual && (
-                  <a
-                    href={videoUrlActual}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-4 inline-block text-sm font-bold"
-                    style={{ color: AMARILLO }}
-                  >
-                    Abrir video en YouTube ↗
-                  </a>
-                )}
-              </section>
+                          return (
+                            <button
+                              key={accion.nombre}
+                              type="button"
+                              disabled={guardando}
+                              onClick={() => {
+                                setTipoRapido(activa ? '' : accion.nombre)
+                                setTipo(accion.nombre)
+                                setError('')
+                                setMensaje('')
+                              }}
+                              className="rounded-lg border p-3 text-left transition hover:brightness-125"
+                              style={{
+                                backgroundColor: activa ? '#303B4D' : FONDO,
+                                borderColor: activa ? accion.color : BORDE,
+                                boxShadow: activa ? `inset 0 0 0 1px ${accion.color}` : 'none',
+                              }}
+                            >
+                              <span
+                                className="flex h-7 w-7 items-center justify-center rounded-md text-base font-black"
+                                style={{
+                                  backgroundColor: `${accion.color}22`,
+                                  color: accion.color,
+                                }}
+                              >
+                                {accion.icono}
+                              </span>
+                              <span className="mt-2 block text-xs font-bold">
+                                {accion.corto}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
 
-              <section
-                className="rounded-2xl border p-4 md:p-5"
-                style={{ backgroundColor: PANEL, borderColor: BORDE }}
-              >
-                <h2 className="mb-4 text-lg font-bold">
-                  Etiquetar acciones
-                </h2>
-
-                {esAdmin ? (
-                  <form
-                    onSubmit={guardarEvento}
-                    className="space-y-4"
-                  >
-                    <Campo label="Acción">
-                      <select
-                        className={inputClass}
-                        style={inputStyle}
-                        value={tipo}
-                        onChange={(e) => setTipo(e.target.value)}
-                      >
-                        {TIPOS.map((t) => (
-                          <option key={t} value={t}>
-                            {t}
-                          </option>
-                        ))}
-                      </select>
-                    </Campo>
-
-                    <Campo label="Jugadora">
-                      <select
-                        className={inputClass}
-                        style={inputStyle}
-                        value={jugadorId}
-                        onChange={(e) => setJugadorId(e.target.value)}
-                      >
-                        <option value="">Sin jugadora asignada</option>
-
-                        {jugadoras.map((j) => (
-                          <option key={j.id} value={j.id}>
-                            {j.apellido}, {j.nombre}
-                          </option>
-                        ))}
-                      </select>
-                    </Campo>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <Campo label="Tiempo (segundos)">
-                        <input
-                          className={inputClass}
-                          style={inputStyle}
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={segundo}
-                          onChange={(e) =>
-                            setSegundo(e.target.value)
-                          }
-                          required
-                        />
-
-                        <p
-                          className="mt-1 text-xs"
-                          style={{ color: SECUNDARIO }}
+                      {tipoRapido && (
+                        <div
+                          className="mt-4 rounded-lg border p-3"
+                          style={{
+                            backgroundColor: FONDO,
+                            borderColor: AMARILLO,
+                          }}
                         >
-                          Tiempo mostrado: {formatearTiempo(segundo)}
-                        </p>
-                      </Campo>
+                          <p className="text-sm font-bold">
+                            Acción seleccionada: {tipoRapido}
+                          </p>
+                          <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
+                            Tiempo: {formatearTiempo(tiempoVideo)} · Elegí una
+                            convocada para guardar el evento.
+                          </p>
 
-                      <Campo label="Resultado">
-                        <select
-                          className={inputClass}
-                          style={inputStyle}
-                          value={resultado}
-                          onChange={(e) =>
-                            setResultado(e.target.value)
-                          }
-                        >
-                          {RESULTADOS.map((r) => (
-                            <option key={r} value={r}>
-                              {r}
-                            </option>
-                          ))}
-                        </select>
-                      </Campo>
-                    </div>
+                          <Campo label="Buscar jugadora por nombre o dorsal">
+                            <input
+                              className={`${inputClass} mt-3`}
+                              style={inputStyle}
+                              value={busquedaJugadora}
+                              onChange={(e) => setBusquedaJugadora(e.target.value)}
+                              placeholder="Nombre, apellido o dorsal..."
+                            />
+                          </Campo>
 
-                    <div className="flex flex-wrap gap-2">
-                      <Boton
-                        secundario
-                        disabled={!videoListo}
-                        onClick={tomarTiempoActual}
+                          <div className="mt-3 max-h-64 space-y-1 overflow-y-auto">
+                            {jugadorasVisibles.map((c) => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                disabled={guardando || !videoListo}
+                                onClick={() =>
+                                  registrarAccionRapida(tipoRapido, c.jugador_id)
+                                }
+                                className="flex w-full items-center gap-3 rounded-lg border p-2 text-left hover:border-yellow-400 disabled:opacity-40"
+                                style={{
+                                  backgroundColor: '#202A38',
+                                  borderColor: BORDE,
+                                }}
+                              >
+                                <span
+                                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black"
+                                  style={{
+                                    backgroundColor: AMARILLO,
+                                    color: '#171717',
+                                  }}
+                                >
+                                  {c.dorsal ?? '—'}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-sm font-bold">
+                                    {nombreJugadora(c.jugadora)}
+                                  </span>
+                                  <span className="text-xs" style={{ color: SECUNDARIO }}>
+                                    {c.titular ? 'Titular' : 'Suplente'}
+                                  </span>
+                                </span>
+                                <span style={{ color: AMARILLO }}>＋</span>
+                              </button>
+                            ))}
+
+                            {jugadorasVisibles.length === 0 && (
+                              <p className="py-3 text-sm" style={{ color: SECUNDARIO }}>
+                                No hay convocadas que coincidan con la búsqueda.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="my-5 border-t" style={{ borderColor: BORDE }} />
+
+                      <details>
+                        <summary className="cursor-pointer text-sm font-bold">
+                          Registro manual / acción detallada
+                        </summary>
+
+                        <form onSubmit={guardarEvento} className="mt-4 space-y-4">
+                          <Campo label="Acción">
+                            <select
+                              className={inputClass}
+                              style={inputStyle}
+                              value={tipo}
+                              onChange={(e) => setTipo(e.target.value)}
+                            >
+                              {TIPOS.map((t) => (
+                                <option key={t} value={t}>{t}</option>
+                              ))}
+                            </select>
+                          </Campo>
+
+                          <Campo label="Jugadora">
+                            <select
+                              className={inputClass}
+                              style={inputStyle}
+                              value={jugadorId}
+                              onChange={(e) => setJugadorId(e.target.value)}
+                            >
+                              <option value="">Sin jugadora asignada</option>
+                              {citaciones.map((c) => (
+                                <option key={c.id} value={c.jugador_id}>
+                                  {c.dorsal ?? '—'} · {nombreJugadora(c.jugadora)}
+                                </option>
+                              ))}
+                            </select>
+                          </Campo>
+
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <Campo label="Tiempo en segundos">
+                              <input
+                                className={inputClass}
+                                style={inputStyle}
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={segundo}
+                                onChange={(e) => setSegundo(e.target.value)}
+                                required
+                              />
+                              <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
+                                {formatearTiempo(segundo)}
+                              </p>
+                            </Campo>
+
+                            <Campo label="Resultado">
+                              <select
+                                className={inputClass}
+                                style={inputStyle}
+                                value={resultado}
+                                onChange={(e) => setResultado(e.target.value)}
+                              >
+                                {RESULTADOS.map((r) => (
+                                  <option key={r} value={r}>{r}</option>
+                                ))}
+                              </select>
+                            </Campo>
+                          </div>
+
+                          <Boton
+                            secundario
+                            disabled={!videoListo}
+                            onClick={tomarTiempoActual}
+                          >
+                            Tomar tiempo del video
+                          </Boton>
+
+                          <Campo label="Zona de cancha">
+                            <select
+                              className={inputClass}
+                              style={inputStyle}
+                              value={zona}
+                              onChange={(e) => setZona(e.target.value)}
+                            >
+                              {ZONAS.map((z) => (
+                                <option key={z} value={z}>{z}</option>
+                              ))}
+                            </select>
+                          </Campo>
+
+                          <Campo label="Observaciones">
+                            <textarea
+                              className={inputClass}
+                              style={inputStyle}
+                              rows={2}
+                              value={observaciones}
+                              onChange={(e) => setObservaciones(e.target.value)}
+                              placeholder="Detalle opcional..."
+                            />
+                          </Campo>
+
+                          <Boton submit disabled={guardando}>
+                            {guardando ? 'Guardando...' : 'Registrar acción'}
+                          </Boton>
+                        </form>
+                      </details>
+                    </>
+                  )}
+                </Panel>
+
+                <Panel>
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                      <p
+                        className="text-xs font-bold uppercase tracking-widest"
+                        style={{ color: AMARILLO }}
                       >
-                        Tomar segundo actual del video
-                      </Boton>
+                        RESUMEN
+                      </p>
+                      <h2 className="mt-1 text-lg font-bold">Actividad etiquetada</h2>
                     </div>
+                    <span
+                      className="rounded-lg px-3 py-2 text-xl font-black"
+                      style={{ backgroundColor: FONDO, color: AMARILLO }}
+                    >
+                      {eventosPartido.length}
+                    </span>
+                  </div>
 
-                    <Campo label="Zona de la cancha">
-                      <select
-                        className={inputClass}
-                        style={inputStyle}
-                        value={zona}
-                        onChange={(e) => setZona(e.target.value)}
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      ['Pendientes', eventosPartido.filter((e) => !e.resultado).length],
+                      ['Exitosas', eventosPartido.filter((e) =>
+                        ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado),
+                      ).length],
+                      ['Fallidas', eventosPartido.filter((e) =>
+                        ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado),
+                      ).length],
+                    ].map(([label, valor]) => (
+                      <div
+                        key={label}
+                        className="rounded-lg border p-3"
+                        style={{ backgroundColor: FONDO, borderColor: BORDE }}
                       >
-                        {ZONAS.map((z) => (
-                          <option key={z} value={z}>
-                            {z}
-                          </option>
-                        ))}
-                      </select>
-                    </Campo>
+                        <p className="text-xs" style={{ color: SECUNDARIO }}>{label}</p>
+                        <p className="mt-1 text-2xl font-black">{valor}</p>
+                      </div>
+                    ))}
+                  </div>
+                </Panel>
+              </div>
 
-                    <Campo label="Observaciones">
-                      <textarea
-                        className={inputClass}
-                        style={inputStyle}
-                        rows={2}
-                        value={observaciones}
-                        onChange={(e) =>
-                          setObservaciones(e.target.value)
-                        }
-                        placeholder="Detalle opcional de la acción"
-                      />
-                    </Campo>
-
-                    <Boton submit disabled={guardando}>
-                      {guardando
-                        ? 'Guardando...'
-                        : 'Registrar acción'}
-                    </Boton>
-                  </form>
-                ) : (
-                  <p
-                    className="text-sm"
-                    style={{ color: SECUNDARIO }}
-                  >
-                    Esta sección es de consulta. Solo el administrador
-                    puede registrar acciones.
-                  </p>
-                )}
-              </section>
-
-              <section
-                className="rounded-2xl border p-4 md:p-5 xl:col-span-2"
-                style={{ backgroundColor: PANEL, borderColor: BORDE }}
-              >
+              <Panel className="xl:col-span-2">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-lg font-bold">
-                    Acciones registradas ({eventosFiltrados.length})
-                  </h2>
+                  <div>
+                    <p
+                      className="text-xs font-bold uppercase tracking-widest"
+                      style={{ color: AMARILLO }}
+                    >
+                      EVENT LOG
+                    </p>
+                    <h2 className="mt-1 text-xl font-black">
+                      Acciones registradas ({eventosFiltrados.length})
+                    </h2>
+                  </div>
 
                   <div className="flex flex-wrap gap-2">
                     <select
                       className="rounded-lg border p-2 text-xs"
                       style={inputStyle}
                       value={filtroJugador}
-                      onChange={(e) =>
-                        setFiltroJugador(e.target.value)
-                      }
+                      onChange={(e) => setFiltroJugador(e.target.value)}
                     >
                       <option value="todos">Todas las jugadoras</option>
-
                       {jugadoras.map((j) => (
                         <option key={j.id} value={j.id}>
-                          {j.apellido}, {j.nombre}
+                          {nombreJugadora(j)}
                         </option>
                       ))}
                     </select>
@@ -1661,240 +2082,348 @@ export default function AnalisisSection() {
                       onChange={(e) => setFiltroTipo(e.target.value)}
                     >
                       <option value="todos">Todas las acciones</option>
-
                       {TIPOS.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+
+                    <select
+                      className="rounded-lg border p-2 text-xs"
+                      style={inputStyle}
+                      value={filtroResultado}
+                      onChange={(e) => setFiltroResultado(e.target.value)}
+                    >
+                      <option value="todos">Todos los resultados</option>
+                      <option value="Pendiente">Pendientes</option>
+                      {RESULTADOS.map((r) => (
+                        <option key={r} value={r}>{r}</option>
                       ))}
                     </select>
                   </div>
                 </div>
 
+                {mostrarEdicionEvento && (
+                  <form
+                    onSubmit={guardarEdicionEvento}
+                    className="mb-5 space-y-4 rounded-lg border p-4"
+                    style={{ backgroundColor: FONDO, borderColor: AMARILLO }}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="font-bold">Editar acción</h3>
+                      <button
+                        type="button"
+                        onClick={() => setMostrarEdicionEvento(false)}
+                        className="text-sm"
+                        style={{ color: SECUNDARIO }}
+                      >
+                        Cerrar ×
+                      </button>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      <Campo label="Acción">
+                        <select
+                          className={inputClass}
+                          style={inputStyle}
+                          value={edicionEvento.tipo}
+                          onChange={(e) => setEdicionEvento((a) => ({
+                            ...a,
+                            tipo: e.target.value,
+                          }))}
+                        >
+                          {TIPOS.map((t) => (
+                            <option key={t} value={t}>{t}</option>
+                          ))}
+                        </select>
+                      </Campo>
+
+                      <Campo label="Jugadora">
+                        <select
+                          className={inputClass}
+                          style={inputStyle}
+                          value={edicionEvento.jugador_id}
+                          onChange={(e) => setEdicionEvento((a) => ({
+                            ...a,
+                            jugador_id: e.target.value,
+                          }))}
+                        >
+                          <option value="">Sin jugadora</option>
+                          {jugadoras.map((j) => (
+                            <option key={j.id} value={j.id}>
+                              {nombreJugadora(j)}
+                            </option>
+                          ))}
+                        </select>
+                      </Campo>
+
+                      <Campo label="Tiempo (segundos)">
+                        <input
+                          className={inputClass}
+                          style={inputStyle}
+                          type="number"
+                          min="0"
+                          step="1"
+                          required
+                          value={edicionEvento.segundo}
+                          onChange={(e) => setEdicionEvento((a) => ({
+                            ...a,
+                            segundo: e.target.value,
+                          }))}
+                        />
+                      </Campo>
+
+                      <Campo label="Zona">
+                        <select
+                          className={inputClass}
+                          style={inputStyle}
+                          value={edicionEvento.zona}
+                          onChange={(e) => setEdicionEvento((a) => ({
+                            ...a,
+                            zona: e.target.value,
+                          }))}
+                        >
+                          <option value="">Pendiente de completar</option>
+                          {ZONAS.map((z) => (
+                            <option key={z} value={z}>{z}</option>
+                          ))}
+                        </select>
+                      </Campo>
+
+                      <Campo label="Resultado">
+                        <select
+                          className={inputClass}
+                          style={inputStyle}
+                          value={edicionEvento.resultado}
+                          onChange={(e) => setEdicionEvento((a) => ({
+                            ...a,
+                            resultado: e.target.value,
+                          }))}
+                        >
+                          <option value="">Pendiente de completar</option>
+                          {RESULTADOS.map((r) => (
+                            <option key={r} value={r}>{r}</option>
+                          ))}
+                        </select>
+                      </Campo>
+
+                      <Campo label="Observaciones">
+                        <input
+                          className={inputClass}
+                          style={inputStyle}
+                          value={edicionEvento.observaciones}
+                          onChange={(e) => setEdicionEvento((a) => ({
+                            ...a,
+                            observaciones: e.target.value,
+                          }))}
+                          placeholder="Detalle..."
+                        />
+                      </Campo>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Boton submit disabled={guardando}>
+                        {guardando ? 'Guardando...' : 'Guardar cambios'}
+                      </Boton>
+                      <Boton
+                        secundario
+                        onClick={() => setMostrarEdicionEvento(false)}
+                      >
+                        Cancelar
+                      </Boton>
+                    </div>
+                  </form>
+                )}
+
                 {eventosFiltrados.length === 0 ? (
-                  <p
-                    className="text-sm"
-                    style={{ color: SECUNDARIO }}
+                  <div
+                    className="rounded-lg border p-6 text-center text-sm"
+                    style={{
+                      backgroundColor: FONDO,
+                      borderColor: BORDE,
+                      color: SECUNDARIO,
+                    }}
                   >
                     No hay acciones para mostrar con estos filtros.
-                  </p>
+                  </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[650px] text-left text-sm">
-                      <thead>
-                        <tr style={{ color: SECUNDARIO }}>
-                          <th className="p-2">Tiempo</th>
-                          <th className="p-2">Acción</th>
-                          <th className="p-2">Jugadora</th>
-                          <th className="p-2">Zona</th>
-                          <th className="p-2">Resultado</th>
+                  <div className="space-y-2">
+                    {eventosFiltrados.map((ev) => {
+                      const jugadora = jugadoras.find(
+                        (j) => j.id === ev.jugador_id,
+                      )
+
+                      const accion = TIPOS_RAPIDOS.find(
+                        (a) => a.nombre === ev.tipo,
+                      )
+
+                      const pendiente = !ev.resultado
+
+                      return (
+                        <article
+                          key={ev.id}
+                          className="flex flex-wrap items-center gap-3 rounded-lg border p-3"
+                          style={{ backgroundColor: FONDO, borderColor: BORDE }}
+                        >
+                          <button
+                            type="button"
+                            disabled={!videoListo}
+                            onClick={() => {
+                              setSegundoIr(String(ev.segundo))
+                              irAlSegundo(ev.segundo)
+                            }}
+                            className="min-w-[62px] rounded-md px-2 py-2 text-center font-mono text-sm font-black disabled:opacity-40"
+                            style={{ backgroundColor: '#303B4D', color: AMARILLO }}
+                            title="Ir a este momento del video"
+                          >
+                            {formatearTiempo(ev.segundo)}
+                          </button>
+
+                          <div
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-black"
+                            style={{
+                              backgroundColor: `${accion?.color || AMARILLO}20`,
+                              color: accion?.color || AMARILLO,
+                            }}
+                          >
+                            {accion?.icono || '•'}
+                          </div>
+
+                          <div className="min-w-[120px] flex-1">
+                            <p className="font-bold">{ev.tipo}</p>
+                            <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
+                              {jugadora ? nombreJugadora(jugadora) : 'Sin jugadora'}
+                              {ev.zona ? ` · ${ev.zona}` : ''}
+                            </p>
+                            {ev.observaciones && (
+                              <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
+                                {ev.observaciones}
+                              </p>
+                            )}
+                          </div>
+
+                          <span
+                            className="rounded-md px-2 py-1 text-xs font-bold"
+                            style={{
+                              backgroundColor: pendiente ? '#3A3522' : '#202A38',
+                              color: pendiente ? AMARILLO : TEXTO,
+                            }}
+                          >
+                            {ev.resultado || 'Pendiente'}
+                          </span>
+
                           {esAdmin && (
-                            <th className="p-2">Acción</th>
+                            <div className="flex gap-3">
+                              <button
+                                type="button"
+                                onClick={() => abrirEdicionEvento(ev)}
+                                className="text-xs font-bold"
+                                style={{ color: AMARILLO }}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => eliminarEvento(ev)}
+                                className="text-xs font-bold text-red-300"
+                              >
+                                Eliminar
+                              </button>
+                            </div>
                           )}
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {eventosFiltrados.map((ev) => {
-                          const jugadora = jugadoras.find(
-                            (j) => j.id === ev.jugador_id,
-                          )
-
-                          return (
-                            <tr
-                              key={ev.id}
-                              className="border-t"
-                              style={{ borderColor: BORDE }}
-                            >
-                              <td className="p-2 font-mono">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const tiempo =
-                                      Number(ev.segundo) || 0
-
-                                    setSegundoIr(String(tiempo))
-                                    irAlSegundo(tiempo)
-                                  }}
-                                  disabled={!videoListo}
-                                  className="font-bold underline decoration-dotted underline-offset-4 disabled:cursor-not-allowed disabled:opacity-50"
-                                  style={{ color: AMARILLO }}
-                                  title={
-                                    videoListo
-                                      ? 'Volver a este momento del video'
-                                      : 'Esperá a que el video esté conectado'
-                                  }
-                                >
-                                  {formatearTiempo(ev.segundo)}
-                                </button>
-                              </td>
-
-                              <td className="p-2">{ev.tipo}</td>
-
-                              <td className="p-2">
-                                {jugadora
-                                  ? `${jugadora.nombre} ${jugadora.apellido}`
-                                  : '—'}
-                              </td>
-
-                              <td className="p-2">
-                                {ev.zona || '—'}
-                              </td>
-
-                              <td className="p-2">
-                                {ev.resultado || '—'}
-                              </td>
-
-                              {esAdmin && (
-                                <td className="p-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => eliminarEvento(ev)}
-                                    className="text-xs font-bold text-red-300"
-                                  >
-                                    Eliminar
-                                  </button>
-                                </td>
-                              )}
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
+                        </article>
+                      )
+                    })}
                   </div>
                 )}
-              </section>
+              </Panel>
             </div>
           )}
 
           {seccion === 'estadisticas' && (
-            <section
-              className="space-y-5 rounded-2xl border p-5"
-              style={{ backgroundColor: PANEL, borderColor: BORDE }}
-            >
-              <h2 className="text-xl font-bold">
+            <Panel>
+              <h2 className="text-xl font-black">
                 Estadísticas · {partidoActual.rival}
               </h2>
-
-              <p className="text-sm" style={{ color: SECUNDARIO }}>
+              <p className="mt-1 text-sm" style={{ color: SECUNDARIO }}>
                 {datosEncuentro(partidoActual)}
               </p>
 
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {[
                   ['Acciones totales', eventosPartido.length],
-                  [
-                    'Jugadoras registradas',
-                    new Set(
-                      eventosPartido
-                        .map((e) => e.jugador_id)
-                        .filter(Boolean),
-                    ).size,
-                  ],
-                  [
-                    'Zonas utilizadas',
-                    new Set(
-                      eventosPartido
-                        .map((e) => e.zona)
-                        .filter(Boolean),
-                    ).size,
-                  ],
+                  ['Jugadoras registradas', new Set(
+                    eventosPartido.map((e) => e.jugador_id).filter(Boolean),
+                  ).size],
+                  ['Zonas utilizadas', new Set(
+                    eventosPartido.map((e) => e.zona).filter(Boolean),
+                  ).size],
+                  ['Resultados pendientes', eventosPartido.filter((e) => !e.resultado).length],
                 ].map(([label, valor]) => (
                   <div
                     key={label}
-                    className="rounded-xl border p-4"
-                    style={{
-                      backgroundColor: FONDO,
-                      borderColor: BORDE,
-                    }}
+                    className="rounded-lg border p-4"
+                    style={{ backgroundColor: FONDO, borderColor: BORDE }}
                   >
-                    <p
-                      className="text-sm"
-                      style={{ color: SECUNDARIO }}
-                    >
-                      {label}
-                    </p>
-
-                    <p
-                      className="mt-2 text-3xl font-bold"
-                      style={{ color: AMARILLO }}
-                    >
+                    <p className="text-sm" style={{ color: SECUNDARIO }}>{label}</p>
+                    <p className="mt-2 text-3xl font-black" style={{ color: AMARILLO }}>
                       {valor}
                     </p>
                   </div>
                 ))}
               </div>
 
-              <div>
+              <div className="mt-6">
                 <h3 className="mb-3 font-bold">Acciones por tipo</h3>
-
                 {estadisticas.length === 0 ? (
-                  <p
-                    className="text-sm"
-                    style={{ color: SECUNDARIO }}
-                  >
+                  <p className="text-sm" style={{ color: SECUNDARIO }}>
                     Todavía no hay acciones etiquetadas.
                   </p>
                 ) : (
-                  <div className="space-y-3">
-                    {estadisticas.map(([nombre, datos]) => (
-                      <div key={nombre}>
-                        <div className="mb-1 flex justify-between gap-3 text-sm">
-                          <span>{nombre}</span>
-                          <span className="font-bold">
-                            {datos.total}
-                          </span>
-                        </div>
+                  <div className="space-y-4">
+                    {estadisticas.map(([nombre, datos]) => {
+                      const maximo = Math.max(
+                        1,
+                        ...estadisticas.map(([, d]) => d.total),
+                      )
 
-                        <div
-                          className="h-2 overflow-hidden rounded-full"
-                          style={{ backgroundColor: '#303B4D' }}
-                        >
+                      return (
+                        <div key={nombre}>
+                          <div className="mb-1 flex justify-between gap-3 text-sm">
+                            <span>{nombre}</span>
+                            <span className="font-bold">{datos.total}</span>
+                          </div>
                           <div
-                            className="h-full rounded-full"
-                            style={{
-                              backgroundColor: AMARILLO,
-                              width: `${
-                                (datos.total /
-                                  Math.max(
-                                    ...estadisticas.map(
-                                      ([, d]) => d.total,
-                                    ),
-                                  )) *
-                                100
-                              }%`,
-                            }}
-                          />
+                            className="h-2 overflow-hidden rounded-full"
+                            style={{ backgroundColor: '#303B4D' }}
+                          >
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                backgroundColor: AMARILLO,
+                                width: `${(datos.total / maximo) * 100}%`,
+                              }}
+                            />
+                          </div>
+                          <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
+                            Exitosos: {datos.exitosos} · Fallidos: {datos.fallidos}
+                            {' · '}Pendientes: {datos.pendientes}
+                          </p>
                         </div>
-
-                        <p
-                          className="mt-1 text-xs"
-                          style={{ color: SECUNDARIO }}
-                        >
-                          Exitosos: {datos.exitosos} · Fallidos:{' '}
-                          {datos.fallidos}
-                        </p>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>
 
-              <div>
-                <h3 className="mb-3 font-bold">
-                  Acciones por jugadora
-                </h3>
-
+              <div className="mt-7">
+                <h3 className="mb-3 font-bold">Acciones por jugadora</h3>
                 {estadisticasJugadoras.length === 0 ? (
-                  <p
-                    className="text-sm"
-                    style={{ color: SECUNDARIO }}
-                  >
+                  <p className="text-sm" style={{ color: SECUNDARIO }}>
                     No hay acciones asignadas a jugadoras.
                   </p>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
+                    <table className="w-full min-w-[500px] text-left text-sm">
                       <thead>
                         <tr style={{ color: SECUNDARIO }}>
                           <th className="p-2">Jugadora</th>
@@ -1902,7 +2431,6 @@ export default function AnalisisSection() {
                           <th className="p-2">Detalle</th>
                         </tr>
                       </thead>
-
                       <tbody>
                         {estadisticasJugadoras.map((j) => (
                           <tr
@@ -1910,12 +2438,8 @@ export default function AnalisisSection() {
                             className="border-t"
                             style={{ borderColor: BORDE }}
                           >
-                            <td className="p-2 font-bold">
-                              {j.nombre}
-                            </td>
-
+                            <td className="p-2 font-bold">{j.nombre}</td>
                             <td className="p-2">{j.total}</td>
-
                             <td className="p-2">
                               {Object.entries(j.tipos)
                                 .map(([t, n]) => `${t}: ${n}`)
@@ -1928,26 +2452,19 @@ export default function AnalisisSection() {
                   </div>
                 )}
               </div>
-            </section>
+            </Panel>
           )}
 
           {seccion === 'mapa' && (
-            <section
-              className="rounded-2xl border p-5"
-              style={{ backgroundColor: PANEL, borderColor: BORDE }}
-            >
-              <h2 className="mb-2 text-xl font-bold">Mapa de zonas</h2>
-
-              <p
-                className="mb-5 text-sm"
-                style={{ color: SECUNDARIO }}
-              >
-                Distribución de las acciones registradas por zona. Es un
-                mapa de nueve sectores, no un seguimiento GPS.
+            <Panel>
+              <h2 className="text-xl font-black">Mapa de zonas</h2>
+              <p className="mb-5 mt-2 text-sm" style={{ color: SECUNDARIO }}>
+                Distribución de las acciones registradas por zona. Representa
+                nueve sectores de la cancha, no un seguimiento GPS.
               </p>
 
               <div
-                className="mx-auto grid max-w-3xl grid-cols-3 overflow-hidden rounded-xl border"
+                className="mx-auto grid max-w-3xl grid-cols-3 overflow-hidden rounded-lg border"
                 style={{ borderColor: '#A3B0A0' }}
               >
                 {estadisticasZonas.map((z) => {
@@ -1955,7 +2472,6 @@ export default function AnalisisSection() {
                     1,
                     ...estadisticasZonas.map((item) => item.total),
                   )
-
                   const intensidad = z.total / maximo
 
                   return (
@@ -1964,99 +2480,67 @@ export default function AnalisisSection() {
                       className="flex min-h-28 flex-col items-center justify-center border p-3 text-center"
                       style={{
                         borderColor: '#A3B0A0',
-                        backgroundColor:
-                          z.total === 0
-                            ? '#233A36'
-                            : `rgba(242, 194, 48, ${
-                                0.18 + intensidad * 0.72
-                              })`,
+                        backgroundColor: z.total === 0
+                          ? '#233A36'
+                          : `rgba(242, 194, 48, ${0.18 + intensidad * 0.72})`,
                         color: z.total === 0 ? TEXTO : '#171717',
                       }}
                     >
-                      <span className="text-xs font-semibold">
-                        {z.nombre}
-                      </span>
-
-                      <span className="mt-2 text-2xl font-bold">
-                        {z.total}
-                      </span>
-
+                      <span className="text-xs font-semibold">{z.nombre}</span>
+                      <span className="mt-2 text-2xl font-black">{z.total}</span>
                       <span className="text-xs">acciones</span>
                     </div>
                   )
                 })}
               </div>
 
-              <p
-                className="mt-4 text-xs"
-                style={{ color: SECUNDARIO }}
-              >
-                Mantené el mismo criterio al etiquetar las zonas en todos
-                los partidos.
+              <p className="mt-4 text-xs" style={{ color: SECUNDARIO }}>
+                Mantené el mismo criterio al etiquetar las zonas en todos los partidos.
               </p>
-            </section>
+            </Panel>
           )}
 
           {seccion === 'informe' && (
-            <section
-              className="space-y-5 rounded-2xl border p-5"
-              style={{ backgroundColor: PANEL, borderColor: BORDE }}
-            >
+            <Panel>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-xl font-bold">
-                    Informe del partido
-                  </h2>
-
                   <p
-                    className="mt-1 text-sm"
-                    style={{ color: SECUNDARIO }}
+                    className="text-xs font-bold uppercase tracking-widest"
+                    style={{ color: AMARILLO }}
                   >
+                    INFORME TÉCNICO
+                  </p>
+                  <h2 className="mt-1 text-xl font-black">Informe del partido</h2>
+                  <p className="mt-1 text-sm" style={{ color: SECUNDARIO }}>
                     {partidoActual.rival} · {datosEncuentro(partidoActual)}
                   </p>
                 </div>
-
                 <Boton onClick={imprimirInforme}>
                   Imprimir / Guardar PDF
                 </Boton>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {[
                   ['Total de acciones', eventosPartido.length],
-                  [
-                    'Acciones con jugadora asignada',
-                    eventosPartido.filter((e) => e.jugador_id).length,
-                  ],
+                  ['Con jugadora asignada', eventosPartido.filter((e) => e.jugador_id).length],
+                  ['Pendientes de resultado', eventosPartido.filter((e) => !e.resultado).length],
                 ].map(([label, valor]) => (
                   <div
                     key={label}
-                    className="rounded-xl border p-4"
-                    style={{
-                      backgroundColor: FONDO,
-                      borderColor: BORDE,
-                    }}
+                    className="rounded-lg border p-4"
+                    style={{ backgroundColor: FONDO, borderColor: BORDE }}
                   >
-                    <p
-                      className="text-sm"
-                      style={{ color: SECUNDARIO }}
-                    >
-                      {label}
-                    </p>
-
-                    <p
-                      className="mt-1 text-3xl font-bold"
-                      style={{ color: AMARILLO }}
-                    >
+                    <p className="text-sm" style={{ color: SECUNDARIO }}>{label}</p>
+                    <p className="mt-1 text-3xl font-black" style={{ color: AMARILLO }}>
                       {valor}
                     </p>
                   </div>
                 ))}
               </div>
 
-              <div>
-                <h3 className="mb-2 font-bold">Resumen por acción</h3>
-
+              <div className="mt-6">
+                <h3 className="mb-3 font-bold">Resumen por acción</h3>
                 {estadisticas.length ? (
                   <ul className="space-y-2 text-sm">
                     {estadisticas.map(([nombre, datos]) => (
@@ -2066,46 +2550,79 @@ export default function AnalisisSection() {
                         style={{ borderColor: BORDE }}
                       >
                         <span>{nombre}</span>
-                        <span className="font-bold">
-                          {datos.total}
-                        </span>
+                        <span className="font-bold">{datos.total}</span>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p
-                    className="text-sm"
-                    style={{ color: SECUNDARIO }}
-                  >
+                  <p className="text-sm" style={{ color: SECUNDARIO }}>
                     No hay información suficiente para generar el resumen.
                   </p>
                 )}
               </div>
 
-              {partidoActual.notas && (
-                <div>
-                  <h3 className="mb-2 font-bold">
-                    Observaciones generales
-                  </h3>
+              <div className="mt-6">
+                <h3 className="mb-3 font-bold">Detalle de acciones</h3>
+                {eventosPartido.length ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[600px] text-left text-sm">
+                      <thead>
+                        <tr style={{ color: SECUNDARIO }}>
+                          <th className="p-2">Tiempo</th>
+                          <th className="p-2">Acción</th>
+                          <th className="p-2">Jugadora</th>
+                          <th className="p-2">Zona</th>
+                          <th className="p-2">Resultado</th>
+                          <th className="p-2">Observaciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...eventosPartido]
+                          .sort((a, b) => Number(a.segundo) - Number(b.segundo))
+                          .map((ev) => (
+                            <tr
+                              key={ev.id}
+                              className="border-t"
+                              style={{ borderColor: BORDE }}
+                            >
+                              <td className="p-2 font-mono">
+                                {formatearTiempo(ev.segundo)}
+                              </td>
+                              <td className="p-2">{ev.tipo}</td>
+                              <td className="p-2">
+                                {nombreJugadora(
+                                  jugadoras.find((j) => j.id === ev.jugador_id),
+                                )}
+                              </td>
+                              <td className="p-2">{ev.zona || '—'}</td>
+                              <td className="p-2">{ev.resultado || 'Pendiente'}</td>
+                              <td className="p-2">{ev.observaciones || '—'}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-sm" style={{ color: SECUNDARIO }}>
+                    Todavía no hay acciones registradas.
+                  </p>
+                )}
+              </div>
 
-                  <p
-                    className="whitespace-pre-wrap text-sm"
-                    style={{ color: SECUNDARIO }}
-                  >
+              {partidoActual.notas && (
+                <div className="mt-6">
+                  <h3 className="mb-2 font-bold">Observaciones generales</h3>
+                  <p className="whitespace-pre-wrap text-sm" style={{ color: SECUNDARIO }}>
                     {partidoActual.notas}
                   </p>
                 </div>
               )}
 
-              <p
-                className="text-xs"
-                style={{ color: SECUNDARIO }}
-              >
-                El informe utiliza los eventos guardados en la base de
-                datos. Podés imprimirlo o guardarlo como PDF desde el
-                navegador.
+              <p className="mt-5 text-xs" style={{ color: SECUNDARIO }}>
+                El informe utiliza los eventos guardados en la base de datos.
+                Podés imprimirlo o guardarlo como PDF desde el navegador.
               </p>
-            </section>
+            </Panel>
           )}
         </>
       )}
@@ -2116,8 +2633,23 @@ export default function AnalisisSection() {
       >
         {esAdmin
           ? 'Administrador: Kevin Garay · Gestión de análisis'
-          : 'Modo consulta · Los cambios en los análisis están restringidos'}
+          : 'Modo consulta · Los cambios están restringidos'}
       </footer>
+
+      <style>{`
+        @media print {
+          body {
+            background: white !important;
+            color: black !important;
+          }
+          button, nav, iframe, summary {
+            display: none !important;
+          }
+          section, article {
+            break-inside: avoid;
+          }
+        }
+      `}</style>
     </div>
   )
 }
