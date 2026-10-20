@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
 const AMARILLO = '#F2C230'
@@ -60,7 +60,6 @@ const inputStyle = {
   color: TEXTO,
 }
 
-// CORREGIDO: permite botones normales y botones de envío de formularios.
 function Boton({
   children,
   onClick,
@@ -122,7 +121,8 @@ function youtubeEmbed(url) {
     }
 
     if (!/^[a-zA-Z0-9_-]{11}$/.test(id)) return ''
-    return `https://www.youtube-nocookie.com/embed/${id}`
+
+    return `https://www.youtube.com/embed/${id}?enablejsapi=1`
   } catch {
     return ''
   }
@@ -131,8 +131,37 @@ function youtubeEmbed(url) {
 function formatearTiempo(segundos) {
   const total = Math.max(0, Number(segundos) || 0)
   const minutos = Math.floor(total / 60)
-  const resto = total % 60
+  const resto = Math.floor(total % 60)
+
   return `${String(minutos).padStart(2, '0')}:${String(resto).padStart(2, '0')}`
+}
+
+function cargarAPIYouTube() {
+  return new Promise((resolve, reject) => {
+    if (window.YT?.Player) {
+      resolve(window.YT)
+      return
+    }
+
+    const callbackAnterior = window.onYouTubeIframeAPIReady
+
+    window.onYouTubeIframeAPIReady = () => {
+      callbackAnterior?.()
+      resolve(window.YT)
+    }
+
+    let script = document.querySelector('script[data-youtube-iframe-api]')
+
+    if (!script) {
+      script = document.createElement('script')
+      script.src = 'https://www.youtube.com/iframe_api'
+      script.dataset.youtubeIframeApi = 'true'
+      script.onerror = () =>
+        reject(new Error('No se pudo cargar la API de YouTube.'))
+
+      document.head.appendChild(script)
+    }
+  })
 }
 
 export default function AnalisisSection() {
@@ -166,8 +195,66 @@ export default function AnalisisSection() {
   const [filtroTipo, setFiltroTipo] = useState('todos')
   const [seccion, setSeccion] = useState('video')
 
+  const youtubeIframeRef = useRef(null)
+  const playerRef = useRef(null)
+  const [playerListo, setPlayerListo] = useState(false)
+
   const partidoActual = partidos.find((p) => p.id === partidoId)
   const videoActual = youtubeEmbed(partidoActual?.video_url)
+
+  useEffect(() => {
+    let cancelado = false
+
+    setPlayerListo(false)
+
+    if (!videoActual) {
+      playerRef.current = null
+      return undefined
+    }
+
+    cargarAPIYouTube()
+      .then((YT) => {
+        if (cancelado || !youtubeIframeRef.current) return
+
+        const player = new YT.Player(youtubeIframeRef.current, {
+          events: {
+            onReady: () => {
+              if (!cancelado) setPlayerListo(true)
+            },
+            onError: (evento) => {
+              if (!cancelado) {
+                setPlayerListo(false)
+                setError(
+                  `YouTube no pudo reproducir este video (código ${evento.data}).`,
+                )
+              }
+            },
+          },
+        })
+
+        playerRef.current = player
+      })
+      .catch((e) => {
+        if (!cancelado) {
+          setError(e.message || 'No se pudo iniciar el reproductor.')
+        }
+      })
+
+    return () => {
+      cancelado = true
+
+      const player = playerRef.current
+      playerRef.current = null
+
+      if (player?.destroy) {
+        try {
+          player.destroy()
+        } catch (e) {
+          console.warn('No se pudo cerrar el reproductor anterior:', e)
+        }
+      }
+    }
+  }, [videoActual, partidoId])
 
   const cargarDatos = useCallback(async () => {
     setCargando(true)
@@ -187,6 +274,7 @@ export default function AnalisisSection() {
         setPartidos([])
         setEventos([])
         setJugadoras([])
+        setPartidoId('')
         setError('Iniciá sesión para consultar Análisis.')
         return
       }
@@ -348,6 +436,41 @@ export default function AnalisisSection() {
       })),
     [eventosPartido],
   )
+
+  function capturarTiempoVideo() {
+    if (!playerListo || !playerRef.current) {
+      setError('Esperá a que el reproductor de YouTube esté listo.')
+      return
+    }
+
+    try {
+      const tiempo = Math.floor(playerRef.current.getCurrentTime())
+
+      setSegundo(String(tiempo))
+      setError('')
+      setMensaje(`Tiempo capturado: ${formatearTiempo(tiempo)}.`)
+    } catch {
+      setError('No se pudo leer el tiempo actual del video.')
+    }
+  }
+
+  function irAEvento(evento) {
+    if (!playerListo || !playerRef.current) {
+      setError('El reproductor todavía no está listo.')
+      return
+    }
+
+    try {
+      playerRef.current.seekTo(Number(evento.segundo) || 0, true)
+      playerRef.current.playVideo()
+      setError('')
+      setMensaje(
+        `Reproduciendo ${evento.tipo} desde ${formatearTiempo(evento.segundo)}.`,
+      )
+    } catch {
+      setError('No se pudo saltar al momento seleccionado.')
+    }
+  }
 
   function limpiarFormulario() {
     setRival('')
@@ -820,6 +943,8 @@ export default function AnalisisSection() {
                 {videoActual ? (
                   <div className="aspect-video overflow-hidden rounded-xl">
                     <iframe
+                      key={partidoId}
+                      ref={youtubeIframeRef}
                       title={`Video del partido contra ${partidoActual.rival}`}
                       src={videoActual}
                       className="h-full w-full"
@@ -840,6 +965,30 @@ export default function AnalisisSection() {
                     Este partido no tiene un enlace de YouTube válido.
                   </p>
                 )}
+
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span
+                    className="rounded-lg border px-3 py-2 text-xs"
+                    style={{
+                      backgroundColor: FONDO,
+                      borderColor: BORDE,
+                      color: SECUNDARIO,
+                    }}
+                  >
+                    {playerListo
+                      ? 'Reproductor conectado'
+                      : videoActual
+                        ? 'Conectando reproductor...'
+                        : 'Sin video'}
+                  </span>
+                  <Boton
+                    secundario
+                    disabled={!playerListo}
+                    onClick={capturarTiempoVideo}
+                  >
+                    ⏱ Capturar tiempo actual
+                  </Boton>
+                </div>
 
                 {partidoActual.notas && (
                   <p className="mt-4 text-sm" style={{ color: SECUNDARIO }}>
@@ -900,21 +1049,33 @@ export default function AnalisisSection() {
                     </Campo>
 
                     <div className="grid gap-4 sm:grid-cols-2">
-                      <Campo label="Tiempo (segundos)">
-                        <input
-                          className={inputClass}
-                          style={inputStyle}
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={segundo}
-                          onChange={(e) => setSegundo(e.target.value)}
-                          required
-                        />
-                        <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
-                          Tiempo mostrado: {formatearTiempo(segundo)}
-                        </p>
-                      </Campo>
+                      <div className="space-y-2">
+                        <Campo label="Tiempo (segundos)">
+                          <input
+                            className={inputClass}
+                            style={inputStyle}
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={segundo}
+                            onChange={(e) => setSegundo(e.target.value)}
+                            required
+                          />
+                          <p
+                            className="mt-1 text-xs"
+                            style={{ color: SECUNDARIO }}
+                          >
+                            Tiempo: {formatearTiempo(segundo)}
+                          </p>
+                        </Campo>
+                        <Boton
+                          secundario
+                          onClick={capturarTiempoVideo}
+                          disabled={!playerListo}
+                        >
+                          Usar tiempo del video
+                        </Boton>
+                      </div>
 
                       <Campo label="Resultado">
                         <select
@@ -1023,7 +1184,7 @@ export default function AnalisisSection() {
                           <th className="p-2">Jugadora</th>
                           <th className="p-2">Zona</th>
                           <th className="p-2">Resultado</th>
-                          {esAdmin && <th className="p-2">Acción</th>}
+                          {esAdmin && <th className="p-2">Administrar</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -1039,7 +1200,16 @@ export default function AnalisisSection() {
                               style={{ borderColor: BORDE }}
                             >
                               <td className="p-2 font-mono">
-                                {formatearTiempo(ev.segundo)}
+                                <button
+                                  type="button"
+                                  onClick={() => irAEvento(ev)}
+                                  disabled={!playerListo}
+                                  className="font-bold hover:underline disabled:opacity-40"
+                                  style={{ color: AMARILLO }}
+                                  title="Reproducir esta acción en el video"
+                                >
+                                  ▶ {formatearTiempo(ev.segundo)}
+                                </button>
                               </td>
                               <td className="p-2">{ev.tipo}</td>
                               <td className="p-2">
@@ -1148,7 +1318,10 @@ export default function AnalisisSection() {
                             }}
                           />
                         </div>
-                        <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
+                        <p
+                          className="mt-1 text-xs"
+                          style={{ color: SECUNDARIO }}
+                        >
                           Exitosos: {datos.exitosos} · Fallidos: {datos.fallidos}
                         </p>
                       </div>
@@ -1259,7 +1432,9 @@ export default function AnalisisSection() {
                     {partidoActual.rival} · {partidoActual.fecha || 'Sin fecha'}
                   </p>
                 </div>
-                <Boton onClick={imprimirInforme}>Imprimir / Guardar PDF</Boton>
+                <Boton onClick={imprimirInforme}>
+                  Imprimir / Guardar PDF
+                </Boton>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -1270,7 +1445,10 @@ export default function AnalisisSection() {
                   <p className="text-sm" style={{ color: SECUNDARIO }}>
                     Total de acciones
                   </p>
-                  <p className="mt-1 text-3xl font-bold" style={{ color: AMARILLO }}>
+                  <p
+                    className="mt-1 text-3xl font-bold"
+                    style={{ color: AMARILLO }}
+                  >
                     {eventosPartido.length}
                   </p>
                 </div>
@@ -1281,7 +1459,10 @@ export default function AnalisisSection() {
                   <p className="text-sm" style={{ color: SECUNDARIO }}>
                     Acciones con jugadora asignada
                   </p>
-                  <p className="mt-1 text-3xl font-bold" style={{ color: AMARILLO }}>
+                  <p
+                    className="mt-1 text-3xl font-bold"
+                    style={{ color: AMARILLO }}
+                  >
                     {eventosPartido.filter((e) => e.jugador_id).length}
                   </p>
                 </div>
@@ -1312,7 +1493,10 @@ export default function AnalisisSection() {
               {partidoActual.notas && (
                 <div>
                   <h3 className="mb-2 font-bold">Observaciones generales</h3>
-                  <p className="whitespace-pre-wrap text-sm" style={{ color: SECUNDARIO }}>
+                  <p
+                    className="whitespace-pre-wrap text-sm"
+                    style={{ color: SECUNDARIO }}
+                  >
                     {partidoActual.notas}
                   </p>
                 </div>
@@ -1327,7 +1511,10 @@ export default function AnalisisSection() {
         </>
       )}
 
-      <footer className="border-t pt-4 text-xs" style={{ borderColor: BORDE, color: SECUNDARIO }}>
+      <footer
+        className="border-t pt-4 text-xs"
+        style={{ borderColor: BORDE, color: SECUNDARIO }}
+      >
         {esAdmin
           ? 'Administrador: Kevin Garay · Gestión de análisis'
           : 'Modo consulta · Los cambios en los análisis están restringidos'}
