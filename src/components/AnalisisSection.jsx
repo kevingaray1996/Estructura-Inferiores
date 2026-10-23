@@ -97,9 +97,10 @@ function Campo({ label, children }) {
   )
 }
 
-function Panel({ children, className = '', style = {} }) {
+function Panel({ children, className = '', style = {}, id }) {
   return (
     <section
+      id={id}
       className={`rounded-xl border p-4 md:p-5 ${className}`}
       style={{ backgroundColor: PANEL, borderColor: BORDE, ...style }}
     >
@@ -878,6 +879,39 @@ export default function AnalisisSection() {
     [eventosPartido],
   )
 
+  const estadisticasInforme = useMemo(() => {
+    const resumen = {}
+    for (const evento of eventosPartido) {
+      if (!resumen[evento.tipo]) resumen[evento.tipo] = { total: 0, efectivas: 0, noEfectivas: 0, pendientes: 0 }
+      const item = resumen[evento.tipo]
+      item.total += 1
+      if (['Exitoso', 'Gol', 'Atajada'].includes(evento.resultado)) item.efectivas += 1
+      else if (['Fallido', 'Fuera', 'Bloqueado'].includes(evento.resultado)) item.noEfectivas += 1
+      else if (!evento.resultado || evento.resultado === 'Neutro') item.pendientes += 1
+    }
+    return Object.entries(resumen).sort((a, b) => b[1].total - a[1].total)
+  }, [eventosPartido])
+
+  const jugadorasInforme = useMemo(() => {
+    const resumen = {}
+    for (const evento of eventosPartido) {
+      if (!evento.jugador_id) continue
+      if (!resumen[evento.jugador_id]) resumen[evento.jugador_id] = { total: 0, efectivas: 0, noEfectivas: 0 }
+      resumen[evento.jugador_id].total += 1
+      if (['Exitoso', 'Gol', 'Atajada'].includes(evento.resultado)) resumen[evento.jugador_id].efectivas += 1
+      if (['Fallido', 'Fuera', 'Bloqueado'].includes(evento.resultado)) resumen[evento.jugador_id].noEfectivas += 1
+    }
+    return Object.entries(resumen).map(([id, datos]) => ({
+      id,
+      nombre: nombreJugadora(jugadoras.find((j) => j.id === id)),
+      ...datos,
+      evaluadas: datos.efectivas + datos.noEfectivas,
+      efectividad: datos.efectivas + datos.noEfectivas
+        ? Math.round((datos.efectivas / (datos.efectivas + datos.noEfectivas)) * 100)
+        : null,
+    })).sort((a, b) => b.total - a.total)
+  }, [eventosPartido, jugadoras])
+
   const resumenEfectividad = useMemo(() => {
     const exitosas = eventosEstadisticos.filter((e) => ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length
     const fallidas = eventosEstadisticos.filter((e) => ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length
@@ -1524,6 +1558,7 @@ export default function AnalisisSection() {
           <div className="min-w-0 flex-1">
             <h2 className="text-lg font-bold">Biblioteca de análisis</h2>
             <p className="mt-1 text-sm" style={{ color: SECUNDARIO }}>
+
               {partidos.length} análisis · {partidosCalendario.length} partidos
               en el calendario
             </p>
@@ -1545,7 +1580,6 @@ export default function AnalisisSection() {
             un partido del calendario.
           </p>
         ) : (
-
           <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
             {partidos.map((partido) => {
               const encuentro =
@@ -2939,127 +2973,106 @@ export default function AnalisisSection() {
           )}
 
           {seccion === 'informe' && (
-            <Panel>
-              <div className="flex flex-wrap items-center justify-between gap-3">
+            <Panel id="informe-imprimible" className="pdf-informe">
+              <div className="pdf-cabecera flex flex-wrap items-start justify-between gap-4 border-b pb-5" style={{ borderColor: BORDE }}>
                 <div>
-                  <p
-                    className="text-xs font-bold uppercase tracking-widest"
-                    style={{ color: AMARILLO }}
-                  >
-                    INFORME TÉCNICO
+                  <p className="pdf-acento text-xs font-black uppercase tracking-[0.22em]" style={{ color: AMARILLO }}>
+                    COMUNICACIONES · PERFORMANCE
                   </p>
-                  <h2 className="mt-1 text-xl font-black">Informe del partido</h2>
-                  <p className="mt-1 text-sm" style={{ color: SECUNDARIO }}>
-                    {partidoActual.rival} · {datosEncuentro(partidoActual)}
-                  </p>
+                  <h2 className="mt-2 text-2xl font-black tracking-tight">Informe técnico de partido</h2>
+                  <p className="mt-2 text-base font-semibold">{partidoActual.rival || 'Rival sin especificar'}</p>
+                  <p className="mt-1 text-sm" style={{ color: SECUNDARIO }}>{datosEncuentro(partidoActual)}</p>
                 </div>
-                <Boton onClick={imprimirInforme}>
+                <Boton onClick={imprimirInforme} className="no-imprimir">
                   Imprimir / Guardar PDF
                 </Boton>
               </div>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {[
-                  ['Total de acciones', eventosPartido.length],
-                  ['Con jugadora asignada', eventosPartido.filter((e) => e.jugador_id).length],
-                  ['Pendientes de resultado', eventosPartido.filter((e) => !e.resultado).length],
-                ].map(([label, valor]) => (
-                  <div
-                    key={label}
-                    className="rounded-lg border p-4"
-                    style={{ backgroundColor: FONDO, borderColor: BORDE }}
-                  >
-                    <p className="text-sm" style={{ color: SECUNDARIO }}>{label}</p>
-                    <p className="mt-1 text-3xl font-black" style={{ color: AMARILLO }}>
-                      {valor}
-                    </p>
-                  </div>
-                ))}
+              <div className="pdf-meta mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="rounded-lg border p-3" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
+                  <p className="text-xs uppercase tracking-wide" style={{ color: SECUNDARIO }}>Acciones registradas</p>
+                  <p className="mt-1 text-2xl font-black">{eventosPartido.length}</p>
+                </div>
+                <div className="rounded-lg border p-3" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
+                  <p className="text-xs uppercase tracking-wide" style={{ color: SECUNDARIO }}>Con jugadora</p>
+                  <p className="mt-1 text-2xl font-black">{eventosPartido.filter((e) => e.jugador_id).length}</p>
+                </div>
+                <div className="rounded-lg border p-3" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
+                  <p className="text-xs uppercase tracking-wide" style={{ color: SECUNDARIO }}>Efectivas</p>
+                  <p className="mt-1 text-2xl font-black">{eventosPartido.filter((e) => ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length}</p>
+                </div>
+                <div className="rounded-lg border p-3" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
+                  <p className="text-xs uppercase tracking-wide" style={{ color: SECUNDARIO }}>Pendientes / neutras</p>
+                  <p className="mt-1 text-2xl font-black">{eventosPartido.filter((e) => !e.resultado || e.resultado === 'Neutro').length}</p>
+                </div>
               </div>
 
-              <div className="mt-6">
-                <h3 className="mb-3 font-bold">Resumen por acción</h3>
-                {estadisticas.length ? (
-                  <ul className="space-y-2 text-sm">
-                    {estadisticas.map(([nombre, datos]) => (
-                      <li
-                        key={nombre}
-                        className="flex justify-between gap-3 border-b pb-2"
-                        style={{ borderColor: BORDE }}
-                      >
-                        <span>{nombre}</span>
-                        <span className="font-bold">{datos.total}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm" style={{ color: SECUNDARIO }}>
-                    No hay información suficiente para generar el resumen.
-                  </p>
-                )}
-              </div>
-
-              <div className="mt-6">
-                <h3 className="mb-3 font-bold">Detalle de acciones</h3>
-                {eventosPartido.length ? (
+              <div className="pdf-seccion mt-6">
+                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: BORDE }}>1. Rendimiento colectivo · acciones por tipo</h3>
+                {estadisticasInforme.length ? (
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[600px] text-left text-sm">
-                      <thead>
-                        <tr style={{ color: SECUNDARIO }}>
-                          <th className="p-2">Tiempo</th>
-                          <th className="p-2">Acción</th>
-                          <th className="p-2">Jugadora</th>
-                          <th className="p-2">Zona</th>
-                          <th className="p-2">Resultado</th>
-                          <th className="p-2">Observaciones</th>
+                    <table className="w-full text-left text-sm pdf-tabla">
+                      <thead><tr style={{ color: SECUNDARIO }}>
+                        <th className="p-2">Acción</th><th className="p-2 text-right">Total</th><th className="p-2 text-right">Efectivas</th><th className="p-2 text-right">No efectivas</th><th className="p-2 text-right">Efectividad</th>
+                      </tr></thead>
+                      <tbody>{estadisticasInforme.map(([nombre, datos]) => (
+                        <tr key={nombre} className="border-t" style={{ borderColor: BORDE }}>
+                          <td className="p-2 font-semibold">{nombre}</td><td className="p-2 text-right">{datos.total}</td><td className="p-2 text-right">{datos.efectivas}</td><td className="p-2 text-right">{datos.noEfectivas}</td>
+                          <td className="p-2 text-right">{datos.efectivas + datos.noEfectivas ? `${Math.round(datos.efectivas / (datos.efectivas + datos.noEfectivas) * 100)}%` : '—'}</td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {[...eventosPartido]
-                          .sort((a, b) => Number(a.segundo) - Number(b.segundo))
-                          .map((ev) => (
-                            <tr
-                              key={ev.id}
-                              className="border-t"
-                              style={{ borderColor: BORDE }}
-                            >
-                              <td className="p-2 font-mono">
-                                {formatearTiempo(ev.segundo)}
-                              </td>
-                              <td className="p-2">{ev.tipo}</td>
-                              <td className="p-2">
-                                {nombreJugadora(
-                                  jugadoras.find((j) => j.id === ev.jugador_id),
-                                )}
-                              </td>
-                              <td className="p-2">{ev.zona || '—'}</td>
-                              <td className="p-2">{ev.resultado || 'Pendiente'}</td>
-                              <td className="p-2">{ev.observaciones || '—'}</td>
-                            </tr>
-                          ))}
-                      </tbody>
+                      ))}</tbody>
                     </table>
                   </div>
-                ) : (
-                  <p className="text-sm" style={{ color: SECUNDARIO }}>
-                    Todavía no hay acciones registradas.
-                  </p>
-                )}
+                ) : <p className="text-sm">Todavía no hay acciones etiquetadas para este partido.</p>}
+                <p className="mt-2 text-xs" style={{ color: SECUNDARIO }}>La efectividad se calcula sobre acciones con resultado evaluable: efectivas frente a no efectivas. Las acciones neutras o sin resultado no entran en ese porcentaje.</p>
+              </div>
+
+              <div className="pdf-seccion mt-6">
+                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: BORDE }}>2. Rendimiento individual · jugadoras</h3>
+                {jugadorasInforme.length ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm pdf-tabla">
+                      <thead><tr style={{ color: SECUNDARIO }}>
+                        <th className="p-2">Jugadora</th><th className="p-2 text-right">Acciones</th><th className="p-2 text-right">Efectivas</th><th className="p-2 text-right">No efectivas</th><th className="p-2 text-right">Efectividad</th>
+                      </tr></thead>
+                      <tbody>{jugadorasInforme.map((j) => (
+                        <tr key={j.id} className="border-t" style={{ borderColor: BORDE }}>
+                          <td className="p-2 font-semibold">{j.nombre}</td><td className="p-2 text-right">{j.total}</td><td className="p-2 text-right">{j.efectivas}</td><td className="p-2 text-right">{j.noEfectivas}</td><td className="p-2 text-right">{j.efectividad === null ? '—' : `${j.efectividad}%`}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+                ) : <p className="text-sm">No hay acciones asignadas a jugadoras en este partido.</p>}
               </div>
 
               {partidoActual.notas && (
-                <div className="mt-6">
-                  <h3 className="mb-2 font-bold">Observaciones generales</h3>
-                  <p className="whitespace-pre-wrap text-sm" style={{ color: SECUNDARIO }}>
-                    {partidoActual.notas}
-                  </p>
+                <div className="pdf-seccion mt-6">
+                  <h3 className="mb-2 text-base font-black">3. Observaciones generales</h3>
+                  <p className="whitespace-pre-wrap text-sm">{partidoActual.notas}</p>
                 </div>
               )}
 
-              <p className="mt-5 text-xs" style={{ color: SECUNDARIO }}>
-                El informe utiliza los eventos guardados en la base de datos.
-                Podés imprimirlo o guardarlo como PDF desde el navegador.
-              </p>
+              <div className="pdf-seccion mt-6">
+                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: BORDE }}>Detalle cronológico de acciones</h3>
+                {eventosPartido.length ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs pdf-tabla">
+                      <thead><tr style={{ color: SECUNDARIO }}>
+                        <th className="p-2">Tiempo</th><th className="p-2">Acción</th><th className="p-2">Jugadora</th><th className="p-2">Zona</th><th className="p-2">Resultado</th><th className="p-2">Observaciones</th>
+                      </tr></thead>
+                      <tbody>{[...eventosPartido].sort((a, b) => Number(a.segundo) - Number(b.segundo)).map((ev) => (
+                        <tr key={ev.id} className="border-t" style={{ borderColor: BORDE }}>
+                          <td className="p-2 font-mono">{formatearTiempo(ev.segundo)}</td><td className="p-2">{ev.tipo}</td><td className="p-2">{nombreJugadora(jugadoras.find((j) => j.id === ev.jugador_id))}</td><td className="p-2">{ev.zona || '—'}</td><td className="p-2">{ev.resultado || 'Pendiente'}</td><td className="p-2">{ev.observaciones || '—'}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+                ) : <p className="text-sm">Todavía no hay acciones registradas.</p>}
+              </div>
+
+              <div className="pdf-pie mt-7 border-t pt-3 text-xs" style={{ borderColor: BORDE, color: SECUNDARIO }}>
+                Informe generado desde el módulo de videoanálisis de Comunicaciones. Los datos corresponden a las acciones guardadas para este partido.
+              </div>
             </Panel>
           )}
         </>
@@ -3075,17 +3088,31 @@ export default function AnalisisSection() {
       </footer>
 
       <style>{`
+        @page { size: A4; margin: 14mm 12mm 16mm; }
         @media print {
-          body {
-            background: white !important;
-            color: black !important;
+          html, body { background: #fff !important; color: #171717 !important; }
+          body * { visibility: hidden !important; }
+          #informe-imprimible, #informe-imprimible * { visibility: visible !important; }
+          #informe-imprimible {
+            position: absolute !important; left: 0 !important; top: 0 !important;
+            width: 100% !important; margin: 0 !important; padding: 0 !important;
+            border: 0 !important; border-radius: 0 !important; box-shadow: none !important;
+            background: #fff !important; color: #171717 !important;
+            font-size: 10pt !important;
           }
-          button, nav, iframe, summary {
-            display: none !important;
-          }
-          section, article {
-            break-inside: avoid;
-          }
+          #informe-imprimible * { color: #171717 !important; background-color: transparent !important; border-color: #d1d5db !important; box-shadow: none !important; }
+          #informe-imprimible .pdf-acento { color: #8a6500 !important; }
+          #informe-imprimible .no-imprimir, #informe-imprimible button { display: none !important; }
+          #informe-imprimible .pdf-cabecera { padding-bottom: 10pt !important; }
+          #informe-imprimible .pdf-meta > div { padding: 8pt !important; }
+          #informe-imprimible .pdf-seccion { break-inside: auto; page-break-inside: auto; }
+          #informe-imprimible h2, #informe-imprimible h3 { break-after: avoid; page-break-after: avoid; }
+          #informe-imprimible table { width: 100% !important; border-collapse: collapse !important; font-size: 8.5pt !important; }
+          #informe-imprimible thead { display: table-header-group; }
+          #informe-imprimible tr { break-inside: avoid; page-break-inside: avoid; }
+          #informe-imprimible th, #informe-imprimible td { padding: 4pt 5pt !important; vertical-align: top !important; }
+          #informe-imprimible .pdf-pie { margin-top: 18pt !important; }
+          a { color: #171717 !important; text-decoration: none !important; }
         }
       `}</style>
     </div>
