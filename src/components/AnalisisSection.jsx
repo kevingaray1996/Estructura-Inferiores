@@ -352,6 +352,8 @@ export default function AnalisisSection() {
   const [partidoId, setPartidoId] = useState('')
   const [partidoCalendarioId, setPartidoCalendarioId] = useState('')
 
+  const [alcanceEstadisticas, setAlcanceEstadisticas] = useState('partido')
+
   const [mostrarFormulario, setMostrarFormulario] = useState(false)
   const [editandoId, setEditandoId] = useState(null)
   const [videoUrl, setVideoUrl] = useState('')
@@ -802,10 +804,15 @@ export default function AnalisisSection() {
     filtroExploradorMinutoHasta,
   ])
 
+  const eventosEstadisticos = useMemo(
+    () => alcanceEstadisticas === 'acumulado' ? eventos : eventosPartido,
+    [alcanceEstadisticas, eventos, eventosPartido],
+  )
+
   const estadisticas = useMemo(() => {
     const acumulado = {}
 
-    for (const evento of eventosPartido) {
+    for (const evento of eventosEstadisticos) {
       if (!acumulado[evento.tipo]) {
         acumulado[evento.tipo] = {
           total: 0,
@@ -833,12 +840,12 @@ export default function AnalisisSection() {
     return Object.entries(acumulado).sort(
       (a, b) => b[1].total - a[1].total,
     )
-  }, [eventosPartido])
+  }, [eventosEstadisticos])
 
   const estadisticasJugadoras = useMemo(() => {
     const acumulado = {}
 
-    for (const evento of eventosPartido) {
+    for (const evento of eventosEstadisticos) {
       if (!evento.jugador_id) continue
 
       if (!acumulado[evento.jugador_id]) {
@@ -861,7 +868,7 @@ export default function AnalisisSection() {
         }
       })
       .sort((a, b) => b.total - a.total)
-  }, [eventosPartido, jugadoras])
+  }, [eventosEstadisticos, jugadoras])
 
   const estadisticasZonas = useMemo(
     () => ZONAS.map((nombre) => ({
@@ -872,11 +879,11 @@ export default function AnalisisSection() {
   )
 
   const resumenEfectividad = useMemo(() => {
-    const exitosas = eventosPartido.filter((e) => ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length
-    const fallidas = eventosPartido.filter((e) => ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length
+    const exitosas = eventosEstadisticos.filter((e) => ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length
+    const fallidas = eventosEstadisticos.filter((e) => ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length
     const evaluadas = exitosas + fallidas
-    const pendientes = eventosPartido.filter((e) => !e.resultado).length
-    const conUbicacionExacta = eventosPartido.filter((e) => Number.isFinite(Number(e.coordenada_x)) && Number.isFinite(Number(e.coordenada_y)) && e.coordenada_x !== null && e.coordenada_y !== null).length
+    const pendientes = eventosEstadisticos.filter((e) => !e.resultado).length
+    const conUbicacionExacta = eventosEstadisticos.filter((e) => Number.isFinite(Number(e.coordenada_x)) && Number.isFinite(Number(e.coordenada_y)) && e.coordenada_x !== null && e.coordenada_y !== null).length
     return {
       exitosas,
       fallidas,
@@ -885,7 +892,7 @@ export default function AnalisisSection() {
       porcentaje: evaluadas ? Math.round((exitosas / evaluadas) * 100) : 0,
       conUbicacionExacta,
     }
-  }, [eventosPartido])
+  }, [eventosEstadisticos])
 
   const partidosDisponibles = useMemo(
     () => [...partidosCalendario].sort((a, b) =>
@@ -1525,7 +1532,6 @@ export default function AnalisisSection() {
           {partidoActual && (
             <div className="text-right">
               <p className="text-xs" style={{ color: SECUNDARIO }}>
-
                 PARTIDO ACTIVO
               </p>
               <p className="font-bold">{partidoActual.rival}</p>
@@ -1539,6 +1545,7 @@ export default function AnalisisSection() {
             un partido del calendario.
           </p>
         ) : (
+
           <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
             {partidos.map((partido) => {
               const encuentro =
@@ -2712,16 +2719,43 @@ export default function AnalisisSection() {
 
           {seccion === 'estadisticas' && (
             <Panel>
-              <h2 className="text-xl font-black">
-                Estadísticas · {partidoActual.rival}
-              </h2>
-              <p className="mt-1 text-sm" style={{ color: SECUNDARIO }}>
-                {datosEncuentro(partidoActual)}
-              </p>
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-black">Estadísticas</h2>
+                  <p className="mt-1 text-sm" style={{ color: SECUNDARIO }}>
+                    {alcanceEstadisticas === 'partido'
+                      ? `Partido seleccionado · ${partidoActual?.rival || 'Sin rival'}`
+                      : `Acumulado de ${partidos.length} partidos registrados`}
+                  </p>
+                  {alcanceEstadisticas === 'partido' && partidoActual && (
+                    <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
+                      {datosEncuentro(partidoActual)}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Alcance de estadísticas">
+                  <button
+                    type="button"
+                    onClick={() => setAlcanceEstadisticas('partido')}
+                    className="rounded-lg border px-4 py-2 text-sm font-bold"
+                    style={alcanceEstadisticas === 'partido'
+                      ? { backgroundColor: AMARILLO, color: '#171717', borderColor: AMARILLO }
+                      : { backgroundColor: FONDO, color: TEXTO, borderColor: BORDE }}
+                  >Partido seleccionado</button>
+                  <button
+                    type="button"
+                    onClick={() => setAlcanceEstadisticas('acumulado')}
+                    className="rounded-lg border px-4 py-2 text-sm font-bold"
+                    style={alcanceEstadisticas === 'acumulado'
+                      ? { backgroundColor: AMARILLO, color: '#171717', borderColor: AMARILLO }
+                      : { backgroundColor: FONDO, color: TEXTO, borderColor: BORDE }}
+                  >Todos los partidos</button>
+                </div>
+              </div>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 {[
-                  ['Acciones totales', eventosPartido.length],
+                  ['Acciones totales', eventosEstadisticos.length],
                   ['Efectivas', resumenEfectividad.exitosas],
                   ['No efectivas', resumenEfectividad.fallidas],
                   ['Efectividad', resumenEfectividad.evaluadas ? `${resumenEfectividad.porcentaje}%` : '—'],
@@ -2740,8 +2774,13 @@ export default function AnalisisSection() {
                 ))}
               </div>
 
+              <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 rounded-lg border p-3 text-sm" style={{ backgroundColor: FONDO, borderColor: BORDE }}>
+                <span style={{ color: SECUNDARIO }}>Partidos incluidos: <strong style={{ color: TEXTO }}>{alcanceEstadisticas === 'partido' ? (partidoActual ? 1 : 0) : partidos.length}</strong></span>
+                <span style={{ color: SECUNDARIO }}>Acciones sin jugadora asignada: <strong style={{ color: TEXTO }}>{eventosEstadisticos.filter((e) => !e.jugador_id).length}</strong></span>
+              </div>
+
               <div className="mt-6">
-                <h3 className="mb-3 font-bold">Acciones por tipo</h3>
+                <h3 className="mb-3 font-bold">Rendimiento colectivo · acciones por tipo</h3>
                 {estadisticas.length === 0 ? (
                   <p className="text-sm" style={{ color: SECUNDARIO }}>
                     Todavía no hay acciones etiquetadas.
@@ -2787,7 +2826,7 @@ export default function AnalisisSection() {
               </div>
 
               <div className="mt-7">
-                <h3 className="mb-3 font-bold">Acciones por jugadora</h3>
+                <h3 className="mb-3 font-bold">Rendimiento individual · acciones por jugadora</h3>
                 {estadisticasJugadoras.length === 0 ? (
                   <p className="text-sm" style={{ color: SECUNDARIO }}>
                     No hay acciones asignadas a jugadoras.
@@ -2814,11 +2853,11 @@ export default function AnalisisSection() {
                           >
                             <td className="p-2 font-bold">{j.nombre}</td>
                             <td className="p-2">{j.total}</td>
-                            <td className="p-2 text-emerald-300">{eventosPartido.filter((e) => e.jugador_id === j.id && ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length}</td>
-                            <td className="p-2 text-red-300">{eventosPartido.filter((e) => e.jugador_id === j.id && ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length}</td>
+                            <td className="p-2 text-emerald-300">{eventosEstadisticos.filter((e) => e.jugador_id === j.id && ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length}</td>
+                            <td className="p-2 text-red-300">{eventosEstadisticos.filter((e) => e.jugador_id === j.id && ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length}</td>
                             <td className="p-2">{(() => {
-                              const positivas = eventosPartido.filter((e) => e.jugador_id === j.id && ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length
-                              const negativas = eventosPartido.filter((e) => e.jugador_id === j.id && ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length
+                              const positivas = eventosEstadisticos.filter((e) => e.jugador_id === j.id && ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length
+                              const negativas = eventosEstadisticos.filter((e) => e.jugador_id === j.id && ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length
                               return positivas + negativas ? `${Math.round((positivas / (positivas + negativas)) * 100)}%` : '—'
                             })()}</td>
                             <td className="p-2">
