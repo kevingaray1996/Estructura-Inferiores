@@ -912,6 +912,25 @@ export default function AnalisisSection() {
     })).sort((a, b) => b.total - a.total)
   }, [eventosPartido, jugadoras])
 
+  const resumenGraficoInforme = useMemo(() => {
+    const efectivas = eventosPartido.filter((e) => ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length
+    const noEfectivas = eventosPartido.filter((e) => ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length
+    const pendientes = eventosPartido.filter((e) => !e.resultado || e.resultado === 'Neutro').length
+    const evaluables = efectivas + noEfectivas
+    return {
+      efectivas,
+      noEfectivas,
+      pendientes,
+      evaluables,
+      porcentaje: evaluables ? Math.round((efectivas / evaluables) * 100) : null,
+    }
+  }, [eventosPartido])
+
+  const accionesGraficoInforme = useMemo(
+    () => estadisticasInforme.slice(0, 7),
+    [estadisticasInforme],
+  )
+
   const resumenEfectividad = useMemo(() => {
     const exitosas = eventosEstadisticos.filter((e) => ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length
     const fallidas = eventosEstadisticos.filter((e) => ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length
@@ -1578,7 +1597,6 @@ export default function AnalisisSection() {
             Todavía no hay análisis guardados. Usá «Nuevo análisis» para elegir
             un partido del calendario.
           </p>
-
         ) : (
           <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
             {partidos.map((partido) => {
@@ -1600,6 +1618,7 @@ export default function AnalisisSection() {
                     setFiltroTipo('todos')
                     setFiltroResultado('todos')
                     setSeccion('video')
+
                     setTipoRapido('')
                     setError('')
                     setMensaje('')
@@ -3029,6 +3048,59 @@ export default function AnalisisSection() {
                 <p className="mt-3 text-xs" style={{ color: '#4B5563' }}>Este resumen destaca volumen de registro; no sustituye la interpretación táctica del analista.</p>
               </div>
 
+              <div className="pdf-seccion pdf-graficos mt-6">
+                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: BORDE }}>Panel visual del partido</h3>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <div className="pdf-grafico-card rounded-xl border p-4" style={{ borderColor: BORDE, backgroundColor: '#FFFFFF' }}>
+                    <p className="text-xs font-black uppercase tracking-wide" style={{ color: '#4B5563' }}>Efectividad evaluable</p>
+                    <div className="mt-3 flex items-center gap-3">
+                      <svg viewBox="0 0 100 100" role="img" aria-label="Gráfico circular de efectividad" style={{ width: '96px', height: '96px', flexShrink: 0 }}>
+                        <circle cx="50" cy="50" r="36" fill="none" stroke="#E5E7EB" strokeWidth="13" />
+                        {resumenGraficoInforme.evaluables > 0 && <>
+                          <circle cx="50" cy="50" r="36" fill="none" stroke="#F2C230" strokeWidth="13" strokeDasharray={`${(resumenGraficoInforme.efectivas / resumenGraficoInforme.evaluables) * 226.2} 226.2`} transform="rotate(-90 50 50)" />
+                          <circle cx="50" cy="50" r="36" fill="none" stroke="#27272A" strokeWidth="13" strokeDasharray={`${(resumenGraficoInforme.noEfectivas / resumenGraficoInforme.evaluables) * 226.2} 226.2`} strokeDashoffset={`-${(resumenGraficoInforme.efectivas / resumenGraficoInforme.evaluables) * 226.2}`} transform="rotate(-90 50 50)" />
+                        </>}
+                        <text x="50" y="47" textAnchor="middle" fontSize="17" fontWeight="900" fill="#171717">{resumenGraficoInforme.porcentaje === null ? '—' : `${resumenGraficoInforme.porcentaje}%`}</text>
+                        <text x="50" y="60" textAnchor="middle" fontSize="7" fill="#6B7280">EFECTIVIDAD</text>
+                      </svg>
+                      <div className="space-y-2 text-xs">
+                        <p><span className="pdf-leyenda-amarilla inline-block mr-2 h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: '#F2C230' }} />Efectivas: <strong>{resumenGraficoInforme.efectivas}</strong></p>
+                        <p><span className="pdf-leyenda-negra inline-block mr-2 h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: '#27272A' }} />No efectivas: <strong>{resumenGraficoInforme.noEfectivas}</strong></p>
+                        <p><span className="pdf-leyenda-gris inline-block mr-2 h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: '#D1D5DB' }} />Pendientes/neutras: <strong>{resumenGraficoInforme.pendientes}</strong></p>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-[10px]" style={{ color: '#6B7280' }}>El porcentaje excluye acciones pendientes y neutras.</p>
+                  </div>
+
+                  <div className="pdf-grafico-card rounded-xl border p-4" style={{ borderColor: BORDE, backgroundColor: '#FFFFFF' }}>
+                    <p className="text-xs font-black uppercase tracking-wide" style={{ color: '#4B5563' }}>Acciones más registradas</p>
+                    <div className="mt-3 space-y-3">
+                      {accionesGraficoInforme.length ? accionesGraficoInforme.map(([nombre, datos]) => {
+                        const maximo = Math.max(...accionesGraficoInforme.map(([, d]) => d.total), 1)
+                        return <div key={nombre}>
+                          <div className="mb-1 flex items-center justify-between gap-2 text-xs"><span className="min-w-0 truncate font-semibold">{nombre}</span><strong>{datos.total}</strong></div>
+                          <div className="pdf-barra-fondo h-2.5 overflow-hidden rounded-full" style={{ backgroundColor: '#E5E7EB' }}><div className="pdf-barra-amarilla" style={{ width: `${(datos.total / maximo) * 100}%`, height: '100%', backgroundColor: '#F2C230', borderRadius: '999px' }} /></div>
+                        </div>
+                      }) : <p className="text-xs" style={{ color: '#6B7280' }}>Sin acciones registradas.</p>}
+                    </div>
+                  </div>
+
+                  <div className="pdf-grafico-card rounded-xl border p-4" style={{ borderColor: BORDE, backgroundColor: '#FFFFFF' }}>
+                    <p className="text-xs font-black uppercase tracking-wide" style={{ color: '#4B5563' }}>Jugadoras · volumen de acciones</p>
+                    <div className="mt-3 space-y-3">
+                      {jugadorasInforme.slice(0, 5).length ? jugadorasInforme.slice(0, 5).map((j) => {
+                        const maximo = Math.max(...jugadorasInforme.slice(0, 5).map((item) => item.total), 1)
+                        return <div key={j.id}>
+                          <div className="mb-1 flex items-center justify-between gap-2 text-xs"><span className="min-w-0 truncate font-semibold">{j.nombre}</span><strong>{j.total}</strong></div>
+                          <div className="pdf-barra-fondo h-2.5 overflow-hidden rounded-full" style={{ backgroundColor: '#E5E7EB' }}><div className="pdf-barra-negra" style={{ width: `${(j.total / maximo) * 100}%`, height: '100%', backgroundColor: '#27272A', borderRadius: '999px' }} /></div>
+                        </div>
+                      }) : <p className="text-xs" style={{ color: '#6B7280' }}>Sin acciones asignadas a jugadoras.</p>}
+                    </div>
+                    <p className="mt-2 text-[10px]" style={{ color: '#6B7280' }}>Muestra las cinco con más etiquetas; no representa por sí solo calidad ni minutos jugados.</p>
+                  </div>
+                </div>
+              </div>
+
               <div className="pdf-seccion mt-6">
                 <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: BORDE }}>1. Rendimiento colectivo · acciones por tipo</h3>
                 {estadisticasInforme.length ? (
@@ -3144,6 +3216,14 @@ export default function AnalisisSection() {
           #informe-imprimible .pdf-cabecera h2, #informe-imprimible .pdf-cabecera p:not(.pdf-acento) { color: #FFFFFF !important; }
           #informe-imprimible .pdf-meta > div { padding: 8pt !important; border: 1px solid #d1d5db !important; }
           #informe-imprimible .pdf-seccion { break-inside: auto; page-break-inside: auto; }
+          #informe-imprimible .pdf-graficos { break-inside: avoid; page-break-inside: avoid; }
+          #informe-imprimible .pdf-grafico-card { break-inside: avoid; page-break-inside: avoid; border: 1px solid #D1D5DB !important; }
+          #informe-imprimible .pdf-graficos .grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+          #informe-imprimible .pdf-graficos .pdf-grafico-card { padding: 8pt !important; }
+          #informe-imprimible .pdf-barra-fondo { background-color: #E5E7EB !important; }
+          #informe-imprimible .pdf-barra-amarilla, #informe-imprimible .pdf-leyenda-amarilla { background-color: #F2C230 !important; }
+          #informe-imprimible .pdf-barra-negra, #informe-imprimible .pdf-leyenda-negra { background-color: #27272A !important; }
+          #informe-imprimible .pdf-leyenda-gris { background-color: #D1D5DB !important; }
           #informe-imprimible .pdf-seccion.rounded-xl { background: #FFF9E6 !important; border: 1px solid #E7D9A5 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           #informe-imprimible .pdf-seccion.rounded-xl * { color: #171717 !important; }
           #informe-imprimible h2, #informe-imprimible h3 { break-after: avoid; page-break-after: avoid; }
