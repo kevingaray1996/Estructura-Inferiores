@@ -205,6 +205,91 @@ function obtenerCoordenadas(posicion) {
   }
 }
 
+function zonaDesdeCoordenadas(x, y) {
+  const columna = x < 33.333 ? 'izquierda' : x < 66.666 ? 'centro' : 'derecha'
+  const fila = y < 33.333 ? 'Ataque' : y < 66.666 ? 'Medio' : 'Defensa'
+  return `${fila} ${columna}`
+}
+
+function coordenadasEvento(evento) {
+  const x = Number(evento?.coordenada_x)
+  const y = Number(evento?.coordenada_y)
+
+  if (Number.isFinite(x) && Number.isFinite(y)) {
+    return { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)), exacta: true }
+  }
+
+  // Los eventos antiguos se muestran en el centro aproximado de su zona,
+  // sin modificar ni sobrescribir sus datos históricos.
+  const indice = ZONAS.indexOf(evento?.zona)
+  if (indice < 0) return null
+  const fila = Math.floor(indice / 3)
+  const columna = indice % 3
+  return { x: [17, 50, 83][columna], y: [80, 50, 20][fila], exacta: false }
+}
+
+function colorTipo(tipo) {
+  if (['Gol', 'Remate', 'Centro'].includes(tipo)) return '#F2C230'
+  if (['Pase correcto', 'Recuperación', 'Atajada', 'Falta recibida'].includes(tipo)) return '#4ADE80'
+  if (['Pérdida', 'Pase incorrecto', 'Falta cometida'].includes(tipo)) return '#F87171'
+  return '#60A5FA'
+}
+
+function CanchaInteractiva({ eventos = [], coordenadas, interactiva = false, onSelect, onEventClick }) {
+  function manejarClick(e) {
+    if (!interactiva || !onSelect) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100))
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100))
+    onSelect({ x: Number(x.toFixed(1)), y: Number(y.toFixed(1)) })
+  }
+
+  return (
+    <div className="w-full overflow-hidden rounded-xl border" style={{ borderColor: '#78917D', backgroundColor: '#176344' }}>
+      <svg
+        viewBox="0 0 100 64"
+        role={interactiva ? 'button' : 'img'}
+        aria-label={interactiva ? 'Cancha interactiva. Seleccioná la ubicación de la acción.' : 'Cancha con ubicaciones de acciones registradas.'}
+        onClick={interactiva ? manejarClick : undefined}
+        className={interactiva ? 'block w-full cursor-crosshair' : 'block w-full'}
+        style={{ touchAction: 'manipulation' }}
+      >
+        <rect x="1" y="1" width="98" height="62" rx="0.5" fill="#176344" stroke="#E5F0E7" strokeWidth="0.7" />
+        <line x1="50" y1="1" x2="50" y2="63" stroke="#E5F0E7" strokeWidth="0.55" />
+        <circle cx="50" cy="32" r="9.2" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
+        <circle cx="50" cy="32" r="0.7" fill="#E5F0E7" />
+        <rect x="1" y="17" width="16" height="30" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
+        <rect x="1" y="24" width="5.5" height="16" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
+        <rect x="83" y="17" width="16" height="30" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
+        <rect x="93.5" y="24" width="5.5" height="16" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
+        <path d="M17 25 A7 7 0 0 1 17 39 M83 25 A7 7 0 0 0 83 39" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
+        {eventos.map((evento) => {
+          const punto = coordenadasEvento(evento)
+          if (!punto) return null
+          const cx = punto.x
+          const cy = punto.y * 0.64
+          return (
+            <g
+              key={evento.id}
+              onClick={onEventClick ? (e) => { e.stopPropagation(); onEventClick(evento) } : undefined}
+              style={{ cursor: onEventClick ? 'pointer' : 'default' }}
+            >
+              <circle cx={cx} cy={cy} r={punto.exacta ? 1.65 : 1.35} fill={colorTipo(evento.tipo)} stroke="#10251B" strokeWidth="0.35" opacity={punto.exacta ? 1 : 0.65} />
+              {punto.exacta && <circle cx={cx} cy={cy} r="2.35" fill="none" stroke={colorTipo(evento.tipo)} strokeWidth="0.3" />}
+            </g>
+          )
+        })}
+        {coordenadas && (
+          <g pointerEvents="none">
+            <circle cx={coordenadas.x} cy={coordenadas.y * 0.64} r="2.2" fill="#F2C230" stroke="#FFFFFF" strokeWidth="0.7" />
+            <path d={`M ${coordenadas.x - 3} ${coordenadas.y * 0.64} L ${coordenadas.x + 3} ${coordenadas.y * 0.64} M ${coordenadas.x} ${coordenadas.y * 0.64 - 3} L ${coordenadas.x} ${coordenadas.y * 0.64 + 3}`} stroke="#FFFFFF" strokeWidth="0.55" />
+          </g>
+        )}
+      </svg>
+    </div>
+  )
+}
+
 let youtubeApiPromise = null
 
 function cargarYouTubeAPI() {
@@ -276,6 +361,7 @@ export default function AnalisisSection() {
   const [jugadorId, setJugadorId] = useState('')
   const [segundo, setSegundo] = useState('0')
   const [zona, setZona] = useState('Medio centro')
+  const [coordenadasAccion, setCoordenadasAccion] = useState(null)
   const [resultado, setResultado] = useState('Exitoso')
   const [observaciones, setObservaciones] = useState('')
 
@@ -303,6 +389,8 @@ export default function AnalisisSection() {
     zona: '',
     resultado: '',
     observaciones: '',
+    coordenada_x: null,
+    coordenada_y: null,
   })
 
   const iframeRef = useRef(null)
@@ -783,6 +871,22 @@ export default function AnalisisSection() {
     [eventosPartido],
   )
 
+  const resumenEfectividad = useMemo(() => {
+    const exitosas = eventosPartido.filter((e) => ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length
+    const fallidas = eventosPartido.filter((e) => ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length
+    const evaluadas = exitosas + fallidas
+    const pendientes = eventosPartido.filter((e) => !e.resultado).length
+    const conUbicacionExacta = eventosPartido.filter((e) => Number.isFinite(Number(e.coordenada_x)) && Number.isFinite(Number(e.coordenada_y)) && e.coordenada_x !== null && e.coordenada_y !== null).length
+    return {
+      exitosas,
+      fallidas,
+      evaluadas,
+      pendientes,
+      porcentaje: evaluadas ? Math.round((exitosas / evaluadas) * 100) : 0,
+      conUbicacionExacta,
+    }
+  }, [eventosPartido])
+
   const partidosDisponibles = useMemo(
     () => [...partidosCalendario].sort((a, b) =>
       (b.fecha || '').localeCompare(a.fecha || ''),
@@ -925,6 +1029,8 @@ export default function AnalisisSection() {
       zona: evento.zona || '',
       resultado: evento.resultado || '',
       observaciones: evento.observaciones || '',
+      coordenada_x: evento.coordenada_x ?? null,
+      coordenada_y: evento.coordenada_y ?? null,
     })
 
     setMostrarEdicionEvento(true)
@@ -957,6 +1063,8 @@ export default function AnalisisSection() {
           zona: edicionEvento.zona || null,
           resultado: edicionEvento.resultado || null,
           observaciones: edicionEvento.observaciones.trim() || null,
+          coordenada_x: edicionEvento.coordenada_x,
+          coordenada_y: edicionEvento.coordenada_y,
         })
         .eq('id', editandoEventoId)
         .select()
@@ -1193,6 +1301,8 @@ export default function AnalisisSection() {
           zona: zona || null,
           resultado: resultado || null,
           observaciones: observaciones.trim() || null,
+          coordenada_x: coordenadasAccion?.x ?? null,
+          coordenada_y: coordenadasAccion?.y ?? null,
         })
         .select()
         .single()
@@ -1207,6 +1317,7 @@ export default function AnalisisSection() {
 
       setMensaje('Acción registrada correctamente.')
       setObservaciones('')
+      setCoordenadasAccion(null)
     } catch (e) {
       console.error('Error al registrar acción:', e)
       setError(e.message || 'No se pudo registrar la acción.')
@@ -1414,6 +1525,7 @@ export default function AnalisisSection() {
           {partidoActual && (
             <div className="text-right">
               <p className="text-xs" style={{ color: SECUNDARIO }}>
+
                 PARTIDO ACTIVO
               </p>
               <p className="font-bold">{partidoActual.rival}</p>
@@ -1432,7 +1544,6 @@ export default function AnalisisSection() {
               const encuentro =
                 partido.partido_calendario ||
                 partidosCalendario.find(
-
                   (p) => p.id === partido.partido_calendario_id,
                 )
 
@@ -2063,6 +2174,27 @@ export default function AnalisisSection() {
                             </select>
                           </Campo>
 
+                          <div className="space-y-2">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <label className="text-sm font-medium" style={{ color: TEXTO }}>Ubicación exacta en cancha (opcional)</label>
+                              <span className="text-xs" style={{ color: SECUNDARIO }}>
+                                {coordenadasAccion ? `X ${coordenadasAccion.x}% · Y ${coordenadasAccion.y}%` : 'Tocá la cancha para ubicar la acción'}
+                              </span>
+                            </div>
+                            <CanchaInteractiva
+                              interactiva
+                              coordenadas={coordenadasAccion}
+                              onSelect={(punto) => {
+                                setCoordenadasAccion(punto)
+                                setZona(zonaDesdeCoordenadas(punto.x, punto.y))
+                              }}
+                            />
+                            <div className="flex justify-between gap-2">
+                              <p className="text-xs" style={{ color: SECUNDARIO }}>La ubicación se guarda junto con la acción.</p>
+                              {coordenadasAccion && <button type="button" className="text-xs font-bold" style={{ color: AMARILLO }} onClick={() => setCoordenadasAccion(null)}>Quitar ubicación</button>}
+                            </div>
+                          </div>
+
                           <Campo label="Observaciones">
                             <textarea
                               className={inputClass}
@@ -2297,6 +2429,32 @@ export default function AnalisisSection() {
                           placeholder="Detalle..."
                         />
                       </Campo>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <label className="text-sm font-medium" style={{ color: TEXTO }}>Ubicación exacta en cancha</label>
+                        <span className="text-xs" style={{ color: SECUNDARIO }}>
+                          {edicionEvento.coordenada_x != null && edicionEvento.coordenada_y != null
+                            ? `X ${edicionEvento.coordenada_x}% · Y ${edicionEvento.coordenada_y}%`
+                            : 'Sin ubicación exacta'}
+                        </span>
+                      </div>
+                      <CanchaInteractiva
+                        interactiva
+                        coordenadas={edicionEvento.coordenada_x != null && edicionEvento.coordenada_y != null
+                          ? { x: Number(edicionEvento.coordenada_x), y: Number(edicionEvento.coordenada_y) }
+                          : null}
+                        onSelect={(punto) => setEdicionEvento((a) => ({
+                          ...a,
+                          coordenada_x: punto.x,
+                          coordenada_y: punto.y,
+                          zona: zonaDesdeCoordenadas(punto.x, punto.y),
+                        }))}
+                      />
+                      {(edicionEvento.coordenada_x != null || edicionEvento.coordenada_y != null) && (
+                        <button type="button" className="text-xs font-bold" style={{ color: AMARILLO }} onClick={() => setEdicionEvento((a) => ({ ...a, coordenada_x: null, coordenada_y: null }))}>Quitar ubicación exacta</button>
+                      )}
                     </div>
 
                     <div className="flex flex-wrap gap-2">
@@ -2561,16 +2719,13 @@ export default function AnalisisSection() {
                 {datosEncuentro(partidoActual)}
               </p>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 {[
                   ['Acciones totales', eventosPartido.length],
-                  ['Jugadoras registradas', new Set(
-                    eventosPartido.map((e) => e.jugador_id).filter(Boolean),
-                  ).size],
-                  ['Zonas utilizadas', new Set(
-                    eventosPartido.map((e) => e.zona).filter(Boolean),
-                  ).size],
-                  ['Resultados pendientes', eventosPartido.filter((e) => !e.resultado).length],
+                  ['Efectivas', resumenEfectividad.exitosas],
+                  ['No efectivas', resumenEfectividad.fallidas],
+                  ['Efectividad', resumenEfectividad.evaluadas ? `${resumenEfectividad.porcentaje}%` : '—'],
+                  ['Pendientes', resumenEfectividad.pendientes],
                 ].map(([label, valor]) => (
                   <div
                     key={label}
@@ -2620,6 +2775,9 @@ export default function AnalisisSection() {
                           <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
                             Exitosos: {datos.exitosos} · Fallidos: {datos.fallidos}
                             {' · '}Pendientes: {datos.pendientes}
+                            {' · '}Efectividad: {datos.exitosos + datos.fallidos > 0
+                              ? `${Math.round((datos.exitosos / (datos.exitosos + datos.fallidos)) * 100)}%`
+                              : 'Sin evaluar'}
                           </p>
                         </div>
                       )
@@ -2641,6 +2799,9 @@ export default function AnalisisSection() {
                         <tr style={{ color: SECUNDARIO }}>
                           <th className="p-2">Jugadora</th>
                           <th className="p-2">Acciones</th>
+                          <th className="p-2">Efectivas</th>
+                          <th className="p-2">No efectivas</th>
+                          <th className="p-2">Efectividad</th>
                           <th className="p-2">Detalle</th>
                         </tr>
                       </thead>
@@ -2653,6 +2814,13 @@ export default function AnalisisSection() {
                           >
                             <td className="p-2 font-bold">{j.nombre}</td>
                             <td className="p-2">{j.total}</td>
+                            <td className="p-2 text-emerald-300">{eventosPartido.filter((e) => e.jugador_id === j.id && ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length}</td>
+                            <td className="p-2 text-red-300">{eventosPartido.filter((e) => e.jugador_id === j.id && ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length}</td>
+                            <td className="p-2">{(() => {
+                              const positivas = eventosPartido.filter((e) => e.jugador_id === j.id && ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length
+                              const negativas = eventosPartido.filter((e) => e.jugador_id === j.id && ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length
+                              return positivas + negativas ? `${Math.round((positivas / (positivas + negativas)) * 100)}%` : '—'
+                            })()}</td>
                             <td className="p-2">
                               {Object.entries(j.tipos)
                                 .map(([t, n]) => `${t}: ${n}`)
@@ -2670,45 +2838,63 @@ export default function AnalisisSection() {
 
           {seccion === 'mapa' && (
             <Panel>
-              <h2 className="text-xl font-black">Mapa de zonas</h2>
-              <p className="mb-5 mt-2 text-sm" style={{ color: SECUNDARIO }}>
-                Distribución de las acciones registradas por zona. Representa
-                nueve sectores de la cancha, no un seguimiento GPS.
-              </p>
-
-              <div
-                className="mx-auto grid max-w-3xl grid-cols-3 overflow-hidden rounded-lg border"
-                style={{ borderColor: '#A3B0A0' }}
-              >
-                {estadisticasZonas.map((z) => {
-                  const maximo = Math.max(
-                    1,
-                    ...estadisticasZonas.map((item) => item.total),
-                  )
-                  const intensidad = z.total / maximo
-
-                  return (
-                    <div
-                      key={z.nombre}
-                      className="flex min-h-28 flex-col items-center justify-center border p-3 text-center"
-                      style={{
-                        borderColor: '#A3B0A0',
-                        backgroundColor: z.total === 0
-                          ? '#233A36'
-                          : `rgba(242, 194, 48, ${0.18 + intensidad * 0.72})`,
-                        color: z.total === 0 ? TEXTO : '#171717',
-                      }}
-                    >
-                      <span className="text-xs font-semibold">{z.nombre}</span>
-                      <span className="mt-2 text-2xl font-black">{z.total}</span>
-                      <span className="text-xs">acciones</span>
-                    </div>
-                  )
-                })}
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-black">Mapa de acciones en cancha</h2>
+                  <p className="mt-2 max-w-2xl text-sm" style={{ color: SECUNDARIO }}>
+                    Cada punto representa una acción. Los puntos brillantes tienen ubicación exacta; los puntos más apagados son acciones antiguas ubicadas de forma aproximada según su zona.
+                  </p>
+                </div>
+                <div className="rounded-lg border px-3 py-2 text-sm" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
+                  <span className="font-bold" style={{ color: AMARILLO }}>{resumenEfectividad.conUbicacionExacta}</span>
+                  <span style={{ color: SECUNDARIO }}> / {eventosPartido.length} con ubicación exacta</span>
+                </div>
               </div>
 
+              <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(250px,1fr)]">
+                <div>
+                  <CanchaInteractiva
+                    eventos={eventosPartido}
+                    onEventClick={(evento) => {
+                      setSeccion('video')
+                      setSegundoPendiente({ partidoId: evento.partido_id, segundo: Number(evento.segundo) || 0 })
+                    }}
+                  />
+                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs" style={{ color: SECUNDARIO }}>
+                    {[
+                      ['#F2C230', 'Ataque / remate / gol'],
+                      ['#4ADE80', 'Acción positiva'],
+                      ['#F87171', 'Pérdida / acción negativa'],
+                      ['#60A5FA', 'Duelo / otras acciones'],
+                    ].map(([color, label]) => (
+                      <span key={label} className="flex items-center gap-2">
+                        <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />{label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="font-bold">Resumen de ubicación</h3>
+                  {estadisticasZonas.map((z) => {
+                    const maximo = Math.max(1, ...estadisticasZonas.map((item) => item.total))
+                    const porcentaje = eventosPartido.length ? Math.round((z.total / eventosPartido.length) * 100) : 0
+                    return (
+                      <div key={z.nombre} className="rounded-lg border p-3" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
+                        <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                          <span>{z.nombre}</span>
+                          <span className="font-bold" style={{ color: AMARILLO }}>{z.total} <span className="font-normal" style={{ color: SECUNDARIO }}>({porcentaje}%)</span></span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full" style={{ backgroundColor: '#303B4D' }}>
+                          <div className="h-full rounded-full" style={{ width: `${(z.total / maximo) * 100}%`, backgroundColor: AMARILLO }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
               <p className="mt-4 text-xs" style={{ color: SECUNDARIO }}>
-                Mantené el mismo criterio al etiquetar las zonas en todos los partidos.
+                Las acciones registradas antes de agregar coordenadas se conservan y se muestran aproximadamente por zona. Podés editar una acción para asignarle un punto exacto.
               </p>
             </Panel>
           )}
