@@ -1558,7 +1558,6 @@ export default function AnalisisSection() {
           <div className="min-w-0 flex-1">
             <h2 className="text-lg font-bold">Biblioteca de análisis</h2>
             <p className="mt-1 text-sm" style={{ color: SECUNDARIO }}>
-
               {partidos.length} análisis · {partidosCalendario.length} partidos
               en el calendario
             </p>
@@ -1579,6 +1578,7 @@ export default function AnalisisSection() {
             Todavía no hay análisis guardados. Usá «Nuevo análisis» para elegir
             un partido del calendario.
           </p>
+
         ) : (
           <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
             {partidos.map((partido) => {
@@ -2974,14 +2974,14 @@ export default function AnalisisSection() {
 
           {seccion === 'informe' && (
             <Panel id="informe-imprimible" className="pdf-informe">
-              <div className="pdf-cabecera flex flex-wrap items-start justify-between gap-4 border-b pb-5" style={{ borderColor: BORDE }}>
-                <div>
+              <div className="pdf-cabecera flex flex-wrap items-start justify-between gap-4 rounded-xl border-b-4 p-5" style={{ backgroundColor: '#171717', borderColor: AMARILLO, color: '#FFFFFF' }}>
+                <div className="min-w-0">
                   <p className="pdf-acento text-xs font-black uppercase tracking-[0.22em]" style={{ color: AMARILLO }}>
-                    COMUNICACIONES · PERFORMANCE
+                    COMUNICACIONES · VIDEOANÁLISIS
                   </p>
-                  <h2 className="mt-2 text-2xl font-black tracking-tight">Informe técnico de partido</h2>
-                  <p className="mt-2 text-base font-semibold">{partidoActual.rival || 'Rival sin especificar'}</p>
-                  <p className="mt-1 text-sm" style={{ color: SECUNDARIO }}>{datosEncuentro(partidoActual)}</p>
+                  <h2 className="mt-2 text-2xl font-black tracking-tight" style={{ color: '#FFFFFF' }}>Informe técnico de partido</h2>
+                  <p className="mt-2 text-lg font-bold" style={{ color: '#FFFFFF' }}>{partidoActual.rival || 'Rival sin especificar'}</p>
+                  <p className="mt-1 text-sm" style={{ color: '#E5E5E5' }}>{datosEncuentro(partidoActual)}</p>
                 </div>
                 <Boton onClick={imprimirInforme} className="no-imprimir">
                   Imprimir / Guardar PDF
@@ -3007,17 +3007,39 @@ export default function AnalisisSection() {
                 </div>
               </div>
 
+              <div className="pdf-seccion mt-6 rounded-xl border p-4" style={{ borderColor: BORDE, backgroundColor: '#FFF9E6' }}>
+                <h3 className="mb-3 text-base font-black" style={{ color: '#171717' }}>Resumen ejecutivo</h3>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="border-l-4 pl-3" style={{ borderColor: AMARILLO }}>
+                    <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#6B7280' }}>Acción más registrada</p>
+                    <p className="mt-1 text-sm font-black" style={{ color: '#171717' }}>{estadisticasInforme[0]?.[0] || 'Sin acciones registradas'}</p>
+                    {estadisticasInforme[0] && <p className="text-xs" style={{ color: '#4B5563' }}>{estadisticasInforme[0][1].total} registro(s)</p>}
+                  </div>
+                  <div className="border-l-4 pl-3" style={{ borderColor: AMARILLO }}>
+                    <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#6B7280' }}>Jugadora con más acciones</p>
+                    <p className="mt-1 text-sm font-black" style={{ color: '#171717' }}>{jugadorasInforme[0]?.nombre || 'Sin acciones asignadas'}</p>
+                    {jugadorasInforme[0] && <p className="text-xs" style={{ color: '#4B5563' }}>{jugadorasInforme[0].total} acción(es) etiquetada(s)</p>}
+                  </div>
+                  <div className="border-l-4 pl-3" style={{ borderColor: AMARILLO }}>
+                    <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#6B7280' }}>Efectividad evaluable</p>
+                    <p className="mt-1 text-sm font-black" style={{ color: '#171717' }}>{(() => { const ef = eventosPartido.filter((e) => ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length; const noEf = eventosPartido.filter((e) => ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length; return ef + noEf ? `${Math.round((ef / (ef + noEf)) * 100)}%` : 'Sin datos evaluables' })()}</p>
+                    <p className="text-xs" style={{ color: '#4B5563' }}>Solo resultados evaluables</p>
+                  </div>
+                </div>
+                <p className="mt-3 text-xs" style={{ color: '#4B5563' }}>Este resumen destaca volumen de registro; no sustituye la interpretación táctica del analista.</p>
+              </div>
+
               <div className="pdf-seccion mt-6">
                 <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: BORDE }}>1. Rendimiento colectivo · acciones por tipo</h3>
                 {estadisticasInforme.length ? (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm pdf-tabla">
                       <thead><tr style={{ color: SECUNDARIO }}>
-                        <th className="p-2">Acción</th><th className="p-2 text-right">Total</th><th className="p-2 text-right">Efectivas</th><th className="p-2 text-right">No efectivas</th><th className="p-2 text-right">Efectividad</th>
+                        <th className="p-2">Acción</th><th className="p-2 text-right">Total</th><th className="p-2 text-right">Efectivas</th><th className="p-2 text-right">No efectivas</th><th className="p-2 text-right">Pendientes</th><th className="p-2 text-right">Efectividad</th>
                       </tr></thead>
                       <tbody>{estadisticasInforme.map(([nombre, datos]) => (
                         <tr key={nombre} className="border-t" style={{ borderColor: BORDE }}>
-                          <td className="p-2 font-semibold">{nombre}</td><td className="p-2 text-right">{datos.total}</td><td className="p-2 text-right">{datos.efectivas}</td><td className="p-2 text-right">{datos.noEfectivas}</td>
+                          <td className="p-2 font-semibold">{nombre}</td><td className="p-2 text-right">{datos.total}</td><td className="p-2 text-right">{datos.efectivas}</td><td className="p-2 text-right">{datos.noEfectivas}</td><td className="p-2 text-right">{datos.pendientes}</td>
                           <td className="p-2 text-right">{datos.efectivas + datos.noEfectivas ? `${Math.round(datos.efectivas / (datos.efectivas + datos.noEfectivas) * 100)}%` : '—'}</td>
                         </tr>
                       ))}</tbody>
@@ -3045,9 +3067,24 @@ export default function AnalisisSection() {
                 ) : <p className="text-sm">No hay acciones asignadas a jugadoras en este partido.</p>}
               </div>
 
+              <div className="pdf-seccion mt-6">
+                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: BORDE }}>3. Distribución de acciones por zona</h3>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {[...estadisticasZonas].sort((a, b) => b.total - a.total).map((zona) => {
+                    const porcentaje = eventosPartido.length ? Math.round((zona.total / eventosPartido.length) * 100) : 0
+                    return <div key={zona.nombre} className="rounded-lg border p-3" style={{ borderColor: BORDE }}>
+                      <div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold">{zona.nombre}</span><span className="text-sm font-black">{zona.total}</span></div>
+                      <div className="mt-2 h-2 overflow-hidden rounded-full" style={{ backgroundColor: '#E5E7EB' }}><div className="h-full rounded-full" style={{ width: `${porcentaje}%`, backgroundColor: AMARILLO }} /></div>
+                      <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>{porcentaje}% de las acciones registradas</p>
+                    </div>
+                  })}
+                </div>
+                <p className="mt-2 text-xs" style={{ color: SECUNDARIO }}>La distribución se calcula con la zona guardada en cada etiqueta; las acciones sin zona quedan fuera de este desglose.</p>
+              </div>
+
               {partidoActual.notas && (
                 <div className="pdf-seccion mt-6">
-                  <h3 className="mb-2 text-base font-black">3. Observaciones generales</h3>
+                  <h3 className="mb-2 text-base font-black">4. Observaciones generales</h3>
                   <p className="whitespace-pre-wrap text-sm">{partidoActual.notas}</p>
                 </div>
               )}
@@ -3101,11 +3138,14 @@ export default function AnalisisSection() {
             font-size: 10pt !important;
           }
           #informe-imprimible * { color: #171717 !important; background-color: transparent !important; border-color: #d1d5db !important; box-shadow: none !important; }
-          #informe-imprimible .pdf-acento { color: #8a6500 !important; }
+          #informe-imprimible .pdf-acento { color: #F2C230 !important; }
           #informe-imprimible .no-imprimir, #informe-imprimible button { display: none !important; }
-          #informe-imprimible .pdf-cabecera { padding-bottom: 10pt !important; }
-          #informe-imprimible .pdf-meta > div { padding: 8pt !important; }
+          #informe-imprimible .pdf-cabecera { padding: 14pt !important; margin-bottom: 10pt !important; background: #171717 !important; border-bottom: 4pt solid #F2C230 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          #informe-imprimible .pdf-cabecera h2, #informe-imprimible .pdf-cabecera p:not(.pdf-acento) { color: #FFFFFF !important; }
+          #informe-imprimible .pdf-meta > div { padding: 8pt !important; border: 1px solid #d1d5db !important; }
           #informe-imprimible .pdf-seccion { break-inside: auto; page-break-inside: auto; }
+          #informe-imprimible .pdf-seccion.rounded-xl { background: #FFF9E6 !important; border: 1px solid #E7D9A5 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          #informe-imprimible .pdf-seccion.rounded-xl * { color: #171717 !important; }
           #informe-imprimible h2, #informe-imprimible h3 { break-after: avoid; page-break-after: avoid; }
           #informe-imprimible table { width: 100% !important; border-collapse: collapse !important; font-size: 8.5pt !important; }
           #informe-imprimible thead { display: table-header-group; }
