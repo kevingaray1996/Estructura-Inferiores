@@ -1,7 +1,9 @@
+
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
+import TablaDataFem from './TablaDataFem'
 
 const ESCUDO_CLUB_URL =
   'https://qvjviyjkxyngiggoeqlj.supabase.co/storage/v1/object/public/Biblioteca/escudos/Escudo%20simplificado.png'
@@ -1302,6 +1304,9 @@ function InicioSection({ perfil, onCambiarSeccion }) {
             </Tarjeta>
           </section>
         )}
+
+        {/* Tabla DataFem - Primera B Femenina */}
+        <TablaDataFem />
 
         {/* Plantel: lesionados y nutrición */}
         <section className="inicio-panel mb-8">
