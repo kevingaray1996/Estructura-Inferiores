@@ -1209,6 +1209,10 @@ export default function AnalisisSection() {
     const partidoCalendario = partido?.partido_calendario || partidosCalendario.find((p) => p.id === partido?.partido_calendario_id)
     const urlVideo = partido?.video_url || videoCalendario(partidoCalendario)
 
+    // Invalidar el estado del reproductor anterior antes de cambiar de partido/sección.
+    // El salto queda pendiente hasta que YouTube confirme que el reproductor del partido correcto está listo.
+    setVideoListo(false)
+    setVideoListoPartidoId(null)
     setPartidoId(evento.partido_id)
     setPeriodoActual(Number(evento.periodo) === 2 ? 2 : 1)
     setSeccion('video')
@@ -1836,12 +1840,12 @@ export default function AnalisisSection() {
           </div>
 
           {partidoActual && (
+
             <div className="text-right">
               <p className="text-xs" style={{ color: SECUNDARIO }}>
                 PARTIDO ACTIVO
               </p>
               <p className="font-bold">{partidoActual.rival}</p>
-
           </div>
           )}
         </div>
@@ -3010,13 +3014,7 @@ export default function AnalisisSection() {
                           <td className="p-3">
                             <button type="button" disabled={!youtubeEmbed(partido?.video_url || videoCalendario(partido?.partido_calendario))} className="rounded-md px-3 py-2 font-mono font-black disabled:cursor-not-allowed disabled:opacity-40" style={{ backgroundColor: '#303B4D', color: AMARILLO }}
                               title={youtubeEmbed(partido?.video_url || videoCalendario(partido?.partido_calendario)) ? 'Abrir el video en este momento' : 'Este partido no tiene un video válido'}
-                              onClick={() => {
-                                setError('')
-                                setVideoListo(false)
-                                setSegundoPendiente({ partidoId: ev.partido_id, segundo: Math.max(0, Number(ev.segundo) || 0) })
-                                setPartidoId(ev.partido_id)
-                                setSeccion('video')
-                              }}>
+                              onClick={() => abrirEventoEnVideo(ev)}>
                               {formatearTiempo(ev.segundo)}
                             </button>
                           </td>
