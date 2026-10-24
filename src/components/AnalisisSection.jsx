@@ -1,5 +1,6 @@
 
 
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
@@ -207,9 +208,11 @@ function obtenerCoordenadas(posicion) {
 }
 
 function zonaDesdeCoordenadas(x, y) {
-  const columna = x < 33.333 ? 'izquierda' : x < 66.666 ? 'centro' : 'derecha'
-  const fila = y < 33.333 ? 'Ataque' : y < 66.666 ? 'Medio' : 'Defensa'
-  return `${fila} ${columna}`
+  // Cancha horizontal: X representa la progresión defensa → medio → ataque.
+  // Y representa los carriles izquierda → centro → derecha.
+  const sector = x < 33.333 ? 'Defensa' : x < 66.666 ? 'Medio' : 'Ataque'
+  const carril = y < 33.333 ? 'izquierda' : y < 66.666 ? 'centro' : 'derecha'
+  return `${sector} ${carril}`
 }
 
 function coordenadasEvento(evento) {
@@ -226,9 +229,9 @@ function coordenadasEvento(evento) {
   // sin modificar ni sobrescribir sus datos históricos.
   const indice = ZONAS.indexOf(evento?.zona)
   if (indice < 0) return null
-  const fila = Math.floor(indice / 3)
-  const columna = indice % 3
-  return { x: [17, 50, 83][columna], y: [80, 50, 20][fila], exacta: false }
+  const sector = Math.floor(indice / 3) // Defensa, Medio, Ataque
+  const carril = indice % 3 // izquierda, centro, derecha
+  return { x: [17, 50, 83][sector], y: [17, 50, 83][carril], exacta: false }
 }
 
 function tieneCoordenadasExactas(evento) {
@@ -274,6 +277,10 @@ function CanchaInteractiva({ eventos = [], coordenadas, interactiva = false, onS
         <line x1="50" y1="1" x2="50" y2="63" stroke="#E5F0E7" strokeWidth="0.55" />
         <circle cx="50" cy="32" r="9.2" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
         <circle cx="50" cy="32" r="0.7" fill="#E5F0E7" />
+        <line x1="33.333" y1="1" x2="33.333" y2="63" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.8" />
+        <line x1="66.666" y1="1" x2="66.666" y2="63" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.8" />
+        <line x1="1" y1="21.333" x2="99" y2="21.333" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.8" />
+        <line x1="1" y1="42.666" x2="99" y2="42.666" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.8" />
         <rect x="1" y="17" width="16" height="30" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
         <rect x="1" y="24" width="5.5" height="16" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
         <rect x="83" y="17" width="16" height="30" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
@@ -303,16 +310,15 @@ function CanchaInteractiva({ eventos = [], coordenadas, interactiva = false, onS
           </g>
         )}
       </svg>
+      <div className="flex justify-between px-2 pb-2 text-[10px] font-black tracking-wide" style={{ color: '#E5F0E7' }}>
+        <span>DEFENSA</span><span>MEDIO</span><span>ATAQUE</span>
+      </div>
     </div>
   )
 }
 
 function CanchaInformePDF({ eventos = [] }) {
-  const zonasVista = [
-    'Ataque izquierda', 'Ataque centro', 'Ataque derecha',
-    'Medio izquierda', 'Medio centro', 'Medio derecha',
-    'Defensa izquierda', 'Defensa centro', 'Defensa derecha',
-  ]
+  const zonasVista = ZONAS
 
   const conteos = zonasVista.reduce((acc, nombre) => {
     acc[nombre] = 0
@@ -320,59 +326,51 @@ function CanchaInformePDF({ eventos = [] }) {
   }, {})
 
   eventos.forEach((evento) => {
-    const x = Number(evento?.coordenada_x)
-    const y = Number(evento?.coordenada_y)
-    const tieneCoordenadas = evento?.coordenada_x !== null && evento?.coordenada_x !== undefined && evento?.coordenada_x !== '' &&
-      evento?.coordenada_y !== null && evento?.coordenada_y !== undefined && evento?.coordenada_y !== ''
-    const zona = ZONAS.includes(evento?.zona)
-      ? evento.zona
-      : tieneCoordenadas && Number.isFinite(x) && Number.isFinite(y)
-        ? zonaDesdeCoordenadas(x, y)
-        : null
+    const zona = zonaEfectivaEvento(evento)
     if (zona && Object.prototype.hasOwnProperty.call(conteos, zona)) conteos[zona] += 1
   })
 
   const totalConZona = Object.values(conteos).reduce((total, cantidad) => total + cantidad, 0)
   const maximoZona = Math.max(1, ...Object.values(conteos))
-  const ubicacionesExactas = eventos.filter((evento) => {
-    const x = Number(evento?.coordenada_x)
-    const y = Number(evento?.coordenada_y)
-    return evento?.coordenada_x !== null && evento?.coordenada_x !== undefined &&
-      evento?.coordenada_y !== null && evento?.coordenada_y !== undefined &&
-      Number.isFinite(x) && Number.isFinite(y)
-  }).length
+  const ubicacionesExactas = eventos.filter(tieneCoordenadasExactas).length
 
   return (
-    <div className="pdf-zonas-layout grid grid-cols-1 gap-4 md:grid-cols-[minmax(180px,0.85fr)_minmax(0,1.4fr)]">
+    <div className="pdf-zonas-layout grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
       <div className="pdf-zonas-cancha rounded-xl border p-3" style={{ borderColor: '#D1D5DB', backgroundColor: '#F8FAFC' }}>
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="text-xs font-black uppercase tracking-wide" style={{ color: '#374151' }}>Mapa de acciones</p>
-          <span className="text-[10px] font-semibold" style={{ color: '#6B7280' }}>Vista vertical</span>
+          <span className="text-[10px] font-semibold" style={{ color: '#6B7280' }}>Vista horizontal · Defensa → Ataque</span>
         </div>
-        <svg viewBox="0 0 64 100" role="img" aria-label="Cancha con las ubicaciones de las acciones del partido" className="mx-auto block w-full" style={{ maxHeight: '350px' }}>
-          <rect x="1" y="1" width="62" height="98" rx="1" fill="#176344" stroke="#F4F7F4" strokeWidth="0.8" />
-          <line x1="1" y1="50" x2="63" y2="50" stroke="#E5F0E7" strokeWidth="0.55" />
-          <circle cx="32" cy="50" r="7" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
-          <circle cx="32" cy="50" r="0.7" fill="#E5F0E7" />
-          <rect x="15" y="1" width="34" height="12" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
-          <rect x="22" y="1" width="20" height="5" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
-          <rect x="15" y="87" width="34" height="12" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
-          <rect x="22" y="94" width="20" height="5" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
-          <line x1="21.67" y1="1" x2="21.67" y2="99" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.7" />
-          <line x1="42.33" y1="1" x2="42.33" y2="99" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.7" />
-          <line x1="1" y1="33.33" x2="63" y2="33.33" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.7" />
-          <line x1="1" y1="66.66" x2="63" y2="66.66" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.7" />
+        <svg viewBox="0 0 100 64" role="img" aria-label="Cancha horizontal: defensa a la izquierda, medio en el centro y ataque a la derecha" className="mx-auto block w-full" style={{ maxHeight: '350px' }}>
+          <rect x="1" y="1" width="98" height="62" rx="0.5" fill="#176344" stroke="#F4F7F4" strokeWidth="0.8" />
+          <line x1="50" y1="1" x2="50" y2="63" stroke="#E5F0E7" strokeWidth="0.55" />
+          <circle cx="50" cy="32" r="9.2" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
+          <circle cx="50" cy="32" r="0.7" fill="#E5F0E7" />
+          <rect x="1" y="17" width="16" height="30" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
+          <rect x="1" y="24" width="5.5" height="16" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
+          <rect x="83" y="17" width="16" height="30" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
+          <rect x="93.5" y="24" width="5.5" height="16" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
+          <path d="M17 25 A7 7 0 0 1 17 39 M83 25 A7 7 0 0 0 83 39" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
+          <line x1="33.333" y1="1" x2="33.333" y2="63" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.8" />
+          <line x1="66.666" y1="1" x2="66.666" y2="63" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.8" />
+          <line x1="1" y1="21.333" x2="99" y2="21.333" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.8" />
+          <line x1="1" y1="42.666" x2="99" y2="42.666" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.8" />
           {eventos.map((evento) => {
             const punto = coordenadasEvento(evento)
             if (!punto) return null
+            const cx = Math.max(1.5, Math.min(98.5, punto.x))
+            const cy = Math.max(1.5, Math.min(62.5, punto.y * 0.64))
             return (
               <g key={evento.id}>
-                <circle cx={Math.max(1.5, Math.min(62.5, punto.x * 0.62 + 1))} cy={Math.max(1.5, Math.min(98.5, punto.y * 0.98 + 1))} r={punto.exacta ? 1.25 : 1.05} fill={colorTipo(evento.tipo)} stroke="#FFFFFF" strokeWidth="0.35" opacity={punto.exacta ? 1 : 0.68} />
-                {punto.exacta && <circle cx={Math.max(1.5, Math.min(62.5, punto.x * 0.62 + 1))} cy={Math.max(1.5, Math.min(98.5, punto.y * 0.98 + 1))} r="1.8" fill="none" stroke="#FFFFFF" strokeWidth="0.3" />}
+                <circle cx={cx} cy={cy} r={punto.exacta ? 1.65 : 1.35} fill={colorTipo(evento.tipo)} stroke="#FFFFFF" strokeWidth="0.35" opacity={punto.exacta ? 1 : 0.68} />
+                {punto.exacta && <circle cx={cx} cy={cy} r="2.35" fill="none" stroke="#FFFFFF" strokeWidth="0.3" />}
               </g>
             )
           })}
         </svg>
+        <div className="mt-2 flex justify-between text-[10px] font-bold" style={{ color: '#374151' }}>
+          <span>DEFENSA</span><span>MEDIO</span><span>ATAQUE</span>
+        </div>
         <div className="mt-3 flex flex-wrap gap-x-3 gap-y-2 text-[10px]" style={{ color: '#4B5563' }}>
           <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: '#F2C230', border: '1px solid #9CA3AF' }} />Ataque / remate / gol</span>
           <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: '#4ADE80', border: '1px solid #9CA3AF' }} />Acción positiva</span>
@@ -1797,6 +1795,7 @@ export default function AnalisisSection() {
               </p>
               <p className="font-bold">{partidoActual.rival}</p>
           </div>
+
           )}
         </div>
 
