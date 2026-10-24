@@ -213,10 +213,12 @@ function zonaDesdeCoordenadas(x, y) {
 }
 
 function coordenadasEvento(evento) {
+  const tieneX = evento?.coordenada_x !== null && evento?.coordenada_x !== undefined && evento?.coordenada_x !== ''
+  const tieneY = evento?.coordenada_y !== null && evento?.coordenada_y !== undefined && evento?.coordenada_y !== ''
   const x = Number(evento?.coordenada_x)
   const y = Number(evento?.coordenada_y)
 
-  if (Number.isFinite(x) && Number.isFinite(y)) {
+  if (tieneX && tieneY && Number.isFinite(x) && Number.isFinite(y)) {
     return { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)), exacta: true }
   }
 
@@ -287,6 +289,124 @@ function CanchaInteractiva({ eventos = [], coordenadas, interactiva = false, onS
           </g>
         )}
       </svg>
+    </div>
+  )
+}
+
+function CanchaInformePDF({ eventos = [] }) {
+  const zonasVista = [
+    'Ataque izquierda', 'Ataque centro', 'Ataque derecha',
+    'Medio izquierda', 'Medio centro', 'Medio derecha',
+    'Defensa izquierda', 'Defensa centro', 'Defensa derecha',
+  ]
+
+  const conteos = zonasVista.reduce((acc, nombre) => {
+    acc[nombre] = 0
+    return acc
+  }, {})
+
+  eventos.forEach((evento) => {
+    const x = Number(evento?.coordenada_x)
+    const y = Number(evento?.coordenada_y)
+    const tieneCoordenadas = evento?.coordenada_x !== null && evento?.coordenada_x !== undefined && evento?.coordenada_x !== '' &&
+      evento?.coordenada_y !== null && evento?.coordenada_y !== undefined && evento?.coordenada_y !== ''
+    const zona = ZONAS.includes(evento?.zona)
+      ? evento.zona
+      : tieneCoordenadas && Number.isFinite(x) && Number.isFinite(y)
+        ? zonaDesdeCoordenadas(x, y)
+        : null
+    if (zona && Object.prototype.hasOwnProperty.call(conteos, zona)) conteos[zona] += 1
+  })
+
+  const totalConZona = Object.values(conteos).reduce((total, cantidad) => total + cantidad, 0)
+  const maximoZona = Math.max(1, ...Object.values(conteos))
+  const ubicacionesExactas = eventos.filter((evento) => {
+    const x = Number(evento?.coordenada_x)
+    const y = Number(evento?.coordenada_y)
+    return evento?.coordenada_x !== null && evento?.coordenada_x !== undefined &&
+      evento?.coordenada_y !== null && evento?.coordenada_y !== undefined &&
+      Number.isFinite(x) && Number.isFinite(y)
+  }).length
+
+  return (
+    <div className="pdf-zonas-layout grid grid-cols-1 gap-4 md:grid-cols-[minmax(180px,0.85fr)_minmax(0,1.4fr)]">
+      <div className="pdf-zonas-cancha rounded-xl border p-3" style={{ borderColor: '#D1D5DB', backgroundColor: '#F8FAFC' }}>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-xs font-black uppercase tracking-wide" style={{ color: '#374151' }}>Mapa de acciones</p>
+          <span className="text-[10px] font-semibold" style={{ color: '#6B7280' }}>Vista vertical</span>
+        </div>
+        <svg viewBox="0 0 64 100" role="img" aria-label="Cancha con las ubicaciones de las acciones del partido" className="mx-auto block w-full" style={{ maxHeight: '350px' }}>
+          <rect x="1" y="1" width="62" height="98" rx="1" fill="#176344" stroke="#F4F7F4" strokeWidth="0.8" />
+          <line x1="1" y1="50" x2="63" y2="50" stroke="#E5F0E7" strokeWidth="0.55" />
+          <circle cx="32" cy="50" r="7" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
+          <circle cx="32" cy="50" r="0.7" fill="#E5F0E7" />
+          <rect x="15" y="1" width="34" height="12" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
+          <rect x="22" y="1" width="20" height="5" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
+          <rect x="15" y="87" width="34" height="12" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
+          <rect x="22" y="94" width="20" height="5" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
+          <line x1="21.67" y1="1" x2="21.67" y2="99" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.7" />
+          <line x1="42.33" y1="1" x2="42.33" y2="99" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.7" />
+          <line x1="1" y1="33.33" x2="63" y2="33.33" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.7" />
+          <line x1="1" y1="66.66" x2="63" y2="66.66" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.7" />
+          {eventos.map((evento) => {
+            const punto = coordenadasEvento(evento)
+            if (!punto) return null
+            return (
+              <g key={evento.id}>
+                <circle cx={Math.max(1.5, Math.min(62.5, punto.x * 0.62 + 1))} cy={Math.max(1.5, Math.min(98.5, punto.y * 0.98 + 1))} r={punto.exacta ? 1.25 : 1.05} fill={colorTipo(evento.tipo)} stroke="#FFFFFF" strokeWidth="0.35" opacity={punto.exacta ? 1 : 0.68} />
+                {punto.exacta && <circle cx={Math.max(1.5, Math.min(62.5, punto.x * 0.62 + 1))} cy={Math.max(1.5, Math.min(98.5, punto.y * 0.98 + 1))} r="1.8" fill="none" stroke="#FFFFFF" strokeWidth="0.3" />}
+              </g>
+            )
+          })}
+        </svg>
+        <div className="mt-3 flex flex-wrap gap-x-3 gap-y-2 text-[10px]" style={{ color: '#4B5563' }}>
+          <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: '#F2C230', border: '1px solid #9CA3AF' }} />Ataque / remate / gol</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: '#4ADE80', border: '1px solid #9CA3AF' }} />Acción positiva</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: '#F87171', border: '1px solid #9CA3AF' }} />Pérdida / negativa</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: '#60A5FA', border: '1px solid #9CA3AF' }} />Duelo / otra acción</span>
+        </div>
+        <p className="mt-2 text-[10px]" style={{ color: '#6B7280' }}>Puntos con aro blanco: ubicación exacta. Puntos sin aro: ubicación aproximada a partir de la zona histórica.</p>
+      </div>
+
+      <div className="pdf-zonas-resumen">
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="text-xs font-black uppercase tracking-wide" style={{ color: '#374151' }}>Distribución por sector</p>
+            <p className="mt-1 text-xs" style={{ color: '#6B7280' }}>{totalConZona} acciones con zona identificada</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xl font-black" style={{ color: '#171717' }}>{eventos.length}</p>
+            <p className="text-[10px] uppercase tracking-wide" style={{ color: '#6B7280' }}>acciones totales</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {zonasVista.map((nombre) => {
+            const cantidad = conteos[nombre]
+            const porcentaje = totalConZona ? Math.round((cantidad / totalConZona) * 100) : 0
+            return (
+              <div key={nombre} className="pdf-zona-celda rounded-lg border p-2" style={{ borderColor: '#D1D5DB', backgroundColor: '#FFFFFF' }}>
+                <p className="text-[10px] font-semibold leading-tight" style={{ color: '#4B5563' }}>{nombre}</p>
+                <p className="mt-1 text-xl font-black" style={{ color: '#171717' }}>{cantidad}</p>
+                <div className="pdf-zona-barra-fondo mt-1.5 h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: '#E5E7EB' }}>
+                  <div className="pdf-zona-barra h-full rounded-full" style={{ width: `${(cantidad / maximoZona) * 100}%`, backgroundColor: '#F2C230' }} />
+                </div>
+                <p className="mt-1 text-[10px]" style={{ color: '#6B7280' }}>{porcentaje}% de las ubicadas</p>
+              </div>
+            )
+          })}
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="rounded-lg border p-3" style={{ borderColor: '#D1D5DB', backgroundColor: '#FFFBEB' }}>
+            <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: '#6B7280' }}>Ubicación exacta</p>
+            <p className="mt-1 text-lg font-black" style={{ color: '#171717' }}>{ubicacionesExactas}</p>
+          </div>
+          <div className="rounded-lg border p-3" style={{ borderColor: '#D1D5DB', backgroundColor: '#F3F4F6' }}>
+            <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: '#6B7280' }}>Sin zona / ubicación</p>
+            <p className="mt-1 text-lg font-black" style={{ color: '#171717' }}>{Math.max(0, eventos.length - totalConZona)}</p>
+          </div>
+        </div>
+        <p className="mt-3 text-[10px] leading-relaxed" style={{ color: '#6B7280' }}>Los porcentajes se calculan sobre las acciones que tienen una zona identificada. Las acciones antiguas se representan en el centro aproximado de su zona y no se modifican los registros guardados.</p>
+      </div>
     </div>
   )
 }
@@ -1618,7 +1738,6 @@ export default function AnalisisSection() {
                     setFiltroTipo('todos')
                     setFiltroResultado('todos')
                     setSeccion('video')
-
                     setTipoRapido('')
                     setError('')
                     setMensaje('')
@@ -3139,19 +3258,9 @@ export default function AnalisisSection() {
                 ) : <p className="text-sm">No hay acciones asignadas a jugadoras en este partido.</p>}
               </div>
 
-              <div className="pdf-seccion mt-6">
+              <div className="pdf-seccion pdf-distribucion-zonas mt-6">
                 <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: BORDE }}>3. Distribución de acciones por zona</h3>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                  {[...estadisticasZonas].sort((a, b) => b.total - a.total).map((zona) => {
-                    const porcentaje = eventosPartido.length ? Math.round((zona.total / eventosPartido.length) * 100) : 0
-                    return <div key={zona.nombre} className="rounded-lg border p-3" style={{ borderColor: BORDE }}>
-                      <div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold">{zona.nombre}</span><span className="text-sm font-black">{zona.total}</span></div>
-                      <div className="mt-2 h-2 overflow-hidden rounded-full" style={{ backgroundColor: '#E5E7EB' }}><div className="h-full rounded-full" style={{ width: `${porcentaje}%`, backgroundColor: AMARILLO }} /></div>
-                      <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>{porcentaje}% de las acciones registradas</p>
-                    </div>
-                  })}
-                </div>
-                <p className="mt-2 text-xs" style={{ color: SECUNDARIO }}>La distribución se calcula con la zona guardada en cada etiqueta; las acciones sin zona quedan fuera de este desglose.</p>
+                <CanchaInformePDF eventos={eventosPartido} />
               </div>
 
               {partidoActual.notas && (
@@ -3218,6 +3327,18 @@ export default function AnalisisSection() {
           #informe-imprimible .pdf-seccion { break-inside: auto; page-break-inside: auto; }
           #informe-imprimible .pdf-graficos { break-inside: avoid; page-break-inside: avoid; }
           #informe-imprimible .pdf-grafico-card { break-inside: avoid; page-break-inside: avoid; border: 1px solid #D1D5DB !important; }
+          #informe-imprimible .pdf-distribucion-zonas { break-inside: auto; page-break-inside: auto; }
+          #informe-imprimible .pdf-zonas-cancha, #informe-imprimible .pdf-zona-celda { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          #informe-imprimible .pdf-zonas-cancha { break-inside: avoid; page-break-inside: avoid; }
+          #informe-imprimible .pdf-zonas-cancha { background-color: #F8FAFC !important; }
+          #informe-imprimible .pdf-zona-celda { background-color: #FFFFFF !important; }
+          #informe-imprimible .pdf-zonas-resumen > .grid > div:first-child { background-color: #FFFBEB !important; }
+          #informe-imprimible .pdf-zonas-resumen > .grid > div:last-child { background-color: #F3F4F6 !important; }
+          #informe-imprimible .pdf-zona-barra-fondo { background-color: #E5E7EB !important; }
+          #informe-imprimible .pdf-zona-barra { background-color: #F2C230 !important; }
+          #informe-imprimible .pdf-zonas-layout { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.4fr) !important; gap: 10pt !important; }
+          #informe-imprimible .pdf-zona-celda { padding: 5pt !important; break-inside: avoid; page-break-inside: avoid; }
+          #informe-imprimible .pdf-zona-celda p { overflow-wrap: anywhere; }
           #informe-imprimible .pdf-graficos .grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
           #informe-imprimible .pdf-graficos .pdf-grafico-card { padding: 8pt !important; }
           #informe-imprimible .pdf-barra-fondo { background-color: #E5E7EB !important; }
@@ -3238,3 +3359,4 @@ export default function AnalisisSection() {
     </div>
   )
 }
+
