@@ -539,6 +539,7 @@ export default function AnalisisSection() {
   const playerRef = useRef(null)
 
   const [videoListo, setVideoListo] = useState(false)
+  const [videoListoPartidoId, setVideoListoPartidoId] = useState(null)
   const [videoReproduciendo, setVideoReproduciendo] = useState(false)
   const [tiempoVideo, setTiempoVideo] = useState(0)
   const [segundoIr, setSegundoIr] = useState('0')
@@ -782,6 +783,7 @@ export default function AnalisisSection() {
     let cancelado = false
 
     setVideoListo(false)
+    setVideoListoPartidoId(null)
     setVideoReproduciendo(false)
     setTiempoVideo(0)
 
@@ -794,6 +796,7 @@ export default function AnalisisSection() {
             onReady: (evento) => {
               if (cancelado) return
               setVideoListo(true)
+              setVideoListoPartidoId(partidoId)
               setTiempoVideo(
                 Math.floor(evento.target.getCurrentTime() || 0),
               )
@@ -837,6 +840,7 @@ export default function AnalisisSection() {
       }
 
       setVideoListo(false)
+      setVideoListoPartidoId(null)
       setVideoReproduciendo(false)
     }
   }, [videoActual, partidoId, seccion])
@@ -863,23 +867,25 @@ export default function AnalisisSection() {
     if (
       !segundoPendiente ||
       !videoListo ||
+      videoListoPartidoId !== segundoPendiente.partidoId ||
       !playerRef.current ||
       seccion !== 'video' ||
       partidoId !== segundoPendiente.partidoId
     ) return
 
     try {
+      // Evita consumir el salto mientras todavía está montado el reproductor anterior.
       playerRef.current.seekTo(segundoPendiente.segundo, true)
       playerRef.current.playVideo()
       setTiempoVideo(segundoPendiente.segundo)
       setSegundoIr(String(segundoPendiente.segundo))
+      setError('')
       setSegundoPendiente(null)
     } catch (e) {
-      console.error('No se pudo abrir la acción desde el explorador:', e)
-      setError('No se pudo saltar a ese momento del video.')
-      setSegundoPendiente(null)
+      console.error('No se pudo abrir la acción desde el mapa/explorador:', e)
+      setError('No se pudo saltar a ese momento del video. Probá tocar la acción nuevamente cuando el video termine de cargar.')
     }
-  }, [segundoPendiente, videoListo, seccion, partidoId])
+  }, [segundoPendiente, videoListo, videoListoPartidoId, seccion, partidoId])
 
   const eventosPartido = useMemo(
     () => eventos.filter((e) => e.partido_id === partidoId),
@@ -1792,10 +1798,10 @@ export default function AnalisisSection() {
             <div className="text-right">
               <p className="text-xs" style={{ color: SECUNDARIO }}>
                 PARTIDO ACTIVO
+
               </p>
               <p className="font-bold">{partidoActual.rival}</p>
           </div>
-
           )}
         </div>
 
