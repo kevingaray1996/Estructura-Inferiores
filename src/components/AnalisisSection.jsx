@@ -207,6 +207,10 @@ function obtenerCoordenadas(posicion) {
   }
 }
 
+function direccionOpuesta(direccion) {
+  return direccion === 'derecha' ? 'izquierda' : 'derecha'
+}
+
 function zonaDesdeCoordenadas(x, y) {
   // Cancha horizontal: X representa la progresión defensa → medio → ataque.
   // Y representa los carriles izquierda → centro → derecha.
@@ -317,7 +321,7 @@ function CanchaInteractiva({ eventos = [], coordenadas, interactiva = false, onS
   )
 }
 
-function CanchaInformePDF({ eventos = [] }) {
+function CanchaInformePDF({ eventos = [], titulo = 'Mapa de acciones', direccionReal = 'derecha' }) {
   const zonasVista = ZONAS
 
   const conteos = zonasVista.reduce((acc, nombre) => {
@@ -338,8 +342,8 @@ function CanchaInformePDF({ eventos = [] }) {
     <div className="pdf-zonas-layout grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
       <div className="pdf-zonas-cancha rounded-xl border p-3" style={{ borderColor: '#D1D5DB', backgroundColor: '#F8FAFC' }}>
         <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="text-xs font-black uppercase tracking-wide" style={{ color: '#374151' }}>Mapa de acciones</p>
-          <span className="text-[10px] font-semibold" style={{ color: '#6B7280' }}>Vista horizontal · Defensa → Ataque</span>
+          <p className="text-xs font-black uppercase tracking-wide" style={{ color: '#374151' }}>{titulo}</p>
+          <span className="text-[10px] font-semibold" style={{ color: '#6B7280' }}>Ataque real: {direccionReal === 'derecha' ? '→ derecha' : '← izquierda'}</span>
         </div>
         <svg viewBox="0 0 100 64" role="img" aria-label="Cancha horizontal: defensa a la izquierda, medio en el centro y ataque a la derecha" className="mx-auto block w-full" style={{ maxHeight: '350px' }}>
           <rect x="1" y="1" width="98" height="62" rx="0.5" fill="#176344" stroke="#F4F7F4" strokeWidth="0.8" />
@@ -484,6 +488,8 @@ export default function AnalisisSection() {
 
   const [partidoId, setPartidoId] = useState('')
   const [partidoCalendarioId, setPartidoCalendarioId] = useState('')
+  const [periodoActual, setPeriodoActual] = useState(1)
+  const [filtroMapaPeriodo, setFiltroMapaPeriodo] = useState('todos')
 
   const [alcanceEstadisticas, setAlcanceEstadisticas] = useState('partido')
 
@@ -528,6 +534,7 @@ export default function AnalisisSection() {
     tipo: 'Pase correcto',
     jugador_id: '',
     segundo: '0',
+    periodo: 1,
     zona: '',
     resultado: '',
     observaciones: '',
@@ -545,6 +552,8 @@ export default function AnalisisSection() {
   const [segundoIr, setSegundoIr] = useState('0')
 
   const partidoActual = partidos.find((p) => p.id === partidoId)
+  const direccionPrimerTiempo = partidoActual?.direccion_primer_tiempo === 'izquierda' ? 'izquierda' : 'derecha'
+  const direccionAtaqueActual = periodoActual === 1 ? direccionPrimerTiempo : direccionOpuesta(direccionPrimerTiempo)
 
   const partidoCalendarioActual =
     partidoActual?.partido_calendario ||
@@ -900,7 +909,8 @@ export default function AnalisisSection() {
       (filtroMapaTipo === 'todos' || evento.tipo === filtroMapaTipo) &&
       (filtroMapaResultado === 'todos' ||
         (filtroMapaResultado === 'Pendiente' ? !evento.resultado : evento.resultado === filtroMapaResultado)) &&
-      (filtroMapaZona === 'todos' || zonaEfectivaEvento(evento) === filtroMapaZona)
+      (filtroMapaZona === 'todos' || zonaEfectivaEvento(evento) === filtroMapaZona) &&
+      (filtroMapaPeriodo === 'todos' || Number(evento.periodo || 1) === Number(filtroMapaPeriodo))
     )
   }, [
     alcanceMapa,
@@ -911,6 +921,7 @@ export default function AnalisisSection() {
     filtroMapaTipo,
     filtroMapaResultado,
     filtroMapaZona,
+    filtroMapaPeriodo,
   ])
 
   const eventosMapaOrdenados = useMemo(() => [...eventosMapa].sort((a, b) => {
@@ -1168,12 +1179,38 @@ export default function AnalisisSection() {
     })
   }, [citaciones, busquedaJugadora])
 
+  async function cambiarDireccionAtaque(direccionElegida) {
+    if (!esAdmin || !partidoActual || guardando) return
+    const direccion = direccionElegida === 'izquierda' ? 'izquierda' : 'derecha'
+    const nuevaDireccionPrimerTiempo = periodoActual === 1 ? direccion : direccionOpuesta(direccion)
+    setGuardando(true)
+    setError('')
+    setMensaje('')
+    try {
+      const { data, error: updateError } = await supabase
+        .from('analisis_partidos')
+        .update({ direccion_primer_tiempo: nuevaDireccionPrimerTiempo })
+        .eq('id', partidoActual.id)
+        .select()
+        .single()
+      if (updateError) throw updateError
+      setPartidos((actuales) => actuales.map((p) => p.id === data.id ? { ...p, ...data } : p))
+      setMensaje(`Dirección del ataque actualizada. ${periodoActual === 1 ? 'El segundo tiempo queda en el sentido contrario.' : 'El primer tiempo queda en el sentido contrario.'}`)
+    } catch (e) {
+      console.error('No se pudo guardar la dirección del ataque:', e)
+      setError(e.message || 'No se pudo guardar la dirección del ataque.')
+    } finally {
+      setGuardando(false)
+    }
+  }
+
   function abrirEventoEnVideo(evento) {
     const partido = partidos.find((p) => p.id === evento.partido_id)
     const partidoCalendario = partido?.partido_calendario || partidosCalendario.find((p) => p.id === partido?.partido_calendario_id)
     const urlVideo = partido?.video_url || videoCalendario(partidoCalendario)
 
     setPartidoId(evento.partido_id)
+    setPeriodoActual(Number(evento.periodo) === 2 ? 2 : 1)
     setSeccion('video')
     setError('')
 
@@ -1257,6 +1294,7 @@ export default function AnalisisSection() {
           partido_id: partidoId,
           jugador_id: idJugadora,
           segundo: tiempo,
+          periodo: periodoActual,
           tipo: tipoSeleccionado,
           zona: null,
           resultado: null,
@@ -1298,6 +1336,7 @@ export default function AnalisisSection() {
       tipo: evento.tipo || TIPOS[0],
       jugador_id: evento.jugador_id || '',
       segundo: String(evento.segundo ?? 0),
+      periodo: Number(evento.periodo) === 2 ? 2 : 1,
       zona: evento.zona || '',
       resultado: evento.resultado || '',
       observaciones: evento.observaciones || '',
@@ -1332,6 +1371,7 @@ export default function AnalisisSection() {
           tipo: edicionEvento.tipo,
           jugador_id: edicionEvento.jugador_id || null,
           segundo: tiempo,
+          periodo: Number(edicionEvento.periodo) === 2 ? 2 : 1,
           zona: edicionEvento.zona || null,
           resultado: edicionEvento.resultado || null,
           observaciones: edicionEvento.observaciones.trim() || null,
@@ -1569,6 +1609,7 @@ export default function AnalisisSection() {
           partido_id: partidoId,
           jugador_id: jugadorId || null,
           segundo: tiempo,
+          periodo: periodoActual,
           tipo,
           zona: zona || null,
           resultado: resultado || null,
@@ -1798,9 +1839,9 @@ export default function AnalisisSection() {
             <div className="text-right">
               <p className="text-xs" style={{ color: SECUNDARIO }}>
                 PARTIDO ACTIVO
-
               </p>
               <p className="font-bold">{partidoActual.rival}</p>
+
           </div>
           )}
         </div>
@@ -1827,6 +1868,7 @@ export default function AnalisisSection() {
                   type="button"
                   onClick={() => {
                     setPartidoId(partido.id)
+                    setPeriodoActual(1)
                     setFiltroJugador('todos')
                     setFiltroTipo('todos')
                     setFiltroResultado('todos')
@@ -1935,6 +1977,24 @@ export default function AnalisisSection() {
                     >
                       {videoListo ? '● Video conectado' : '○ Conectando video'}
                     </div>
+                  </div>
+
+                  <div className="mb-4 grid gap-3 rounded-xl border p-3 sm:grid-cols-2" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
+                    <Campo label="Tiempo del partido que estás analizando">
+                      <select className={inputClass} style={inputStyle} value={periodoActual} onChange={(e) => setPeriodoActual(Number(e.target.value))}>
+                        <option value={1}>Primer tiempo</option>
+                        <option value={2}>Segundo tiempo</option>
+                      </select>
+                    </Campo>
+                    <Campo label={`Dirección real del ataque en ${periodoActual === 1 ? 'el primer' : 'el segundo'} tiempo`}>
+                      <select className={inputClass} style={inputStyle} value={direccionAtaqueActual} onChange={(e) => cambiarDireccionAtaque(e.target.value)} disabled={!esAdmin || guardando}>
+                        <option value="derecha">Atacamos hacia la derecha →</option>
+                        <option value="izquierda">Atacamos hacia la izquierda ←</option>
+                      </select>
+                    </Campo>
+                    <p className="text-xs sm:col-span-2" style={{ color: SECUNDARIO }}>
+                      La cancha del análisis se mantiene normalizada (defensa a la izquierda y ataque a la derecha) para comparar ambos tiempos. La dirección real se guarda por partido y el otro tiempo queda automáticamente en sentido contrario.
+                    </p>
                   </div>
 
                   {videoActual ? (
@@ -2655,6 +2715,13 @@ export default function AnalisisSection() {
                         />
                       </Campo>
 
+                      <Campo label="Tiempo del partido">
+                        <select className={inputClass} style={inputStyle} value={edicionEvento.periodo} onChange={(e) => setEdicionEvento((a) => ({ ...a, periodo: Number(e.target.value) }))}>
+                          <option value={1}>Primer tiempo</option>
+                          <option value={2}>Segundo tiempo</option>
+                        </select>
+                      </Campo>
+
                       <Campo label="Zona">
                         <select
                           className={inputClass}
@@ -3199,6 +3266,13 @@ export default function AnalisisSection() {
                     </select>
                   </Campo>
                 )}
+                <Campo label="Tiempo">
+                  <select className={inputClass} style={inputStyle} value={filtroMapaPeriodo} onChange={(e) => setFiltroMapaPeriodo(e.target.value)}>
+                    <option value="todos">Todos los tiempos</option>
+                    <option value="1">Primer tiempo</option>
+                    <option value="2">Segundo tiempo</option>
+                  </select>
+                </Campo>
                 <Campo label="Jugadora">
                   <select className={inputClass} style={inputStyle} value={filtroMapaJugadora} onChange={(e) => setFiltroMapaJugadora(e.target.value)}>
                     <option value="todos">Todas las jugadoras</option>
@@ -3239,6 +3313,7 @@ export default function AnalisisSection() {
                     setFiltroMapaTipo('todos')
                     setFiltroMapaResultado('todos')
                     setFiltroMapaZona('todos')
+                    setFiltroMapaPeriodo('todos')
                   }}
                 >
                   Limpiar filtros
@@ -3498,7 +3573,18 @@ export default function AnalisisSection() {
 
               <div className="pdf-seccion pdf-distribucion-zonas mt-6">
                 <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: BORDE }}>3. Distribución de acciones por zona</h3>
-                <CanchaInformePDF eventos={eventosPartido} />
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                  <CanchaInformePDF
+                    titulo="Primer tiempo · mapa de acciones"
+                    direccionReal={direccionPrimerTiempo}
+                    eventos={eventosPartido.filter((evento) => Number(evento.periodo || 1) === 1)}
+                  />
+                  <CanchaInformePDF
+                    titulo="Segundo tiempo · mapa de acciones"
+                    direccionReal={direccionOpuesta(direccionPrimerTiempo)}
+                    eventos={eventosPartido.filter((evento) => Number(evento.periodo || 1) === 2)}
+                  />
+                </div>
               </div>
 
               {partidoActual.notas && (
