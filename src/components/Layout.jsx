@@ -37,6 +37,7 @@ function seccionesParaRol(rol) {
       { id: 'seleccion', label: 'Selección' },
       { id: 'contratos', label: 'Contratos' },
       { id: 'pases', label: 'Pases' },
+      { id: 'informes', label: 'Informes automáticos' },
       { id: 'usuarios', label: 'Usuarios' },
       { id: 'evaluaciones', label: 'Evaluaciones' },
     ]
@@ -81,6 +82,7 @@ function seccionesParaRol(rol) {
     { id: 'pensiones', label: 'Pensión' },
     { id: 'seleccion', label: 'Selección' },
     { id: 'contratos', label: 'Contratos' },
+    { id: 'informes', label: 'Informes automáticos' },
     { id: 'evaluaciones', label: 'Evaluaciones' },
   ]
 }
