@@ -231,6 +231,19 @@ function coordenadasEvento(evento) {
   return { x: [17, 50, 83][columna], y: [80, 50, 20][fila], exacta: false }
 }
 
+function tieneCoordenadasExactas(evento) {
+  return evento?.coordenada_x !== null && evento?.coordenada_x !== undefined && evento?.coordenada_x !== '' &&
+    evento?.coordenada_y !== null && evento?.coordenada_y !== undefined && evento?.coordenada_y !== '' &&
+    Number.isFinite(Number(evento.coordenada_x)) && Number.isFinite(Number(evento.coordenada_y))
+}
+
+function zonaEfectivaEvento(evento) {
+  if (tieneCoordenadasExactas(evento)) {
+    return zonaDesdeCoordenadas(Number(evento.coordenada_x), Number(evento.coordenada_y))
+  }
+  return ZONAS.includes(evento?.zona) ? evento.zona : null
+}
+
 function colorTipo(tipo) {
   if (['Gol', 'Remate', 'Centro'].includes(tipo)) return '#F2C230'
   if (['Pase correcto', 'Recuperación', 'Atajada', 'Falta recibida'].includes(tipo)) return '#4ADE80'
@@ -277,6 +290,7 @@ function CanchaInteractiva({ eventos = [], coordenadas, interactiva = false, onS
               onClick={onEventClick ? (e) => { e.stopPropagation(); onEventClick(evento) } : undefined}
               style={{ cursor: onEventClick ? 'pointer' : 'default' }}
             >
+              <title>{`${evento.tipo} · ${formatearTiempo(evento.segundo)} · ${evento.resultado || 'Pendiente'} · ${zonaEfectivaEvento(evento) || 'Sin zona'}`}</title>
               <circle cx={cx} cy={cy} r={punto.exacta ? 1.65 : 1.35} fill={colorTipo(evento.tipo)} stroke="#10251B" strokeWidth="0.35" opacity={punto.exacta ? 1 : 0.65} />
               {punto.exacta && <circle cx={cx} cy={cy} r="2.35" fill="none" stroke={colorTipo(evento.tipo)} strokeWidth="0.3" />}
             </g>
@@ -500,6 +514,13 @@ export default function AnalisisSection() {
   const [filtroExploradorMinutoDesde, setFiltroExploradorMinutoDesde] = useState('')
   const [filtroExploradorMinutoHasta, setFiltroExploradorMinutoHasta] = useState('')
   const [segundoPendiente, setSegundoPendiente] = useState(null)
+
+  const [alcanceMapa, setAlcanceMapa] = useState('partido')
+  const [filtroMapaPartido, setFiltroMapaPartido] = useState('todos')
+  const [filtroMapaJugadora, setFiltroMapaJugadora] = useState('todos')
+  const [filtroMapaTipo, setFiltroMapaTipo] = useState('todos')
+  const [filtroMapaResultado, setFiltroMapaResultado] = useState('todos')
+  const [filtroMapaZona, setFiltroMapaZona] = useState('todos')
 
   const [tipoRapido, setTipoRapido] = useState('')
   const [busquedaJugadora, setBusquedaJugadora] = useState('')
@@ -867,6 +888,52 @@ export default function AnalisisSection() {
     [eventos, partidoId],
   )
 
+  const eventosMapa = useMemo(() => {
+    const base = alcanceMapa === 'acumulado' ? eventos : eventosPartido
+    return base.filter((evento) =>
+      (alcanceMapa !== 'acumulado' || filtroMapaPartido === 'todos' || evento.partido_id === filtroMapaPartido) &&
+      (filtroMapaJugadora === 'todos' || evento.jugador_id === filtroMapaJugadora) &&
+      (filtroMapaTipo === 'todos' || evento.tipo === filtroMapaTipo) &&
+      (filtroMapaResultado === 'todos' ||
+        (filtroMapaResultado === 'Pendiente' ? !evento.resultado : evento.resultado === filtroMapaResultado)) &&
+      (filtroMapaZona === 'todos' || zonaEfectivaEvento(evento) === filtroMapaZona)
+    )
+  }, [
+    alcanceMapa,
+    eventos,
+    eventosPartido,
+    filtroMapaPartido,
+    filtroMapaJugadora,
+    filtroMapaTipo,
+    filtroMapaResultado,
+    filtroMapaZona,
+  ])
+
+  const eventosMapaOrdenados = useMemo(() => [...eventosMapa].sort((a, b) => {
+    const partidoA = partidos.find((p) => p.id === a.partido_id)
+    const partidoB = partidos.find((p) => p.id === b.partido_id)
+    const fechaA = partidoA?.fecha || partidoA?.created_at || ''
+    const fechaB = partidoB?.fecha || partidoB?.created_at || ''
+    return fechaB.localeCompare(fechaA) || Number(a.segundo || 0) - Number(b.segundo || 0)
+  }), [eventosMapa, partidos])
+
+  const resumenMapa = useMemo(() => {
+    const conUbicacion = eventosMapa.filter((evento) => Boolean(coordenadasEvento(evento)))
+    const exactas = conUbicacion.filter(tieneCoordenadasExactas).length
+    const zonas = ZONAS.map((nombre) => ({
+      nombre,
+      total: eventosMapa.filter((evento) => zonaEfectivaEvento(evento) === nombre).length,
+    }))
+    return {
+      total: eventosMapa.length,
+      conUbicacion: conUbicacion.length,
+      exactas,
+      aproximadas: conUbicacion.length - exactas,
+      sinUbicacion: eventosMapa.length - conUbicacion.length,
+      zonas,
+    }
+  }, [eventosMapa])
+
   const eventosFiltrados = useMemo(
     () => eventosPartido.filter((e) =>
       (filtroJugador === 'todos' || e.jugador_id === filtroJugador) &&
@@ -1096,6 +1163,27 @@ export default function AnalisisSection() {
       return nombre.includes(busqueda) || dorsal.includes(busqueda)
     })
   }, [citaciones, busquedaJugadora])
+
+  function abrirEventoEnVideo(evento) {
+    const partido = partidos.find((p) => p.id === evento.partido_id)
+    const partidoCalendario = partido?.partido_calendario || partidosCalendario.find((p) => p.id === partido?.partido_calendario_id)
+    const urlVideo = partido?.video_url || videoCalendario(partidoCalendario)
+
+    setPartidoId(evento.partido_id)
+    setSeccion('video')
+    setError('')
+
+    if (!youtubeEmbed(urlVideo)) {
+      setSegundoPendiente(null)
+      setError('Este partido no tiene un video válido asociado. Podés revisar la etiqueta, pero no saltar al video hasta agregarlo.')
+      return
+    }
+
+    setSegundoPendiente({
+      partidoId: evento.partido_id,
+      segundo: Math.max(0, Number(evento.segundo) || 0),
+    })
+  }
 
   function irAlSegundo(valor) {
     const tiempo = Number(valor)
@@ -1708,7 +1796,7 @@ export default function AnalisisSection() {
                 PARTIDO ACTIVO
               </p>
               <p className="font-bold">{partidoActual.rival}</p>
-            </div>
+          </div>
           )}
         </div>
 
@@ -3051,29 +3139,116 @@ export default function AnalisisSection() {
             <Panel>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-xl font-black">Mapa de acciones en cancha</h2>
+                  <h2 className="text-xl font-black">Mapa táctico interactivo</h2>
                   <p className="mt-2 max-w-2xl text-sm" style={{ color: SECUNDARIO }}>
-                    Cada punto representa una acción. Los puntos brillantes tienen ubicación exacta; los puntos más apagados son acciones antiguas ubicadas de forma aproximada según su zona.
+                    Filtrá las acciones del partido o de todos los encuentros. Tocá un punto o una acción para abrir el video en el segundo registrado.
                   </p>
                 </div>
-                <div className="rounded-lg border px-3 py-2 text-sm" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
-                  <span className="font-bold" style={{ color: AMARILLO }}>{resumenEfectividad.conUbicacionExacta}</span>
-                  <span style={{ color: SECUNDARIO }}> / {eventosPartido.length} con ubicación exacta</span>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {[
+                    ['Acciones', resumenMapa.total],
+                    ['Con ubicación', resumenMapa.conUbicacion],
+                    ['Exactas', resumenMapa.exactas],
+                    ['Sin ubicación', resumenMapa.sinUbicacion],
+                  ].map(([label, valor]) => (
+                    <div key={label} className="rounded-lg border px-3 py-2" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
+                      <p className="text-[10px] uppercase tracking-wide" style={{ color: SECUNDARIO }}>{label}</p>
+                      <p className="text-lg font-black" style={{ color: label === 'Exactas' ? AMARILLO : TEXTO }}>{valor}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(250px,1fr)]">
-                <div>
-                  <CanchaInteractiva
-                    eventos={eventosPartido}
-                    onEventClick={(evento) => {
-                      setSeccion('video')
-                      setSegundoPendiente({ partidoId: evento.partido_id, segundo: Number(evento.segundo) || 0 })
+              <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Alcance del mapa">
+                {[
+                  ['partido', 'Partido seleccionado'],
+                  ['acumulado', 'Todos los partidos'],
+                ].map(([valor, etiqueta]) => (
+                  <button
+                    key={valor}
+                    type="button"
+                    onClick={() => setAlcanceMapa(valor)}
+                    className="rounded-lg border px-4 py-2 text-sm font-bold"
+                    style={{
+                      backgroundColor: alcanceMapa === valor ? AMARILLO : FONDO,
+                      color: alcanceMapa === valor ? '#171717' : TEXTO,
+                      borderColor: alcanceMapa === valor ? AMARILLO : BORDE,
                     }}
+                  >
+                    {etiqueta}
+                  </button>
+                ))}
+                <span className="self-center text-xs" style={{ color: SECUNDARIO }}>
+                  {alcanceMapa === 'partido' ? `Encuentro: ${partidoActual?.rival || 'seleccionado'}` : `${partidos.length} partidos disponibles`}
+                </span>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                {alcanceMapa === 'acumulado' && (
+                  <Campo label="Partido / rival">
+                    <select className={inputClass} style={inputStyle} value={filtroMapaPartido} onChange={(e) => setFiltroMapaPartido(e.target.value)}>
+                      <option value="todos">Todos los partidos</option>
+                      {partidos.map((partido) => (
+                        <option key={partido.id} value={partido.id}>{partido.rival || 'Rival sin nombre'} · {partido.fecha || 'Sin fecha'}</option>
+                      ))}
+                    </select>
+                  </Campo>
+                )}
+                <Campo label="Jugadora">
+                  <select className={inputClass} style={inputStyle} value={filtroMapaJugadora} onChange={(e) => setFiltroMapaJugadora(e.target.value)}>
+                    <option value="todos">Todas las jugadoras</option>
+                    {jugadoras.map((jugadora) => <option key={jugadora.id} value={jugadora.id}>{nombreJugadora(jugadora)}</option>)}
+                  </select>
+                </Campo>
+                <Campo label="Tipo de acción">
+                  <select className={inputClass} style={inputStyle} value={filtroMapaTipo} onChange={(e) => setFiltroMapaTipo(e.target.value)}>
+                    <option value="todos">Todos los tipos</option>
+                    {TIPOS.map((accion) => <option key={accion} value={accion}>{accion}</option>)}
+                  </select>
+                </Campo>
+                <Campo label="Resultado">
+                  <select className={inputClass} style={inputStyle} value={filtroMapaResultado} onChange={(e) => setFiltroMapaResultado(e.target.value)}>
+                    <option value="todos">Todos los resultados</option>
+                    <option value="Pendiente">Pendiente</option>
+                    {RESULTADOS.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </Campo>
+                <Campo label="Zona de cancha">
+                  <select className={inputClass} style={inputStyle} value={filtroMapaZona} onChange={(e) => setFiltroMapaZona(e.target.value)}>
+                    <option value="todos">Todas las zonas</option>
+                    {ZONAS.map((z) => <option key={z} value={z}>{z}</option>)}
+                  </select>
+                </Campo>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs" style={{ color: SECUNDARIO }}>
+                  {eventosMapa.length} acciones coinciden con los filtros · {resumenMapa.aproximadas} ubicación(es) aproximada(s)
+                </p>
+                <button
+                  type="button"
+                  className="rounded-lg border px-3 py-2 text-xs font-bold"
+                  style={{ borderColor: BORDE, color: TEXTO, backgroundColor: FONDO }}
+                  onClick={() => {
+                    setFiltroMapaPartido('todos')
+                    setFiltroMapaJugadora('todos')
+                    setFiltroMapaTipo('todos')
+                    setFiltroMapaResultado('todos')
+                    setFiltroMapaZona('todos')
+                  }}
+                >
+                  Limpiar filtros
+                </button>
+              </div>
+
+              <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
+                <div className="space-y-3">
+                  <CanchaInteractiva
+                    eventos={eventosMapa}
+                    onEventClick={abrirEventoEnVideo}
                   />
-                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs" style={{ color: SECUNDARIO }}>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs" style={{ color: SECUNDARIO }}>
                     {[
-                      ['#F2C230', 'Ataque / remate / gol'],
+                      ['#F2C230', 'Remate / centro / gol'],
                       ['#4ADE80', 'Acción positiva'],
                       ['#F87171', 'Pérdida / acción negativa'],
                       ['#60A5FA', 'Duelo / otras acciones'],
@@ -3082,31 +3257,89 @@ export default function AnalisisSection() {
                         <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />{label}
                       </span>
                     ))}
+                    <span className="flex items-center gap-2"><span className="inline-block h-2.5 w-2.5 rounded-full border-2" style={{ borderColor: '#FFFFFF', backgroundColor: '#64748B', opacity: 0.7 }} />Ubicación aproximada</span>
                   </div>
+                  <p className="text-xs" style={{ color: SECUNDARIO }}>
+                    Los puntos sin coordenadas exactas se ubican en el centro de la zona registrada. Los eventos sin coordenadas ni zona no se dibujan, pero aparecen en el listado y pueden abrirse desde su segundo de video.
+                  </p>
                 </div>
 
-                <div className="space-y-3">
-                  <h3 className="font-bold">Resumen de ubicación</h3>
-                  {estadisticasZonas.map((z) => {
-                    const maximo = Math.max(1, ...estadisticasZonas.map((item) => item.total))
-                    const porcentaje = eventosPartido.length ? Math.round((z.total / eventosPartido.length) * 100) : 0
-                    return (
-                      <div key={z.nombre} className="rounded-lg border p-3" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
-                        <div className="mb-2 flex items-center justify-between gap-3 text-sm">
-                          <span>{z.nombre}</span>
-                          <span className="font-bold" style={{ color: AMARILLO }}>{z.total} <span className="font-normal" style={{ color: SECUNDARIO }}>({porcentaje}%)</span></span>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-bold">Acciones por zona</h3>
+                    <div className="mt-3 space-y-2">
+                      {resumenMapa.zonas.map((zona) => {
+                        const maximo = Math.max(1, ...resumenMapa.zonas.map((item) => item.total))
+                        const porcentaje = resumenMapa.conUbicacion ? Math.round((zona.total / resumenMapa.conUbicacion) * 100) : 0
+                        return (
+                          <button
+                            key={zona.nombre}
+                            type="button"
+                            onClick={() => setFiltroMapaZona(filtroMapaZona === zona.nombre ? 'todos' : zona.nombre)}
+                            className="w-full rounded-lg border p-2.5 text-left"
+                            style={{ borderColor: filtroMapaZona === zona.nombre ? AMARILLO : BORDE, backgroundColor: filtroMapaZona === zona.nombre ? '#292719' : FONDO }}
+                          >
+                            <div className="mb-2 flex items-center justify-between gap-2 text-xs">
+                              <span>{zona.nombre}</span>
+                              <span className="font-bold" style={{ color: AMARILLO }}>{zona.total} <span className="font-normal" style={{ color: SECUNDARIO }}>({porcentaje}%)</span></span>
+                            </div>
+                            <div className="h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: '#303B4D' }}>
+                              <div className="h-full rounded-full" style={{ width: `${(zona.total / maximo) * 100}%`, backgroundColor: AMARILLO }} />
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <h3 className="font-bold">Acciones para revisar</h3>
+                      <span className="text-xs" style={{ color: SECUNDARIO }}>{eventosMapaOrdenados.length}</span>
+                    </div>
+                    <div className="max-h-[420px] space-y-2 overflow-y-auto pr-1">
+                      {eventosMapaOrdenados.map((evento) => {
+                        const partido = partidos.find((p) => p.id === evento.partido_id)
+                        const jugadora = jugadoras.find((j) => j.id === evento.jugador_id)
+                        const punto = coordenadasEvento(evento)
+                        const tieneVideo = Boolean(youtubeEmbed(partido?.video_url || videoCalendario(partido?.partido_calendario || partidosCalendario.find((p) => p.id === partido?.partido_calendario_id))))
+                        return (
+                          <button
+                            key={evento.id}
+                            type="button"
+                            onClick={() => abrirEventoEnVideo(evento)}
+                            className="w-full rounded-lg border p-3 text-left transition hover:border-yellow-400"
+                            style={{ borderColor: BORDE, backgroundColor: FONDO }}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-bold">{evento.tipo}</p>
+                                <p className="mt-1 truncate text-xs" style={{ color: SECUNDARIO }}>
+                                  {nombreJugadora(jugadora)} · {partido?.rival || 'Rival sin nombre'}
+                                </p>
+                                <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
+                                  {zonaEfectivaEvento(evento) || 'Sin zona'} · {evento.resultado || 'Pendiente'} · {punto?.exacta ? 'Exacta' : punto ? 'Aproximada' : 'Sin ubicación'}
+                                </p>
+                              </div>
+                              <span className="shrink-0 rounded-md px-2 py-1 font-mono text-xs font-black" style={{ backgroundColor: '#303B4D', color: AMARILLO }}>
+                                {formatearTiempo(evento.segundo)}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-[10px]" style={{ color: tieneVideo ? AMARILLO : '#F87171' }}>
+                              {tieneVideo ? '▶ Abrir video en esta acción' : 'Video no disponible para este partido'}
+                            </p>
+                          </button>
+                        )
+                      })}
+                      {eventosMapaOrdenados.length === 0 && (
+                        <div className="rounded-lg border p-4 text-sm" style={{ borderColor: BORDE, color: SECUNDARIO }}>
+                          No hay acciones que coincidan con estos filtros.
                         </div>
-                        <div className="h-2 overflow-hidden rounded-full" style={{ backgroundColor: '#303B4D' }}>
-                          <div className="h-full rounded-full" style={{ width: `${(z.total / maximo) * 100}%`, backgroundColor: AMARILLO }} />
-                        </div>
-                      </div>
-                    )
-                  })}
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
-              <p className="mt-4 text-xs" style={{ color: SECUNDARIO }}>
-                Las acciones registradas antes de agregar coordenadas se conservan y se muestran aproximadamente por zona. Podés editar una acción para asignarle un punto exacto.
-              </p>
             </Panel>
           )}
 
@@ -3359,4 +3592,3 @@ export default function AnalisisSection() {
     </div>
   )
 }
-
