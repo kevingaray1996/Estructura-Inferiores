@@ -245,6 +245,7 @@ function App() {
       {seccion === 'seleccion' && <ConvocatoriasSeleccionSection onVolver={() => setSeccion('inicio')} />}
       {seccion === 'contratos' && <ContratosSection onVolver={() => setSeccion('inicio')} />}
       {seccion === 'evaluaciones' && <EvaluacionesSection perfil={perfil} />}
+      {seccion === 'informes' && <InformesAutomaticosSection perfil={perfil} />}
       {seccion === 'pases' && <PaseCategoriaSection />}
       {seccion === 'usuarios' && <UsuariosSection />}
     </Layout>
