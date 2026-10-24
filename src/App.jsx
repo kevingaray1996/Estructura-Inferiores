@@ -25,6 +25,7 @@ import PensionesSection from './components/PensionesSection'
 import ConvocatoriasSeleccionSection from './components/ConvocatoriasSeleccionSection'
 import ContratosSection from './components/ContratosSection'
 import EvaluacionesSection from './components/EvaluacionesSection'
+import InformesAutomaticosSection from './components/InformesAutomaticosSection'
 
 function App() {
   const [categoriaBienestarId] = useState(
