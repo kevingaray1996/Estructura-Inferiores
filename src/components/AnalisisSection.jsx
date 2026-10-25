@@ -501,6 +501,7 @@ export default function AnalisisSection() {
   const [tipo, setTipo] = useState('Pase correcto')
   const [jugadorId, setJugadorId] = useState('')
   const [segundo, setSegundo] = useState('0')
+  const [tiempoAutomatico, setTiempoAutomatico] = useState(true)
   const [zona, setZona] = useState('Medio centro')
   const [coordenadasAccion, setCoordenadasAccion] = useState(null)
   const [resultado, setResultado] = useState('Exitoso')
@@ -1315,7 +1316,7 @@ export default function AnalisisSection() {
         ),
       )
 
-      setTipoRapido('')
+      // Conservamos la acción elegida para etiquetar varias jugadoras seguidas.
       setMensaje(
         `${tipoSeleccionado} registrada para ${nombreJugadora(
           jugadoras.find((j) => j.id === idJugadora),
@@ -1597,7 +1598,9 @@ export default function AnalisisSection() {
     setMensaje('')
 
     try {
-      const tiempo = Number(segundo)
+      const tiempo = tiempoAutomatico && videoListo && playerRef.current
+        ? Math.floor(playerRef.current.getCurrentTime() || 0)
+        : Number(segundo)
 
       if (!Number.isInteger(tiempo) || tiempo < 0) {
         throw new Error('El tiempo debe ser un número entero de segundos.')
@@ -1632,6 +1635,7 @@ export default function AnalisisSection() {
         ),
       )
 
+      setSegundo(String(tiempo))
       setMensaje('Acción registrada correctamente.')
       setObservaciones('')
       setCoordenadasAccion(null)
@@ -2458,8 +2462,13 @@ export default function AnalisisSection() {
                             </select>
                           </Campo>
 
+                          <label className="flex items-center gap-2 text-sm" style={{ color: TEXTO }}>
+                            <input type="checkbox" checked={tiempoAutomatico}
+                              onChange={(e) => setTiempoAutomatico(e.target.checked)} />
+                            Capturar automáticamente el tiempo del video al guardar
+                          </label>
                           <div className="grid gap-3 sm:grid-cols-2">
-                            <Campo label="Tiempo en segundos">
+                            <Campo label={tiempoAutomatico ? 'Tiempo de referencia (automático al guardar)' : 'Tiempo en segundos (manual)'}>
                               <input
                                 className={inputClass}
                                 style={inputStyle}
@@ -2468,6 +2477,7 @@ export default function AnalisisSection() {
                                 step="1"
                                 value={segundo}
                                 onChange={(e) => setSegundo(e.target.value)}
+                                disabled={tiempoAutomatico && videoListo}
                                 required
                               />
                               <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
@@ -2489,13 +2499,17 @@ export default function AnalisisSection() {
                             </Campo>
                           </div>
 
-                          <Boton
-                            secundario
-                            disabled={!videoListo}
-                            onClick={tomarTiempoActual}
-                          >
-                            Tomar tiempo del video
-                          </Boton>
+                          {!tiempoAutomatico && (
+                            <Boton secundario disabled={!videoListo} onClick={tomarTiempoActual}>
+                              Tomar tiempo del video
+                            </Boton>
+                          )}
+                          {tiempoAutomatico && (
+                            <p className="text-xs" style={{ color: SECUNDARIO }}>
+                              Tiempo actual del video: {formatearTiempo(tiempoVideo)}. Se capturará al guardar.
+                              Si necesitás corregirlo, desactivá la captura automática.
+                            </p>
+                          )}
 
                           <Campo label="Zona de cancha">
                             <select
