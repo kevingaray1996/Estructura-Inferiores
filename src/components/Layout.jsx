@@ -1,5 +1,5 @@
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { COLORES } from '../theme'
 
@@ -87,6 +87,14 @@ function seccionesParaRol(rol) {
   ]
 }
 
+const ICONOS = {
+  inicio: '⌂', plantel: '♟', medicos: '✚', nutricion: '◉', psicologia: '♡',
+  video: '▶', analisis: '▥', partidos: '⚽', entrenamientos: '◆',
+  asistencia: '✓', fisico: '▤', captacion: '◎', representantes: '♧',
+  pensiones: '⌂', seleccion: '★', contratos: '▣', pases: '⇄',
+  informes: '▧', usuarios: '♙', evaluaciones: '☑', bienestar: '♥',
+}
+
 function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
   const secciones = seccionesParaRol(perfil?.rol)
 
@@ -99,6 +107,26 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
   const [categoriasLink, setCategoriasLink] = useState([])
   const [linkCopiado, setLinkCopiado] = useState('')
   const [menuAbierto, setMenuAbierto] = useState(false)
+  const [menuCompacto, setMenuCompacto] = useState(() => {
+    try {
+      const guardado = window.localStorage.getItem('comunicaciones-menu-compacto')
+      return guardado === null ? seccionActiva === 'analisis' : guardado === 'true'
+    } catch {
+      return seccionActiva === 'analisis'
+    }
+  })
+
+  useEffect(() => {
+    if (seccionActiva === 'analisis') setMenuCompacto(true)
+  }, [seccionActiva])
+
+  function alternarMenuCompacto() {
+    setMenuCompacto((actual) => {
+      const siguiente = !actual
+      try { window.localStorage.setItem('comunicaciones-menu-compacto', String(siguiente)) } catch { /* almacenamiento no disponible */ }
+      return siguiente
+    })
+  }
 
   function construirLink(categoriaId) {
     const url = new URL(window.location.href)
@@ -178,7 +206,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
 
       {/* Sidebar */}
       <aside
-        className={`w-64 md:w-56 shrink-0 min-h-screen flex flex-col fixed md:static inset-y-0 left-0 z-50 transition-transform duration-200 ${
+        className={`w-64 ${menuCompacto ? 'md:w-[68px]' : 'md:w-56'} shrink-0 min-h-screen flex flex-col fixed md:static inset-y-0 left-0 z-50 transition-all duration-200 ${
           menuAbierto ? 'translate-x-0' : '-translate-x-full'
         } md:translate-x-0`}
         style={{
@@ -187,10 +215,10 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
         }}
       >
         <div
-          className="px-5 pt-6 pb-4 flex items-start justify-between"
+          className={`pt-6 pb-4 flex items-start justify-between ${menuCompacto ? 'px-3 md:px-2' : 'px-5'}`}
           style={{ borderBottom: `1px solid ${COLORES.borde}` }}
         >
-          <div>
+          <div className={menuCompacto ? 'md:hidden' : ''}>
             <p
               className="text-xs tracking-widest uppercase font-medium"
               style={{ color: COLORES.texto }}
@@ -203,6 +231,16 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
               </p>
             )}
           </div>
+          <button
+            type="button"
+            onClick={alternarMenuCompacto}
+            title={menuCompacto ? 'Expandir menú' : 'Plegar menú'}
+            aria-label={menuCompacto ? 'Expandir menú lateral' : 'Plegar menú lateral'}
+            className="hidden md:flex items-center justify-center rounded-lg w-9 h-9 shrink-0 hover:opacity-80"
+            style={{ color: COLORES.acento, border: `1px solid ${COLORES.borde}` }}
+          >
+            {menuCompacto ? '»' : '«'}
+          </button>
           <button
             onClick={() => setMenuAbierto(false)}
             aria-label="Cerrar menú"
@@ -221,7 +259,9 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
               <button
                 key={s.id}
                 onClick={() => seleccionarSeccion(s.id)}
-                className="w-full text-left px-3 py-2.5 mb-0.5 text-sm rounded-r-lg transition-colors"
+                className={`w-full flex items-center gap-3 px-3 py-2.5 mb-0.5 text-sm rounded-lg transition-colors ${menuCompacto ? 'md:justify-center md:px-1' : ''}`}
+                title={s.label}
+                aria-label={s.label}
                 style={{
                   color: activa ? COLORES.acento : COLORES.textoSecundario,
                   backgroundColor: activa ? 'rgba(242,194,48,0.08)' : 'transparent',
@@ -231,7 +271,8 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
                   fontWeight: activa ? 500 : 400,
                 }}
               >
-                {s.label}
+                <span aria-hidden="true" className={`text-lg shrink-0 text-center ${menuCompacto ? 'md:w-full' : 'w-6'}`}>{ICONOS[s.id] || '•'}</span>
+                <span className={menuCompacto ? 'md:hidden' : ''}>{s.label}</span>
               </button>
             )
           })}
@@ -241,7 +282,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
           className="px-3 py-3"
           style={{ borderTop: `1px solid ${COLORES.borde}` }}
         >
-          <div className="flex items-center gap-2 mb-3">
+          <div className={`flex items-center gap-2 mb-3 ${menuCompacto ? 'md:flex-col' : ''}`}>
             {perfil?.rol !== 'medico' && (
               <button
                 onClick={() => seleccionarSeccion('calendario')}
@@ -312,7 +353,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
             </p>
           )}
 
-          <div className="flex items-center gap-2 mb-2">
+          <div className={`flex items-center gap-2 mb-2 ${menuCompacto ? 'md:justify-center' : ''}`}>
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
               style={{ backgroundColor: COLORES.acento, color: '#1A1A1A' }}
@@ -320,7 +361,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
               {iniciales(perfil?.nombre || rolLabel[perfil?.rol])}
             </div>
 
-            <div className="min-w-0">
+            <div className={`min-w-0 ${menuCompacto ? 'md:hidden' : ''}`}>
               <p className="text-xs truncate" style={{ color: COLORES.texto }}>
                 {perfil?.nombre || rolLabel[perfil?.rol] || 'Usuario'}
               </p>
@@ -332,20 +373,23 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
 
           <button
             onClick={() => supabase.auth.signOut()}
-            className="w-full text-xs px-3 py-2 rounded-lg hover:opacity-80 text-left"
+            className={`w-full text-xs px-3 py-2 rounded-lg hover:opacity-80 ${menuCompacto ? 'md:text-center md:px-1' : 'text-left'}`}
+            title="Cerrar sesión"
+            aria-label="Cerrar sesión"
             style={{
               backgroundColor: COLORES.fondoPagina,
               color: COLORES.textoSecundario,
               border: `1px solid ${COLORES.borde}`,
             }}
           >
-            Cerrar sesión
+            <span className={menuCompacto ? 'md:hidden' : ''}>Cerrar sesión</span>
+            {menuCompacto && <span className="hidden md:inline" aria-hidden="true">⇥</span>}
           </button>
         </div>
       </aside>
 
       {/* Contenido */}
-      <div className="flex-1 min-w-0 pt-14 md:pt-0">{children}</div>
+      <div className="flex-1 min-w-0 pt-14 md:pt-0 transition-all duration-200">{children}</div>
     </div>
   )
 }
