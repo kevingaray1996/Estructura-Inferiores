@@ -28,6 +28,7 @@ const TIPOS = [
   'Falta cometida',
   'Falta recibida',
   'Intercepción',
+  'Despeje',
 ]
 
 const TIPOS_RAPIDOS = [
@@ -46,6 +47,7 @@ const TIPOS_RAPIDOS = [
   { nombre: 'Falta cometida', corto: 'Falta com.', icono: '!', color: '#F87171' },
   { nombre: 'Falta recibida', corto: 'Falta rec.', icono: '+', color: '#4ADE80' },
   { nombre: 'Intercepción', corto: 'Intercepción', icono: '↯', color: '#60A5FA' },
+  { nombre: 'Despeje', corto: 'Despeje', icono: '⇧', color: '#60A5FA' },
 ]
 
 const ZONAS = [
@@ -57,6 +59,24 @@ const ZONAS = [
 const RESULTADOS = [
   'Exitoso', 'Fallido', 'Neutro', 'Gol', 'Atajada', 'Fuera', 'Bloqueado',
 ]
+
+const RESULTADOS_DESPEJE = ['Exitoso', 'Fallido', 'Neutro']
+const CRITERIO_DESPEJE = 'Exitoso: elimina o reduce el peligro defensivo, aunque la pelota termine en posesión rival. Fallido: no resuelve la situación y genera o mantiene peligro inmediato. Neutro: no genera una ventaja ni un perjuicio defensivo claro.'
+
+function resultadosParaTipo(tipo) {
+  return tipo === 'Despeje' ? RESULTADOS_DESPEJE : RESULTADOS
+}
+
+function resultadoAlCambiarTipo(tipo, resultado) {
+  const opciones = resultadosParaTipo(tipo)
+  return opciones.includes(resultado) ? resultado : opciones[0]
+}
+
+function validarResultadoAccion(tipo, resultado) {
+  if (tipo === 'Despeje' && !RESULTADOS_DESPEJE.includes(resultado)) {
+    throw new Error('Seleccioná Exitoso, Fallido o Neutro para completar el despeje.')
+  }
+}
 
 const inputClass =
   'w-full rounded-lg border p-3 text-sm outline-none focus:ring-1 focus:ring-yellow-400'
@@ -1023,6 +1043,7 @@ export default function AnalisisSection() {
           exitosos: 0,
           fallidos: 0,
           pendientes: 0,
+          neutros: 0,
         }
       }
 
@@ -1039,6 +1060,7 @@ export default function AnalisisSection() {
       if (!evento.resultado) {
         acumulado[evento.tipo].pendientes += 1
       }
+      if (evento.resultado === 'Neutro') acumulado[evento.tipo].neutros += 1
     }
 
     return Object.entries(acumulado).sort(
@@ -1085,12 +1107,13 @@ export default function AnalisisSection() {
   const estadisticasInforme = useMemo(() => {
     const resumen = {}
     for (const evento of eventosPartido) {
-      if (!resumen[evento.tipo]) resumen[evento.tipo] = { total: 0, efectivas: 0, noEfectivas: 0, pendientes: 0 }
+      if (!resumen[evento.tipo]) resumen[evento.tipo] = { total: 0, efectivas: 0, noEfectivas: 0, pendientes: 0, neutros: 0 }
       const item = resumen[evento.tipo]
       item.total += 1
       if (['Exitoso', 'Gol', 'Atajada'].includes(evento.resultado)) item.efectivas += 1
       else if (['Fallido', 'Fuera', 'Bloqueado'].includes(evento.resultado)) item.noEfectivas += 1
-      else if (!evento.resultado || evento.resultado === 'Neutro') item.pendientes += 1
+      else if (!evento.resultado) item.pendientes += 1
+      else if (evento.resultado === 'Neutro') item.neutros += 1
     }
     return Object.entries(resumen).sort((a, b) => b[1].total - a[1].total)
   }, [eventosPartido])
@@ -1099,10 +1122,12 @@ export default function AnalisisSection() {
     const resumen = {}
     for (const evento of eventosPartido) {
       if (!evento.jugador_id) continue
-      if (!resumen[evento.jugador_id]) resumen[evento.jugador_id] = { total: 0, efectivas: 0, noEfectivas: 0 }
+      if (!resumen[evento.jugador_id]) resumen[evento.jugador_id] = { total: 0, efectivas: 0, noEfectivas: 0, neutros: 0, pendientes: 0 }
       resumen[evento.jugador_id].total += 1
       if (['Exitoso', 'Gol', 'Atajada'].includes(evento.resultado)) resumen[evento.jugador_id].efectivas += 1
       if (['Fallido', 'Fuera', 'Bloqueado'].includes(evento.resultado)) resumen[evento.jugador_id].noEfectivas += 1
+      if (evento.resultado === 'Neutro') resumen[evento.jugador_id].neutros += 1
+      if (!evento.resultado) resumen[evento.jugador_id].pendientes += 1
     }
     return Object.entries(resumen).map(([id, datos]) => ({
       id,
@@ -1118,12 +1143,14 @@ export default function AnalisisSection() {
   const resumenGraficoInforme = useMemo(() => {
     const efectivas = eventosPartido.filter((e) => ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length
     const noEfectivas = eventosPartido.filter((e) => ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length
-    const pendientes = eventosPartido.filter((e) => !e.resultado || e.resultado === 'Neutro').length
+    const pendientes = eventosPartido.filter((e) => !e.resultado).length
+    const neutros = eventosPartido.filter((e) => e.resultado === 'Neutro').length
     const evaluables = efectivas + noEfectivas
     return {
       efectivas,
       noEfectivas,
       pendientes,
+      neutros,
       evaluables,
       porcentaje: evaluables ? Math.round((efectivas / evaluables) * 100) : null,
     }
@@ -1139,12 +1166,14 @@ export default function AnalisisSection() {
     const fallidas = eventosEstadisticos.filter((e) => ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length
     const evaluadas = exitosas + fallidas
     const pendientes = eventosEstadisticos.filter((e) => !e.resultado).length
+    const neutros = eventosEstadisticos.filter((e) => e.resultado === 'Neutro').length
     const conUbicacionExacta = eventosEstadisticos.filter((e) => Number.isFinite(Number(e.coordenada_x)) && Number.isFinite(Number(e.coordenada_y)) && e.coordenada_x !== null && e.coordenada_y !== null).length
     return {
       exitosas,
       fallidas,
       evaluadas,
       pendientes,
+      neutros,
       porcentaje: evaluadas ? Math.round((exitosas / evaluadas) * 100) : 0,
       conUbicacionExacta,
     }
@@ -1364,6 +1393,7 @@ export default function AnalisisSection() {
     setMensaje('')
 
     try {
+      validarResultadoAccion(edicionEvento.tipo, edicionEvento.resultado)
       const tiempo = Number(edicionEvento.segundo)
 
       if (!Number.isInteger(tiempo) || tiempo < 0) {
@@ -1598,6 +1628,7 @@ export default function AnalisisSection() {
     setMensaje('')
 
     try {
+      validarResultadoAccion(tipo, resultado)
       const tiempo = tiempoAutomatico && videoListo && playerRef.current
         ? Math.floor(playerRef.current.getCurrentTime() || 0)
         : Number(segundo)
@@ -2327,6 +2358,7 @@ export default function AnalisisSection() {
                               onClick={() => {
                                 setTipoRapido(activa ? '' : accion.nombre)
                                 setTipo(accion.nombre)
+                                setResultado((actual) => resultadoAlCambiarTipo(accion.nombre, actual))
                                 setError('')
                                 setMensaje('')
                               }}
@@ -2438,7 +2470,10 @@ export default function AnalisisSection() {
                               className={inputClass}
                               style={inputStyle}
                               value={tipo}
-                              onChange={(e) => setTipo(e.target.value)}
+                              onChange={(e) => {
+                                setTipo(e.target.value)
+                                setResultado((actual) => resultadoAlCambiarTipo(e.target.value, actual))
+                              }}
                             >
                               {TIPOS.map((t) => (
                                 <option key={t} value={t}>{t}</option>
@@ -2490,12 +2525,14 @@ export default function AnalisisSection() {
                                 className={inputClass}
                                 style={inputStyle}
                                 value={resultado}
+                                required={tipo === 'Despeje'}
                                 onChange={(e) => setResultado(e.target.value)}
                               >
-                                {RESULTADOS.map((r) => (
+                                {resultadosParaTipo(tipo).map((r) => (
                                   <option key={r} value={r}>{r}</option>
                                 ))}
                               </select>
+                              {tipo === 'Despeje' && <p className="mt-2 text-xs" style={{ color: SECUNDARIO }}>{CRITERIO_DESPEJE}</p>}
                             </Campo>
                           </div>
 
@@ -2690,6 +2727,7 @@ export default function AnalisisSection() {
                           onChange={(e) => setEdicionEvento((a) => ({
                             ...a,
                             tipo: e.target.value,
+                            resultado: resultadoAlCambiarTipo(e.target.value, a.resultado),
                           }))}
                         >
                           {TIPOS.map((t) => (
@@ -2762,16 +2800,18 @@ export default function AnalisisSection() {
                           className={inputClass}
                           style={inputStyle}
                           value={edicionEvento.resultado}
+                          required={edicionEvento.tipo === 'Despeje'}
                           onChange={(e) => setEdicionEvento((a) => ({
                             ...a,
                             resultado: e.target.value,
                           }))}
                         >
-                          <option value="">Pendiente de completar</option>
-                          {RESULTADOS.map((r) => (
+                          <option value="" disabled={edicionEvento.tipo === 'Despeje'}>Pendiente de completar</option>
+                          {resultadosParaTipo(edicionEvento.tipo).map((r) => (
                             <option key={r} value={r}>{r}</option>
                           ))}
                         </select>
+                        {edicionEvento.tipo === 'Despeje' && <p className="mt-2 text-xs" style={{ color: SECUNDARIO }}>{CRITERIO_DESPEJE}</p>}
                       </Campo>
 
                       <Campo label="Observaciones">
@@ -3097,12 +3137,13 @@ export default function AnalisisSection() {
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
                 {[
                   ['Acciones totales', eventosEstadisticos.length],
                   ['Efectivas', resumenEfectividad.exitosas],
                   ['No efectivas', resumenEfectividad.fallidas],
                   ['Efectividad', resumenEfectividad.evaluadas ? `${resumenEfectividad.porcentaje}%` : '—'],
+                  ['Neutras', resumenEfectividad.neutros],
                   ['Pendientes', resumenEfectividad.pendientes],
                 ].map(([label, valor]) => (
                   <div
@@ -3110,7 +3151,7 @@ export default function AnalisisSection() {
                     className="rounded-lg border p-4"
                     style={{ backgroundColor: FONDO, borderColor: BORDE }}
                   >
-                    <p className="text-sm" style={{ color: SECUNDARIO }}>{label}</p>
+                    <p className="min-h-10 text-sm" style={{ color: SECUNDARIO }}>{label}</p>
                     <p className="mt-2 text-3xl font-black" style={{ color: AMARILLO }}>
                       {valor}
                     </p>
@@ -3157,6 +3198,7 @@ export default function AnalisisSection() {
                           </div>
                           <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
                             Exitosos: {datos.exitosos} · Fallidos: {datos.fallidos}
+                            {' · '}Neutros: {datos.neutros}
                             {' · '}Pendientes: {datos.pendientes}
                             {' · '}Efectividad: {datos.exitosos + datos.fallidos > 0
                               ? `${Math.round((datos.exitosos / (datos.exitosos + datos.fallidos)) * 100)}%`
@@ -3184,6 +3226,8 @@ export default function AnalisisSection() {
                           <th className="p-2">Acciones</th>
                           <th className="p-2">Efectivas</th>
                           <th className="p-2">No efectivas</th>
+                          <th className="p-2">Neutras</th>
+                          <th className="p-2">Pendientes</th>
                           <th className="p-2">Efectividad</th>
                           <th className="p-2">Detalle</th>
                         </tr>
@@ -3199,6 +3243,8 @@ export default function AnalisisSection() {
                             <td className="p-2">{j.total}</td>
                             <td className="p-2 text-emerald-300">{eventosEstadisticos.filter((e) => e.jugador_id === j.id && ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length}</td>
                             <td className="p-2 text-red-300">{eventosEstadisticos.filter((e) => e.jugador_id === j.id && ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length}</td>
+                            <td className="p-2">{eventosEstadisticos.filter((e) => e.jugador_id === j.id && e.resultado === 'Neutro').length}</td>
+                            <td className="p-2">{eventosEstadisticos.filter((e) => e.jugador_id === j.id && !e.resultado).length}</td>
                             <td className="p-2">{(() => {
                               const positivas = eventosEstadisticos.filter((e) => e.jugador_id === j.id && ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length
                               const negativas = eventosEstadisticos.filter((e) => e.jugador_id === j.id && ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length
@@ -3451,22 +3497,26 @@ export default function AnalisisSection() {
                 </Boton>
               </div>
 
-              <div className="pdf-meta mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <div className="rounded-lg border p-3" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
-                  <p className="text-xs uppercase tracking-wide" style={{ color: SECUNDARIO }}>Acciones registradas</p>
+              <div className="pdf-meta mt-4 grid grid-cols-2 gap-3 sm:grid-cols-6 xl:grid-cols-10">
+                <div className="col-span-2 rounded-lg border p-3 sm:col-span-2" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
+                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: SECUNDARIO }}>Acciones registradas</p>
                   <p className="mt-1 text-2xl font-black">{eventosPartido.length}</p>
                 </div>
-                <div className="rounded-lg border p-3" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
-                  <p className="text-xs uppercase tracking-wide" style={{ color: SECUNDARIO }}>Con jugadora</p>
+                <div className="col-span-1 rounded-lg border p-3 sm:col-span-2" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
+                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: SECUNDARIO }}>Con jugadora</p>
                   <p className="mt-1 text-2xl font-black">{eventosPartido.filter((e) => e.jugador_id).length}</p>
                 </div>
-                <div className="rounded-lg border p-3" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
-                  <p className="text-xs uppercase tracking-wide" style={{ color: SECUNDARIO }}>Efectivas</p>
+                <div className="col-span-1 rounded-lg border p-3 sm:col-span-2" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
+                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: SECUNDARIO }}>Efectivas</p>
                   <p className="mt-1 text-2xl font-black">{eventosPartido.filter((e) => ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length}</p>
                 </div>
-                <div className="rounded-lg border p-3" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
-                  <p className="text-xs uppercase tracking-wide" style={{ color: SECUNDARIO }}>Pendientes / neutras</p>
-                  <p className="mt-1 text-2xl font-black">{eventosPartido.filter((e) => !e.resultado || e.resultado === 'Neutro').length}</p>
+                <div className="col-span-1 rounded-lg border p-3 sm:col-span-3 xl:col-span-2" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
+                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: SECUNDARIO }}>Pendientes</p>
+                  <p className="mt-1 text-2xl font-black">{resumenGraficoInforme.pendientes}</p>
+                </div>
+                <div className="col-span-1 rounded-lg border p-3 sm:col-span-3 xl:col-span-2" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
+                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: SECUNDARIO }}>Neutras</p>
+                  <p className="mt-1 text-2xl font-black">{resumenGraficoInforme.neutros}</p>
                 </div>
               </div>
 
@@ -3510,7 +3560,8 @@ export default function AnalisisSection() {
                       <div className="space-y-2 text-xs">
                         <p><span className="pdf-leyenda-amarilla inline-block mr-2 h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: '#F2C230' }} />Efectivas: <strong>{resumenGraficoInforme.efectivas}</strong></p>
                         <p><span className="pdf-leyenda-negra inline-block mr-2 h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: '#27272A' }} />No efectivas: <strong>{resumenGraficoInforme.noEfectivas}</strong></p>
-                        <p><span className="pdf-leyenda-gris inline-block mr-2 h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: '#D1D5DB' }} />Pendientes/neutras: <strong>{resumenGraficoInforme.pendientes}</strong></p>
+                        <p><span className="pdf-leyenda-gris inline-block mr-2 h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: '#D1D5DB' }} />Pendientes: <strong>{resumenGraficoInforme.pendientes}</strong></p>
+                        <p>Neutras: <strong>{resumenGraficoInforme.neutros}</strong></p>
                       </div>
                     </div>
                     <p className="mt-2 text-[10px]" style={{ color: '#6B7280' }}>El porcentaje excluye acciones pendientes y neutras.</p>
@@ -3551,11 +3602,11 @@ export default function AnalisisSection() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm pdf-tabla">
                       <thead><tr style={{ color: SECUNDARIO }}>
-                        <th className="p-2">Acción</th><th className="p-2 text-right">Total</th><th className="p-2 text-right">Efectivas</th><th className="p-2 text-right">No efectivas</th><th className="p-2 text-right">Pendientes</th><th className="p-2 text-right">Efectividad</th>
+                        <th className="p-2">Acción</th><th className="p-2 text-right">Total</th><th className="p-2 text-right">Efectivas</th><th className="p-2 text-right">No efectivas</th><th className="p-2 text-right">Neutras</th><th className="p-2 text-right">Pendientes</th><th className="p-2 text-right">Efectividad</th>
                       </tr></thead>
                       <tbody>{estadisticasInforme.map(([nombre, datos]) => (
                         <tr key={nombre} className="border-t" style={{ borderColor: BORDE }}>
-                          <td className="p-2 font-semibold">{nombre}</td><td className="p-2 text-right">{datos.total}</td><td className="p-2 text-right">{datos.efectivas}</td><td className="p-2 text-right">{datos.noEfectivas}</td><td className="p-2 text-right">{datos.pendientes}</td>
+                          <td className="p-2 font-semibold">{nombre}</td><td className="p-2 text-right">{datos.total}</td><td className="p-2 text-right">{datos.efectivas}</td><td className="p-2 text-right">{datos.noEfectivas}</td><td className="p-2 text-right">{datos.neutros}</td><td className="p-2 text-right">{datos.pendientes}</td>
                           <td className="p-2 text-right">{datos.efectivas + datos.noEfectivas ? `${Math.round(datos.efectivas / (datos.efectivas + datos.noEfectivas) * 100)}%` : '—'}</td>
                         </tr>
                       ))}</tbody>
@@ -3571,11 +3622,11 @@ export default function AnalisisSection() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm pdf-tabla">
                       <thead><tr style={{ color: SECUNDARIO }}>
-                        <th className="p-2">Jugadora</th><th className="p-2 text-right">Acciones</th><th className="p-2 text-right">Efectivas</th><th className="p-2 text-right">No efectivas</th><th className="p-2 text-right">Efectividad</th>
+                        <th className="p-2">Jugadora</th><th className="p-2 text-right">Acciones</th><th className="p-2 text-right">Efectivas</th><th className="p-2 text-right">No efectivas</th><th className="p-2 text-right">Neutras</th><th className="p-2 text-right">Pendientes</th><th className="p-2 text-right">Efectividad</th>
                       </tr></thead>
                       <tbody>{jugadorasInforme.map((j) => (
                         <tr key={j.id} className="border-t" style={{ borderColor: BORDE }}>
-                          <td className="p-2 font-semibold">{j.nombre}</td><td className="p-2 text-right">{j.total}</td><td className="p-2 text-right">{j.efectivas}</td><td className="p-2 text-right">{j.noEfectivas}</td><td className="p-2 text-right">{j.efectividad === null ? '—' : `${j.efectividad}%`}</td>
+                          <td className="p-2 font-semibold">{j.nombre}</td><td className="p-2 text-right">{j.total}</td><td className="p-2 text-right">{j.efectivas}</td><td className="p-2 text-right">{j.noEfectivas}</td><td className="p-2 text-right">{j.neutros}</td><td className="p-2 text-right">{j.pendientes}</td><td className="p-2 text-right">{j.efectividad === null ? '—' : `${j.efectividad}%`}</td>
                         </tr>
                       ))}</tbody>
                     </table>
@@ -3659,7 +3710,9 @@ export default function AnalisisSection() {
           #informe-imprimible .no-imprimir, #informe-imprimible button { display: none !important; }
           #informe-imprimible .pdf-cabecera { padding: 14pt !important; margin-bottom: 10pt !important; background: #171717 !important; border-bottom: 4pt solid #F2C230 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
           #informe-imprimible .pdf-cabecera h2, #informe-imprimible .pdf-cabecera p:not(.pdf-acento) { color: #FFFFFF !important; }
-          #informe-imprimible .pdf-meta > div { padding: 8pt !important; border: 1px solid #d1d5db !important; }
+          #informe-imprimible .pdf-meta { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; }
+          #informe-imprimible .pdf-meta > div { grid-column: span 2 !important; padding: 8pt !important; border: 1px solid #d1d5db !important; }
+          #informe-imprimible .pdf-meta > div:nth-last-child(-n+2) { grid-column: span 3 !important; }
           #informe-imprimible .pdf-seccion { break-inside: auto; page-break-inside: auto; }
           #informe-imprimible .pdf-graficos { break-inside: avoid; page-break-inside: avoid; }
           #informe-imprimible .pdf-grafico-card { break-inside: avoid; page-break-inside: avoid; border: 1px solid #D1D5DB !important; }
