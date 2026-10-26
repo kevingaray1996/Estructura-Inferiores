@@ -153,9 +153,9 @@ function App() {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: '#0F1419' }}
+        style={{ backgroundColor: 'var(--ui-estado-fondo, #0F1419)' }}
       >
-        <p style={{ color: '#5B6B85' }}>Cargando...</p>
+        <p style={{ color: 'var(--ui-carga-texto, #5B6B85)' }}>Cargando...</p>
       </div>
     )
   }
@@ -168,9 +168,9 @@ function App() {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: '#0F1419' }}
+        style={{ backgroundColor: 'var(--ui-estado-fondo, #0F1419)' }}
       >
-        <p style={{ color: '#5B6B85' }}>Cargando...</p>
+        <p style={{ color: 'var(--ui-carga-texto, #5B6B85)' }}>Cargando...</p>
       </div>
     )
   }
@@ -179,14 +179,14 @@ function App() {
     return (
       <div
         className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 text-center"
-        style={{ backgroundColor: '#0F1419' }}
+        style={{ backgroundColor: 'var(--ui-estado-fondo, #0F1419)' }}
       >
-        <p style={{ color: '#F0F2F5' }}>
+        <p style={{ color: 'var(--ui-estado-texto, #F0F2F5)' }}>
           Tu usuario ({sesion.user.email}) todavía no tiene un perfil asignado
           en la app.
         </p>
 
-        <p className="text-sm" style={{ color: '#8A9BB8' }}>
+        <p className="text-sm" style={{ color: 'var(--ui-estado-secundario, #8A9BB8)' }}>
           Pedile a coordinación que te dé de alta en la sección Usuarios.
         </p>
 
@@ -194,9 +194,9 @@ function App() {
           onClick={() => supabase.auth.signOut()}
           className="text-sm px-4 py-2 rounded-xl hover:opacity-80"
           style={{
-            backgroundColor: '#1A2332',
-            color: '#8A9BB8',
-            border: '1px solid #2A3548',
+            backgroundColor: 'var(--ui-estado-control, #1A2332)',
+            color: 'var(--ui-estado-secundario, #8A9BB8)',
+            border: '1px solid var(--ui-estado-borde, #2A3548)',
           }}
         >
           Cerrar sesión

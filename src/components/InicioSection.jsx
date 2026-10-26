@@ -4,23 +4,10 @@ import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
 import TablaDataFem from './TablaDataFem'
+import { PALETA_INICIO as C, textoInicio } from '../appearance/paletaInicio'
 
 const ESCUDO_CLUB_URL =
   'https://qvjviyjkxyngiggoeqlj.supabase.co/storage/v1/object/public/Biblioteca/escudos/Escudo%20simplificado.png'
-
-const C = {
-  fondo: '#101010',
-  tarjeta: '#1B1B1B',
-  tarjetaHover: '#232323',
-  borde: '#303030',
-  amarillo: '#F6C900',
-  amarilloSuave: '#332B00',
-  blanco: '#FAFAFA',
-  gris: '#B5B5B5',
-  tenue: '#858585',
-  verde: '#72C58B',
-  rojo: '#F07171',
-}
 
 function fechaISO(date) {
   const anio = date.getFullYear()
@@ -181,7 +168,7 @@ function SeccionTitulo({ icono, titulo, detalle, cantidad }) {
         <span
           className="px-3 py-1 rounded-full text-xs font-bold"
           style={{
-            color: C.amarillo,
+            color: textoInicio(C.amarillo),
             background: C.amarilloSuave,
             border: `1px solid ${C.amarillo}35`,
           }}
@@ -234,7 +221,7 @@ function EtiquetaEstado({ children, color = C.amarillo }) {
       className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
       style={{
         background: `${color}16`,
-        color,
+        color: textoInicio(color),
         border: `1px solid ${color}45`,
       }}
     >
@@ -628,7 +615,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
               <div
                 key={n}
                 className="h-28 rounded-xl animate-pulse"
-                style={{ background: '#252525' }}
+                style={{ background: 'var(--inicio-esqueleto, #252525)' }}
               />
             ))}
           </div>
@@ -746,7 +733,8 @@ function InicioSection({ perfil, onCambiarSeccion }) {
           transform: 'translate(-50%, -50%)',
           width: 'min(70vw, 820px)',
           minWidth: 280,
-          opacity: 0.025,
+          opacity: 'var(--inicio-escudo-opacidad, 0.025)',
+          filter: 'var(--inicio-escudo-filtro, none)',
           zIndex: 0,
         }}
       />
@@ -757,7 +745,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
           className="inicio-panel relative overflow-hidden rounded-2xl md:rounded-3xl mb-7 md:mb-9"
           style={{
             background:
-              'linear-gradient(115deg, #242000 0%, #191919 45%, #141414 100%)',
+              'var(--inicio-cabecera, linear-gradient(115deg, #242000 0%, #191919 45%, #141414 100%))',
             border: `1px solid ${C.amarillo}40`,
           }}
         >
@@ -767,7 +755,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
             <div
               className="w-[76px] h-[76px] md:w-24 md:h-24 rounded-2xl flex items-center justify-center shrink-0"
               style={{
-                background: '#0F0F0F',
+                background: 'var(--inicio-escudo-fondo, #0F0F0F)',
                 border: `1px solid ${C.amarillo}50`,
                 boxShadow: '0 8px 30px #00000040',
               }}
@@ -782,7 +770,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
             <div className="flex-1 min-w-0">
               <p
                 className="text-xs md:text-sm font-bold tracking-[0.22em] uppercase mb-2"
-                style={{ color: C.amarillo }}
+                style={{ color: textoInicio(C.amarillo) }}
               >
                 Club Comunicaciones · Fútbol femenino
               </p>
@@ -805,7 +793,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
             <div
               className="self-start sm:self-center rounded-xl px-4 py-3 min-w-[145px]"
               style={{
-                background: '#0F0F0F75',
+                background: 'var(--inicio-insignia-fondo, #0F0F0F75)',
                 border: `1px solid ${C.amarillo}30`,
               }}
             >
@@ -815,7 +803,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
               >
                 Panel de gestión
               </p>
-              <p className="text-sm font-bold mt-1" style={{ color: C.amarillo }}>
+              <p className="text-sm font-bold mt-1" style={{ color: textoInicio(C.amarillo) }}>
                 Temporada actual
               </p>
             </div>
@@ -859,7 +847,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                     </span>
                     <span
                       className="inline-block mt-2 text-xs font-bold"
-                      style={{ color: a.color }}
+                      style={{ color: textoInicio(a.color) }}
                     >
                       Ir a la sección →
                     </span>
@@ -904,7 +892,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                     {alertasWellnessDetalle.length} jugadoras con indicadores para revisar
                   </span>
                 </span>
-                <span className="text-sm font-bold shrink-0" style={{ color: C.amarillo }}>
+                <span className="text-sm font-bold shrink-0" style={{ color: textoInicio(C.amarillo) }}>
                   {wellnessExpandido ? 'Ver menos ↑' : 'Ver detalle ↓'}
                 </span>
               </button>
@@ -971,7 +959,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                 <p
                   className="text-2xl md:text-3xl font-black leading-tight break-words"
                   style={{
-                    color: item.accent,
+                    color: textoInicio(item.accent),
                     overflowWrap: 'anywhere',
                   }}
                 >
@@ -987,7 +975,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                   style={{ borderTop: `1px solid ${C.borde}`, color: C.gris }}
                 >
                   <span>Ver información</span>
-                  <span style={{ color: C.amarillo }}>→</span>
+                  <span style={{ color: textoInicio(C.amarillo) }}>→</span>
                 </div>
               </Tarjeta>
             ))}
@@ -1025,7 +1013,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                       <div
                         className="w-[68px] h-[68px] rounded-2xl flex items-center justify-center shrink-0"
                         style={{
-                          background: '#111111',
+                          background: 'var(--inicio-interior, #111111)',
                           border: `1px solid ${C.borde}`,
                         }}
                       >
@@ -1067,7 +1055,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                       <span className="text-sm font-medium" style={{ color: C.gris }}>
                         Cuenta regresiva
                       </span>
-                      <span className="text-sm md:text-base font-bold text-right" style={{ color: C.amarillo }}>
+                      <span className="text-sm md:text-base font-bold text-right" style={{ color: textoInicio(C.amarillo) }}>
                         {calcularCuentaRegresiva(
                           proximoPartido.fecha,
                           proximoPartido.hora
@@ -1098,7 +1086,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                   style={{ borderTop: `1px solid ${C.borde}`, color: C.gris }}
                 >
                   <span>Consultar calendario</span>
-                  <span style={{ color: C.amarillo }}>→</span>
+                  <span style={{ color: textoInicio(C.amarillo) }}>→</span>
                 </div>
               </Tarjeta>
 
@@ -1127,7 +1115,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                       <div
                         className="w-[68px] h-[68px] rounded-2xl flex items-center justify-center shrink-0"
                         style={{
-                          background: '#111111',
+                          background: 'var(--inicio-interior, #111111)',
                           border: `1px solid ${C.borde}`,
                         }}
                       >
@@ -1171,7 +1159,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                         </span>
                         <span
                           className="text-lg md:text-xl font-black"
-                          style={{ color: colorUltimo }}
+                          style={{ color: textoInicio(colorUltimo) }}
                         >
                           {resultadoUltimo.texto}
                         </span>
@@ -1195,7 +1183,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                   style={{ borderTop: `1px solid ${C.borde}`, color: C.gris }}
                 >
                   <span>Consultar partidos</span>
-                  <span style={{ color: C.amarillo }}>→</span>
+                  <span style={{ color: textoInicio(C.amarillo) }}>→</span>
                 </div>
               </Tarjeta>
             </div>
@@ -1217,15 +1205,15 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                     {[
                       { label: 'Jugados', valor: estadisticasRapidas.pj, color: C.blanco },
-                      { label: 'Victorias', valor: estadisticasRapidas.pg, color: C.verde },
-                      { label: 'Empates', valor: estadisticasRapidas.pe, color: C.amarillo },
-                      { label: 'Derrotas', valor: estadisticasRapidas.pp, color: C.rojo },
+                      { label: 'Victorias', valor: estadisticasRapidas.pg, color: textoInicio(C.verde) },
+                      { label: 'Empates', valor: estadisticasRapidas.pe, color: textoInicio(C.amarillo) },
+                      { label: 'Derrotas', valor: estadisticasRapidas.pp, color: textoInicio(C.rojo) },
                     ].map((stat) => (
                       <div
                         key={stat.label}
                         className="rounded-xl p-4 md:p-5"
                         style={{
-                          background: '#111111',
+                          background: 'var(--inicio-interior, #111111)',
                           border: `1px solid ${C.borde}`,
                         }}
                       >
@@ -1234,7 +1222,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                         </p>
                         <p
                           className="inicio-numero text-3xl md:text-4xl font-black mt-2"
-                          style={{ color: stat.color }}
+                          style={{ color: textoInicio(stat.color) }}
                         >
                           {stat.valor}
                         </p>
@@ -1244,8 +1232,8 @@ function InicioSection({ perfil, onCambiarSeccion }) {
 
                   <div className="grid sm:grid-cols-3 gap-3 mt-4">
                     {[
-                      { label: 'Goles a favor', valor: estadisticasRapidas.gf, color: C.verde },
-                      { label: 'Goles en contra', valor: estadisticasRapidas.gc, color: C.rojo },
+                      { label: 'Goles a favor', valor: estadisticasRapidas.gf, color: textoInicio(C.verde) },
+                      { label: 'Goles en contra', valor: estadisticasRapidas.gc, color: textoInicio(C.rojo) },
                       {
                         label: 'Diferencia de gol',
                         valor:
@@ -1262,14 +1250,14 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                         key={stat.label}
                         className="rounded-xl p-4 flex items-center justify-between gap-3"
                         style={{
-                          background: '#111111',
+                          background: 'var(--inicio-interior, #111111)',
                           border: `1px solid ${C.borde}`,
                         }}
                       >
                         <span className="text-sm" style={{ color: C.gris }}>
                           {stat.label}
                         </span>
-                        <span className="text-xl font-black" style={{ color: stat.color }}>
+                        <span className="text-xl font-black" style={{ color: textoInicio(stat.color) }}>
                           {stat.valor}
                         </span>
                       </div>
@@ -1288,7 +1276,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                     <span className="text-sm font-semibold" style={{ color: C.blanco }}>
                       Ver detalle de los partidos
                     </span>
-                    <span style={{ color: C.amarillo }}>→</span>
+                    <span style={{ color: textoInicio(C.amarillo) }}>→</span>
                   </button>
                 </>
               ) : (
@@ -1344,7 +1332,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
               <div className="flex items-end gap-3 mb-5">
                 <span
                   className="inicio-numero text-5xl font-black"
-                  style={{ color: lesionados.length ? C.rojo : C.verde }}
+                  style={{ color: textoInicio(lesionados.length ? C.rojo : C.verde) }}
                 >
                   {lesionados.length}
                 </span>
@@ -1357,9 +1345,9 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                 <div
                   className="rounded-xl p-4 text-sm"
                   style={{
-                    background: '#111111',
+                    background: 'var(--inicio-interior, #111111)',
                     border: `1px solid ${C.borde}`,
-                    color: C.verde,
+                    color: textoInicio(C.verde),
                   }}
                 >
                   ✓ No hay jugadores marcados como lesionados.
@@ -1371,15 +1359,15 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                       key={j.id}
                       className="flex items-center gap-3 rounded-xl p-3"
                       style={{
-                        background: '#111111',
+                        background: 'var(--inicio-interior, #111111)',
                         border: `1px solid ${C.borde}`,
                       }}
                     >
                       <span
                         className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                         style={{
-                          background: '#2D1919',
-                          color: C.rojo,
+                          background: 'var(--inicio-alerta-fondo, #2D1919)',
+                          color: textoInicio(C.rojo),
                           border: `1px solid ${C.rojo}30`,
                         }}
                       >
@@ -1393,7 +1381,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                           {j.categorias?.nombre || 'Categoría no indicada'}
                         </p>
                       </div>
-                      <span className="text-xs shrink-0" style={{ color: C.rojo }}>
+                      <span className="text-xs shrink-0" style={{ color: textoInicio(C.rojo) }}>
                         Lesionado
                       </span>
                     </div>
@@ -1412,7 +1400,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                 style={{ borderTop: `1px solid ${C.borde}`, color: C.gris }}
               >
                 <span>Consultar plantel</span>
-                <span style={{ color: C.amarillo }}>→</span>
+                <span style={{ color: textoInicio(C.amarillo) }}>→</span>
               </div>
             </Tarjeta>
 
@@ -1444,7 +1432,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                 <div className="flex items-end gap-3 mb-5">
                   <span
                     className="inicio-numero text-5xl font-black"
-                    style={{ color: alertasNutricion.length ? C.rojo : C.verde }}
+                    style={{ color: textoInicio(alertasNutricion.length ? C.rojo : C.verde) }}
                   >
                     {alertasNutricion.length}
                   </span>
@@ -1459,9 +1447,9 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                   <div
                     className="rounded-xl p-4 text-sm"
                     style={{
-                      background: '#111111',
+                      background: 'var(--inicio-interior, #111111)',
                       border: `1px solid ${C.borde}`,
-                      color: C.verde,
+                      color: textoInicio(C.verde),
                     }}
                   >
                     ✓ Sin alertas de peso activas.
@@ -1473,15 +1461,15 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                         key={f.id}
                         className="flex items-center gap-3 rounded-xl p-3"
                         style={{
-                          background: '#111111',
+                          background: 'var(--inicio-interior, #111111)',
                           border: `1px solid ${C.borde}`,
                         }}
                       >
                         <span
                           className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                           style={{
-                            background: '#2D1919',
-                            color: C.rojo,
+                            background: 'var(--inicio-alerta-fondo, #2D1919)',
+                            color: textoInicio(C.rojo),
                             border: `1px solid ${C.rojo}30`,
                           }}
                         >
@@ -1495,7 +1483,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                             {f.jugadores?.categorias?.nombre || 'Categoría no indicada'}
                           </p>
                         </div>
-                        <span className="text-xs shrink-0" style={{ color: C.rojo }}>
+                        <span className="text-xs shrink-0" style={{ color: textoInicio(C.rojo) }}>
                           Revisar
                         </span>
                       </div>
@@ -1514,7 +1502,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                   style={{ borderTop: `1px solid ${C.borde}`, color: C.gris }}
                 >
                   <span>Consultar nutrición</span>
-                  <span style={{ color: C.amarillo }}>→</span>
+                  <span style={{ color: textoInicio(C.amarillo) }}>→</span>
                 </div>
               </Tarjeta>
             )}
@@ -1545,7 +1533,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                     className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
                     style={{
                       background: C.amarilloSuave,
-                      color: C.amarillo,
+                      color: textoInicio(C.amarillo),
                       border: `1px solid ${C.amarillo}35`,
                     }}
                   >

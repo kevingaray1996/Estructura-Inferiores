@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import ProveedorApariencia from './appearance/ProveedorApariencia'
 const root = createRoot(document.getElementById('root'))
 
 function mostrarErrorInicio(sinConfiguracion) {
@@ -26,8 +27,8 @@ if (!import.meta.env.VITE_SUPABASE_URL?.trim() || !import.meta.env.VITE_SUPABASE
   mostrarErrorInicio(true)
 } else {
   root.render(<p role="status" className="p-8">Cargando Comunicaciones…</p>)
-  import('./App.jsx').then(({ default: App }) => {
-    root.render(<StrictMode><App /></StrictMode>)
+  Promise.all([import('./App.jsx'), import('./supabaseClient')]).then(([{ default: App }, { supabase }]) => {
+    root.render(<StrictMode><ProveedorApariencia auth={supabase.auth}><App /></ProveedorApariencia></StrictMode>)
   }).catch((error) => {
     console.error('No se pudo cargar la aplicación:', error)
     mostrarErrorInicio(false)

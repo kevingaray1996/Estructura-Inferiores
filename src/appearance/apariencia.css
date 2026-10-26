@@ -1,0 +1,102 @@
+/* Base oscura identica a theme.js anterior. Sin cambiar estilos de body,
+   controles nativos, canvas, colores deportivos ni reglas de impresion. */
+:root {
+  --marca-amarillo: #F2C230;
+  --marca-negro: #0A0A0A;
+  --ui-fondo-pagina: #1A1A18;
+  --ui-fondo-sidebar: #0A0A0A;
+  --ui-superficie: #242422;
+  --ui-superficie-alternativa: #20201E;
+  --ui-borde: #2C2C2A;
+  --ui-texto: #FFFFFF;
+  --ui-texto-secundario: #B4B2A9;
+  --ui-texto-muted: #8A8A82;
+  --ui-acento: #F2C230;
+  --ui-texto-sobre-acento: #1A1A1A;
+  --ui-control-fondo: #1A1A18;
+  --ui-control-texto: #FFFFFF;
+  --ui-control-borde: #2C2C2A;
+  --ui-foco: #F2C230;
+  --ui-exito: #97C459;
+  --ui-peligro: #E24B4A;
+  --ui-neutro: #B4B2A9;
+  --ui-texto-acento: #F2C230;
+  --ui-nav-activo-texto: #F2C230;
+  --ui-nav-activo-fondo: rgba(242,194,48,0.08);
+  --ui-estado-fondo: #0F1419;
+  --ui-estado-texto: #F0F2F5;
+  --ui-estado-secundario: #8A9BB8;
+  --ui-carga-texto: #5B6B85;
+  --ui-estado-control: #1A2332;
+  --ui-estado-borde: #2A3548;
+  --inicio-fondo: #101010;
+  --inicio-tarjeta: #1B1B1B;
+  --inicio-tarjeta-hover: #232323;
+  --inicio-borde: #303030;
+  --inicio-amarillo-suave: #332B00;
+  --inicio-texto: #FAFAFA;
+  --inicio-secundario: #B5B5B5;
+  --inicio-tenue: #858585;
+  --inicio-texto-acento: #F6C900;
+  --inicio-texto-exito: #72C58B;
+  --inicio-texto-peligro: #F07171;
+  --inicio-texto-aviso: #EF9F27;
+  --inicio-esqueleto: #252525;
+  --inicio-interior: #111111;
+  --inicio-alerta-fondo: #2D1919;
+  --inicio-escudo-fondo: #0F0F0F;
+  --inicio-insignia-fondo: #0F0F0F75;
+  --inicio-cabecera: linear-gradient(115deg, #242000 0%, #191919 45%, #141414 100%);
+  --inicio-escudo-opacidad: 0.025;
+  --inicio-escudo-filtro: none;
+}
+
+/* Paleta preparada para pantalla. El tema de pantalla nunca cambia las
+   variables base utilizadas por las reglas de impresion ya existentes. */
+@media screen {
+  :root[data-apariencia='claro'] {
+    --ui-fondo-pagina: #F5F5F0;
+    --ui-fondo-sidebar: #F0F0E8;
+    --ui-superficie: #FFFFFF;
+    --ui-superficie-alternativa: #F5F5F0;
+    --ui-borde: #D4D4C8;
+    --ui-texto: #1A1A18;
+    --ui-texto-secundario: #52524A;
+    --ui-texto-muted: #66665D;
+    --ui-control-fondo: #FFFFFF;
+    --ui-control-texto: #1A1A18;
+    --ui-control-borde: #D4D4C8;
+    --ui-exito: #3B641C;
+    --ui-peligro: #B42323;
+    --ui-neutro: #52524A;
+    --ui-texto-acento: #755600;
+    --ui-nav-activo-texto: #1A1A18;
+    --ui-nav-activo-fondo: #F2C230;
+    --ui-estado-fondo: #F5F5F0;
+    --ui-estado-texto: #1A1A18;
+    --ui-estado-secundario: #52524A;
+    --ui-carga-texto: #52524A;
+    --ui-estado-control: #FFFFFF;
+    --ui-estado-borde: #D4D4C8;
+    --inicio-fondo: #F5F5F0;
+    --inicio-tarjeta: #FFFFFF;
+    --inicio-tarjeta-hover: #F5F5ED;
+    --inicio-borde: #D4D4C8;
+    --inicio-amarillo-suave: #FFF3BA;
+    --inicio-texto: #1A1A18;
+    --inicio-secundario: #52524A;
+    --inicio-tenue: #66665D;
+    --inicio-texto-acento: #755600;
+    --inicio-texto-exito: #28633B;
+    --inicio-texto-peligro: #A52626;
+    --inicio-texto-aviso: #805000;
+    --inicio-esqueleto: #E5E5DB;
+    --inicio-interior: #F5F5F0;
+    --inicio-alerta-fondo: #FCECEC;
+    --inicio-escudo-fondo: #FFF3BA;
+    --inicio-insignia-fondo: #FFFFFFB3;
+    --inicio-cabecera: linear-gradient(115deg, #FFF0B0 0%, #FAFAF3 65%, #FFFFFF 100%);
+    --inicio-escudo-opacidad: 0.09;
+    --inicio-escudo-filtro: grayscale(1) contrast(1.2);
+  }
+}

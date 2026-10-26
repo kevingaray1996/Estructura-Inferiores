@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { COLORES } from '../theme'
+import SelectorApariencia from '../appearance/SelectorApariencia'
 
 const rolLabel = {
   coordinacion: 'Coordinación',
@@ -183,7 +184,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
           onClick={() => setMenuAbierto(true)}
           aria-label="Abrir menú"
           className="w-9 h-9 flex items-center justify-center rounded-lg text-xl"
-          style={{ color: COLORES.acento }}
+          style={{ color: 'var(--ui-texto-acento, #F2C230)' }}
         >
           ☰
         </button>
@@ -226,7 +227,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
               Club Comunicaciones
             </p>
             {subtitulo && (
-              <p className="text-xs mt-1" style={{ color: COLORES.acento }}>
+              <p className="text-xs mt-1" style={{ color: 'var(--ui-texto-acento, #F2C230)' }}>
                 {subtitulo}
               </p>
             )}
@@ -237,7 +238,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
             title={menuCompacto ? 'Expandir menú' : 'Plegar menú'}
             aria-label={menuCompacto ? 'Expandir menú lateral' : 'Plegar menú lateral'}
             className="hidden md:flex items-center justify-center rounded-lg w-9 h-9 shrink-0 hover:opacity-80"
-            style={{ color: COLORES.acento, border: `1px solid ${COLORES.borde}` }}
+            style={{ color: 'var(--ui-texto-acento, #F2C230)', border: `1px solid ${COLORES.borde}` }}
           >
             {menuCompacto ? '»' : '«'}
           </button>
@@ -263,8 +264,8 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
                 title={s.label}
                 aria-label={s.label}
                 style={{
-                  color: activa ? COLORES.acento : COLORES.textoSecundario,
-                  backgroundColor: activa ? 'rgba(242,194,48,0.08)' : 'transparent',
+                  color: activa ? 'var(--ui-nav-activo-texto, #F2C230)' : COLORES.textoSecundario,
+                  backgroundColor: activa ? 'var(--ui-nav-activo-fondo, rgba(242,194,48,0.08))' : 'transparent',
                   borderLeft: activa
                     ? `3px solid ${COLORES.acento}`
                     : '3px solid transparent',
@@ -370,6 +371,8 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
               </p>
             </div>
           </div>
+
+          <SelectorApariencia compacto={menuCompacto} />
 
           <button
             onClick={() => supabase.auth.signOut()}
