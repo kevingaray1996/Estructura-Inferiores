@@ -1,3 +1,4 @@
+import { BOTON_GESTION } from '../appearance/gestion'
 import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -19,7 +20,7 @@ function EquiposSection({ onVolver }) {
 
   const inputStyle = {
     backgroundColor: COLORES.fondoTarjeta,
-    border: '1px solid COLORES.borde',
+    border: `1px solid ${COLORES.borde}`,
     color: COLORES.texto,
   }
 
@@ -131,7 +132,7 @@ function EquiposSection({ onVolver }) {
           <button
             onClick={mostrarForm ? cancelarForm : abrirNuevo}
             className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
-            style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+            style={BOTON_GESTION}
           >
             {mostrarForm ? 'Cancelar' : '+ Nuevo equipo'}
           </button>
@@ -140,7 +141,7 @@ function EquiposSection({ onVolver }) {
         {mostrarForm && (
           <div
             className="space-y-3 mb-8 p-4 rounded-xl"
-            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
           >
             {equipoEditando && (
               <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
@@ -152,7 +153,7 @@ function EquiposSection({ onVolver }) {
               placeholder="Nombre del equipo"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
-              className="w-full p-2.5 rounded-xl outline-none text-sm"
+              className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
               style={inputStyle}
             />
 
@@ -166,12 +167,12 @@ function EquiposSection({ onVolver }) {
                     src={escudoUrl}
                     alt="Escudo"
                     className="w-12 h-12 rounded-lg object-contain shrink-0"
-                    style={{ backgroundColor: COLORES.fondoPagina, border: '1px solid COLORES.borde' }}
+                    style={{ backgroundColor: COLORES.fondoPagina, border: `1px solid ${COLORES.borde}` }}
                   />
                 )}
                 <label
                   className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 cursor-pointer"
-                  style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario, border: '1px solid COLORES.borde' }}
+                  style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario, border: `1px solid ${COLORES.borde}` }}
                 >
                   {subiendoEscudo ? 'Subiendo...' : escudoUrl ? 'Cambiar escudo' : '📤 Subir escudo'}
                   <input
@@ -205,7 +206,7 @@ function EquiposSection({ onVolver }) {
               onClick={handleGuardar}
               disabled={guardando}
               className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+              style={BOTON_GESTION}
             >
               {guardando ? 'Guardando...' : equipoEditando ? 'Guardar cambios' : 'Guardar equipo'}
             </button>
@@ -217,7 +218,7 @@ function EquiposSection({ onVolver }) {
           placeholder="Buscar equipo..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          className="w-full p-2.5 rounded-xl outline-none text-sm mb-4"
+          className="w-full p-2.5 rounded-xl ui-control outline-none text-sm mb-4"
           style={inputStyle}
         />
 
@@ -232,7 +233,7 @@ function EquiposSection({ onVolver }) {
             <div
               key={e.id}
               className="p-3 rounded-xl flex items-center justify-between"
-              style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
             >
               <div className="flex items-center gap-2.5">
                 {e.escudo_url ? (

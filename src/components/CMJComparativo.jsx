@@ -183,7 +183,7 @@ function CMJComparativo() {
         <select
           value={jugadorId}
           onChange={(e) => setJugadorId(e.target.value)}
-          className="w-full sm:w-64 p-2.5 rounded-xl outline-none text-sm"
+          className="w-full sm:w-64 p-2.5 rounded-xl ui-control outline-none text-sm"
           style={inputStyle}
         >
           <option value="">Todo el plantel (general)</option>
@@ -220,7 +220,7 @@ function CMJComparativo() {
                   key={jugador.id}
                   onClick={() => setJugadorId(jugador.id)}
                   className="cursor-pointer hover:opacity-80 transition-opacity"
-                  style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#1F1F1D' }}
+                  style={{ backgroundColor: i % 2 === 0 ? 'transparent' : 'var(--cmj-fila, #1F1F1D)' }}
                 >
                   <td className="p-2.5" style={{ color: COLORES.texto }}>
                     {jugador.apellido}, {jugador.nombre}
@@ -240,7 +240,11 @@ function CMJComparativo() {
                               : resultado.nivel === 'moderado'
                               ? COLORES.acento
                               : COLORES.exito,
-                          color: '#1A1A1A',
+                          color: resultado.nivel === 'moderado'
+                            ? 'var(--ui-texto-sobre-acento, #1A1A1A)'
+                            : resultado.nivel === 'alerta'
+                            ? 'var(--riesgo-chip-texto, #111111)'
+                            : 'var(--riesgo-chip-texto, #1A1A1A)',
                         }}
                       >
                         {resultado.nivel === 'alerta' ? 'Alerta' : resultado.nivel === 'moderado' ? 'Moderado' : 'Normal'}
@@ -326,7 +330,7 @@ function CMJComparativo() {
                   </tr>
                 )}
                 {historial.map((h, i) => (
-                  <tr key={h.fecha} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#1F1F1D' }}>
+                  <tr key={h.fecha} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : 'var(--cmj-fila, #1F1F1D)' }}>
                     <td className="p-2.5" style={{ color: COLORES.texto }}>
                       {h.fecha}
                     </td>

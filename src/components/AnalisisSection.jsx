@@ -1,3 +1,4 @@
+import { ANALISIS as A, textoAnalisis } from '../appearance/analisis'
 
 
 
@@ -12,11 +13,6 @@ import {
 } from '../utils/destinatariasPases'
 
 const AMARILLO = '#F2C230'
-const PANEL = '#151D29'
-const BORDE = '#2A3548'
-const TEXTO = '#F0F2F5'
-const SECUNDARIO = '#8A9BB8'
-const FONDO = '#0F1419'
 const CATEGORIA_ID = '438874e7-e59f-460b-bec4-3c0ef5b44016'
 
 const TIPOS = [
@@ -86,12 +82,12 @@ function validarResultadoAccion(tipo, resultado) {
 }
 
 const inputClass =
-  'w-full rounded-lg border p-3 text-sm outline-none focus:ring-1 focus:ring-yellow-400'
+  'w-full rounded-lg border p-3 text-sm ui-control outline-none focus:ring-1 focus:ring-yellow-400'
 
 const inputStyle = {
-  backgroundColor: FONDO,
-  borderColor: BORDE,
-  color: TEXTO,
+  backgroundColor: A.fondo,
+  borderColor: A.borde,
+  color: A.texto,
 }
 
 function Boton({
@@ -108,7 +104,7 @@ function Boton({
       disabled={disabled}
       className="rounded-lg px-4 py-2.5 text-sm font-bold transition hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
       style={secundario
-        ? { backgroundColor: '#202A38', color: TEXTO, border: `1px solid ${BORDE}` }
+        ? { backgroundColor: A.control, color: A.texto, border: `1px solid ${A.borde}` }
         : { backgroundColor: AMARILLO, color: '#171717' }}
     >
       {children}
@@ -119,7 +115,7 @@ function Boton({
 function Campo({ label, children }) {
   return (
     <label className="block space-y-2 text-sm">
-      <span className="font-medium" style={{ color: TEXTO }}>{label}</span>
+      <span className="font-medium" style={{ color: A.texto }}>{label}</span>
       {children}
     </label>
   )
@@ -130,7 +126,7 @@ function Panel({ children, className = '', style = {}, id }) {
     <section
       id={id}
       className={`rounded-xl border p-4 md:p-5 ${className}`}
-      style={{ backgroundColor: PANEL, borderColor: BORDE, ...style }}
+      style={{ backgroundColor: A.panel, borderColor: A.borde, ...style }}
     >
       {children}
     </section>
@@ -1727,7 +1723,7 @@ export default function AnalisisSection() {
 
   if (cargando) {
     return (
-      <div className="p-6 text-sm" style={{ color: SECUNDARIO }}>
+      <div className="p-6 text-sm" style={{ color: A.secundario }}>
         Cargando módulo de Análisis...
       </div>
     )
@@ -1736,23 +1732,23 @@ export default function AnalisisSection() {
   return (
     <div
       className="min-h-screen space-y-5 p-3 md:p-6"
-      style={{ backgroundColor: FONDO, color: TEXTO }}
+      style={{ backgroundColor: A.fondo, color: A.texto }}
     >
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p
             className="mb-2 text-xs font-bold uppercase tracking-[0.2em]"
-            style={{ color: AMARILLO }}
+            style={{ color: textoAnalisis(AMARILLO) }}
           >
             COMUNICACIONES · PERFORMANCE
           </p>
           <h1 className="text-3xl font-black tracking-tight md:text-4xl">
             Videoanálisis
           </h1>
-          <p className="mt-2 text-sm" style={{ color: SECUNDARIO }}>
+          <p className="mt-2 text-sm" style={{ color: A.secundario }}>
             Etiquetado de acciones, formación y análisis del rendimiento.
           </p>
-          <p className="mt-2 text-xs" style={{ color: SECUNDARIO }}>
+          <p className="mt-2 text-xs" style={{ color: A.secundario }}>
             {esAdmin
               ? 'Modo administrador · Gestión habilitada'
               : 'Modo consulta · Solo lectura'}
@@ -1785,9 +1781,9 @@ export default function AnalisisSection() {
         <div
           className="rounded-lg border p-3 text-sm"
           style={{
-            backgroundColor: '#351D22',
-            borderColor: '#85404B',
-            color: '#FFD5DA',
+            backgroundColor: A.errorFondo,
+            borderColor: A.errorBorde,
+            color: A.errorTexto,
           }}
         >
           {error}
@@ -1798,9 +1794,9 @@ export default function AnalisisSection() {
         <div
           className="rounded-lg border p-3 text-sm"
           style={{
-            backgroundColor: '#203326',
-            borderColor: '#3B714A',
-            color: '#D5F5DE',
+            backgroundColor: A.exitoFondo,
+            borderColor: A.exitoBorde,
+            color: A.exitoTexto,
           }}
         >
           {mensaje}
@@ -1813,7 +1809,7 @@ export default function AnalisisSection() {
             {editandoId ? 'Editar análisis' : 'Vincular análisis a un partido'}
           </h2>
 
-          <p className="mb-4 text-sm" style={{ color: SECUNDARIO }}>
+          <p className="mb-4 text-sm" style={{ color: A.secundario }}>
             Seleccioná un encuentro existente del calendario. No se creará otro
             partido en el calendario.
           </p>
@@ -1858,7 +1854,7 @@ export default function AnalisisSection() {
                 onChange={(e) => setVideoUrl(e.target.value)}
                 placeholder="https://www.youtube.com/watch?v=..."
               />
-              <span className="text-xs" style={{ color: SECUNDARIO }}>
+              <span className="text-xs" style={{ color: A.secundario }}>
                 Si lo dejás vacío, se utilizará el video disponible en el
                 calendario.
               </span>
@@ -1898,7 +1894,7 @@ export default function AnalisisSection() {
         className="overflow-hidden"
         style={{
           background:
-            'linear-gradient(120deg, #202A38 0%, #151D29 70%, #242B30 100%)',
+            A.cabecera,
         }}
       >
         <div className="flex flex-wrap items-center gap-4">
@@ -1911,7 +1907,7 @@ export default function AnalisisSection() {
 
           <div className="min-w-0 flex-1">
             <h2 className="text-lg font-bold">Biblioteca de análisis</h2>
-            <p className="mt-1 text-sm" style={{ color: SECUNDARIO }}>
+            <p className="mt-1 text-sm" style={{ color: A.secundario }}>
               {partidos.length} análisis · {partidosCalendario.length} partidos
               en el calendario
             </p>
@@ -1920,7 +1916,7 @@ export default function AnalisisSection() {
           {partidoActual && (
 
             <div className="text-right">
-              <p className="text-xs" style={{ color: SECUNDARIO }}>
+              <p className="text-xs" style={{ color: A.secundario }}>
                 PARTIDO ACTIVO
               </p>
               <p className="font-bold">{partidoActual.rival}</p>
@@ -1929,7 +1925,7 @@ export default function AnalisisSection() {
         </div>
 
         {partidos.length === 0 ? (
-          <p className="mt-4 text-sm" style={{ color: SECUNDARIO }}>
+          <p className="mt-4 text-sm" style={{ color: A.secundario }}>
             Todavía no hay análisis guardados. Usá «Nuevo análisis» para elegir
             un partido del calendario.
           </p>
@@ -1961,18 +1957,18 @@ export default function AnalisisSection() {
                   }}
                   className="min-w-[190px] rounded-lg border p-3 text-left transition hover:border-yellow-400"
                   style={{
-                    backgroundColor: activo ? '#303B4D' : FONDO,
-                    borderColor: activo ? AMARILLO : BORDE,
+                    backgroundColor: activo ? A.activo : A.fondo,
+                    borderColor: activo ? AMARILLO : A.borde,
                   }}
                 >
                   <p className="font-bold">{encuentro?.rival || partido.rival}</p>
-                  <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
+                  <p className="mt-1 text-xs" style={{ color: A.secundario }}>
                     {datosEncuentro({
                       ...partido,
                       partido_calendario: encuentro,
                     })}
                   </p>
-                  <p className="mt-2 text-xs" style={{ color: AMARILLO }}>
+                  <p className="mt-2 text-xs" style={{ color: textoAnalisis(AMARILLO) }}>
                     {eventos.filter((e) => e.partido_id === partido.id).length}{' '}
                     acciones
                   </p>
@@ -1983,11 +1979,11 @@ export default function AnalisisSection() {
         )}
 
         {esAdmin && partidoActual && (
-          <div className="mt-4 flex flex-wrap gap-3 border-t pt-3" style={{ borderColor: BORDE }}>
+          <div className="mt-4 flex flex-wrap gap-3 border-t pt-3" style={{ borderColor: A.borde }}>
             <button
               type="button"
               className="text-xs font-bold"
-              style={{ color: AMARILLO }}
+              style={{ color: textoAnalisis(AMARILLO) }}
               onClick={() => editarPartido(partidoActual)}
             >
               Editar datos del análisis
@@ -2019,9 +2015,9 @@ export default function AnalisisSection() {
                 onClick={() => setSeccion(id)}
                 className="rounded-lg border px-4 py-2.5 text-sm font-bold"
                 style={{
-                  backgroundColor: seccion === id ? AMARILLO : PANEL,
-                  color: seccion === id ? '#171717' : TEXTO,
-                  borderColor: seccion === id ? AMARILLO : BORDE,
+                  backgroundColor: seccion === id ? AMARILLO : A.panel,
+                  color: seccion === id ? '#171717' : A.texto,
+                  borderColor: seccion === id ? AMARILLO : A.borde,
                 }}
               >
                 {texto}
@@ -2037,14 +2033,14 @@ export default function AnalisisSection() {
                     <div>
                       <p
                         className="text-xs font-bold uppercase tracking-widest"
-                        style={{ color: AMARILLO }}
+                        style={{ color: textoAnalisis(AMARILLO) }}
                       >
                         PARTIDO EN ANÁLISIS
                       </p>
                       <h2 className="mt-1 text-xl font-black">
                         {partidoActual.rival}
                       </h2>
-                      <p className="mt-1 text-sm" style={{ color: SECUNDARIO }}>
+                      <p className="mt-1 text-sm" style={{ color: A.secundario }}>
                         {datosEncuentro(partidoActual)}
                       </p>
                     </div>
@@ -2052,16 +2048,16 @@ export default function AnalisisSection() {
                     <div
                       className="rounded-lg border px-3 py-2 text-xs"
                       style={{
-                        backgroundColor: FONDO,
-                        borderColor: BORDE,
-                        color: videoListo ? '#4ADE80' : SECUNDARIO,
+                        backgroundColor: A.fondo,
+                        borderColor: A.borde,
+                        color: textoAnalisis(videoListo ? '#4ADE80' : A.secundario),
                       }}
                     >
                       {videoListo ? '● Video conectado' : '○ Conectando video'}
                     </div>
                   </div>
 
-                  <div className="mb-4 grid gap-3 rounded-xl border p-3 sm:grid-cols-2" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
+                  <div className="mb-4 grid gap-3 rounded-xl border p-3 sm:grid-cols-2" style={{ borderColor: A.borde, backgroundColor: A.fondo }}>
                     <Campo label="Tiempo del partido que estás analizando">
                       <select className={inputClass} style={inputStyle} value={periodoActual} onChange={(e) => setPeriodoActual(Number(e.target.value))}>
                         <option value={1}>Primer tiempo</option>
@@ -2074,7 +2070,7 @@ export default function AnalisisSection() {
                         <option value="izquierda">Atacamos hacia la izquierda ←</option>
                       </select>
                     </Campo>
-                    <p className="text-xs sm:col-span-2" style={{ color: SECUNDARIO }}>
+                    <p className="text-xs sm:col-span-2" style={{ color: A.secundario }}>
                       La cancha del análisis se mantiene normalizada (defensa a la izquierda y ataque a la derecha) para comparar ambos tiempos. La dirección real se guarda por partido y el otro tiempo queda automáticamente en sentido contrario.
                     </p>
                   </div>
@@ -2095,11 +2091,11 @@ export default function AnalisisSection() {
                   ) : (
                     <div
                       className="flex aspect-video flex-col items-center justify-center rounded-lg border p-5 text-center"
-                      style={{ backgroundColor: FONDO, borderColor: BORDE }}
+                      style={{ backgroundColor: A.fondo, borderColor: A.borde }}
                     >
                       <span className="text-4xl">▶</span>
                       <p className="mt-3 font-bold">No hay video disponible</p>
-                      <p className="mt-1 text-sm" style={{ color: SECUNDARIO }}>
+                      <p className="mt-1 text-sm" style={{ color: A.secundario }}>
                         Agregá un enlace de YouTube desde los datos del análisis.
                       </p>
                       {esAdmin && (
@@ -2116,15 +2112,15 @@ export default function AnalisisSection() {
                     <div className="mt-4 space-y-3">
                       <div
                         className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
-                        style={{ backgroundColor: FONDO, borderColor: BORDE }}
+                        style={{ backgroundColor: A.fondo, borderColor: A.borde }}
                       >
                         <div>
-                          <p className="text-xs" style={{ color: SECUNDARIO }}>
+                          <p className="text-xs" style={{ color: A.secundario }}>
                             TIEMPO ACTUAL
                           </p>
                           <p
                             className="font-mono text-3xl font-black"
-                            style={{ color: AMARILLO }}
+                            style={{ color: textoAnalisis(AMARILLO) }}
                           >
                             {formatearTiempo(tiempoVideo)}
                           </p>
@@ -2170,7 +2166,7 @@ export default function AnalisisSection() {
                           target="_blank"
                           rel="noreferrer"
                           className="inline-block text-sm font-bold"
-                          style={{ color: AMARILLO }}
+                          style={{ color: textoAnalisis(AMARILLO) }}
                         >
                           Abrir video en YouTube ↗
                         </a>
@@ -2181,9 +2177,9 @@ export default function AnalisisSection() {
                   {partidoActual.notas && (
                     <div
                       className="mt-4 rounded-lg border p-3"
-                      style={{ backgroundColor: FONDO, borderColor: BORDE }}
+                      style={{ backgroundColor: A.fondo, borderColor: A.borde }}
                     >
-                      <p className="mb-1 text-xs font-bold uppercase" style={{ color: SECUNDARIO }}>
+                      <p className="mb-1 text-xs font-bold uppercase" style={{ color: A.secundario }}>
                         Notas generales
                       </p>
                       <p className="whitespace-pre-wrap text-sm">
@@ -2198,7 +2194,7 @@ export default function AnalisisSection() {
                     <div>
                       <p
                         className="text-xs font-bold uppercase tracking-widest"
-                        style={{ color: AMARILLO }}
+                        style={{ color: textoAnalisis(AMARILLO) }}
                       >
                         CONVOCATORIA DEL PARTIDO
                       </p>
@@ -2206,7 +2202,7 @@ export default function AnalisisSection() {
                     </div>
                     <div className="text-right">
                       <p className="text-xl font-black">{citaciones.length}</p>
-                      <p className="text-xs" style={{ color: SECUNDARIO }}>
+                      <p className="text-xs" style={{ color: A.secundario }}>
                         convocadas
                       </p>
                     </div>
@@ -2216,9 +2212,9 @@ export default function AnalisisSection() {
                     <div
                       className="rounded-lg border p-4 text-sm"
                       style={{
-                        backgroundColor: FONDO,
-                        borderColor: BORDE,
-                        color: SECUNDARIO,
+                        backgroundColor: A.fondo,
+                        borderColor: A.borde,
+                        color: A.secundario,
                       }}
                     >
                       No se encontraron convocadas para este encuentro. Revisá
@@ -2320,7 +2316,7 @@ export default function AnalisisSection() {
                       <div className="mt-4">
                         <div className="mb-2 flex items-center justify-between gap-2">
                           <h3 className="text-sm font-bold">Suplentes</h3>
-                          <span className="text-xs" style={{ color: SECUNDARIO }}>
+                          <span className="text-xs" style={{ color: A.secundario }}>
                             {suplentes.length} jugadoras
                           </span>
                         </div>
@@ -2335,13 +2331,13 @@ export default function AnalisisSection() {
                                 onClick={() => setJugadorId(c.jugador_id)}
                                 className="flex items-center gap-2 rounded-lg border px-3 py-2 text-left"
                                 style={{
-                                  backgroundColor: jugadorId === c.jugador_id ? '#3A3522' : FONDO,
-                                  borderColor: jugadorId === c.jugador_id ? AMARILLO : BORDE,
+                                  backgroundColor: jugadorId === c.jugador_id ? A.seleccion : A.fondo,
+                                  borderColor: jugadorId === c.jugador_id ? AMARILLO : A.borde,
                                 }}
                               >
                                 <span
                                   className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-black"
-                                  style={{ backgroundColor: '#303B4D', color: TEXTO }}
+                                  style={{ backgroundColor: A.activo, color: A.texto }}
                                 >
                                   {c.dorsal ?? '—'}
                                 </span>
@@ -2352,13 +2348,13 @@ export default function AnalisisSection() {
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm" style={{ color: SECUNDARIO }}>
+                          <p className="text-sm" style={{ color: A.secundario }}>
                             No hay suplentes cargadas o todas tienen posición guardada en cancha.
                           </p>
                         )}
                       </div>
 
-                      <p className="mt-3 text-xs" style={{ color: SECUNDARIO }}>
+                      <p className="mt-3 text-xs" style={{ color: A.secundario }}>
                         Seleccioná una jugadora para asignarla al próximo evento.
                         Las posiciones se muestran cuando están guardadas en Convocados.
                       </p>
@@ -2372,19 +2368,19 @@ export default function AnalisisSection() {
                   <div className="mb-4">
                     <p
                       className="text-xs font-bold uppercase tracking-widest"
-                      style={{ color: AMARILLO }}
+                      style={{ color: textoAnalisis(AMARILLO) }}
                     >
                       LIVE TAGGING
                     </p>
                     <h2 className="mt-1 text-xl font-black">Etiquetado rápido</h2>
-                    <p className="mt-2 text-sm" style={{ color: SECUNDARIO }}>
+                    <p className="mt-2 text-sm" style={{ color: A.secundario }}>
                       1. Elegí una acción. 2. Elegí la jugadora. 3. Completá el
                       resultado cuando revises el evento.
                     </p>
                   </div>
 
                   {!esAdmin ? (
-                    <p className="text-sm" style={{ color: SECUNDARIO }}>
+                    <p className="text-sm" style={{ color: A.secundario }}>
                       Solo el administrador puede registrar acciones.
                     </p>
                   ) : (
@@ -2407,8 +2403,8 @@ export default function AnalisisSection() {
                               }}
                               className="rounded-lg border p-3 text-left transition hover:brightness-125"
                               style={{
-                                backgroundColor: activa ? '#303B4D' : FONDO,
-                                borderColor: activa ? accion.color : BORDE,
+                                backgroundColor: activa ? A.activo : A.fondo,
+                                borderColor: activa ? accion.color : A.borde,
                                 boxShadow: activa ? `inset 0 0 0 1px ${accion.color}` : 'none',
                               }}
                             >
@@ -2416,7 +2412,7 @@ export default function AnalisisSection() {
                                 className="flex h-7 w-7 items-center justify-center rounded-md text-base font-black"
                                 style={{
                                   backgroundColor: `${accion.color}22`,
-                                  color: accion.color,
+                                  color: textoAnalisis(accion.color),
                                 }}
                               >
                                 {accion.icono}
@@ -2433,14 +2429,14 @@ export default function AnalisisSection() {
                         <div
                           className="mt-4 rounded-lg border p-3"
                           style={{
-                            backgroundColor: FONDO,
+                            backgroundColor: A.fondo,
                             borderColor: AMARILLO,
                           }}
                         >
                           <p className="text-sm font-bold">
                             Acción seleccionada: {tipoRapido}
                           </p>
-                          <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
+                          <p className="mt-1 text-xs" style={{ color: A.secundario }}>
                             Tiempo: {formatearTiempo(tiempoVideo)} · Elegí una
                             convocada para guardar el evento.
                           </p>
@@ -2466,8 +2462,8 @@ export default function AnalisisSection() {
                                 }
                                 className="flex w-full items-center gap-3 rounded-lg border p-2 text-left hover:border-yellow-400 disabled:opacity-40"
                                 style={{
-                                  backgroundColor: '#202A38',
-                                  borderColor: BORDE,
+                                  backgroundColor: A.control,
+                                  borderColor: A.borde,
                                 }}
                               >
                                 <span
@@ -2483,16 +2479,16 @@ export default function AnalisisSection() {
                                   <span className="block truncate text-sm font-bold">
                                     {nombreJugadora(c.jugadora)}
                                   </span>
-                                  <span className="text-xs" style={{ color: SECUNDARIO }}>
+                                  <span className="text-xs" style={{ color: A.secundario }}>
                                     {c.titular ? 'Titular' : 'Suplente'}
                                   </span>
                                 </span>
-                                <span style={{ color: AMARILLO }}>＋</span>
+                                <span style={{ color: textoAnalisis(AMARILLO) }}>＋</span>
                               </button>
                             ))}
 
                             {jugadorasVisibles.length === 0 && (
-                              <p className="py-3 text-sm" style={{ color: SECUNDARIO }}>
+                              <p className="py-3 text-sm" style={{ color: A.secundario }}>
                                 No hay convocadas que coincidan con la búsqueda.
                               </p>
                             )}
@@ -2500,7 +2496,7 @@ export default function AnalisisSection() {
                         </div>
                       )}
 
-                      <div className="my-5 border-t" style={{ borderColor: BORDE }} />
+                      <div className="my-5 border-t" style={{ borderColor: A.borde }} />
 
                       <details>
                         <summary className="cursor-pointer text-sm font-bold">
@@ -2540,7 +2536,7 @@ export default function AnalisisSection() {
                             </select>
                           </Campo>
 
-                          <label className="flex items-center gap-2 text-sm" style={{ color: TEXTO }}>
+                          <label className="flex items-center gap-2 text-sm" style={{ color: A.texto }}>
                             <input type="checkbox" checked={tiempoAutomatico}
                               onChange={(e) => setTiempoAutomatico(e.target.checked)} />
                             Capturar automáticamente el tiempo del video al guardar
@@ -2558,7 +2554,7 @@ export default function AnalisisSection() {
                                 disabled={tiempoAutomatico && videoListo}
                                 required
                               />
-                              <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
+                              <p className="mt-1 text-xs" style={{ color: A.secundario }}>
                                 {formatearTiempo(segundo)}
                               </p>
                             </Campo>
@@ -2575,7 +2571,7 @@ export default function AnalisisSection() {
                                   <option key={r} value={r}>{r}</option>
                                 ))}
                               </select>
-                              {tipo === 'Despeje' && <p className="mt-2 text-xs" style={{ color: SECUNDARIO }}>{CRITERIO_DESPEJE}</p>}
+                              {tipo === 'Despeje' && <p className="mt-2 text-xs" style={{ color: A.secundario }}>{CRITERIO_DESPEJE}</p>}
                             </Campo>
                           </div>
 
@@ -2585,7 +2581,7 @@ export default function AnalisisSection() {
                             </Boton>
                           )}
                           {tiempoAutomatico && (
-                            <p className="text-xs" style={{ color: SECUNDARIO }}>
+                            <p className="text-xs" style={{ color: A.secundario }}>
                               Tiempo actual del video: {formatearTiempo(tiempoVideo)}. Se capturará al guardar.
                               Si necesitás corregirlo, desactivá la captura automática.
                             </p>
@@ -2606,8 +2602,8 @@ export default function AnalisisSection() {
 
                           <div className="space-y-2">
                             <div className="flex flex-wrap items-center justify-between gap-2">
-                              <label className="text-sm font-medium" style={{ color: TEXTO }}>Ubicación exacta en cancha (opcional)</label>
-                              <span className="text-xs" style={{ color: SECUNDARIO }}>
+                              <label className="text-sm font-medium" style={{ color: A.texto }}>Ubicación exacta en cancha (opcional)</label>
+                              <span className="text-xs" style={{ color: A.secundario }}>
                                 {coordenadasAccion ? `X ${coordenadasAccion.x}% · Y ${coordenadasAccion.y}%` : 'Tocá la cancha para ubicar la acción'}
                               </span>
                             </div>
@@ -2620,8 +2616,8 @@ export default function AnalisisSection() {
                               }}
                             />
                             <div className="flex justify-between gap-2">
-                              <p className="text-xs" style={{ color: SECUNDARIO }}>La ubicación se guarda junto con la acción.</p>
-                              {coordenadasAccion && <button type="button" className="text-xs font-bold" style={{ color: AMARILLO }} onClick={() => setCoordenadasAccion(null)}>Quitar ubicación</button>}
+                              <p className="text-xs" style={{ color: A.secundario }}>La ubicación se guarda junto con la acción.</p>
+                              {coordenadasAccion && <button type="button" className="text-xs font-bold" style={{ color: textoAnalisis(AMARILLO) }} onClick={() => setCoordenadasAccion(null)}>Quitar ubicación</button>}
                             </div>
                           </div>
 
@@ -2650,7 +2646,7 @@ export default function AnalisisSection() {
                     <div>
                       <p
                         className="text-xs font-bold uppercase tracking-widest"
-                        style={{ color: AMARILLO }}
+                        style={{ color: textoAnalisis(AMARILLO) }}
                       >
                         RESUMEN
                       </p>
@@ -2658,7 +2654,7 @@ export default function AnalisisSection() {
                     </div>
                     <span
                       className="rounded-lg px-3 py-2 text-xl font-black"
-                      style={{ backgroundColor: FONDO, color: AMARILLO }}
+                      style={{ backgroundColor: A.fondo, color: textoAnalisis(AMARILLO) }}
                     >
                       {eventosPartido.length}
                     </span>
@@ -2677,9 +2673,9 @@ export default function AnalisisSection() {
                       <div
                         key={label}
                         className="rounded-lg border p-3"
-                        style={{ backgroundColor: FONDO, borderColor: BORDE }}
+                        style={{ backgroundColor: A.fondo, borderColor: A.borde }}
                       >
-                        <p className="text-xs" style={{ color: SECUNDARIO }}>{label}</p>
+                        <p className="text-xs" style={{ color: A.secundario }}>{label}</p>
                         <p className="mt-1 text-2xl font-black">{valor}</p>
                       </div>
                     ))}
@@ -2692,7 +2688,7 @@ export default function AnalisisSection() {
                   <div>
                     <p
                       className="text-xs font-bold uppercase tracking-widest"
-                      style={{ color: AMARILLO }}
+                      style={{ color: textoAnalisis(AMARILLO) }}
                     >
                       EVENT LOG
                     </p>
@@ -2747,7 +2743,7 @@ export default function AnalisisSection() {
                   <form
                     onSubmit={guardarEdicionEvento}
                     className="mb-5 space-y-4 rounded-lg border p-4"
-                    style={{ backgroundColor: FONDO, borderColor: AMARILLO }}
+                    style={{ backgroundColor: A.fondo, borderColor: AMARILLO }}
                   >
                     <div className="flex items-center justify-between gap-3">
                       <h3 className="font-bold">Editar acción</h3>
@@ -2755,7 +2751,7 @@ export default function AnalisisSection() {
                         type="button"
                         onClick={() => setMostrarEdicionEvento(false)}
                         className="text-sm"
-                        style={{ color: SECUNDARIO }}
+                        style={{ color: A.secundario }}
                       >
                         Cerrar ×
                       </button>
@@ -2854,7 +2850,7 @@ export default function AnalisisSection() {
                             <option key={r} value={r}>{r}</option>
                           ))}
                         </select>
-                        {edicionEvento.tipo === 'Despeje' && <p className="mt-2 text-xs" style={{ color: SECUNDARIO }}>{CRITERIO_DESPEJE}</p>}
+                        {edicionEvento.tipo === 'Despeje' && <p className="mt-2 text-xs" style={{ color: A.secundario }}>{CRITERIO_DESPEJE}</p>}
                       </Campo>
 
                       <Campo label="Observaciones">
@@ -2873,8 +2869,8 @@ export default function AnalisisSection() {
 
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <label className="text-sm font-medium" style={{ color: TEXTO }}>Ubicación exacta en cancha</label>
-                        <span className="text-xs" style={{ color: SECUNDARIO }}>
+                        <label className="text-sm font-medium" style={{ color: A.texto }}>Ubicación exacta en cancha</label>
+                        <span className="text-xs" style={{ color: A.secundario }}>
                           {edicionEvento.coordenada_x != null && edicionEvento.coordenada_y != null
                             ? `X ${edicionEvento.coordenada_x}% · Y ${edicionEvento.coordenada_y}%`
                             : 'Sin ubicación exacta'}
@@ -2893,7 +2889,7 @@ export default function AnalisisSection() {
                         }))}
                       />
                       {(edicionEvento.coordenada_x != null || edicionEvento.coordenada_y != null) && (
-                        <button type="button" className="text-xs font-bold" style={{ color: AMARILLO }} onClick={() => setEdicionEvento((a) => ({ ...a, coordenada_x: null, coordenada_y: null }))}>Quitar ubicación exacta</button>
+                        <button type="button" className="text-xs font-bold" style={{ color: textoAnalisis(AMARILLO) }} onClick={() => setEdicionEvento((a) => ({ ...a, coordenada_x: null, coordenada_y: null }))}>Quitar ubicación exacta</button>
                       )}
                     </div>
 
@@ -2915,9 +2911,9 @@ export default function AnalisisSection() {
                   <div
                     className="rounded-lg border p-6 text-center text-sm"
                     style={{
-                      backgroundColor: FONDO,
-                      borderColor: BORDE,
-                      color: SECUNDARIO,
+                      backgroundColor: A.fondo,
+                      borderColor: A.borde,
+                      color: A.secundario,
                     }}
                   >
                     No hay acciones para mostrar con estos filtros.
@@ -2939,7 +2935,7 @@ export default function AnalisisSection() {
                         <article
                           key={ev.id}
                           className="flex flex-wrap items-center gap-3 rounded-lg border p-3"
-                          style={{ backgroundColor: FONDO, borderColor: BORDE }}
+                          style={{ backgroundColor: A.fondo, borderColor: A.borde }}
                         >
                           <button
                             type="button"
@@ -2949,7 +2945,7 @@ export default function AnalisisSection() {
                               irAlSegundo(ev.segundo)
                             }}
                             className="min-w-[62px] rounded-md px-2 py-2 text-center font-mono text-sm font-black disabled:opacity-40"
-                            style={{ backgroundColor: '#303B4D', color: AMARILLO }}
+                            style={{ backgroundColor: A.activo, color: textoAnalisis(AMARILLO) }}
                             title="Ir a este momento del video"
                           >
                             {formatearTiempo(ev.segundo)}
@@ -2959,7 +2955,7 @@ export default function AnalisisSection() {
                             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-black"
                             style={{
                               backgroundColor: `${accion?.color || AMARILLO}20`,
-                              color: accion?.color || AMARILLO,
+                              color: textoAnalisis(accion?.color || AMARILLO),
                             }}
                           >
                             {accion?.icono || '•'}
@@ -2967,12 +2963,12 @@ export default function AnalisisSection() {
 
                           <div className="min-w-[120px] flex-1">
                             <p className="font-bold">{ev.tipo}</p>
-                            <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
+                            <p className="mt-1 text-xs" style={{ color: A.secundario }}>
                               {jugadora ? nombreJugadora(jugadora) : 'Sin jugadora'}
                               {ev.zona ? ` · ${ev.zona}` : ''}
                             </p>
                             {ev.observaciones && (
-                              <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
+                              <p className="mt-1 text-xs" style={{ color: A.secundario }}>
                                 {ev.observaciones}
                               </p>
                             )}
@@ -2981,8 +2977,8 @@ export default function AnalisisSection() {
                           <span
                             className="rounded-md px-2 py-1 text-xs font-bold"
                             style={{
-                              backgroundColor: pendiente ? '#3A3522' : '#202A38',
-                              color: pendiente ? AMARILLO : TEXTO,
+                              backgroundColor: pendiente ? A.seleccion : A.control,
+                              color: textoAnalisis(pendiente ? AMARILLO : A.texto),
                             }}
                           >
                             {ev.resultado || 'Pendiente'}
@@ -2994,7 +2990,7 @@ export default function AnalisisSection() {
                                 type="button"
                                 onClick={() => abrirEdicionEvento(ev)}
                                 className="text-xs font-bold"
-                                style={{ color: AMARILLO }}
+                                style={{ color: textoAnalisis(AMARILLO) }}
                               >
                                 Editar
                               </button>
@@ -3020,15 +3016,15 @@ export default function AnalisisSection() {
             <Panel>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-widest" style={{ color: AMARILLO }}>
+                  <p className="text-xs font-bold uppercase tracking-widest" style={{ color: textoAnalisis(AMARILLO) }}>
                     BIBLIOTECA DE JUGADAS
                   </p>
                   <h2 className="mt-1 text-xl font-black">Explorador de acciones</h2>
-                  <p className="mt-1 text-sm" style={{ color: SECUNDARIO }}>
+                  <p className="mt-1 text-sm" style={{ color: A.secundario }}>
                     Buscá acciones de todos los partidos analizados y abrí el video directamente en el momento registrado.
                   </p>
                 </div>
-                <span className="rounded-lg px-3 py-2 text-sm font-black" style={{ backgroundColor: FONDO, color: AMARILLO }}>
+                <span className="rounded-lg px-3 py-2 text-sm font-black" style={{ backgroundColor: A.fondo, color: textoAnalisis(AMARILLO) }}>
                   {eventosExplorador.length} resultados
                 </span>
               </div>
@@ -3093,9 +3089,9 @@ export default function AnalisisSection() {
                 {resumenDestinatarias.error}{' '}
                 <button type="button" className="font-bold underline" onClick={() => setRecargaDestinatarias((n) => n + 1)}>Reintentar</button>
               </p>}
-              <div className="mt-5 overflow-x-auto rounded-lg border" style={{ borderColor: BORDE }}>
+              <div className="mt-5 overflow-x-auto rounded-lg border" style={{ borderColor: A.borde }}>
                 <table className="w-full min-w-[760px] text-left text-sm">
-                  <thead style={{ backgroundColor: FONDO, color: SECUNDARIO }}>
+                  <thead style={{ backgroundColor: A.fondo, color: A.secundario }}>
                     <tr>
                       <th className="p-3">Video</th>
                       <th className="p-3">Partido</th>
@@ -3112,9 +3108,9 @@ export default function AnalisisSection() {
                       const jugadora = jugadoras.find((j) => j.id === ev.jugador_id)
                       const accion = TIPOS_RAPIDOS.find((a) => a.nombre === ev.tipo)
                       return (
-                        <tr key={ev.id} className="border-t" style={{ borderColor: BORDE }}>
+                        <tr key={ev.id} className="border-t" style={{ borderColor: A.borde }}>
                           <td className="p-3">
-                            <button type="button" disabled={!youtubeEmbed(partido?.video_url || videoCalendario(partido?.partido_calendario))} className="rounded-md px-3 py-2 font-mono font-black disabled:cursor-not-allowed disabled:opacity-40" style={{ backgroundColor: '#303B4D', color: AMARILLO }}
+                            <button type="button" disabled={!youtubeEmbed(partido?.video_url || videoCalendario(partido?.partido_calendario))} className="rounded-md px-3 py-2 font-mono font-black disabled:cursor-not-allowed disabled:opacity-40" style={{ backgroundColor: A.activo, color: textoAnalisis(AMARILLO) }}
                               title={youtubeEmbed(partido?.video_url || videoCalendario(partido?.partido_calendario)) ? 'Abrir el video en este momento' : 'Este partido no tiene un video válido'}
                               onClick={() => abrirEventoEnVideo(ev)}>
                               {formatearTiempo(ev.segundo)}
@@ -3122,13 +3118,13 @@ export default function AnalisisSection() {
                           </td>
                           <td className="p-3">
                             <span className="block font-bold">{partido?.rival || 'Partido sin nombre'}</span>
-                            <span className="text-xs" style={{ color: SECUNDARIO }}>{fechaLegible(partido?.fecha)}</span>
+                            <span className="text-xs" style={{ color: A.secundario }}>{fechaLegible(partido?.fecha)}</span>
                           </td>
                           <td className="p-3">{jugadora ? nombreJugadora(jugadora) : 'Sin jugadora'}</td>
-                          <td className="p-3 font-bold" style={{ color: accion?.color || TEXTO }}>{ev.tipo}</td>
+                          <td className="p-3 font-bold" style={{ color: textoAnalisis(accion?.color || A.texto) }}>{ev.tipo}</td>
                           <td className="p-3">{ev.zona || '—'}</td>
                           <td className="p-3">
-                            <span className="rounded-md px-2 py-1 text-xs font-bold" style={{ backgroundColor: ev.resultado ? '#202A38' : '#3A3522', color: ev.resultado ? TEXTO : AMARILLO }}>
+                            <span className="rounded-md px-2 py-1 text-xs font-bold" style={{ backgroundColor: ev.resultado ? A.control : A.seleccion, color: textoAnalisis(ev.resultado ? A.texto : AMARILLO) }}>
                               {ev.resultado || 'Pendiente'}
                             </span>
                           </td>
@@ -3144,7 +3140,7 @@ export default function AnalisisSection() {
                                 disabled={resumenDestinatarias.cargando}
                                 onClick={() => setPaseDestinataria(ev)}
                                 className="mt-2 text-xs font-bold text-yellow-300 disabled:opacity-40">Editar destinataria</button>}
-                            </> : <span style={{ color: SECUNDARIO }}>—</span>}
+                            </> : <span style={{ color: A.secundario }}>—</span>}
                           </td>
                         </tr>
                       )
@@ -3152,12 +3148,12 @@ export default function AnalisisSection() {
                   </tbody>
                 </table>
                 {eventosExplorador.length === 0 && (
-                  <p className="p-6 text-center text-sm" style={{ color: SECUNDARIO }}>
+                  <p className="p-6 text-center text-sm" style={{ color: A.secundario }}>
                     No hay acciones que coincidan con los filtros seleccionados.
                   </p>
                 )}
               </div>
-              <p className="mt-3 text-xs" style={{ color: SECUNDARIO }}>
+              <p className="mt-3 text-xs" style={{ color: A.secundario }}>
                 Los minutos se calculan a partir del segundo guardado en cada acción. Las acciones sin zona o resultado también aparecen y se pueden revisar.
               </p>
               {paseDestinataria && puedeEditarDestinatarias && <DetalleDestinatariaPase
@@ -3185,13 +3181,13 @@ export default function AnalisisSection() {
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-black">Estadísticas</h2>
-                  <p className="mt-1 text-sm" style={{ color: SECUNDARIO }}>
+                  <p className="mt-1 text-sm" style={{ color: A.secundario }}>
                     {alcanceEstadisticas === 'partido'
                       ? `Partido seleccionado · ${partidoActual?.rival || 'Sin rival'}`
                       : `Acumulado de ${partidos.length} partidos registrados`}
                   </p>
                   {alcanceEstadisticas === 'partido' && partidoActual && (
-                    <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
+                    <p className="mt-1 text-xs" style={{ color: A.secundario }}>
                       {datosEncuentro(partidoActual)}
                     </p>
                   )}
@@ -3203,7 +3199,7 @@ export default function AnalisisSection() {
                     className="rounded-lg border px-4 py-2 text-sm font-bold"
                     style={alcanceEstadisticas === 'partido'
                       ? { backgroundColor: AMARILLO, color: '#171717', borderColor: AMARILLO }
-                      : { backgroundColor: FONDO, color: TEXTO, borderColor: BORDE }}
+                      : { backgroundColor: A.fondo, color: A.texto, borderColor: A.borde }}
                   >Partido seleccionado</button>
                   <button
                     type="button"
@@ -3211,7 +3207,7 @@ export default function AnalisisSection() {
                     className="rounded-lg border px-4 py-2 text-sm font-bold"
                     style={alcanceEstadisticas === 'acumulado'
                       ? { backgroundColor: AMARILLO, color: '#171717', borderColor: AMARILLO }
-                      : { backgroundColor: FONDO, color: TEXTO, borderColor: BORDE }}
+                      : { backgroundColor: A.fondo, color: A.texto, borderColor: A.borde }}
                   >Todos los partidos</button>
                 </div>
               </div>
@@ -3228,25 +3224,25 @@ export default function AnalisisSection() {
                   <div
                     key={label}
                     className="rounded-lg border p-4"
-                    style={{ backgroundColor: FONDO, borderColor: BORDE }}
+                    style={{ backgroundColor: A.fondo, borderColor: A.borde }}
                   >
-                    <p className="min-h-10 text-sm" style={{ color: SECUNDARIO }}>{label}</p>
-                    <p className="mt-2 text-3xl font-black" style={{ color: AMARILLO }}>
+                    <p className="min-h-10 text-sm" style={{ color: A.secundario }}>{label}</p>
+                    <p className="mt-2 text-3xl font-black" style={{ color: textoAnalisis(AMARILLO) }}>
                       {valor}
                     </p>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 rounded-lg border p-3 text-sm" style={{ backgroundColor: FONDO, borderColor: BORDE }}>
-                <span style={{ color: SECUNDARIO }}>Partidos incluidos: <strong style={{ color: TEXTO }}>{alcanceEstadisticas === 'partido' ? (partidoActual ? 1 : 0) : partidos.length}</strong></span>
-                <span style={{ color: SECUNDARIO }}>Acciones sin jugadora asignada: <strong style={{ color: TEXTO }}>{eventosEstadisticos.filter((e) => !e.jugador_id).length}</strong></span>
+              <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 rounded-lg border p-3 text-sm" style={{ backgroundColor: A.fondo, borderColor: A.borde }}>
+                <span style={{ color: A.secundario }}>Partidos incluidos: <strong style={{ color: A.texto }}>{alcanceEstadisticas === 'partido' ? (partidoActual ? 1 : 0) : partidos.length}</strong></span>
+                <span style={{ color: A.secundario }}>Acciones sin jugadora asignada: <strong style={{ color: A.texto }}>{eventosEstadisticos.filter((e) => !e.jugador_id).length}</strong></span>
               </div>
 
               <div className="mt-6">
                 <h3 className="mb-3 font-bold">Rendimiento colectivo · acciones por tipo</h3>
                 {estadisticas.length === 0 ? (
-                  <p className="text-sm" style={{ color: SECUNDARIO }}>
+                  <p className="text-sm" style={{ color: A.secundario }}>
                     Todavía no hay acciones etiquetadas.
                   </p>
                 ) : (
@@ -3265,7 +3261,7 @@ export default function AnalisisSection() {
                           </div>
                           <div
                             className="h-2 overflow-hidden rounded-full"
-                            style={{ backgroundColor: '#303B4D' }}
+                            style={{ backgroundColor: A.activo }}
                           >
                             <div
                               className="h-full rounded-full"
@@ -3275,7 +3271,7 @@ export default function AnalisisSection() {
                               }}
                             />
                           </div>
-                          <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
+                          <p className="mt-1 text-xs" style={{ color: A.secundario }}>
                             Exitosos: {datos.exitosos} · Fallidos: {datos.fallidos}
                             {' · '}Neutros: {datos.neutros}
                             {' · '}Pendientes: {datos.pendientes}
@@ -3293,14 +3289,14 @@ export default function AnalisisSection() {
               <div className="mt-7">
                 <h3 className="mb-3 font-bold">Rendimiento individual · acciones por jugadora</h3>
                 {estadisticasJugadoras.length === 0 ? (
-                  <p className="text-sm" style={{ color: SECUNDARIO }}>
+                  <p className="text-sm" style={{ color: A.secundario }}>
                     No hay acciones asignadas a jugadoras.
                   </p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[500px] text-left text-sm">
                       <thead>
-                        <tr style={{ color: SECUNDARIO }}>
+                        <tr style={{ color: A.secundario }}>
                           <th className="p-2">Jugadora</th>
                           <th className="p-2">Acciones</th>
                           <th className="p-2">Efectivas</th>
@@ -3316,7 +3312,7 @@ export default function AnalisisSection() {
                           <tr
                             key={j.id}
                             className="border-t"
-                            style={{ borderColor: BORDE }}
+                            style={{ borderColor: A.borde }}
                           >
                             <td className="p-2 font-bold">{j.nombre}</td>
                             <td className="p-2">{j.total}</td>
@@ -3349,7 +3345,7 @@ export default function AnalisisSection() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="text-xl font-black">Mapa táctico interactivo</h2>
-                  <p className="mt-2 max-w-2xl text-sm" style={{ color: SECUNDARIO }}>
+                  <p className="mt-2 max-w-2xl text-sm" style={{ color: A.secundario }}>
                     Filtrá las acciones del partido o de todos los encuentros. Tocá un punto o una acción para abrir el video en el segundo registrado.
                   </p>
                 </div>
@@ -3360,9 +3356,9 @@ export default function AnalisisSection() {
                     ['Exactas', resumenMapa.exactas],
                     ['Sin ubicación', resumenMapa.sinUbicacion],
                   ].map(([label, valor]) => (
-                    <div key={label} className="rounded-lg border px-3 py-2" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
-                      <p className="text-[10px] uppercase tracking-wide" style={{ color: SECUNDARIO }}>{label}</p>
-                      <p className="text-lg font-black" style={{ color: label === 'Exactas' ? AMARILLO : TEXTO }}>{valor}</p>
+                    <div key={label} className="rounded-lg border px-3 py-2" style={{ borderColor: A.borde, backgroundColor: A.fondo }}>
+                      <p className="text-[10px] uppercase tracking-wide" style={{ color: A.secundario }}>{label}</p>
+                      <p className="text-lg font-black" style={{ color: textoAnalisis(label === 'Exactas' ? AMARILLO : A.texto) }}>{valor}</p>
                     </div>
                   ))}
                 </div>
@@ -3379,15 +3375,15 @@ export default function AnalisisSection() {
                     onClick={() => setAlcanceMapa(valor)}
                     className="rounded-lg border px-4 py-2 text-sm font-bold"
                     style={{
-                      backgroundColor: alcanceMapa === valor ? AMARILLO : FONDO,
-                      color: alcanceMapa === valor ? '#171717' : TEXTO,
-                      borderColor: alcanceMapa === valor ? AMARILLO : BORDE,
+                      backgroundColor: alcanceMapa === valor ? AMARILLO : A.fondo,
+                      color: alcanceMapa === valor ? '#171717' : A.texto,
+                      borderColor: alcanceMapa === valor ? AMARILLO : A.borde,
                     }}
                   >
                     {etiqueta}
                   </button>
                 ))}
-                <span className="self-center text-xs" style={{ color: SECUNDARIO }}>
+                <span className="self-center text-xs" style={{ color: A.secundario }}>
                   {alcanceMapa === 'partido' ? `Encuentro: ${partidoActual?.rival || 'seleccionado'}` : `${partidos.length} partidos disponibles`}
                 </span>
               </div>
@@ -3437,13 +3433,13 @@ export default function AnalisisSection() {
                 </Campo>
               </div>
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs" style={{ color: SECUNDARIO }}>
+                <p className="text-xs" style={{ color: A.secundario }}>
                   {eventosMapa.length} acciones coinciden con los filtros · {resumenMapa.aproximadas} ubicación(es) aproximada(s)
                 </p>
                 <button
                   type="button"
                   className="rounded-lg border px-3 py-2 text-xs font-bold"
-                  style={{ borderColor: BORDE, color: TEXTO, backgroundColor: FONDO }}
+                  style={{ borderColor: A.borde, color: A.texto, backgroundColor: A.fondo }}
                   onClick={() => {
                     setFiltroMapaPartido('todos')
                     setFiltroMapaJugadora('todos')
@@ -3468,12 +3464,12 @@ export default function AnalisisSection() {
                       onSelect={(evento) => setPaseDestinoId(evento.id)}
                     />}
                   />
-                  {resumenDestinatarias.cargando && <p role="status" className="text-xs" style={{ color: SECUNDARIO }}>Cargando trayectorias…</p>}
+                  {resumenDestinatarias.cargando && <p role="status" className="text-xs" style={{ color: A.secundario }}>Cargando trayectorias…</p>}
                   {resumenDestinatarias.error && <p role="alert" className="text-sm text-red-300">
                     {resumenDestinatarias.error} No se asume que falten destinos.{' '}
                     <button type="button" className="font-bold underline" onClick={() => setRecargaDestinatarias((n) => n + 1)}>Reintentar</button>
                   </p>}
-                  <p className="text-xs" style={{ color: SECUNDARIO }}>Flechas verdes: pase correcto · Rojas: pase incorrecto. Tocá un pase para consultar o editar su destino. Las flechas requieren origen y destino exactos.</p>
+                  <p className="text-xs" style={{ color: A.secundario }}>Flechas verdes: pase correcto · Rojas: pase incorrecto. Tocá un pase para consultar o editar su destino. Las flechas requieren origen y destino exactos.</p>
                   {paseDestinoActual && <DetalleDestinoPase
                     key={paseDestinoActual.id}
                     evento={paseDestinoActual}
@@ -3490,7 +3486,7 @@ export default function AnalisisSection() {
                       if (resumenDestinatarias.error) setRecargaDestinatarias((n) => n + 1)
                     }}
                   />}
-                  <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs" style={{ color: SECUNDARIO }}>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs" style={{ color: A.secundario }}>
                     {[
                       ['#F2C230', 'Remate / centro / gol'],
                       ['#4ADE80', 'Acción positiva'],
@@ -3503,7 +3499,7 @@ export default function AnalisisSection() {
                     ))}
                     <span className="flex items-center gap-2"><span className="inline-block h-2.5 w-2.5 rounded-full border-2" style={{ borderColor: '#FFFFFF', backgroundColor: '#64748B', opacity: 0.7 }} />Ubicación aproximada</span>
                   </div>
-                  <p className="text-xs" style={{ color: SECUNDARIO }}>
+                  <p className="text-xs" style={{ color: A.secundario }}>
                     Los puntos sin coordenadas exactas se ubican en el centro de la zona registrada. Los eventos sin coordenadas ni zona no se dibujan, pero aparecen en el listado y pueden abrirse desde su segundo de video.
                   </p>
                 </div>
@@ -3521,13 +3517,13 @@ export default function AnalisisSection() {
                             type="button"
                             onClick={() => setFiltroMapaZona(filtroMapaZona === zona.nombre ? 'todos' : zona.nombre)}
                             className="w-full rounded-lg border p-2.5 text-left"
-                            style={{ borderColor: filtroMapaZona === zona.nombre ? AMARILLO : BORDE, backgroundColor: filtroMapaZona === zona.nombre ? '#292719' : FONDO }}
+                            style={{ borderColor: filtroMapaZona === zona.nombre ? AMARILLO : A.borde, backgroundColor: filtroMapaZona === zona.nombre ? A.zonaSeleccion : A.fondo }}
                           >
                             <div className="mb-2 flex items-center justify-between gap-2 text-xs">
                               <span>{zona.nombre}</span>
-                              <span className="font-bold" style={{ color: AMARILLO }}>{zona.total} <span className="font-normal" style={{ color: SECUNDARIO }}>({porcentaje}%)</span></span>
+                              <span className="font-bold" style={{ color: textoAnalisis(AMARILLO) }}>{zona.total} <span className="font-normal" style={{ color: A.secundario }}>({porcentaje}%)</span></span>
                             </div>
-                            <div className="h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: '#303B4D' }}>
+                            <div className="h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: A.activo }}>
                               <div className="h-full rounded-full" style={{ width: `${(zona.total / maximo) * 100}%`, backgroundColor: AMARILLO }} />
                             </div>
                           </button>
@@ -3539,7 +3535,7 @@ export default function AnalisisSection() {
                   <div>
                     <div className="mb-2 flex items-center justify-between gap-2">
                       <h3 className="font-bold">Acciones para revisar</h3>
-                      <span className="text-xs" style={{ color: SECUNDARIO }}>{eventosMapaOrdenados.length}</span>
+                      <span className="text-xs" style={{ color: A.secundario }}>{eventosMapaOrdenados.length}</span>
                     </div>
                     <div className="max-h-[420px] space-y-2 overflow-y-auto pr-1">
                       {eventosMapaOrdenados.map((evento) => {
@@ -3553,23 +3549,23 @@ export default function AnalisisSection() {
                             type="button"
                             onClick={() => abrirEventoEnVideo(evento)}
                             className="w-full rounded-lg border p-3 text-left transition hover:border-yellow-400"
-                            style={{ borderColor: BORDE, backgroundColor: FONDO }}
+                            style={{ borderColor: A.borde, backgroundColor: A.fondo }}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <p className="truncate text-sm font-bold">{evento.tipo}</p>
-                                <p className="mt-1 truncate text-xs" style={{ color: SECUNDARIO }}>
+                                <p className="mt-1 truncate text-xs" style={{ color: A.secundario }}>
                                   {nombreJugadora(jugadora)} · {partido?.rival || 'Rival sin nombre'}
                                 </p>
-                                <p className="mt-1 text-xs" style={{ color: SECUNDARIO }}>
+                                <p className="mt-1 text-xs" style={{ color: A.secundario }}>
                                   {zonaEfectivaEvento(evento) || 'Sin zona'} · {evento.resultado || 'Pendiente'} · {punto?.exacta ? 'Exacta' : punto ? 'Aproximada' : 'Sin ubicación'}
                                 </p>
                               </div>
-                              <span className="shrink-0 rounded-md px-2 py-1 font-mono text-xs font-black" style={{ backgroundColor: '#303B4D', color: AMARILLO }}>
+                              <span className="shrink-0 rounded-md px-2 py-1 font-mono text-xs font-black" style={{ backgroundColor: A.activo, color: textoAnalisis(AMARILLO) }}>
                                 {formatearTiempo(evento.segundo)}
                               </span>
                             </div>
-                            <p className="mt-2 text-[10px]" style={{ color: tieneVideo ? AMARILLO : '#F87171' }}>
+                            <p className="mt-2 text-[10px]" style={{ color: textoAnalisis(tieneVideo ? AMARILLO : '#F87171') }}>
                               {tieneVideo ? '▶ Abrir video en esta acción' : 'Video no disponible para este partido'}
                             </p>
                           </button>
@@ -3579,7 +3575,7 @@ export default function AnalisisSection() {
                         )
                       })}
                       {eventosMapaOrdenados.length === 0 && (
-                        <div className="rounded-lg border p-4 text-sm" style={{ borderColor: BORDE, color: SECUNDARIO }}>
+                        <div className="rounded-lg border p-4 text-sm" style={{ borderColor: A.borde, color: A.secundario }}>
                           No hay acciones que coincidan con estos filtros.
                         </div>
                       )}
@@ -3607,29 +3603,29 @@ export default function AnalisisSection() {
               </div>
 
               <div className="pdf-meta mt-4 grid grid-cols-2 gap-3 sm:grid-cols-6 xl:grid-cols-10">
-                <div className="col-span-2 rounded-lg border p-3 sm:col-span-2" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
-                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: SECUNDARIO }}>Acciones registradas</p>
+                <div className="col-span-2 rounded-lg border p-3 sm:col-span-2" style={{ borderColor: A.borde, backgroundColor: A.fondo }}>
+                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: A.secundario }}>Acciones registradas</p>
                   <p className="mt-1 text-2xl font-black">{eventosPartido.length}</p>
                 </div>
-                <div className="col-span-1 rounded-lg border p-3 sm:col-span-2" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
-                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: SECUNDARIO }}>Con jugadora</p>
+                <div className="col-span-1 rounded-lg border p-3 sm:col-span-2" style={{ borderColor: A.borde, backgroundColor: A.fondo }}>
+                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: A.secundario }}>Con jugadora</p>
                   <p className="mt-1 text-2xl font-black">{eventosPartido.filter((e) => e.jugador_id).length}</p>
                 </div>
-                <div className="col-span-1 rounded-lg border p-3 sm:col-span-2" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
-                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: SECUNDARIO }}>Efectivas</p>
+                <div className="col-span-1 rounded-lg border p-3 sm:col-span-2" style={{ borderColor: A.borde, backgroundColor: A.fondo }}>
+                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: A.secundario }}>Efectivas</p>
                   <p className="mt-1 text-2xl font-black">{eventosPartido.filter((e) => ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length}</p>
                 </div>
-                <div className="col-span-1 rounded-lg border p-3 sm:col-span-3 xl:col-span-2" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
-                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: SECUNDARIO }}>Pendientes</p>
+                <div className="col-span-1 rounded-lg border p-3 sm:col-span-3 xl:col-span-2" style={{ borderColor: A.borde, backgroundColor: A.fondo }}>
+                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: A.secundario }}>Pendientes</p>
                   <p className="mt-1 text-2xl font-black">{resumenGraficoInforme.pendientes}</p>
                 </div>
-                <div className="col-span-1 rounded-lg border p-3 sm:col-span-3 xl:col-span-2" style={{ borderColor: BORDE, backgroundColor: FONDO }}>
-                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: SECUNDARIO }}>Neutras</p>
+                <div className="col-span-1 rounded-lg border p-3 sm:col-span-3 xl:col-span-2" style={{ borderColor: A.borde, backgroundColor: A.fondo }}>
+                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: A.secundario }}>Neutras</p>
                   <p className="mt-1 text-2xl font-black">{resumenGraficoInforme.neutros}</p>
                 </div>
               </div>
 
-              <div className="pdf-seccion mt-6 rounded-xl border p-4" style={{ borderColor: BORDE, backgroundColor: '#FFF9E6' }}>
+              <div className="pdf-seccion mt-6 rounded-xl border p-4" style={{ borderColor: A.borde, backgroundColor: '#FFF9E6' }}>
                 <h3 className="mb-3 text-base font-black" style={{ color: '#171717' }}>Resumen ejecutivo</h3>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div className="border-l-4 pl-3" style={{ borderColor: AMARILLO }}>
@@ -3652,9 +3648,9 @@ export default function AnalisisSection() {
               </div>
 
               <div className="pdf-seccion pdf-graficos mt-6">
-                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: BORDE }}>Panel visual del partido</h3>
+                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: A.borde }}>Panel visual del partido</h3>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                  <div className="pdf-grafico-card rounded-xl border p-4" style={{ borderColor: BORDE, backgroundColor: '#FFFFFF' }}>
+                  <div className="pdf-grafico-card rounded-xl border p-4" style={{ borderColor: A.borde, backgroundColor: '#FFFFFF' }}>
                     <p className="text-xs font-black uppercase tracking-wide" style={{ color: '#4B5563' }}>Efectividad evaluable</p>
                     <div className="mt-3 flex items-center gap-3">
                       <svg viewBox="0 0 100 100" role="img" aria-label="Gráfico circular de efectividad" style={{ width: '96px', height: '96px', flexShrink: 0 }}>
@@ -3676,7 +3672,7 @@ export default function AnalisisSection() {
                     <p className="mt-2 text-[10px]" style={{ color: '#6B7280' }}>El porcentaje excluye acciones pendientes y neutras.</p>
                   </div>
 
-                  <div className="pdf-grafico-card rounded-xl border p-4" style={{ borderColor: BORDE, backgroundColor: '#FFFFFF' }}>
+                  <div className="pdf-grafico-card rounded-xl border p-4" style={{ borderColor: A.borde, backgroundColor: '#FFFFFF' }}>
                     <p className="text-xs font-black uppercase tracking-wide" style={{ color: '#4B5563' }}>Acciones más registradas</p>
                     <div className="mt-3 space-y-3">
                       {accionesGraficoInforme.length ? accionesGraficoInforme.map(([nombre, datos]) => {
@@ -3689,7 +3685,7 @@ export default function AnalisisSection() {
                     </div>
                   </div>
 
-                  <div className="pdf-grafico-card rounded-xl border p-4" style={{ borderColor: BORDE, backgroundColor: '#FFFFFF' }}>
+                  <div className="pdf-grafico-card rounded-xl border p-4" style={{ borderColor: A.borde, backgroundColor: '#FFFFFF' }}>
                     <p className="text-xs font-black uppercase tracking-wide" style={{ color: '#4B5563' }}>Jugadoras · volumen de acciones</p>
                     <div className="mt-3 space-y-3">
                       {jugadorasInforme.slice(0, 5).length ? jugadorasInforme.slice(0, 5).map((j) => {
@@ -3706,15 +3702,15 @@ export default function AnalisisSection() {
               </div>
 
               <div className="pdf-seccion mt-6">
-                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: BORDE }}>1. Rendimiento colectivo · acciones por tipo</h3>
+                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: A.borde }}>1. Rendimiento colectivo · acciones por tipo</h3>
                 {estadisticasInforme.length ? (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm pdf-tabla">
-                      <thead><tr style={{ color: SECUNDARIO }}>
+                      <thead><tr style={{ color: A.secundario }}>
                         <th className="p-2">Acción</th><th className="p-2 text-right">Total</th><th className="p-2 text-right">Efectivas</th><th className="p-2 text-right">No efectivas</th><th className="p-2 text-right">Neutras</th><th className="p-2 text-right">Pendientes</th><th className="p-2 text-right">Efectividad</th>
                       </tr></thead>
                       <tbody>{estadisticasInforme.map(([nombre, datos]) => (
-                        <tr key={nombre} className="border-t" style={{ borderColor: BORDE }}>
+                        <tr key={nombre} className="border-t" style={{ borderColor: A.borde }}>
                           <td className="p-2 font-semibold">{nombre}</td><td className="p-2 text-right">{datos.total}</td><td className="p-2 text-right">{datos.efectivas}</td><td className="p-2 text-right">{datos.noEfectivas}</td><td className="p-2 text-right">{datos.neutros}</td><td className="p-2 text-right">{datos.pendientes}</td>
                           <td className="p-2 text-right">{datos.efectivas + datos.noEfectivas ? `${Math.round(datos.efectivas / (datos.efectivas + datos.noEfectivas) * 100)}%` : '—'}</td>
                         </tr>
@@ -3722,19 +3718,19 @@ export default function AnalisisSection() {
                     </table>
                   </div>
                 ) : <p className="text-sm">Todavía no hay acciones etiquetadas para este partido.</p>}
-                <p className="mt-2 text-xs" style={{ color: SECUNDARIO }}>La efectividad se calcula sobre acciones con resultado evaluable: efectivas frente a no efectivas. Las acciones neutras o sin resultado no entran en ese porcentaje.</p>
+                <p className="mt-2 text-xs" style={{ color: A.secundario }}>La efectividad se calcula sobre acciones con resultado evaluable: efectivas frente a no efectivas. Las acciones neutras o sin resultado no entran en ese porcentaje.</p>
               </div>
 
               <div className="pdf-seccion mt-6">
-                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: BORDE }}>2. Rendimiento individual · jugadoras</h3>
+                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: A.borde }}>2. Rendimiento individual · jugadoras</h3>
                 {jugadorasInforme.length ? (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm pdf-tabla">
-                      <thead><tr style={{ color: SECUNDARIO }}>
+                      <thead><tr style={{ color: A.secundario }}>
                         <th className="p-2">Jugadora</th><th className="p-2 text-right">Acciones</th><th className="p-2 text-right">Efectivas</th><th className="p-2 text-right">No efectivas</th><th className="p-2 text-right">Neutras</th><th className="p-2 text-right">Pendientes</th><th className="p-2 text-right">Efectividad</th>
                       </tr></thead>
                       <tbody>{jugadorasInforme.map((j) => (
-                        <tr key={j.id} className="border-t" style={{ borderColor: BORDE }}>
+                        <tr key={j.id} className="border-t" style={{ borderColor: A.borde }}>
                           <td className="p-2 font-semibold">{j.nombre}</td><td className="p-2 text-right">{j.total}</td><td className="p-2 text-right">{j.efectivas}</td><td className="p-2 text-right">{j.noEfectivas}</td><td className="p-2 text-right">{j.neutros}</td><td className="p-2 text-right">{j.pendientes}</td><td className="p-2 text-right">{j.efectividad === null ? '—' : `${j.efectividad}%`}</td>
                         </tr>
                       ))}</tbody>
@@ -3744,7 +3740,7 @@ export default function AnalisisSection() {
               </div>
 
               <div className="pdf-seccion pdf-distribucion-zonas mt-6">
-                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: BORDE }}>3. Distribución de acciones por zona</h3>
+                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: A.borde }}>3. Distribución de acciones por zona</h3>
                 <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                   <CanchaInformePDF
                     titulo="Primer tiempo · mapa de acciones"
@@ -3767,15 +3763,15 @@ export default function AnalisisSection() {
               )}
 
               <div className="pdf-seccion mt-6">
-                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: BORDE }}>Detalle cronológico de acciones</h3>
+                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: A.borde }}>Detalle cronológico de acciones</h3>
                 {eventosPartido.length ? (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs pdf-tabla">
-                      <thead><tr style={{ color: SECUNDARIO }}>
+                      <thead><tr style={{ color: A.secundario }}>
                         <th className="p-2">Tiempo</th><th className="p-2">Acción</th><th className="p-2">Jugadora</th><th className="p-2">Zona</th><th className="p-2">Resultado</th><th className="p-2">Observaciones</th>
                       </tr></thead>
                       <tbody>{[...eventosPartido].sort((a, b) => Number(a.segundo) - Number(b.segundo)).map((ev) => (
-                        <tr key={ev.id} className="border-t" style={{ borderColor: BORDE }}>
+                        <tr key={ev.id} className="border-t" style={{ borderColor: A.borde }}>
                           <td className="p-2 font-mono">{formatearTiempo(ev.segundo)}</td><td className="p-2">{ev.tipo}</td><td className="p-2">{nombreJugadora(jugadoras.find((j) => j.id === ev.jugador_id))}</td><td className="p-2">{ev.zona || '—'}</td><td className="p-2">{ev.resultado || 'Pendiente'}</td><td className="p-2">{ev.observaciones || '—'}</td>
                         </tr>
                       ))}</tbody>
@@ -3784,7 +3780,7 @@ export default function AnalisisSection() {
                 ) : <p className="text-sm">Todavía no hay acciones registradas.</p>}
               </div>
 
-              <div className="pdf-pie mt-7 border-t pt-3 text-xs" style={{ borderColor: BORDE, color: SECUNDARIO }}>
+              <div className="pdf-pie mt-7 border-t pt-3 text-xs" style={{ borderColor: A.borde, color: A.secundario }}>
                 Informe generado desde el módulo de videoanálisis de Comunicaciones. Los datos corresponden a las acciones guardadas para este partido.
               </div>
             </Panel>
@@ -3794,7 +3790,7 @@ export default function AnalisisSection() {
 
       <footer
         className="border-t pt-4 text-xs"
-        style={{ borderColor: BORDE, color: SECUNDARIO }}
+        style={{ borderColor: A.borde, color: A.secundario }}
       >
         {esAdmin
           ? 'Administrador: Kevin Garay · Gestión de análisis'

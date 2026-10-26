@@ -1,0 +1,46 @@
+// Variables de pantalla. Las escalas, umbrales y documentos no dependen de esta paleta.
+export const WELLNESS = {
+  fondo: 'var(--wellness-fondo, #191917)',
+  tarjeta: 'var(--wellness-tarjeta, #242422)',
+  filaAlternativa: 'var(--wellness-fila-alternativa, #20201E)',
+  tarjetaAlternativa: 'var(--wellness-tarjeta-alternativa, #1E1E1C)',
+  borde: 'var(--wellness-borde, #393934)',
+  acento: 'var(--wellness-acento, #F2C230)',
+  texto: 'var(--wellness-texto, #F4F2EA)',
+  secundario: 'var(--wellness-secundario, #B5B3AA)',
+  muted: 'var(--wellness-muted, #85847C)',
+  exito: 'var(--wellness-exito, #97C459)',
+  peligro: 'var(--wellness-peligro, #E77970)',
+  advertencia: 'var(--wellness-advertencia, #F2C230)',
+  cabecera: 'var(--wellness-cabecera, linear-gradient(120deg, #242422 0%, #1D1D1B 60%, #29271D 100%))',
+  cabeceraCarga: 'var(--wellness-cabecera-carga, linear-gradient(125deg, #292925 0%, #20201D 65%, #302A19 100%))',
+  cabeceraComparativo: 'var(--wellness-cabecera-comparativo, linear-gradient(125deg, #292925 0%, #20201D 58%, #302A19 100%))',
+  panel: 'var(--wellness-panel, linear-gradient(145deg, #20201E 0%, #1A1A18 100%))',
+  panelDatos: 'var(--wellness-panel-datos, linear-gradient(145deg, #20201E 0%, #191917 100%))',
+  tab: 'var(--wellness-tab, linear-gradient(145deg, #292925 0%, #22221F 100%))',
+  control: 'var(--wellness-control, #20201D)',
+  bordePanel: 'var(--wellness-borde-panel, #3B3B34)',
+  interior: 'var(--wellness-interior, #1B1B19)',
+  bordeInterior: 'var(--wellness-borde-interior, #454439)',
+  textoInsignia: 'var(--wellness-texto-insignia, #D4D2C6)',
+  pista: 'var(--wellness-pista, #3A3931)',
+  bordeSeccion: 'var(--wellness-borde-seccion, #35352F)',
+  amarilloSuave: 'var(--wellness-amarillo-suave, #302D20)',
+  icono: 'var(--wellness-icono, #34342E)',
+  controlOscuro: 'var(--wellness-control-oscuro, #171715)',
+  bordeDetalle: 'var(--wellness-borde-detalle, #383832)',
+  insignia: 'var(--wellness-insignia, #343126)',
+  fondoAccion: 'var(--wellness-fondo-accion, #292923)',
+  bordeAccion: 'var(--wellness-borde-accion, #494735)',
+  fila: 'var(--wellness-fila, #1D1D1B)',
+  bordeFila: 'var(--wellness-borde-fila, #30302B)',
+  foco: 'var(--wellness-foco, #645629)',
+  primario: 'var(--wellness-primario, linear-gradient(135deg, #F7D45A 0%, #F2C230 100%))',
+  primarioCorto: 'var(--wellness-primario-corto, linear-gradient(135deg, #F7D45A, #F2C230))',
+  primarioWellness: 'var(--wellness-primario-wellness, linear-gradient(135deg, #F2C230, #E5AE1E))',
+}
+
+export function textoWellness(color) {
+  return color === WELLNESS.acento || color === 'var(--ui-acento, #F2C230)'
+    ? 'var(--ui-texto-acento, #F2C230)' : color
+}

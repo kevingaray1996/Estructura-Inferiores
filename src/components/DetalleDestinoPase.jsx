@@ -76,7 +76,7 @@ export default function DetalleDestinoPase({ evento, partido, autora, puedeEdita
   }
 
   return <section ref={panel} tabIndex={-1} aria-labelledby="titulo-destino-pase"
-    className="rounded-xl border border-yellow-400 bg-slate-900 p-4 text-slate-100">
+    className="rounded-xl border analisis-editor-destino p-4">
     <div className="flex items-start justify-between gap-3">
       <h3 id="titulo-destino-pase" className="font-bold">Trayectoria del pase</h3>
       <button type="button" disabled={guardando} onClick={onClose} className="text-sm disabled:opacity-40">Cerrar</button>
@@ -86,14 +86,14 @@ export default function DetalleDestinoPase({ evento, partido, autora, puedeEdita
     <p className="mt-2 text-sm">Destinataria: {cargando ? 'Cargando…' : error && !ficha ? 'No disponible' :
       ficha?.detalle?.destinataria_estado === 'identificada' ? ficha.destinataria :
         ESTADOS_DESTINATARIA[ficha?.detalle?.destinataria_estado || 'pendiente']}</p>
-    <p className="mt-2 text-xs text-slate-300">Ataque registrado en este período: {direccion ? `${direccion === 'derecha' ? '→' : '←'} ${direccion}` : 'sin información válida'}.</p>
-    <p className="text-xs text-amber-200">Referencia espacial histórica sin verificar: no se clasifica adelante, atrás ni lateral. Los puntos no se invierten.</p>
+    <p className="mt-2 text-xs analisis-secundario">Ataque registrado en este período: {direccion ? `${direccion === 'derecha' ? '→' : '←'} ${direccion}` : 'sin información válida'}.</p>
+    <p className="text-xs analisis-aviso">Referencia espacial histórica sin verificar: no se clasifica adelante, atrás ni lateral. Los puntos no se invierten.</p>
     {cargando && <p role="status" className="mt-3">Cargando detalle…</p>}
     {!cargando && ficha && <>
       <p className="mt-3 text-sm">{origen ? `Origen exacto: X ${origen.x}% · Y ${origen.y}% (punto blanco).` :
         'Sin origen exacto: podés registrar el destino, pero no se dibujará una flecha ni se usará el centro de la zona como origen.'}</p>
       <p className="mt-2 text-sm">{destino ? `Destino seleccionado: X ${destino.x}% · Y ${destino.y}%.` : 'Sin destino seleccionado.'}</p>
-      {puedeEditar && <p className="my-2 text-xs text-slate-300">Tocá la cancha para marcar o corregir dónde terminó realmente la pelota, con la misma referencia visual del origen.</p>}
+      {puedeEditar && <p className="my-2 text-xs analisis-secundario">Tocá la cancha para marcar o corregir dónde terminó realmente la pelota, con la misma referencia visual del origen.</p>}
       <div className="mt-2">{renderCancha({
         coordenadas: destino,
         interactiva: puedeEditar && !bloqueado && !guardando,
@@ -104,20 +104,20 @@ export default function DetalleDestinoPase({ evento, partido, autora, puedeEdita
         </>,
       })}</div>
     </>}
-    {error && <p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}
-    {mensaje && <p role="status" className="mt-3 text-sm text-green-300">{mensaje}</p>}
+    {error && <p role="alert" className="mt-3 text-sm analisis-error">{error}</p>}
+    {mensaje && <p role="status" className="mt-3 text-sm analisis-exito">{mensaje}</p>}
     <div className="mt-3 flex flex-wrap gap-3 text-sm">
       {puedeEditar && <>
         <button type="button" disabled={cargando || guardando || bloqueado || !destino}
-          onClick={() => guardar(destino)} className="rounded bg-yellow-400 px-3 py-2 font-bold text-slate-900 disabled:opacity-40">
+          onClick={() => guardar(destino)} className="rounded analisis-primario px-3 py-2 font-bold disabled:opacity-40">
           {guardando ? 'Guardando…' : 'Guardar destino'}</button>
         <button type="button" disabled={cargando || guardando || bloqueado || !puntoExacto(ficha?.detalle?.destino_x, ficha?.detalle?.destino_y)}
-          onClick={() => guardar(null)} className="rounded border border-slate-500 px-3 py-2 disabled:opacity-40">Quitar destino guardado</button>
+          onClick={() => guardar(null)} className="rounded border analisis-quitar px-3 py-2 disabled:opacity-40">Quitar destino guardado</button>
       </>}
       <button type="button" disabled={guardando || cargando} onClick={() => setRecarga((n) => n + 1)}
-        className="py-2 text-yellow-300 disabled:opacity-40">Recargar detalle (descarta selección sin guardar)</button>
+        className="py-2 analisis-link disabled:opacity-40">Recargar detalle (descarta selección sin guardar)</button>
       <button type="button" disabled={guardando} onClick={() => { onClose(); onVideo(evento) }}
-        className="py-2 text-yellow-300 disabled:opacity-40">Abrir video en esta acción</button>
+        className="py-2 analisis-link disabled:opacity-40">Abrir video en esta acción</button>
     </div>
   </section>
 }

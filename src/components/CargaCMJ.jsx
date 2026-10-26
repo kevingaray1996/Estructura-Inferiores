@@ -1,3 +1,5 @@
+import { WELLNESS, textoWellness } from '../appearance/wellness'
+import { tintePlantel } from '../appearance/plantel'
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -5,18 +7,8 @@ import { obtenerFechaHoy } from '../utils/fecha'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
 
-const UI = {
-  fondo: '#191917',
-  tarjeta: '#242422',
-  tarjetaAlternativa: '#20201E',
-  borde: '#393934',
-  acento: '#F2C230',
-  texto: '#F4F2EA',
-  secundario: '#B5B3AA',
-  muted: '#85847C',
-  exito: '#97C459',
-  peligro: '#E77970',
-}
+// Alias visual: conserva la superficie alternativa original de estos formularios.
+const UI = { ...WELLNESS, tarjetaAlternativa: WELLNESS.filaAlternativa }
 
 function CargaCMJ() {
   const [categoria, setCategoria] = useState(null)
@@ -171,9 +163,9 @@ function CargaCMJ() {
           <div
             className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
             style={{
-              backgroundColor: `${UI.acento}18`,
-              color: UI.acento,
-              border: `1px solid ${UI.acento}40`,
+              backgroundColor: tintePlantel(UI.acento, '18'),
+              color: textoWellness(UI.acento),
+              border: "1px solid " + tintePlantel(UI.acento, '40'),
             }}
           >
             <svg
@@ -193,7 +185,7 @@ function CargaCMJ() {
           <div className="min-w-0">
             <p
               className="text-xs font-semibold uppercase tracking-widest mb-1"
-              style={{ color: UI.acento }}
+              style={{ color: textoWellness(UI.acento) }}
             >
               Rendimiento físico
             </p>
@@ -230,7 +222,7 @@ function CargaCMJ() {
             <p className="text-xs mb-1" style={{ color: UI.muted }}>
               Valores cargados
             </p>
-            <p className="text-2xl font-bold" style={{ color: UI.acento }}>
+            <p className="text-2xl font-bold" style={{ color: textoWellness(UI.acento) }}>
               {cantidadCargada}
               <span className="text-sm font-normal" style={{ color: UI.muted }}>
                 {' '}/ {jugadores.length}
@@ -258,7 +250,7 @@ function CargaCMJ() {
           type="date"
           value={fecha}
           onChange={(e) => setFecha(e.target.value)}
-          className="w-full sm:w-64 p-3 rounded-xl outline-none text-sm"
+          className="w-full sm:w-64 p-3 rounded-xl ui-control outline-none text-sm"
           style={inputStyle}
         />
 
@@ -335,7 +327,7 @@ function CargaCMJ() {
               </div>
               <span
                 className="text-xs font-semibold px-3 py-1.5 rounded-full shrink-0"
-                style={{ backgroundColor: `${UI.acento}18`, color: UI.acento }}
+                style={{ backgroundColor: tintePlantel(UI.acento, '18'), color: textoWellness(UI.acento) }}
               >
                 CM
               </span>
@@ -368,9 +360,9 @@ function CargaCMJ() {
                         <span
                           className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
                           style={{
-                            backgroundColor: `${UI.acento}18`,
-                            color: UI.acento,
-                            border: `1px solid ${UI.acento}35`,
+                            backgroundColor: tintePlantel(UI.acento, '18'),
+                            color: textoWellness(UI.acento),
+                            border: "1px solid " + tintePlantel(UI.acento, '35'),
                           }}
                         >
                           {`${j.nombre?.[0] || ''}${j.apellido?.[0] || ''}`.toUpperCase()}
@@ -399,7 +391,7 @@ function CargaCMJ() {
                         aria-label={`CMJ de ${j.apellido}, ${j.nombre} en centímetros`}
                         value={valores[j.id] ?? ''}
                         onChange={(e) => cambiarValor(j.id, e.target.value)}
-                        className="w-20 sm:w-24 p-2.5 rounded-lg outline-none text-sm text-center"
+                        className="w-20 sm:w-24 p-2.5 rounded-lg ui-control outline-none text-sm text-center"
                         style={{
                           backgroundColor: UI.fondo,
                           border: `1px solid ${tieneValor ? UI.acento : UI.borde}`,
@@ -423,9 +415,9 @@ function CargaCMJ() {
               className="rounded-xl p-3 text-sm flex items-start gap-2"
               style={{
                 backgroundColor: mensaje.startsWith('Listo')
-                  ? `${UI.exito}15`
-                  : `${UI.peligro}15`,
-                border: `1px solid ${mensaje.startsWith('Listo') ? UI.exito : UI.peligro}50`,
+                  ? tintePlantel(UI.exito, '15')
+                  : tintePlantel(UI.peligro, '15'),
+                border: "1px solid " + tintePlantel(mensaje.startsWith('Listo') ? UI.exito : UI.peligro, '50'),
                 color: mensaje.startsWith('Listo') ? UI.exito : UI.peligro,
               }}
             >
@@ -443,7 +435,7 @@ function CargaCMJ() {
             className="w-full p-3.5 rounded-xl font-bold text-sm transition-opacity hover:opacity-90 disabled:opacity-50"
             style={{
               backgroundColor: UI.acento,
-              color: UI.fondo,
+              color: 'var(--riesgo-boton-texto, #191917)',
             }}
           >
             {guardando ? 'Guardando resultados...' : 'Guardar resultados CMJ'}

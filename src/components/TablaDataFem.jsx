@@ -1,18 +1,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
-
-const C = {
-  fondo: '#101010',
-  tarjeta: '#1B1B1B',
-  borde: '#303030',
-  amarillo: '#F6C900',
-  amarilloSuave: '#332B00',
-  blanco: '#FAFAFA',
-  gris: '#B5B5B5',
-  tenue: '#858585',
-  verde: '#72C58B',
-}
+import { PALETA_INICIO as C, textoInicio } from '../appearance/paletaInicio'
 
 const TABLAS = [
   { key: 'zona_a', titulo: 'Zona A', icono: '🟡' },
@@ -32,7 +21,7 @@ function fechaActualizacion(fecha) {
   }).format(new Date(fecha))
 }
 
-function TablaPosiciones({ titulo, filas = [], destacarComunicaciones = false }) {
+export function TablaPosiciones({ titulo, filas = [], destacarComunicaciones = false }) {
   return (
     <div
       className="overflow-hidden rounded-xl"
@@ -41,7 +30,7 @@ function TablaPosiciones({ titulo, filas = [], destacarComunicaciones = false })
       <div
         className="px-4 py-3 font-bold"
         style={{
-          color: C.amarillo,
+          color: textoInicio(C.amarillo),
           background: C.amarilloSuave,
           borderBottom: `1px solid ${C.borde}`,
         }}
@@ -75,7 +64,7 @@ function TablaPosiciones({ titulo, filas = [], destacarComunicaciones = false })
                   <tr
                     key={`${fila.equipo}-${indice}`}
                     style={{
-                      color: esComunicaciones ? C.amarillo : C.blanco,
+                      color: esComunicaciones ? textoInicio(C.amarillo) : C.blanco,
                       background: esComunicaciones ? C.amarilloSuave : 'transparent',
                       borderBottom: `1px solid ${C.borde}`,
                       fontWeight: esComunicaciones ? 800 : 400,
@@ -168,7 +157,7 @@ export default function TablaDataFem() {
           target="_blank"
           rel="noreferrer"
           className="text-sm font-bold hover:underline"
-          style={{ color: C.amarillo }}
+          style={{ color: textoInicio(C.amarillo) }}
         >
           Ver en DataFem ↗
         </a>
@@ -183,7 +172,7 @@ export default function TablaDataFem() {
             Cargando tablas de posiciones…
           </p>
         ) : error ? (
-          <p className="py-6 text-center text-sm" style={{ color: '#F07171' }}>
+          <p className="py-6 text-center text-sm" style={{ color: textoInicio('#F07171') }}>
             {error}
           </p>
         ) : (

@@ -1,3 +1,4 @@
+import { BOTON_GESTION, textoGestion } from '../appearance/gestion'
 import { COLORES } from '../theme'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -255,7 +256,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
 
   const inputStyle = {
     backgroundColor: COLORES.fondoTarjeta,
-    border: '1px solid COLORES.borde',
+    border: `1px solid ${COLORES.borde}`,
     color: COLORES.texto,
   }
 
@@ -282,13 +283,13 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
               >
                 {jugadorSeleccionado.apellido}, {jugadorSeleccionado.nombre}
               </h1>
-              <p className="text-xs" style={{ color: estadoActual.color }}>
+              <p className="text-xs" style={{ color: textoGestion(estadoActual.color) }}>
                 {estadoActual.label}
               </p>
             </div>
           </div>
 
-          <div className="p-4 rounded-xl mb-6" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}>
+          <div className="p-4 rounded-xl mb-6" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}>
             <p className="text-xs uppercase tracking-wide mb-3" style={{ color: COLORES.textoMuted }}>
               Estado del jugador
             </p>
@@ -297,7 +298,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                 className="text-sm font-medium px-3 py-1.5 rounded-xl"
                 style={{
                   backgroundColor: COLORES.fondoPagina,
-                  color: estadoActual.color,
+                  color: textoGestion(estadoActual.color),
                   border: `1px solid ${estadoActual.color}`,
                 }}
               >
@@ -308,7 +309,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                   onClick={handleMarcarDisponible}
                   disabled={guardandoEstado}
                   className="text-sm font-medium px-4 py-2 rounded-xl transition-opacity hover:opacity-80 disabled:opacity-50"
-                  style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+                  style={BOTON_GESTION}
                 >
                   {guardandoEstado ? 'Actualizando...' : 'Marcar como disponible'}
                 </button>
@@ -326,14 +327,14 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
             <button
               onClick={mostrarForm ? cancelarForm : abrirNuevoRegistro}
               className="text-sm font-medium px-4 py-2 rounded-xl transition-opacity hover:opacity-80 shrink-0"
-              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+              style={BOTON_GESTION}
             >
               {mostrarForm ? 'Cancelar' : '+ Agregar registro'}
             </button>
           </div>
 
           {mostrarForm && (
-            <div className="space-y-3 mb-6 p-4 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}>
+            <div className="space-y-3 mb-6 p-4 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}>
               {fichaEditando && (
                 <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
                   Editando registro del {fichaEditando.fecha}
@@ -343,7 +344,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                 type="date"
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               />
               <textarea
@@ -351,7 +352,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                 value={descripcion}
                 onChange={(e) => setDescripcion(e.target.value)}
                 rows={3}
-                className="w-full p-2.5 rounded-xl outline-none text-sm resize-none"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm resize-none"
                 style={inputStyle}
               />
               <input
@@ -359,7 +360,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                 placeholder="Tiempo estimado de recuperación (ej: 2 semanas)"
                 value={tiempoRecuperacion}
                 onChange={(e) => setTiempoRecuperacion(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               />
               <div>
@@ -370,7 +371,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                   type="date"
                   value={fechaEstimadaAlta}
                   onChange={(e) => setFechaEstimadaAlta(e.target.value)}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                   style={inputStyle}
                 />
               </div>
@@ -387,14 +388,14 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                 placeholder="Link del informe (Drive, PDF, etc.)"
                 value={linkInforme}
                 onChange={(e) => setLinkInforme(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               />
               <button
                 onClick={handleGuardar}
                 disabled={guardando}
                 className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-                style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+                style={BOTON_GESTION}
               >
                 {guardando ? 'Guardando...' : fichaEditando ? 'Guardar cambios' : 'Guardar registro'}
               </button>
@@ -403,14 +404,14 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
 
           <div className="space-y-2">
             {fichas.map((f) => (
-              <div key={f.id} className="p-3.5 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}>
+              <div key={f.id} className="p-3.5 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}>
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-xs font-mono" style={{ color: COLORES.textoSecundario }}>{f.fecha}</p>
                   <div className="flex items-center gap-2">
                     {f.tiempo_recuperacion && (
                       <span
                         className="text-xs font-mono px-2 py-0.5 rounded-full"
-                        style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.acento }}
+                        style={{ backgroundColor: COLORES.fondoPagina, color: textoGestion(COLORES.acento) }}
                       >
                         {f.tiempo_recuperacion}
                       </span>
@@ -442,7 +443,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                 </div>
                 <p className="text-sm" style={{ color: COLORES.texto }}>{f.descripcion}</p>
                 {f.fecha_estimada_alta && !f.recuperado && (
-                  <p className="text-xs mt-1" style={{ color: '#7DD3FC' }}>
+                  <p className="text-xs mt-1" style={{ color: textoGestion('#7DD3FC') }}>
                     📅 Alta estimada: {f.fecha_estimada_alta}
                   </p>
                 )}
@@ -481,14 +482,14 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
           <button
             onClick={() => setMostrarAgregar((v) => !v)}
             className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 shrink-0"
-            style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+            style={BOTON_GESTION}
           >
             {mostrarAgregar ? 'Cancelar' : '+ Agregar jugador'}
           </button>
         </div>
 
         {mostrarAgregar && (
-          <div className="p-4 rounded-xl mb-6 space-y-3" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}>
+          <div className="p-4 rounded-xl mb-6 space-y-3" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}>
             <p className="text-xs uppercase tracking-wide" style={{ color: COLORES.textoMuted }}>
               Elegí categoría y jugador para abrir su ficha médica
             </p>
@@ -499,7 +500,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                   setCategoriaAgregar(e.target.value)
                   setJugadorAgregarId('')
                 }}
-                className="p-2.5 rounded-xl outline-none text-sm"
+                className="p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               >
                 <option value="">Todas las categorías</option>
@@ -510,7 +511,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
               <select
                 value={jugadorAgregarId}
                 onChange={(e) => setJugadorAgregarId(e.target.value)}
-                className="p-2.5 rounded-xl outline-none text-sm"
+                className="p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               >
                 <option value="">Seleccionar jugador...</option>
@@ -523,7 +524,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
               onClick={irAAgregar}
               disabled={!jugadorAgregarId}
               className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+              style={BOTON_GESTION}
             >
               Ir a la ficha
             </button>
@@ -542,7 +543,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
           placeholder="🔍 Buscar en diagnósticos (ej: desgarro, esguince)..."
           value={busquedaLesion}
           onChange={(e) => setBusquedaLesion(e.target.value)}
-          className="w-full p-2.5 rounded-xl outline-none text-sm mb-6"
+          className="w-full p-2.5 rounded-xl ui-control outline-none text-sm mb-6"
           style={inputStyle}
         />
 
@@ -553,7 +554,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                 key={ficha.id}
                 onClick={() => abrirJugador(jugador)}
                 className="p-3.5 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
-                style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+                style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
               >
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
@@ -595,7 +596,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
           (grupo) =>
             grupo.lista.length > 0 && (
               <div key={grupo.titulo} className="mb-6">
-                <p className="text-xs uppercase tracking-wide mb-2" style={{ color: grupo.color }}>
+                <p className="text-xs uppercase tracking-wide mb-2" style={{ color: textoGestion(grupo.color) }}>
                   {grupo.icono} {grupo.titulo} ({grupo.lista.length})
                 </p>
                 <div className="space-y-2">
@@ -616,7 +617,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                       ) : (
                         <div
                           className="flex items-center justify-center w-9 h-9 rounded-full shrink-0 text-xs font-bold"
-                          style={{ backgroundColor: COLORES.fondoPagina, border: `2px solid ${grupo.color}`, color: grupo.color, fontFamily: "'Archivo Black', sans-serif" }}
+                          style={{ backgroundColor: COLORES.fondoPagina, border: `2px solid ${grupo.color}`, color: textoGestion(grupo.color), fontFamily: "'Archivo Black', sans-serif" }}
                         >
                           {iniciales(j.nombre, j.apellido)}
                         </div>

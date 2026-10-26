@@ -1,3 +1,4 @@
+import { BOTON_GESTION } from '../appearance/gestion'
 import { COLORES } from '../theme'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -116,7 +117,7 @@ function PsicologiaSection({ jugadorInicialId, onConsumirJugadorInicial }) {
 
   const inputStyle = {
     backgroundColor: COLORES.fondoTarjeta,
-    border: '1px solid COLORES.borde',
+    border: `1px solid ${COLORES.borde}`,
     color: COLORES.texto,
   }
 
@@ -145,14 +146,14 @@ function PsicologiaSection({ jugadorInicialId, onConsumirJugadorInicial }) {
             <button
               onClick={mostrarForm ? cancelarForm : abrirNuevoRegistro}
               className="text-sm font-medium px-4 py-2 rounded-xl transition-opacity hover:opacity-80 shrink-0"
-              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+              style={BOTON_GESTION}
             >
               {mostrarForm ? 'Cancelar' : '+ Agregar registro'}
             </button>
           </div>
 
           {mostrarForm && (
-            <div className="space-y-3 mb-6 p-4 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}>
+            <div className="space-y-3 mb-6 p-4 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}>
               {fichaEditando && (
                 <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
                   Editando registro del {fichaEditando.fecha}
@@ -162,7 +163,7 @@ function PsicologiaSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                 type="date"
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               />
               <textarea
@@ -170,7 +171,7 @@ function PsicologiaSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                 value={descripcion}
                 onChange={(e) => setDescripcion(e.target.value)}
                 rows={4}
-                className="w-full p-2.5 rounded-xl outline-none text-sm resize-none"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm resize-none"
                 style={inputStyle}
               />
               <input
@@ -178,14 +179,14 @@ function PsicologiaSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                 placeholder="Link del informe (Drive, PDF, etc.)"
                 value={linkInforme}
                 onChange={(e) => setLinkInforme(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               />
               <button
                 onClick={handleGuardar}
                 disabled={guardando}
                 className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-                style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+                style={BOTON_GESTION}
               >
                 {guardando ? 'Guardando...' : fichaEditando ? 'Guardar cambios' : 'Guardar registro'}
               </button>
@@ -198,7 +199,7 @@ function PsicologiaSection({ jugadorInicialId, onConsumirJugadorInicial }) {
 
           <div className="space-y-2">
             {fichas.map((f) => (
-              <div key={f.id} className="p-3.5 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}>
+              <div key={f.id} className="p-3.5 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}>
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-xs font-mono" style={{ color: COLORES.textoSecundario }}>{f.fecha}</p>
                   <div className="flex items-center gap-2">
@@ -264,19 +265,19 @@ function PsicologiaSection({ jugadorInicialId, onConsumirJugadorInicial }) {
               key={j.id}
               onClick={() => abrirJugador(j)}
               className="flex items-center gap-3 p-3.5 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
-              style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
             >
               {j.foto_url ? (
                 <img
                   src={j.foto_url}
                   alt={`${j.apellido}, ${j.nombre}`}
                   className="w-9 h-9 rounded-full object-cover shrink-0"
-                  style={{ border: '2px solid COLORES.borde' }}
+                  style={{ border: `2px solid ${COLORES.borde}` }}
                 />
               ) : (
                 <div
                   className="flex items-center justify-center w-9 h-9 rounded-full shrink-0 text-xs font-bold"
-                  style={{ backgroundColor: COLORES.fondoPagina, border: '2px solid COLORES.borde', color: COLORES.textoSecundario, fontFamily: "'Archivo Black', sans-serif" }}
+                  style={{ backgroundColor: COLORES.fondoPagina, border: `2px solid ${COLORES.borde}`, color: COLORES.textoSecundario, fontFamily: "'Archivo Black', sans-serif" }}
                 >
                   {iniciales(j.nombre, j.apellido)}
                 </div>

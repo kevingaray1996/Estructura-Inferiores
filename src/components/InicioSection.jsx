@@ -1,3 +1,4 @@
+import { tintePlantel } from '../appearance/plantel'
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -220,9 +221,9 @@ function EtiquetaEstado({ children, color = C.amarillo }) {
     <span
       className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
       style={{
-        background: `${color}16`,
+        background: tintePlantel(color, '16'),
         color: textoInicio(color),
-        border: `1px solid ${color}45`,
+        border: "1px solid " + tintePlantel(color, '45'),
       }}
     >
       {children}
@@ -948,8 +949,8 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                   <span
                     className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
                     style={{
-                      background: `${item.accent}16`,
-                      border: `1px solid ${item.accent}30`,
+                      background: tintePlantel(item.accent, '16'),
+                      border: "1px solid " + tintePlantel(item.accent, '30'),
                     }}
                   >
                     {item.icono}
@@ -1150,8 +1151,8 @@ function InicioSection({ perfil, onCambiarSeccion }) {
                       <div
                         className="mt-5 rounded-xl p-4 flex items-center justify-between gap-3"
                         style={{
-                          background: `${colorUltimo}12`,
-                          border: `1px solid ${colorUltimo}35`,
+                          background: tintePlantel(colorUltimo, '12'),
+                          border: "1px solid " + tintePlantel(colorUltimo, '35'),
                         }}
                       >
                         <span className="text-sm" style={{ color: C.gris }}>

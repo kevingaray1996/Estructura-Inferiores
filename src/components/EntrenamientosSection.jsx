@@ -1,3 +1,4 @@
+import { BOTON_GESTION } from '../appearance/gestion'
 import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -24,7 +25,7 @@ function EntrenamientosSection() {
 
   const inputStyle = {
     backgroundColor: COLORES.fondoTarjeta,
-    border: '1px solid COLORES.borde',
+    border: `1px solid ${COLORES.borde}`,
     color: COLORES.texto,
   }
 
@@ -143,14 +144,14 @@ function EntrenamientosSection() {
           <button
             onClick={mostrarForm ? cancelarForm : abrirNuevo}
             className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 shrink-0"
-            style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+            style={BOTON_GESTION}
           >
             {mostrarForm ? 'Cancelar' : '+ Nuevo entrenamiento'}
           </button>
         </div>
 
         {mostrarForm && (
-          <div className="space-y-3 mb-8 p-4 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}>
+          <div className="space-y-3 mb-8 p-4 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}>
             {entrenamientoEditando && (
               <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
                 Editando entrenamiento del {entrenamientoEditando.fecha}
@@ -161,7 +162,7 @@ function EntrenamientosSection() {
                 type="date"
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               />
               <input
@@ -170,7 +171,7 @@ function EntrenamientosSection() {
                 placeholder="Contenido (ej: Tenencia, Ofensivos, Tácticos...)"
                 value={contenido}
                 onChange={(e) => setContenido(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               />
               <datalist id="contenidos-lista">
@@ -184,7 +185,7 @@ function EntrenamientosSection() {
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
               rows={3}
-              className="w-full p-2.5 rounded-xl outline-none text-sm resize-none"
+              className="w-full p-2.5 rounded-xl ui-control outline-none text-sm resize-none"
               style={inputStyle}
             />
             <div className="grid sm:grid-cols-2 gap-3">
@@ -194,7 +195,7 @@ function EntrenamientosSection() {
                 placeholder="Cantidad de jugadores"
                 value={cantidadJugadores}
                 onChange={(e) => setCantidadJugadores(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               />
               <input
@@ -202,7 +203,7 @@ function EntrenamientosSection() {
                 placeholder="Link de video (opcional)"
                 value={linkVideo}
                 onChange={(e) => setLinkVideo(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               />
             </div>
@@ -216,12 +217,12 @@ function EntrenamientosSection() {
                     src={imagenUrl}
                     alt="Vista previa"
                     className="w-16 h-16 rounded-lg object-cover shrink-0"
-                    style={{ border: '1px solid COLORES.borde' }}
+                    style={{ border: `1px solid ${COLORES.borde}` }}
                   />
                 )}
                 <label
                   className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 cursor-pointer"
-                  style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario, border: '1px solid COLORES.borde' }}
+                  style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario, border: `1px solid ${COLORES.borde}` }}
                 >
                   {subiendoImagen ? 'Subiendo...' : imagenUrl ? 'Cambiar imagen' : '📤 Subir imagen'}
                   <input
@@ -248,7 +249,7 @@ function EntrenamientosSection() {
               onClick={handleGuardar}
               disabled={guardando}
               className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+              style={BOTON_GESTION}
             >
               {guardando ? 'Guardando...' : entrenamientoEditando ? 'Guardar cambios' : 'Guardar entrenamiento'}
             </button>
@@ -259,7 +260,7 @@ function EntrenamientosSection() {
           <select
             value={contenidoFiltro}
             onChange={(e) => setContenidoFiltro(e.target.value)}
-            className="p-2.5 rounded-xl outline-none text-sm sm:w-56"
+            className="p-2.5 rounded-xl ui-control outline-none text-sm sm:w-56"
             style={inputStyle}
           >
             <option value="">Todos los contenidos</option>
@@ -270,7 +271,7 @@ function EntrenamientosSection() {
           <select
             value={cantidadFiltro}
             onChange={(e) => setCantidadFiltro(e.target.value)}
-            className="p-2.5 rounded-xl outline-none text-sm sm:w-48"
+            className="p-2.5 rounded-xl ui-control outline-none text-sm sm:w-48"
             style={inputStyle}
           >
             <option value="">Cantidad de jugadores</option>
@@ -283,7 +284,7 @@ function EntrenamientosSection() {
             placeholder="Buscar en la descripción..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            className="p-2.5 rounded-xl outline-none text-sm flex-1"
+            className="p-2.5 rounded-xl ui-control outline-none text-sm flex-1"
             style={inputStyle}
           />
         </div>
@@ -293,7 +294,7 @@ function EntrenamientosSection() {
             <div
               key={e.id}
               className="rounded-xl overflow-hidden flex flex-col"
-              style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
             >
               <div
                 className="w-full aspect-[2/1] flex items-center justify-center"

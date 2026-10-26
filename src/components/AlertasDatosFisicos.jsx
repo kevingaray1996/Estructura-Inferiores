@@ -1,3 +1,4 @@
+import { PARTIDOS as P } from '../appearance/partidos'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
@@ -47,39 +48,39 @@ function AlertasDatosFisicos({ incluirCargaYCmj }) {
   const total = totalWellness + totalCarga + totalCmj
   if (cargando || total === 0) return null
   return (
-    <div className="mb-6 rounded-xl overflow-hidden" style={{ border: '1px solid #FBBF24' }}>
+    <div className="mb-6 rounded-xl overflow-hidden" style={{ border: "1px solid var(--plantel-aviso, #FBBF24)" }}>
       <button
         onClick={() => setAbierto((v) => !v)}
         className="w-full flex items-center justify-between p-3 text-sm font-medium"
-        style={{ backgroundColor: '#1A2332', color: '#FBBF24' }}
+        style={{ backgroundColor: P.superficie, color: P.aviso }}
       >
         <span>⚠️ Alertas — datos insuficientes ({total})</span>
         <span>{abierto ? '▲' : '▼'}</span>
       </button>
       {abierto && (
-        <div className="p-3 space-y-3" style={{ backgroundColor: '#0F1419' }}>
+        <div className="p-3 space-y-3" style={{ backgroundColor: P.fondo }}>
           {totalWellness > 0 && (
             <div>
-              <p className="text-xs font-medium mb-1" style={{ color: '#8A9BB8' }}>
+              <p className="text-xs font-medium mb-1" style={{ color: P.secundario }}>
                 Wellness ({totalWellness}) — menos de 15 respuestas en los últimos 28 días
               </p>
-              <p className="text-sm" style={{ color: '#F0F2F5' }}>{faltantes.wellness.join(' · ')}</p>
+              <p className="text-sm" style={{ color: P.texto }}>{faltantes.wellness.join(' · ')}</p>
             </div>
           )}
           {incluirCargaYCmj && totalCarga > 0 && (
             <div>
-              <p className="text-xs font-medium mb-1" style={{ color: '#8A9BB8' }}>
+              <p className="text-xs font-medium mb-1" style={{ color: P.secundario }}>
                 RPE / Carga ({totalCarga}) — sin ACWR calculable (falta RPE o minutos recientes)
               </p>
-              <p className="text-sm" style={{ color: '#F0F2F5' }}>{faltantes.carga.join(' · ')}</p>
+              <p className="text-sm" style={{ color: P.texto }}>{faltantes.carga.join(' · ')}</p>
             </div>
           )}
           {incluirCargaYCmj && totalCmj > 0 && (
             <div>
-              <p className="text-xs font-medium mb-1" style={{ color: '#8A9BB8' }}>
+              <p className="text-xs font-medium mb-1" style={{ color: P.secundario }}>
                 CMJ ({totalCmj}) — menos de 2 mediciones cargadas
               </p>
-              <p className="text-sm" style={{ color: '#F0F2F5' }}>{faltantes.cmj.join(' · ')}</p>
+              <p className="text-sm" style={{ color: P.texto }}>{faltantes.cmj.join(' · ')}</p>
             </div>
           )}
         </div>

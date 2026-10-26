@@ -1,3 +1,4 @@
+import { BOTON_GESTION } from '../appearance/gestion'
 import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -115,7 +116,7 @@ function PaseCategoriaSection() {
 
   const inputStyle = {
     backgroundColor: COLORES.fondoTarjeta,
-    border: '1px solid COLORES.borde',
+    border: `1px solid ${COLORES.borde}`,
     color: COLORES.texto,
   }
 
@@ -137,7 +138,7 @@ function PaseCategoriaSection() {
           <select
             value={origenId}
             onChange={(e) => setOrigenId(e.target.value)}
-            className="w-full p-2.5 rounded-xl outline-none text-sm"
+            className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
             style={inputStyle}
           >
             <option value="">Categoría origen</option>
@@ -150,7 +151,7 @@ function PaseCategoriaSection() {
           <select
             value={destinoId}
             onChange={(e) => setDestinoId(e.target.value)}
-            className="w-full p-2.5 rounded-xl outline-none text-sm"
+            className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
             style={inputStyle}
           >
             <option value="">Categoría destino</option>
@@ -167,7 +168,7 @@ function PaseCategoriaSection() {
           placeholder="Temporada (ej: 2026, opcional)"
           value={temporada}
           onChange={(e) => setTemporada(e.target.value)}
-          className="w-full p-2.5 rounded-xl outline-none text-sm mb-6"
+          className="w-full p-2.5 rounded-xl ui-control outline-none text-sm mb-6"
           style={inputStyle}
         />
 
@@ -198,7 +199,7 @@ function PaseCategoriaSection() {
                 <label
                   key={j.id}
                   className="flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer"
-                  style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+                  style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
                 >
                   <input
                     type="checkbox"
@@ -238,7 +239,7 @@ function PaseCategoriaSection() {
           onClick={handleConfirmar}
           disabled={guardando || jugadores.length === 0}
           className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-          style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+          style={BOTON_GESTION}
         >
           {guardando ? 'Procesando...' : 'Confirmar pase'}
         </button>

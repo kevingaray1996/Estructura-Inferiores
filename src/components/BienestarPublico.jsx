@@ -242,7 +242,7 @@ function BienestarPublico({ categoriaId }) {
               placeholder="Buscá tu nombre..."
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              className="w-full p-3 rounded-xl outline-none text-sm mb-4"
+              className="w-full p-3 rounded-xl ui-control outline-none text-sm mb-4"
               style={inputStyle}
             />
             <div className="space-y-2">
@@ -299,7 +299,7 @@ function BienestarPublico({ categoriaId }) {
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
                 style={{
                   backgroundColor: vista === 'bienestar' ? COLORES.acento : COLORES.fondoTarjeta,
-                  color: vista === 'bienestar' ? '#1A1A1A' : COLORES.textoSecundario,
+                  color: vista === 'bienestar' ? 'var(--ui-texto-sobre-acento, #1A1A1A)' : COLORES.textoSecundario,
                   border: `1px solid ${COLORES.borde}`,
                 }}
               >
@@ -310,7 +310,7 @@ function BienestarPublico({ categoriaId }) {
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
                 style={{
                   backgroundColor: vista === 'rpe' ? COLORES.acento : COLORES.fondoTarjeta,
-                  color: vista === 'rpe' ? '#1A1A1A' : COLORES.textoSecundario,
+                  color: vista === 'rpe' ? 'var(--ui-texto-sobre-acento, #1A1A1A)' : COLORES.textoSecundario,
                   border: `1px solid ${COLORES.borde}`,
                 }}
               >
@@ -334,7 +334,7 @@ function BienestarPublico({ categoriaId }) {
                               className="flex-1 py-3 rounded-xl text-sm font-mono transition-opacity hover:opacity-80"
                               style={{
                                 backgroundColor: activo ? COLORES.acento : COLORES.fondoTarjeta,
-                                color: activo ? '#1A1A1A' : COLORES.textoSecundario,
+                                color: activo ? 'var(--ui-texto-sobre-acento, #1A1A1A)' : COLORES.textoSecundario,
                                 fontWeight: activo ? 700 : 400,
                                 border: `1px solid ${COLORES.borde}`,
                               }}
@@ -358,7 +358,7 @@ function BienestarPublico({ categoriaId }) {
                             value={valores.zona_dolor || ''}
                             onChange={(e) => actualizarTexto('zona_dolor', e.target.value)}
                             placeholder="Ej: rodilla, espalda, hombro..."
-                            className="w-full p-3 rounded-xl outline-none text-sm"
+                            className="w-full p-3 rounded-xl ui-control outline-none text-sm"
                             style={{
                               ...inputStyle,
                               resize: 'vertical',
@@ -413,7 +413,7 @@ function BienestarPublico({ categoriaId }) {
                           className="text-left px-3 py-2.5 rounded-xl text-sm transition-opacity hover:opacity-80"
                           style={{
                             backgroundColor: activo ? COLORES.acento : COLORES.fondoTarjeta,
-                            color: activo ? '#1A1A1A' : f.valor === 'no_responde' ? COLORES.textoMuted : COLORES.textoSecundario,
+                            color: activo ? 'var(--ui-texto-sobre-acento, #1A1A1A)' : f.valor === 'no_responde' ? COLORES.textoMuted : COLORES.textoSecundario,
                             border: `1px solid ${COLORES.borde}`,
                             fontWeight: activo ? 500 : 400,
                           }}
@@ -433,7 +433,7 @@ function BienestarPublico({ categoriaId }) {
                   onClick={handleEnviar}
                   disabled={guardando}
                   className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-                  style={{ backgroundColor: COLORES.acento, color: '#1A1A1A' }}
+                  style={{ backgroundColor: COLORES.acento, color: 'var(--ui-texto-sobre-acento, #1A1A1A)' }}
                 >
                   {guardando ? 'Enviando...' : 'Enviar'}
                 </button>
@@ -472,7 +472,7 @@ function BienestarPublico({ categoriaId }) {
                         min={fechaMinima}
                         max={fecha}
                         onChange={(e) => setFechaRpe(e.target.value)}
-                        className="w-full p-2.5 rounded-xl outline-none text-sm"
+                        className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                         style={inputStyle}
                       />
                     </div>
@@ -481,7 +481,7 @@ function BienestarPublico({ categoriaId }) {
                       <select
                         value={tipoRpe}
                         onChange={(e) => setTipoRpe(e.target.value)}
-                        className="w-full p-2.5 rounded-xl outline-none text-sm"
+                        className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                         style={inputStyle}
                       >
                         <option value="entrenamiento">Entrenamiento</option>
@@ -504,7 +504,7 @@ function BienestarPublico({ categoriaId }) {
                         className="py-3 rounded-xl text-sm font-mono transition-opacity hover:opacity-80"
                         style={{
                           backgroundColor: activo ? COLORES.acento : COLORES.fondoTarjeta,
-                          color: activo ? '#1A1A1A' : COLORES.textoSecundario,
+                          color: activo ? 'var(--ui-texto-sobre-acento, #1A1A1A)' : COLORES.textoSecundario,
                           fontWeight: activo ? 700 : 400,
                           border: `1px solid ${COLORES.borde}`,
                         }}
@@ -527,7 +527,7 @@ function BienestarPublico({ categoriaId }) {
                   onClick={handleEnviarRpe}
                   disabled={rpeGuardando}
                   className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-                  style={{ backgroundColor: COLORES.acento, color: '#1A1A1A' }}
+                  style={{ backgroundColor: COLORES.acento, color: 'var(--ui-texto-sobre-acento, #1A1A1A)' }}
                 >
                   {rpeGuardando ? 'Enviando...' : 'Enviar'}
                 </button>

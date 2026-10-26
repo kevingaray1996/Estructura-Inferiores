@@ -1,3 +1,4 @@
+import { PARTIDOS as P, textoPartido } from '../appearance/partidos'
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
@@ -87,9 +88,9 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
   const [errorMsg, setErrorMsg] = useState('')
 
   const inputStyle = {
-    backgroundColor: '#0F1419',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: P.fondo,
+    border: "1px solid var(--ui-compartido-borde, #2A3548)",
+    color: P.texto,
   }
 
   useEffect(() => {
@@ -416,7 +417,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
   if (!partido) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p style={{ color: '#5B6B85' }}>Cargando...</p>
+        <p style={{ color: P.tenue }}>Cargando...</p>
       </div>
     )
   }
@@ -439,33 +440,33 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
         <button
           onClick={onVolver}
           className="text-sm mb-6 flex items-center gap-1 hover:opacity-70 transition-opacity"
-          style={{ color: '#8A9BB8' }}
+          style={{ color: P.secundario }}
         >
           ← Volver
         </button>
 
         <h1
           className="text-2xl md:text-3xl mb-1 flex items-center gap-2.5"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+          style={{ fontFamily: "'Archivo Black', sans-serif", color: P.texto }}
         >
           {partido.escudo_url ? (
             <img
               src={partido.escudo_url}
               alt={partido.rival}
               className="w-8 h-8 rounded object-contain shrink-0"
-              style={{ backgroundColor: '#0F1419' }}
+              style={{ backgroundColor: P.fondo }}
             />
           ) : (
             <span
               className="w-8 h-8 rounded flex items-center justify-center text-sm shrink-0"
-              style={{ backgroundColor: '#0F1419', color: '#5B6B85' }}
+              style={{ backgroundColor: P.fondo, color: P.tenue }}
             >
               🛡️
             </span>
           )}
           vs {partido.rival}
         </h1>
-        <p className="text-sm mb-6" style={{ color: '#8A9BB8' }}>
+        <p className="text-sm mb-6" style={{ color: P.secundario }}>
           {partido.fecha} {partido.hora && `· ${partido.hora}`} {partido.lugar && `· ${partido.lugar}`}
           {partido.local_visitante && ` · ${partido.local_visitante}`}
         </p>
@@ -483,8 +484,8 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
               className="flex-1 p-2.5 rounded-xl text-sm font-medium transition-opacity"
               style={
                 tab === t.key
-                  ? { backgroundColor: '#4ADE80', color: '#0F1419' }
-                  : { backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#8A9BB8' }
+                  ? { backgroundColor: P.primario, color: P.sobrePrimario }
+                  : { backgroundColor: P.superficie, border: "1px solid var(--ui-compartido-borde, #2A3548)", color: P.secundario }
               }
             >
               {t.label}
@@ -495,33 +496,33 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
         {tab === 'convocados' && (
           <>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs tracking-widest uppercase" style={{ color: '#5B6B85' }}>
+              <p className="text-xs tracking-widest uppercase" style={{ color: P.tenue }}>
                 Convocatoria y estadísticas
               </p>
-              <span className="text-xs font-mono" style={{ color: '#8A9BB8' }}>
+              <span className="text-xs font-mono" style={{ color: P.secundario }}>
                 {cantidadConvocados} convocados
               </span>
             </div>
 
-            <div className="overflow-x-auto rounded-xl mb-6" style={{ border: '1px solid #2A3548' }}>
+            <div className="overflow-x-auto rounded-xl mb-6" style={{ border: "1px solid var(--ui-compartido-borde, #2A3548)" }}>
               <table className="min-w-full text-xs" style={{ borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ backgroundColor: '#1A2332' }}>
-                    <th className="p-2 text-left sticky left-0 whitespace-nowrap" style={{ color: '#8A9BB8', backgroundColor: '#1A2332' }}>
+                  <tr style={{ backgroundColor: P.superficie }}>
+                    <th className="p-2 text-left sticky left-0 whitespace-nowrap" style={{ color: P.secundario, backgroundColor: P.superficie }}>
                       Jugador
                     </th>
-                    <th className="p-2" style={{ color: '#8A9BB8' }}>Conv.</th>
-                    <th className="p-2" style={{ color: '#7DD3FC' }}>Titular</th>
-                    <th className="p-2" style={{ color: '#8A9BB8' }}>Dorsal</th>
-                    <th className="p-2" style={{ color: '#8A9BB8' }}>Min</th>
-                    <th className="p-2" style={{ color: '#8A9BB8' }}>Goles</th>
-                    <th className="p-2" style={{ color: '#8A9BB8' }}>Asist</th>
-                    <th className="p-2" style={{ color: '#8A9BB8' }}>Amar</th>
-                    <th className="p-2" style={{ color: '#8A9BB8' }}>Roja</th>
-                    <th className="p-2" style={{ color: '#FBBF24' }}>Cap.</th>
-                    <th className="p-2" style={{ color: '#8A9BB8' }}>Link</th>
-                    <th className="p-2" style={{ color: '#8A9BB8' }}>PDF</th>
-                    <th className="p-2 text-left" style={{ color: '#8A9BB8' }}>Observaciones</th>
+                    <th className="p-2" style={{ color: P.secundario }}>Conv.</th>
+                    <th className="p-2" style={{ color: P.informacion }}>Titular</th>
+                    <th className="p-2" style={{ color: P.secundario }}>Dorsal</th>
+                    <th className="p-2" style={{ color: P.secundario }}>Min</th>
+                    <th className="p-2" style={{ color: P.secundario }}>Goles</th>
+                    <th className="p-2" style={{ color: P.secundario }}>Asist</th>
+                    <th className="p-2" style={{ color: P.secundario }}>Amar</th>
+                    <th className="p-2" style={{ color: P.secundario }}>Roja</th>
+                    <th className="p-2" style={{ color: P.aviso }}>Cap.</th>
+                    <th className="p-2" style={{ color: P.secundario }}>Link</th>
+                    <th className="p-2" style={{ color: P.secundario }}>PDF</th>
+                    <th className="p-2 text-left" style={{ color: P.secundario }}>Observaciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -533,20 +534,20 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                     const bloqueado = !!estadoInfo || bloqueadoPorInasistencia
                     const s = stats[j.id] || statsVacias
                     return (
-                      <tr key={j.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#151D2A', opacity: bloqueado ? 0.5 : 1 }}>
+                      <tr key={j.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : P.fila, opacity: bloqueado ? 0.5 : 1 }}>
                         <td
                           className="p-2 whitespace-nowrap sticky left-0"
-                          style={{ color: '#F0F2F5', backgroundColor: i % 2 === 0 ? '#0F1419' : '#151D2A' }}
+                          style={{ color: P.texto, backgroundColor: i % 2 === 0 ? P.fondo : P.fila }}
                         >
                           {j.apellido}, {j.nombre}
                           {estadoInfo && (
-                            <span className="block" style={{ color: estadoInfo.color, fontSize: '10px' }}>
+                            <span className="block" style={{ color: textoPartido(estadoInfo.color), fontSize: '10px' }}>
                               {estadoInfo.label}
                               {j.estado_detalle && ` — ${j.estado_detalle}`}
                             </span>
                           )}
                           {!estadoInfo && bloqueadoPorInasistencia && (
-                            <span className="block" style={{ color: '#F87171', fontSize: '10px' }}>
+                            <span className="block" style={{ color: P.peligro, fontSize: '10px' }}>
                               No convocable: faltó {ausenciasDelJugador.length} días esta semana (
                               {ausenciasDelJugador.map(nombreDiaCorto).join(', ')})
                             </span>
@@ -577,7 +578,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                               max="99"
                               value={convocados[j.id]}
                               onChange={(e) => actualizarDorsal(j.id, e.target.value)}
-                              className="w-12 p-1 rounded text-center outline-none"
+                              className="w-12 p-1 rounded text-center ui-control outline-none"
                               style={inputStyle}
                             />
                           )}
@@ -589,7 +590,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                             max="120"
                             value={s.minutos}
                             onChange={(e) => actualizarStat(j.id, 'minutos', e.target.value)}
-                            className="w-14 p-1 rounded text-center outline-none"
+                            className="w-14 p-1 rounded text-center ui-control outline-none"
                             style={inputStyle}
                           />
                         </td>
@@ -599,7 +600,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                             min="0"
                             value={s.goles}
                             onChange={(e) => actualizarStat(j.id, 'goles', e.target.value)}
-                            className="w-12 p-1 rounded text-center outline-none"
+                            className="w-12 p-1 rounded text-center ui-control outline-none"
                             style={inputStyle}
                           />
                         </td>
@@ -609,7 +610,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                             min="0"
                             value={s.asistencias}
                             onChange={(e) => actualizarStat(j.id, 'asistencias', e.target.value)}
-                            className="w-12 p-1 rounded text-center outline-none"
+                            className="w-12 p-1 rounded text-center ui-control outline-none"
                             style={inputStyle}
                           />
                         </td>
@@ -620,7 +621,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                             max="2"
                             value={s.amarillas}
                             onChange={(e) => actualizarStat(j.id, 'amarillas', e.target.value)}
-                            className="w-12 p-1 rounded text-center outline-none"
+                            className="w-12 p-1 rounded text-center ui-control outline-none"
                             style={inputStyle}
                           />
                         </td>
@@ -631,7 +632,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                             max="1"
                             value={s.rojas}
                             onChange={(e) => actualizarStat(j.id, 'rojas', e.target.value)}
-                            className="w-12 p-1 rounded text-center outline-none"
+                            className="w-12 p-1 rounded text-center ui-control outline-none"
                             style={inputStyle}
                           />
                         </td>
@@ -648,7 +649,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                             value={s.link}
                             onChange={(e) => actualizarStat(j.id, 'link', e.target.value)}
                             placeholder="https://..."
-                            className="w-24 p-1 rounded outline-none"
+                            className="w-24 p-1 rounded ui-control outline-none"
                             style={inputStyle}
                           />
                         </td>
@@ -658,7 +659,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                             value={s.pdfUrl}
                             onChange={(e) => actualizarStat(j.id, 'pdfUrl', e.target.value)}
                             placeholder="https://..."
-                            className="w-24 p-1 rounded outline-none"
+                            className="w-24 p-1 rounded ui-control outline-none"
                             style={inputStyle}
                           />
                         </td>
@@ -667,7 +668,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                             type="text"
                             value={s.observaciones}
                             onChange={(e) => actualizarStat(j.id, 'observaciones', e.target.value)}
-                            className="w-40 p-1 rounded outline-none"
+                            className="w-40 p-1 rounded ui-control outline-none"
                             style={inputStyle}
                           />
                         </td>
@@ -679,7 +680,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
             </div>
 
             {errorMsg && (
-              <p className="text-sm mb-4" style={{ color: '#F87171' }}>
+              <p className="text-sm mb-4" style={{ color: P.peligro }}>
                 {errorMsg}
               </p>
             )}
@@ -688,20 +689,20 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
               onClick={handleGuardarConvocados}
               disabled={guardando}
               className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+              style={{ backgroundColor: P.primario, color: P.sobrePrimario }}
             >
               {guardando ? 'Guardando...' : 'Guardar convocados y estadísticas'}
             </button>
 
             <div className="flex items-center justify-between mt-10 mb-3">
-              <p className="text-xs uppercase tracking-wide" style={{ color: '#5B6B85' }}>
+              <p className="text-xs uppercase tracking-wide" style={{ color: P.tenue }}>
                 Físico (GPS)
               </p>
               {onIrAFisico && (
                 <button
                   onClick={() => onIrAFisico(partidoId)}
                   className="text-xs px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
-                  style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+                  style={{ backgroundColor: P.superficie, color: P.secundario, border: "1px solid var(--ui-compartido-borde, #2A3548)" }}
                 >
                   📊 Cargar/editar físico
                 </button>
@@ -709,26 +710,26 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
             </div>
 
             {Object.keys(datosFisicos).length === 0 ? (
-              <p className="text-sm" style={{ color: '#5B6B85' }}>
+              <p className="text-sm" style={{ color: P.tenue }}>
                 Todavía no hay datos físicos cargados para este partido.
               </p>
             ) : (
-              <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #2A3548' }}>
+              <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid var(--ui-compartido-borde, #2A3548)" }}>
                 <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ backgroundColor: '#1A2332' }}>
+                    <tr style={{ backgroundColor: P.superficie }}>
                       <th
                         className="text-left p-2.5 whitespace-nowrap sticky left-0"
-                        style={{ color: '#8A9BB8', backgroundColor: '#1A2332' }}
+                        style={{ color: P.secundario, backgroundColor: P.superficie }}
                       >
                         Jugador
                       </th>
                       {CAMPOS_FISICOS.map((c) => (
-                        <th key={c.clave} className="text-left p-2.5 whitespace-nowrap" style={{ color: '#8A9BB8' }}>
+                        <th key={c.clave} className="text-left p-2.5 whitespace-nowrap" style={{ color: P.secundario }}>
                           {c.label}
                         </th>
                       ))}
-                      <th className="text-left p-2.5 whitespace-nowrap" style={{ color: '#7DD3FC' }}>
+                      <th className="text-left p-2.5 whitespace-nowrap" style={{ color: P.informacion }}>
                         RPE
                       </th>
                     </tr>
@@ -737,19 +738,19 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                     {jugadores
                       .filter((j) => datosFisicos[j.id])
                       .map((j, i) => (
-                        <tr key={j.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#151D2A' }}>
+                        <tr key={j.id} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : P.fila }}>
                           <td
                             className="p-2.5 whitespace-nowrap sticky left-0"
-                            style={{ color: '#F0F2F5', backgroundColor: i % 2 === 0 ? '#0F1419' : '#151D2A' }}
+                            style={{ color: P.texto, backgroundColor: i % 2 === 0 ? P.fondo : P.fila }}
                           >
                             {j.apellido}, {j.nombre}
                           </td>
                           {CAMPOS_FISICOS.map((c) => (
-                            <td key={c.clave} className="p-2.5 whitespace-nowrap" style={{ color: '#8A9BB8' }}>
+                            <td key={c.clave} className="p-2.5 whitespace-nowrap" style={{ color: P.secundario }}>
                               {datosFisicos[j.id][c.clave] ?? '—'}
                             </td>
                           ))}
-                          <td className="p-2.5 whitespace-nowrap" style={{ color: '#7DD3FC' }}>
+                          <td className="p-2.5 whitespace-nowrap" style={{ color: P.informacion }}>
                             {datosFisicos[j.id].rpe ?? '—'}
                           </td>
                         </tr>
@@ -765,14 +766,14 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
           <>
             <div className="flex items-end gap-3 mb-4 flex-wrap">
               <div>
-                <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: P.tenue }}>
                   Formación
                 </label>
                 <select
                   value={formacion}
                   onChange={(e) => cambiarFormacion(e.target.value)}
-                  className="p-2.5 rounded-xl outline-none text-sm"
-                  style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#F0F2F5' }}
+                  className="p-2.5 rounded-xl ui-control outline-none text-sm"
+                  style={{ backgroundColor: P.superficie, border: "1px solid var(--ui-compartido-borde, #2A3548)", color: P.texto }}
                 >
                   {Object.keys(FORMACIONES).map((f) => (
                     <option key={f} value={f}>
@@ -784,13 +785,13 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
               <button
                 onClick={handleRestablecerPosiciones}
                 className="text-sm px-3 py-2.5 rounded-xl transition-opacity hover:opacity-80"
-                style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+                style={{ backgroundColor: P.superficie, color: P.secundario, border: "1px solid var(--ui-compartido-borde, #2A3548)" }}
               >
                 ↺ Restablecer posiciones
               </button>
             </div>
 
-            <p className="text-xs mb-3" style={{ color: '#5B6B85' }}>
+            <p className="text-xs mb-3" style={{ color: P.tenue }}>
               Al elegir una formación, los convocados se ordenan según sus puestos (por dorsal). Después podés
               arrastrar a cada jugador donde quieras.
             </p>
@@ -803,7 +804,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                   maxWidth: 380,
                   aspectRatio: '68 / 100',
                   backgroundColor: '#183A2A',
-                  border: '1px solid #2A3548',
+                  border: "1px solid var(--ui-compartido-borde, #2A3548)",
                   touchAction: 'none',
                 }}
               >
@@ -884,7 +885,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                           quitarDeCancha(c.jugadorId)
                         }}
                         className="text-[9px] mt-0.5 px-1.5 rounded-full"
-                        style={{ backgroundColor: '#0F1419', color: '#F87171' }}
+                        style={{ backgroundColor: P.fondo, color: P.peligro }}
                       >
                         ✕
                       </button>
@@ -894,7 +895,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
               </div>
 
               <div>
-                <p className="text-xs tracking-widest uppercase mb-3" style={{ color: '#5B6B85' }}>
+                <p className="text-xs tracking-widest uppercase mb-3" style={{ color: P.tenue }}>
                   Banco ({enBanco.length})
                 </p>
                 <div className="space-y-1.5 max-h-[420px] overflow-y-auto">
@@ -903,21 +904,21 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                       key={c.jugadorId}
                       onClick={() => agregarACancha(c.jugadorId)}
                       className="w-full flex items-center gap-2 p-2 rounded-lg text-sm text-left hover:opacity-80"
-                      style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+                      style={{ backgroundColor: P.superficie, border: "1px solid var(--ui-compartido-borde, #2A3548)" }}
                     >
                       <span
                         className="w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold shrink-0"
-                        style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                        style={{ backgroundColor: P.fondo, color: P.secundario }}
                       >
                         {c.dorsal ?? '·'}
                       </span>
-                      <span style={{ color: '#F0F2F5' }} className="truncate">
+                      <span style={{ color: P.texto }} className="truncate">
                         {c.jugador?.apellido}, {c.jugador?.nombre}
                       </span>
                     </button>
                   ))}
                   {enBanco.length === 0 && (
-                    <p className="text-xs" style={{ color: '#5B6B85' }}>
+                    <p className="text-xs" style={{ color: P.tenue }}>
                       Todos los convocados están en la cancha.
                     </p>
                   )}
@@ -929,7 +930,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
               onClick={handleGuardarFormacion}
               disabled={guardando}
               className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+              style={{ backgroundColor: P.primario, color: P.sobrePrimario }}
             >
               {guardando ? 'Guardando...' : 'Guardar formación'}
             </button>
@@ -940,7 +941,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
           <>
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div>
-                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: P.tenue }}>
                   Goles Local
                 </label>
                 <input
@@ -948,12 +949,12 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                   min="0"
                   value={golesLocal}
                   onChange={(e) => setGolesLocal(e.target.value)}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                   style={inputStyle}
                 />
               </div>
               <div>
-                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: P.tenue }}>
                   Goles Visitante
                 </label>
                 <input
@@ -961,12 +962,12 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                   min="0"
                   value={golesVisitante}
                   onChange={(e) => setGolesVisitante(e.target.value)}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                   style={inputStyle}
                 />
               </div>
               <div>
-                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: P.tenue }}>
                   Penales a Favor
                 </label>
                 <input
@@ -974,12 +975,12 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                   min="0"
                   value={penalesFavor}
                   onChange={(e) => setPenalesFavor(e.target.value)}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                   style={inputStyle}
                 />
               </div>
               <div>
-                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: P.tenue }}>
                   Penales en Contra
                 </label>
                 <input
@@ -987,7 +988,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                   min="0"
                   value={penalesContra}
                   onChange={(e) => setPenalesContra(e.target.value)}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                   style={inputStyle}
                 />
               </div>
@@ -1007,7 +1008,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                 ['Resumen Vigilancias', videoResumenVigilancias, setVideoResumenVigilancias],
               ].map(([label, value, setValue]) => (
                 <div key={label}>
-                  <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+                  <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: P.tenue }}>
                     {label}
                   </label>
                   <div className="flex items-center gap-2">
@@ -1016,7 +1017,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                       value={value}
                       onChange={(e) => setValue(e.target.value)}
                       placeholder="https://..."
-                      className="flex-1 p-2.5 rounded-xl outline-none text-sm"
+                      className="flex-1 p-2.5 rounded-xl ui-control outline-none text-sm"
                       style={inputStyle}
                     />
                     {value && (
@@ -1025,7 +1026,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
                         target="_blank"
                         rel="noreferrer"
                         className="w-9 h-9 rounded-full flex items-center justify-center text-sm shrink-0"
-                        style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548', color: '#4ADE80' }}
+                        style={{ backgroundColor: P.superficie, border: "1px solid var(--ui-compartido-borde, #2A3548)", color: P.exito }}
                         title="Abrir"
                       >
                         ▶
@@ -1037,14 +1038,14 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
             </div>
 
             <div className="mb-6">
-              <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+              <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: P.tenue }}>
                 Descripción
               </label>
               <textarea
                 value={descripcionPost}
                 onChange={(e) => setDescripcionPost(e.target.value)}
                 rows={5}
-                className="w-full p-2.5 rounded-xl outline-none text-sm resize-y"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm resize-y"
                 style={inputStyle}
               />
             </div>
@@ -1053,7 +1054,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
               onClick={handleGuardarPost}
               disabled={guardando}
               className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+              style={{ backgroundColor: P.primario, color: P.sobrePrimario }}
             >
               {guardando ? 'Guardando...' : 'Guardar Post-Partido'}
             </button>
@@ -1062,7 +1063,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
 
         {tab === 'destacados' && (
           <>
-            <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+            <label className="text-xs uppercase tracking-wide block mb-1.5" style={{ color: P.tenue }}>
               Jugadores destacados del rival
             </label>
             <textarea
@@ -1070,14 +1071,14 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
               onChange={(e) => setDestacadosRival(e.target.value)}
               rows={10}
               placeholder="Ej: #9 delantero rápido por izquierda, buen juego aéreo..."
-              className="w-full p-2.5 rounded-xl outline-none text-sm resize-y mb-6"
+              className="w-full p-2.5 rounded-xl ui-control outline-none text-sm resize-y mb-6"
               style={inputStyle}
             />
             <button
               onClick={handleGuardarDestacados}
               disabled={guardando}
               className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+              style={{ backgroundColor: P.primario, color: P.sobrePrimario }}
             >
               {guardando ? 'Guardando...' : 'Guardar destacados'}
             </button>
@@ -1085,7 +1086,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
         )}
 
         {guardadoMsg && (
-          <p className="text-sm text-center mt-3" style={{ color: '#4ADE80' }}>
+          <p className="text-sm text-center mt-3" style={{ color: P.exito }}>
             ✅ {guardadoMsg}
           </p>
         )}

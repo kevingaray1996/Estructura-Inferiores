@@ -1,3 +1,4 @@
+import { textoGestion } from '../appearance/gestion'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -5,7 +6,7 @@ import { COLORES } from '../theme'
 
 const ESTILOS = {
   panel: {
-    backgroundColor: COLORES.fondoSidebar,
+    backgroundColor: 'var(--informes-superficie, #0A0A0A)',
     border: `1px solid ${COLORES.borde}`,
     borderRadius: '14px',
   },
@@ -13,7 +14,7 @@ const ESTILOS = {
   secundario: { color: COLORES.textoSecundario },
   muted: { color: COLORES.textoMuted },
   boton: {
-    backgroundColor: COLORES.fondoSidebar,
+    backgroundColor: 'var(--informes-superficie, #0A0A0A)',
     color: COLORES.texto,
     border: `1px solid ${COLORES.borde}`,
   },
@@ -266,7 +267,7 @@ function InformesAutomaticosSection({ perfil }) {
     <div className="p-4 md:p-8 space-y-6">
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-widest mb-2" style={{ color: COLORES.acento }}>
+          <p className="text-xs uppercase tracking-widest mb-2" style={{ color: textoGestion(COLORES.acento) }}>
             Club Comunicaciones
           </p>
           <h1 className="text-2xl font-semibold" style={ESTILOS.texto}>Informes automáticos</h1>
@@ -285,7 +286,7 @@ function InformesAutomaticosSection({ perfil }) {
       </div>
 
       {error && (
-        <div className="rounded-xl p-4 text-sm" style={{ ...ESTILOS.panel, color: '#FCA5A5' }}>
+        <div className="rounded-xl p-4 text-sm" style={{ ...ESTILOS.panel, color: 'var(--plantel-error-texto, #FCA5A5)' }}>
           No se pudo generar el informe: {error}
         </div>
       )}
@@ -299,11 +300,11 @@ function InformesAutomaticosSection({ perfil }) {
               onClick={() => setConsulta(c.id)}
               className="text-left p-4 rounded-xl transition-opacity hover:opacity-90"
               style={{
-                backgroundColor: activa ? 'rgba(242,194,48,0.10)' : COLORES.fondoSidebar,
+                backgroundColor: activa ? 'rgba(242,194,48,0.10)' : 'var(--informes-superficie, #0A0A0A)',
                 border: `1px solid ${activa ? COLORES.acento : COLORES.borde}`,
               }}
             >
-              <p className="font-medium text-sm" style={{ color: activa ? COLORES.acento : COLORES.texto }}>
+              <p className="font-medium text-sm" style={{ color: activa ? textoGestion(COLORES.acento) : COLORES.texto }}>
                 {c.titulo}
               </p>
               <p className="text-xs mt-2 leading-relaxed" style={ESTILOS.secundario}>{c.descripcion}</p>
@@ -321,7 +322,7 @@ function InformesAutomaticosSection({ perfil }) {
             id="temporada-informe"
             value={temporada}
             onChange={(e) => setTemporada(e.target.value)}
-            className="rounded-lg px-3 py-2 text-sm outline-none"
+            className="rounded-lg px-3 py-2 text-sm ui-control outline-none"
             style={ESTILOS.boton}
           >
             <option value="todas">Todas las temporadas</option>

@@ -1,3 +1,4 @@
+import { BOTON_GESTION } from '../appearance/gestion'
 import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -20,7 +21,7 @@ function PensionesSection({ onVolver }) {
 
   const inputStyle = {
     backgroundColor: COLORES.fondoTarjeta,
-    border: '1px solid COLORES.borde',
+    border: `1px solid ${COLORES.borde}`,
     color: COLORES.texto,
   }
 
@@ -115,7 +116,7 @@ function PensionesSection({ onVolver }) {
           <button
             onClick={mostrarForm ? cancelarForm : abrirNuevo}
             className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
-            style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+            style={BOTON_GESTION}
           >
             {mostrarForm ? 'Cancelar' : '+ Nueva pensión'}
           </button>
@@ -124,7 +125,7 @@ function PensionesSection({ onVolver }) {
         {mostrarForm && (
           <div
             className="space-y-3 mb-8 p-4 rounded-xl"
-            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
           >
             {pensionEditando && (
               <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
@@ -136,7 +137,7 @@ function PensionesSection({ onVolver }) {
               placeholder="Nombre de la pensión"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
-              className="w-full p-2.5 rounded-xl outline-none text-sm"
+              className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
               style={inputStyle}
             />
             {errorMsg && (
@@ -148,7 +149,7 @@ function PensionesSection({ onVolver }) {
               onClick={handleGuardar}
               disabled={guardando}
               className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+              style={BOTON_GESTION}
             >
               {guardando ? 'Guardando...' : pensionEditando ? 'Guardar cambios' : 'Guardar pensión'}
             </button>
@@ -170,7 +171,7 @@ function PensionesSection({ onVolver }) {
               <select
                 value={filtroPensionId}
                 onChange={(e) => setFiltroPensionId(e.target.value)}
-                className="p-2 rounded-lg outline-none text-xs"
+                className="p-2 rounded-lg ui-control outline-none text-xs"
                 style={inputStyle}
               >
                 <option value="">Todas</option>
@@ -186,7 +187,7 @@ function PensionesSection({ onVolver }) {
               {pensionesAMostrar.map((p) => {
                 const jugadoresDeEstaPension = jugadores.filter((j) => j.pension_id === p.id)
                 return (
-                  <div key={p.id} className="rounded-xl overflow-hidden" style={{ border: '1px solid COLORES.borde' }}>
+                  <div key={p.id} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${COLORES.borde}` }}>
                     <div
                       className="p-3 flex items-center justify-between"
                       style={{ backgroundColor: COLORES.fondoTarjeta }}
@@ -220,7 +221,7 @@ function PensionesSection({ onVolver }) {
                           <div
                             key={j.id}
                             className="flex items-center justify-between px-3 py-2 text-sm"
-                            style={{ borderTop: '1px solid COLORES.fondoTarjeta', color: COLORES.texto }}
+                            style={{ borderTop: `1px solid ${COLORES.fondoTarjeta}`, color: COLORES.texto }}
                           >
                             <span>
                               {j.apellido}, {j.nombre}

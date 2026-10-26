@@ -1,3 +1,4 @@
+import { BOTON_GESTION, textoGestion } from '../appearance/gestion'
 import { COLORES } from '../theme'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -32,7 +33,7 @@ function RepresentantesSection({ onVolver }) {
 
   const inputStyle = {
     backgroundColor: COLORES.fondoTarjeta,
-    border: '1px solid COLORES.borde',
+    border: `1px solid ${COLORES.borde}`,
     color: COLORES.texto,
   }
 
@@ -194,7 +195,7 @@ function RepresentantesSection({ onVolver }) {
           <button
             onClick={mostrarForm ? cancelarForm : abrirNuevo}
             className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
-            style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+            style={BOTON_GESTION}
           >
             {mostrarForm ? 'Cancelar' : '+ Nuevo representante'}
           </button>
@@ -203,7 +204,7 @@ function RepresentantesSection({ onVolver }) {
         {mostrarForm && (
           <div
             className="space-y-3 mb-8 p-4 rounded-xl"
-            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
           >
             {representanteEditando && (
               <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
@@ -215,7 +216,7 @@ function RepresentantesSection({ onVolver }) {
               placeholder="Nombre"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
-              className="w-full p-2.5 rounded-xl outline-none text-sm"
+              className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
               style={inputStyle}
             />
             <input
@@ -223,7 +224,7 @@ function RepresentantesSection({ onVolver }) {
               placeholder="Teléfono"
               value={telefono}
               onChange={(e) => setTelefono(e.target.value)}
-              className="w-full p-2.5 rounded-xl outline-none text-sm"
+              className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
               style={inputStyle}
             />
             <input
@@ -231,7 +232,7 @@ function RepresentantesSection({ onVolver }) {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2.5 rounded-xl outline-none text-sm"
+              className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
               style={inputStyle}
             />
             <textarea
@@ -239,7 +240,7 @@ function RepresentantesSection({ onVolver }) {
               value={notas}
               onChange={(e) => setNotas(e.target.value)}
               rows={2}
-              className="w-full p-2.5 rounded-xl outline-none text-sm resize-none"
+              className="w-full p-2.5 rounded-xl ui-control outline-none text-sm resize-none"
               style={inputStyle}
             />
 
@@ -253,7 +254,7 @@ function RepresentantesSection({ onVolver }) {
               onClick={handleGuardar}
               disabled={guardando}
               className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+              style={BOTON_GESTION}
             >
               {guardando ? 'Guardando...' : representanteEditando ? 'Guardar cambios' : 'Guardar representante'}
             </button>
@@ -265,7 +266,7 @@ function RepresentantesSection({ onVolver }) {
           placeholder="Buscar representante..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          className="w-full p-2.5 rounded-xl outline-none text-sm mb-4"
+          className="w-full p-2.5 rounded-xl ui-control outline-none text-sm mb-4"
           style={inputStyle}
         />
 
@@ -277,7 +278,7 @@ function RepresentantesSection({ onVolver }) {
 
         <div className="space-y-2">
           {filtrados.map((r) => (
-            <div key={r.id} className="rounded-xl overflow-hidden" style={{ border: '1px solid COLORES.borde' }}>
+            <div key={r.id} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${COLORES.borde}` }}>
               <div
                 className="p-3 flex items-center justify-between cursor-pointer"
                 style={{ backgroundColor: COLORES.fondoTarjeta }}
@@ -356,7 +357,7 @@ function RepresentantesSection({ onVolver }) {
                           <button
                             onClick={() => finalizarAsignacion(a.id)}
                             className="text-[10px] px-2 py-1 rounded-full hover:opacity-80"
-                            style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.acento }}
+                            style={{ backgroundColor: COLORES.fondoPagina, color: textoGestion(COLORES.acento) }}
                           >
                             Finalizar
                           </button>
@@ -378,7 +379,7 @@ function RepresentantesSection({ onVolver }) {
                       placeholder="Buscar jugador para vincular..."
                       value={busquedaJugador}
                       onChange={(e) => setBusquedaJugador(e.target.value)}
-                      className="w-full p-2 rounded-lg outline-none text-xs"
+                      className="w-full p-2 rounded-lg ui-control outline-none text-xs"
                       style={inputStyle}
                     />
                     {resultadosJugador.length > 0 && (

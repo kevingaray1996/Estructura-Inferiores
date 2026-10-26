@@ -1,3 +1,5 @@
+import { textoGestion } from '../appearance/gestion'
+import { tintePlantel } from '../appearance/plantel'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { generarCitacionPDF } from '../utils/generarCitacion'
@@ -247,7 +249,7 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
                     {resultado && (
                       <span
                         className="text-xs font-mono px-2 py-1 rounded-full whitespace-nowrap"
-                        style={{ backgroundColor: COLORES.fondoSidebar, color: colorResultado, border: `1px solid ${colorResultado}40` }}
+                        style={{ backgroundColor: COLORES.fondoSidebar, color: textoGestion(colorResultado), border: `1px solid ${tintePlantel(colorResultado, '40')}` }}
                       >
                         {resultado.texto}
                       </span>

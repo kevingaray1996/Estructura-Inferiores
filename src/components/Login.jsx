@@ -15,9 +15,9 @@ function Login() {
   const [cargando, setCargando] = useState(false)
 
   const inputStyle = {
-    backgroundColor: COLORES.texto,
+    backgroundColor: 'var(--login-control-fondo, #FFFFFF)',
     border: `1px solid ${COLORES.borde}`,
-    color: COLORES.fondoPagina,
+    color: 'var(--login-control-texto, #1A1A18)',
   }
 
   async function handleLogin(e) {
@@ -47,7 +47,7 @@ function Login() {
         </h1>
         <p
           className="text-xs tracking-widest uppercase mb-8 text-center"
-          style={{ color: COLORES.acento }}
+          style={{ color: 'var(--ui-texto-acento, #F2C230)' }}
         >
           Primera División
         </p>
@@ -68,7 +68,7 @@ function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
                 required
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                className="ui-control w-full p-2.5 rounded-xl outline-none text-sm"
                 style={inputStyle}
               />
             </div>
@@ -83,7 +83,7 @@ function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
                 required
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                className="ui-control w-full p-2.5 rounded-xl outline-none text-sm"
                 style={inputStyle}
               />
             </div>
@@ -96,7 +96,7 @@ function Login() {
               type="submit"
               disabled={cargando}
               className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: COLORES.acento, color: COLORES.fondoPagina }}
+              style={{ backgroundColor: COLORES.acento, color: 'var(--login-boton-texto, #1A1A18)' }}
             >
               {cargando ? 'Ingresando...' : 'Ingresar'}
             </button>
