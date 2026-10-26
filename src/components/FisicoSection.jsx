@@ -1,3 +1,4 @@
+import { WELLNESS as W, textoWellness } from '../appearance/wellness'
 
 import { COLORES } from '../theme'
 import { useCallback, useEffect, useState } from 'react'
@@ -299,17 +300,17 @@ function FisicoSection({
 
   const botonPrincipal = (activo) => ({
     background: activo
-      ? 'linear-gradient(135deg, #F7D45A 0%, #F2C230 100%)'
-      : 'linear-gradient(145deg, #292925 0%, #22221F 100%)',
+      ? W.primario
+      : W.tab,
     color: activo ? '#171715' : COLORES.textoSecundario,
-    border: `1px solid ${activo ? '#F2C230' : '#3B3B34'}`,
+    border: `1px solid ${activo ? W.acento : W.bordePanel}`,
     boxShadow: activo ? '0 4px 14px rgba(242,194,48,0.13)' : 'none',
   })
 
   const botonSecundario = (activo) => ({
-    backgroundColor: activo ? '#F2C230' : '#20201D',
+    backgroundColor: activo ? W.acento : W.control,
     color: activo ? '#171715' : COLORES.textoSecundario,
-    border: `1px solid ${activo ? '#F2C230' : '#3B3B34'}`,
+    border: `1px solid ${activo ? W.acento : W.bordePanel}`,
     boxShadow: activo ? '0 3px 10px rgba(242,194,48,0.10)' : 'none',
   })
 
@@ -320,8 +321,8 @@ function FisicoSection({
         <section
           className="relative overflow-hidden rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-8"
           style={{
-            background: 'linear-gradient(120deg, #242422 0%, #1D1D1B 60%, #29271D 100%)',
-            border: '1px solid #3B3B34',
+            background: W.cabecera,
+            border: "1px solid var(--wellness-borde-panel, #3B3B34)",
             boxShadow: '0 12px 32px rgba(0,0,0,0.14)',
           }}
         >
@@ -333,7 +334,7 @@ function FisicoSection({
           />
           <div
             className="pointer-events-none absolute right-8 top-0 h-full w-px opacity-30"
-            style={{ background: 'linear-gradient(180deg, transparent, #F2C230, transparent)' }}
+            style={{ background: "linear-gradient(180deg, transparent, var(--wellness-acento, #F2C230), transparent)" }}
           />
 
           <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -349,7 +350,7 @@ function FisicoSection({
                 F
               </div>
               <div>
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.24em]" style={{ color: '#F2C230' }}>
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.24em]" style={{ color: textoWellness(W.acento) }}>
                   COMUNICACIONES · RENDIMIENTO
                 </p>
                 <h1
@@ -367,18 +368,18 @@ function FisicoSection({
             <div
               className="flex w-fit items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold"
               style={{
-                backgroundColor: '#1B1B19',
-                border: '1px solid #454439',
-                color: '#D4D2C6',
+                backgroundColor: W.interior,
+                border: "1px solid var(--wellness-borde-interior, #454439)",
+                color: W.textoInsignia,
               }}
             >
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: '#97C459', boxShadow: '0 0 8px rgba(151,196,89,0.55)' }} />
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: W.exito, boxShadow: '0 0 8px rgba(151,196,89,0.55)' }} />
               Panel de rendimiento
             </div>
           </div>
           <div
             className="relative mt-6 h-1 overflow-hidden rounded-full"
-            style={{ backgroundColor: '#3A3931' }}
+            style={{ backgroundColor: W.pista }}
           >
             <div className="h-full w-1/3 rounded-full" style={{ background: 'linear-gradient(90deg, #DDAA16, #F7D45A, transparent)' }} />
           </div>
@@ -391,8 +392,8 @@ function FisicoSection({
         <section
           className="rounded-2xl p-3 sm:p-4"
           style={{
-            background: 'linear-gradient(145deg, #20201E 0%, #1A1A18 100%)',
-            border: '1px solid #35352F',
+            background: W.panel,
+            border: "1px solid var(--wellness-borde-seccion, #35352F)",
           }}
         >
           <div className="mb-3 flex items-center justify-between gap-3 px-1">
@@ -404,7 +405,7 @@ function FisicoSection({
                 Seleccioná un módulo para continuar
               </p>
             </div>
-            <span className="hidden rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider sm:inline-flex" style={{ backgroundColor: '#302D20', color: '#F2C230' }}>
+            <span className="hidden rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider sm:inline-flex" style={{ backgroundColor: W.amarilloSuave, color: textoWellness(W.acento) }}>
               {tabsDisponibles.find((t) => t.key === tab)?.label || 'Físico'}
             </span>
           </div>
@@ -417,7 +418,7 @@ function FisicoSection({
                   key={t.key}
                   onClick={() => setTab(t.key)}
                   aria-current={activo ? 'page' : undefined}
-                  className="group relative flex min-h-[72px] items-center gap-3 overflow-hidden rounded-xl px-3 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 sm:min-h-[82px] sm:flex-col sm:items-start sm:justify-center sm:gap-1.5 sm:px-4"
+                  className="group relative flex min-h-[72px] items-center gap-3 overflow-hidden rounded-xl px-3 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 ui-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 sm:min-h-[82px] sm:flex-col sm:items-start sm:justify-center sm:gap-1.5 sm:px-4"
                   style={{
                     ...botonPrincipal(activo),
                     borderRadius: '14px',
@@ -429,8 +430,8 @@ function FisicoSection({
                   <span
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-lg font-bold transition-transform duration-200 group-hover:scale-105"
                     style={{
-                      backgroundColor: activo ? 'rgba(23,23,21,0.10)' : '#34342E',
-                      color: activo ? '#171715' : '#F2C230',
+                      backgroundColor: activo ? 'rgba(23,23,21,0.10)' : W.icono,
+                      color: activo ? '#171715' : textoWellness(W.acento),
                     }}
                   >
                     {t.icon}
@@ -446,8 +447,8 @@ function FisicoSection({
         <section
           className="min-w-0 rounded-2xl p-3 sm:rounded-3xl sm:p-5 lg:p-6"
           style={{
-            background: 'linear-gradient(145deg, #20201E 0%, #191917 100%)',
-            border: '1px solid #35352F',
+            background: W.panelDatos,
+            border: "1px solid var(--wellness-borde-seccion, #35352F)",
             boxShadow: '0 10px 30px rgba(0,0,0,0.10)',
           }}
         >
@@ -456,7 +457,7 @@ function FisicoSection({
               {puedeVerCargaYCmj && (
                 <div
                   className="mb-5 flex flex-wrap gap-2 rounded-xl p-1.5"
-                  style={{ backgroundColor: '#171715', border: '1px solid #34342E' }}
+                  style={{ backgroundColor: W.controlOscuro, border: "1px solid var(--wellness-borde-icono, #34342E)" }}
                 >
                   {[
                     { key: 'ver', label: 'Ver comparativo' },
@@ -467,7 +468,7 @@ function FisicoSection({
                       <button
                         key={sub.key}
                         onClick={() => setSubTabWellness(sub.key)}
-                        className="min-h-10 flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-all duration-200 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 sm:text-sm"
+                        className="min-h-10 flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-all duration-200 hover:brightness-110 ui-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 sm:text-sm"
                         style={botonSecundario(activo)}
                       >
                         {sub.label}
@@ -494,7 +495,7 @@ function FisicoSection({
             <div>
               <div
                 className="mb-5 flex flex-wrap gap-2 rounded-xl p-1.5"
-                style={{ backgroundColor: '#171715', border: '1px solid #34342E' }}
+                style={{ backgroundColor: W.controlOscuro, border: "1px solid var(--wellness-borde-icono, #34342E)" }}
               >
                 {[
                   { key: 'cargar', label: 'Carga manual' },
@@ -505,7 +506,7 @@ function FisicoSection({
                     <button
                       key={sub.key}
                       onClick={() => setSubTabCMJ(sub.key)}
-                      className="min-h-10 flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-all duration-200 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 sm:text-sm"
+                      className="min-h-10 flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-all duration-200 hover:brightness-110 ui-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 sm:text-sm"
                       style={botonSecundario(activo)}
                     >
                       {sub.label}
@@ -526,7 +527,7 @@ function FisicoSection({
             <div>
               <div
                 className="mb-5 flex flex-wrap gap-2 rounded-xl p-1.5"
-                style={{ backgroundColor: '#171715', border: '1px solid #34342E' }}
+                style={{ backgroundColor: W.controlOscuro, border: "1px solid var(--wellness-borde-icono, #34342E)" }}
               >
                 {[
                   { key: 'cargar', label: 'Carga manual' },
@@ -537,7 +538,7 @@ function FisicoSection({
                     <button
                       key={sub.key}
                       onClick={() => setSubTabRPE(sub.key)}
-                      className="min-h-10 flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-all duration-200 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 sm:text-sm"
+                      className="min-h-10 flex-1 rounded-lg px-3 py-2 text-xs font-bold transition-all duration-200 hover:brightness-110 ui-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 sm:text-sm"
                       style={botonSecundario(activo)}
                     >
                       {sub.label}
@@ -550,12 +551,12 @@ function FisicoSection({
                 <>
                   <div
                     className="mb-5 rounded-2xl p-4 sm:p-5"
-                    style={{ backgroundColor: '#242422', border: '1px solid #3B3B34' }}
+                    style={{ backgroundColor: W.tarjeta, border: "1px solid var(--wellness-borde-panel, #3B3B34)" }}
                   >
                     <div className="mb-4 flex items-center gap-3">
                       <div
                         className="flex h-10 w-10 items-center justify-center rounded-xl text-lg font-black"
-                        style={{ backgroundColor: '#343126', color: '#F2C230' }}
+                        style={{ backgroundColor: W.insignia, color: textoWellness(W.acento) }}
                       >
                         R
                       </div>
@@ -578,7 +579,7 @@ function FisicoSection({
                           type="date"
                           value={fecha}
                           onChange={(e) => setFecha(e.target.value)}
-                          className="w-full rounded-xl p-3 text-sm outline-none transition-colors focus:border-yellow-400"
+                          className="w-full rounded-xl p-3 text-sm ui-control outline-none transition-colors focus:border-yellow-400"
                           style={inputStyle}
                         />
                       </label>
@@ -591,7 +592,7 @@ function FisicoSection({
                           <select
                             value={categoriaId}
                             onChange={(e) => setCategoriaId(e.target.value)}
-                            className="w-full rounded-xl p-3 text-sm outline-none transition-colors focus:border-yellow-400"
+                            className="w-full rounded-xl p-3 text-sm ui-control outline-none transition-colors focus:border-yellow-400"
                             style={inputStyle}
                           >
                             <option value="">Elegí una categoría</option>
@@ -614,7 +615,7 @@ function FisicoSection({
                             setTipo(e.target.value)
                             if (e.target.value !== 'partido') setPartidoId('')
                           }}
-                          className="w-full rounded-xl p-3 text-sm outline-none transition-colors focus:border-yellow-400"
+                          className="w-full rounded-xl p-3 text-sm ui-control outline-none transition-colors focus:border-yellow-400"
                           style={inputStyle}
                         >
                           <option value="entrenamiento">Entrenamiento</option>
@@ -636,7 +637,7 @@ function FisicoSection({
                               const p = partidos.find((pp) => pp.id === e.target.value)
                               if (p?.fecha) setFecha(p.fecha)
                             }}
-                            className="w-full rounded-xl p-3 text-sm outline-none transition-colors focus:border-yellow-400 sm:max-w-md"
+                            className="w-full rounded-xl p-3 text-sm ui-control outline-none transition-colors focus:border-yellow-400 sm:max-w-md"
                             style={inputStyle}
                           >
                             <option value="">Vincular a un partido (opcional)</option>
@@ -652,20 +653,20 @@ function FisicoSection({
                   </div>
 
                   {cargando && (
-                    <div className="mb-4 flex items-center gap-3 rounded-xl p-4 text-sm" style={{ backgroundColor: '#242422', color: COLORES.textoMuted, border: '1px solid #383832' }}>
+                    <div className="mb-4 flex items-center gap-3 rounded-xl p-4 text-sm" style={{ backgroundColor: W.tarjeta, color: COLORES.textoMuted, border: "1px solid var(--wellness-borde-detalle, #383832)" }}>
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                       Cargando plantel...
                     </div>
                   )}
 
                   {!cargando && categoriaId && jugadores.length === 0 && (
-                    <p className="rounded-xl p-4 text-sm" style={{ backgroundColor: '#242422', color: COLORES.textoMuted, border: '1px solid #383832' }}>
+                    <p className="rounded-xl p-4 text-sm" style={{ backgroundColor: W.tarjeta, color: COLORES.textoMuted, border: "1px solid var(--wellness-borde-detalle, #383832)" }}>
                       No hay jugadores cargados en esta categoría.
                     </p>
                   )}
 
                   {!categoriaId && !categoriaBloqueada && (
-                    <p className="rounded-xl p-4 text-sm" style={{ backgroundColor: '#242422', color: COLORES.textoMuted, border: '1px solid #383832' }}>
+                    <p className="rounded-xl p-4 text-sm" style={{ backgroundColor: W.tarjeta, color: COLORES.textoMuted, border: "1px solid var(--wellness-borde-detalle, #383832)" }}>
                       Elegí una categoría para ver el plantel.
                     </p>
                   )}
@@ -675,11 +676,11 @@ function FisicoSection({
                       <div className="mb-4">
                         <button
                           onClick={() => setMostrarPegado((v) => !v)}
-                          className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-200 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
+                          className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all duration-200 hover:brightness-110 ui-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
                           style={{
-                            backgroundColor: '#292923',
-                            color: '#F2C230',
-                            border: '1px solid #494735',
+                            backgroundColor: W.fondoAccion,
+                            color: textoWellness(W.acento),
+                            border: "1px solid var(--wellness-borde-accion, #494735)",
                           }}
                         >
                           <span aria-hidden="true">▤</span>
@@ -689,7 +690,7 @@ function FisicoSection({
                         {mostrarPegado && (
                           <div
                             className="mt-3 rounded-2xl p-4 sm:p-5"
-                            style={{ backgroundColor: '#242422', border: '1px solid #454439' }}
+                            style={{ backgroundColor: W.tarjeta, border: "1px solid var(--wellness-borde-interior, #454439)" }}
                           >
                             <p className="mb-3 text-xs leading-relaxed" style={{ color: COLORES.textoMuted }}>
                               Pegá una fila por jugador: nombre (o "Apellido, Nombre") y el valor de RPE (1-10).
@@ -699,20 +700,20 @@ function FisicoSection({
                               onChange={(e) => setTextoPegado(e.target.value)}
                               placeholder={'Pérez, Juan\t7\nGómez, Martín\t5'}
                               rows={5}
-                              className="mb-3 w-full resize-none rounded-xl p-3 font-mono text-sm outline-none transition-colors focus:border-yellow-400"
+                              className="mb-3 w-full resize-none rounded-xl p-3 font-mono text-sm ui-control outline-none transition-colors focus:border-yellow-400"
                               style={inputStyle}
                             />
                             <button
                               onClick={handleAplicarPegado}
                               disabled={!textoPegado.trim()}
                               className="rounded-xl px-5 py-2.5 text-sm font-bold transition-all duration-200 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-                              style={{ background: 'linear-gradient(135deg, #F7D45A, #F2C230)', color: '#171715' }}
+                              style={{ background: W.primarioCorto, color: '#171715' }}
                             >
                               Aplicar
                             </button>
 
                             {resultadoPegado && (
-                              <div className="mt-4 rounded-xl p-3 text-xs" style={{ backgroundColor: '#1A1A18', border: '1px solid #383832' }}>
+                              <div className="mt-4 rounded-xl p-3 text-xs" style={{ backgroundColor: 'var(--wellness-resumen-fondo, #1A1A18)', border: "1px solid var(--wellness-borde-detalle, #383832)" }}>
                                 <p style={{ color: COLORES.exito }}>
                                   {resultadoPegado.aplicados} jugador{resultadoPegado.aplicados !== 1 ? 'es' : ''} completados.
                                 </p>
@@ -735,8 +736,8 @@ function FisicoSection({
                         )}
                       </div>
 
-                      <div className="mb-5 overflow-hidden rounded-2xl" style={{ border: '1px solid #3B3B34', backgroundColor: '#1B1B19' }}>
-                        <div className="flex items-center justify-between gap-3 border-b px-4 py-3" style={{ borderColor: '#3B3B34', backgroundColor: '#242422' }}>
+                      <div className="mb-5 overflow-hidden rounded-2xl" style={{ border: "1px solid var(--wellness-borde-panel, #3B3B34)", backgroundColor: W.interior }}>
+                        <div className="flex items-center justify-between gap-3 border-b px-4 py-3" style={{ borderColor: W.bordePanel, backgroundColor: W.tarjeta }}>
                           <div>
                             <h3 className="text-sm font-bold" style={{ color: COLORES.texto }}>
                               Plantel
@@ -745,7 +746,7 @@ function FisicoSection({
                               Ingresá el RPE correspondiente a cada jugador.
                             </p>
                           </div>
-                          <span className="rounded-lg px-2.5 py-1 text-xs font-bold" style={{ backgroundColor: '#343126', color: '#F2C230' }}>
+                          <span className="rounded-lg px-2.5 py-1 text-xs font-bold" style={{ backgroundColor: W.insignia, color: textoWellness(W.acento) }}>
                             {jugadores.length} jugadores
                           </span>
                         </div>
@@ -753,14 +754,14 @@ function FisicoSection({
                         <div className="overflow-x-auto">
                           <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
                             <thead>
-                              <tr style={{ backgroundColor: '#242422' }}>
+                              <tr style={{ backgroundColor: W.tarjeta }}>
                                 <th
                                   className="sticky left-0 whitespace-nowrap p-3 text-left text-xs font-bold uppercase tracking-wider"
-                                  style={{ color: COLORES.textoSecundario, backgroundColor: '#242422' }}
+                                  style={{ color: COLORES.textoSecundario, backgroundColor: W.tarjeta }}
                                 >
                                   Jugador
                                 </th>
-                                <th className="whitespace-nowrap p-3 text-left text-xs font-bold uppercase tracking-wider" style={{ color: '#F2C230' }}>
+                                <th className="whitespace-nowrap p-3 text-left text-xs font-bold uppercase tracking-wider" style={{ color: textoWellness(W.acento) }}>
                                   RPE (1-10)
                                 </th>
                               </tr>
@@ -771,13 +772,13 @@ function FisicoSection({
                                   key={j.id}
                                   className="transition-colors hover:bg-yellow-400/5"
                                   style={{
-                                    backgroundColor: i % 2 === 0 ? '#1D1D1B' : '#242422',
-                                    borderTop: '1px solid #30302B',
+                                    backgroundColor: i % 2 === 0 ? W.fila : W.tarjeta,
+                                    borderTop: "1px solid var(--wellness-borde-fila, #30302B)",
                                   }}
                                 >
                                   <td
                                     className="sticky left-0 whitespace-nowrap p-3"
-                                    style={{ color: COLORES.texto, backgroundColor: i % 2 === 0 ? '#1D1D1B' : '#242422' }}
+                                    style={{ color: COLORES.texto, backgroundColor: i % 2 === 0 ? W.fila : W.tarjeta }}
                                   >
                                     <div className="flex items-center gap-3">
                                       {j.foto_url ? (
@@ -789,7 +790,7 @@ function FisicoSection({
                                       ) : (
                                         <span
                                           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
-                                          style={{ backgroundColor: '#343126', color: '#F2C230', border: '1px solid #494735' }}
+                                          style={{ backgroundColor: W.insignia, color: textoWellness(W.acento), border: "1px solid var(--wellness-borde-accion, #494735)" }}
                                         >
                                           {`${j.nombre?.[0] || ''}${j.apellido?.[0] || ''}`.toUpperCase()}
                                         </span>
@@ -804,8 +805,8 @@ function FisicoSection({
                                       max="10"
                                       value={datos[j.id]?.rpe ?? ''}
                                       onChange={(e) => cambiarValor(j.id, e.target.value)}
-                                      className="w-24 rounded-lg p-2 text-sm outline-none transition-colors focus:border-yellow-400"
-                                      style={{ ...inputStyle, borderColor: '#645629' }}
+                                      className="w-24 rounded-lg p-2 text-sm ui-control outline-none transition-colors focus:border-yellow-400"
+                                      style={{ ...inputStyle, borderColor: W.foco }}
                                     />
                                   </td>
                                 </tr>
@@ -816,7 +817,7 @@ function FisicoSection({
                       </div>
 
                       {pendientes > 0 && (
-                        <p className="mb-3 flex items-center gap-2 rounded-xl p-3 text-xs" style={{ color: COLORES.acento, backgroundColor: '#302D20', border: '1px solid #494735' }}>
+                        <p className="mb-3 flex items-center gap-2 rounded-xl p-3 text-xs" style={{ color: textoWellness(COLORES.acento), backgroundColor: W.amarilloSuave, border: "1px solid var(--wellness-borde-accion, #494735)" }}>
                           <span aria-hidden="true">◌</span>
                           {pendientes} registro(s) guardados sin conexión, pendientes de sincronizar.
                         </p>
@@ -829,10 +830,10 @@ function FisicoSection({
                             color: mensaje.startsWith('Listo') || mensaje.includes('sincronizaron')
                               ? COLORES.exito
                               : mensaje.startsWith('Sin conexión') || mensaje.startsWith('No se pudo')
-                                ? COLORES.acento
+                                ? textoWellness(COLORES.acento)
                                 : COLORES.peligro,
-                            backgroundColor: '#242422',
-                            border: '1px solid #3B3B34',
+                            backgroundColor: W.tarjeta,
+                            border: "1px solid var(--wellness-borde-panel, #3B3B34)",
                           }}
                         >
                           {mensaje}
@@ -844,7 +845,7 @@ function FisicoSection({
                         disabled={guardando}
                         className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-7 py-3.5 text-sm font-extrabold transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                         style={{
-                          background: 'linear-gradient(135deg, #F7D45A 0%, #F2C230 100%)',
+                          background: W.primario,
                           color: '#171715',
                           boxShadow: '0 5px 18px rgba(242,194,48,0.14)',
                         }}

@@ -1,3 +1,4 @@
+import { BOTON_GESTION } from '../appearance/gestion'
 import { COLORES } from '../theme'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -36,7 +37,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
 
   const inputStyle = {
     backgroundColor: COLORES.fondoTarjeta,
-    border: '1px solid COLORES.borde',
+    border: `1px solid ${COLORES.borde}`,
     color: COLORES.texto,
   }
 
@@ -173,7 +174,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
           <button
             onClick={mostrarForm ? cancelarForm : abrirNueva}
             className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
-            style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+            style={BOTON_GESTION}
           >
             {mostrarForm ? 'Cancelar' : '+ Nueva convocatoria'}
           </button>
@@ -182,7 +183,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
         {mostrarForm && (
           <div
             className="space-y-3 mb-8 p-4 rounded-xl"
-            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
           >
             <div>
               <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: COLORES.textoMuted }}>
@@ -214,7 +215,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
                     placeholder="Buscar jugador..."
                     value={busquedaJugador}
                     onChange={(e) => setBusquedaJugador(e.target.value)}
-                    className="w-full p-2.5 rounded-xl outline-none text-sm"
+                    className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                     style={inputStyle}
                   />
                   {resultadosJugador.length > 0 && (
@@ -242,7 +243,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
               placeholder="Selección (ej: Selección Nacional Sub-17)"
               value={seleccion}
               onChange={(e) => setSeleccion(e.target.value)}
-              className="w-full p-2.5 rounded-xl outline-none text-sm"
+              className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
               style={inputStyle}
             />
 
@@ -255,7 +256,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
                   type="date"
                   value={fechaInicio}
                   onChange={(e) => setFechaInicio(e.target.value)}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                   style={inputStyle}
                 />
               </div>
@@ -267,7 +268,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
                   type="date"
                   value={fechaFin}
                   onChange={(e) => setFechaFin(e.target.value)}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                   style={inputStyle}
                 />
               </div>
@@ -278,7 +279,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
               value={observaciones}
               onChange={(e) => setObservaciones(e.target.value)}
               rows={2}
-              className="w-full p-2.5 rounded-xl outline-none text-sm resize-none"
+              className="w-full p-2.5 rounded-xl ui-control outline-none text-sm resize-none"
               style={inputStyle}
             />
 
@@ -292,7 +293,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
               onClick={handleGuardar}
               disabled={guardando}
               className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+              style={BOTON_GESTION}
             >
               {guardando ? 'Guardando...' : convocatoriaEditando ? 'Guardar cambios' : 'Guardar convocatoria'}
             </button>
@@ -304,7 +305,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
             type="date"
             value={fechaDesde}
             onChange={(e) => setFechaDesde(e.target.value)}
-            className="flex-1 p-2 rounded-lg outline-none text-xs"
+            className="flex-1 p-2 rounded-lg ui-control outline-none text-xs"
             style={inputStyle}
           />
           <span className="text-xs" style={{ color: COLORES.textoMuted }}>
@@ -314,7 +315,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
             type="date"
             value={fechaHasta}
             onChange={(e) => setFechaHasta(e.target.value)}
-            className="flex-1 p-2 rounded-lg outline-none text-xs"
+            className="flex-1 p-2 rounded-lg ui-control outline-none text-xs"
             style={inputStyle}
           />
         </div>
@@ -330,7 +331,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
             <div
               key={c.id}
               className="p-3 rounded-xl flex items-start justify-between gap-2"
-              style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
             >
               <div className="min-w-0">
                 <p className="text-sm font-medium" style={{ color: COLORES.texto }}>

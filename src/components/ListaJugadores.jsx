@@ -1,3 +1,4 @@
+import { PLANTEL as P, textoPlantel, fondoEstadoPlantel } from '../appearance/plantel'
 
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -232,9 +233,9 @@ function FotoJugadora({ jugadora, className = '' }) {
     <div
       className={`flex items-center justify-center rounded-full font-bold shrink-0 ${className}`}
       style={{
-        backgroundColor: '#292B32',
-        color: '#F4D21F',
-        border: '1px solid #41434B',
+        backgroundColor: P.controlLista,
+        color: P.textoAmarilloLista,
+        border: "1px solid var(--plantel-borde-control, #41434B)",
       }}
     >
       {iniciales(jugadora.nombre, jugadora.apellido)}
@@ -247,24 +248,24 @@ function TarjetaResumen({ titulo, valor, detalle, icono, color }) {
     <div
       className="rounded-2xl p-4 md:p-5 min-w-0"
       style={{
-        backgroundColor: '#191B21',
-        border: '1px solid #2D3038',
+        backgroundColor: P.tarjetaLista,
+        border: "1px solid var(--plantel-borde-lista, #2D3038)",
       }}
     >
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs md:text-sm" style={{ color: '#A1A1AA' }}>
+        <p className="text-xs md:text-sm" style={{ color: P.secundarioLista }}>
           {titulo}
         </p>
-        <span style={{ color, fontSize: 20 }}>{icono}</span>
+        <span style={{ color: textoPlantel(color), fontSize: 20 }}>{icono}</span>
       </div>
       <p
         className="text-2xl md:text-3xl font-bold mt-3 truncate"
-        style={{ color }}
+        style={{ color: textoPlantel(color) }}
       >
         {valor}
       </p>
       {detalle && (
-        <p className="text-xs mt-2" style={{ color: '#A1A1AA' }}>
+        <p className="text-xs mt-2" style={{ color: P.secundarioLista }}>
           {detalle}
         </p>
       )}
@@ -303,21 +304,21 @@ function GraficoRanking({
     <div
       className="rounded-2xl p-4 md:p-5"
       style={{
-        backgroundColor: '#191B21',
-        border: '1px solid #2D3038',
+        backgroundColor: P.tarjetaLista,
+        border: "1px solid var(--plantel-borde-lista, #2D3038)",
       }}
     >
       <div className="mb-5">
-        <h3 className="font-semibold" style={{ color: '#F4F4F5' }}>
+        <h3 className="font-semibold" style={{ color: P.textoLista }}>
           {titulo}
         </h3>
-        <p className="text-xs mt-1" style={{ color: '#A1A1AA' }}>
+        <p className="text-xs mt-1" style={{ color: P.secundarioLista }}>
           {subtitulo}
         </p>
       </div>
 
       {ranking.length === 0 ? (
-        <p className="text-sm py-3" style={{ color: '#A1A1AA' }}>
+        <p className="text-sm py-3" style={{ color: P.secundarioLista }}>
           Todavía no hay datos cargados.
         </p>
       ) : (
@@ -327,20 +328,20 @@ function GraficoRanking({
               <div className="flex justify-between items-center gap-3 mb-2">
                 <span
                   className="text-sm truncate"
-                  style={{ color: '#E4E4E7' }}
+                  style={{ color: P.textoDetalle }}
                 >
                   {jugadora.apellido}, {jugadora.nombre}
                 </span>
                 <span
                   className="text-sm font-bold shrink-0"
-                  style={{ color }}
+                  style={{ color: textoPlantel(color) }}
                 >
                   {valor.toLocaleString('es-AR')} {sufijo}
                 </span>
               </div>
               <div
                 className="h-2 rounded-full overflow-hidden"
-                style={{ backgroundColor: '#30323A' }}
+                style={{ backgroundColor: P.pista }}
               >
                 <div
                   className="h-full rounded-full"
@@ -374,16 +375,16 @@ function CanchaTactica({
     <section
       className="rounded-2xl p-4 md:p-6"
       style={{
-        backgroundColor: '#191B21',
-        border: '1px solid #2D3038',
+        backgroundColor: P.tarjetaLista,
+        border: "1px solid var(--plantel-borde-lista, #2D3038)",
       }}
     >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div>
-          <h2 className="text-lg md:text-xl font-bold text-white">
+          <h2 style={{ color: P.blanco }} className="text-lg md:text-xl font-bold ">
             Cancha táctica
           </h2>
-          <p className="text-xs mt-1" style={{ color: '#A1A1AA' }}>
+          <p className="text-xs mt-1" style={{ color: P.secundarioLista }}>
             Once ideal según minutos y posiciones registradas
           </p>
         </div>
@@ -397,9 +398,9 @@ function CanchaTactica({
               aria-pressed={formacion === opcion}
               className="px-3 py-2 rounded-lg text-sm font-bold"
               style={{
-                backgroundColor: formacion === opcion ? '#F4D21F' : '#292B32',
-                color: formacion === opcion ? '#171717' : '#E4E4E7',
-                border: `1px solid ${formacion === opcion ? '#F4D21F' : '#41434B'}`,
+                backgroundColor: formacion === opcion ? P.amarilloLista : P.controlLista,
+                color: formacion === opcion ? '#171717' : P.textoDetalle,
+                border: `1px solid ${formacion === opcion ? P.amarilloLista : P.bordeControl}`,
               }}
             >
               {opcion}
@@ -409,10 +410,10 @@ function CanchaTactica({
       </div>
 
       <div className="flex justify-between items-center gap-2 mb-3">
-        <span className="text-xs" style={{ color: '#A1A1AA' }}>
+        <span className="text-xs" style={{ color: P.secundarioLista }}>
           {usadas.size} de 11 puestos cubiertos
         </span>
-        <span className="text-xs" style={{ color: '#F4D21F' }}>
+        <span className="text-xs" style={{ color: P.textoAmarilloLista }}>
           {formacion}
         </span>
       </div>
@@ -465,7 +466,7 @@ function CanchaTactica({
                         </span>
                         <span
                           className="text-[9px] mt-1 px-1.5 py-0.5 rounded"
-                          style={{ backgroundColor: '#F4D21F', color: '#171717' }}
+                          style={{ backgroundColor: P.amarilloLista, color: '#171717' }}
                         >
                           {obtenerMinutos(j, estadisticas)} min
                         </span>
@@ -492,7 +493,7 @@ function CanchaTactica({
         </div>
       </div>
 
-      <p className="text-xs mt-3" style={{ color: '#A1A1AA' }}>
+      <p className="text-xs mt-3" style={{ color: P.secundarioLista }}>
         Seleccioná una jugadora para abrir su perfil. Los puestos vacíos indican
         que no se encontró una jugadora compatible con esa posición.
       </p>
@@ -678,7 +679,7 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
   return (
     <div
       className="min-h-full p-4 md:p-8"
-      style={{ backgroundColor: '#101115' }}
+      style={{ backgroundColor: P.fondoLista }}
     >
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Encabezado */}
@@ -686,7 +687,7 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
           <div className="flex items-center gap-3">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden"
-              style={{ backgroundColor: '#292B32' }}
+              style={{ backgroundColor: P.controlLista }}
             >
               <img
                 src="/escudo%20simplificado.png"
@@ -700,7 +701,7 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
               />
               <div
                 className="w-full h-full items-center justify-center font-black text-2xl"
-                style={{ display: 'none', color: '#F4D21F' }}
+                style={{ display: 'none', color: P.textoAmarilloLista }}
                 aria-label="Comunicaciones"
               >
                 C
@@ -709,14 +710,14 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
             <div>
               <p
                 className="text-[10px] md:text-xs font-bold tracking-[0.18em] uppercase"
-                style={{ color: '#F4D21F' }}
+                style={{ color: P.textoAmarilloLista }}
               >
                 Comunicaciones · Fútbol femenino
               </p>
-              <h1 className="text-3xl md:text-4xl font-black text-white mt-1">
+              <h1 style={{ color: P.blanco }} className="text-3xl md:text-4xl font-black  mt-1">
                 Plantel
               </h1>
-              <p className="text-sm mt-1" style={{ color: '#A1A1AA' }}>
+              <p className="text-sm mt-1" style={{ color: P.secundarioLista }}>
                 Primera División
               </p>
             </div>
@@ -728,9 +729,9 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
               onClick={generarPlantelPDF}
               className="text-sm font-semibold px-3 py-2.5 rounded-xl"
               style={{
-                backgroundColor: '#191B21',
-                color: '#E4E4E7',
-                border: '1px solid #34363F',
+                backgroundColor: P.tarjetaLista,
+                color: P.textoDetalle,
+                border: "1px solid var(--plantel-separador, #34363F)",
               }}
             >
               ↓ Descargar PDF
@@ -741,9 +742,9 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
               onClick={onCargaMasiva}
               className="text-sm font-semibold px-3 py-2.5 rounded-xl"
               style={{
-                backgroundColor: '#191B21',
-                color: '#E4E4E7',
-                border: '1px solid #34363F',
+                backgroundColor: P.tarjetaLista,
+                color: P.textoDetalle,
+                border: "1px solid var(--plantel-separador, #34363F)",
               }}
             >
               Carga masiva
@@ -753,7 +754,7 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
               type="button"
               onClick={onNuevoJugador}
               className="text-sm font-bold px-4 py-2.5 rounded-xl"
-              style={{ backgroundColor: '#F4D21F', color: '#171717' }}
+              style={{ backgroundColor: P.amarilloLista, color: '#171717' }}
             >
               + Nueva jugadora
             </button>
@@ -764,9 +765,9 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
           <div
             className="rounded-2xl p-12 text-center"
             style={{
-              backgroundColor: '#191B21',
-              border: '1px solid #2D3038',
-              color: '#A1A1AA',
+              backgroundColor: P.tarjetaLista,
+              border: "1px solid var(--plantel-borde-lista, #2D3038)",
+              color: P.secundarioLista,
             }}
           >
             Cargando plantel...
@@ -775,9 +776,9 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
           <div
             className="rounded-xl p-4 text-sm"
             style={{
-              backgroundColor: '#402326',
-              color: '#FCA5A5',
-              border: '1px solid #653337',
+              backgroundColor: P.errorFondo,
+              color: P.errorTexto,
+              border: "1px solid var(--plantel-error-borde, #653337)",
             }}
           >
             {errorCarga}
@@ -788,9 +789,9 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
               <div
                 className="rounded-xl p-3 text-sm"
                 style={{
-                  backgroundColor: '#29251A',
-                  color: '#FBBF24',
-                  border: '1px solid #514323',
+                  backgroundColor: P.avisoFondo,
+                  color: P.aviso,
+                  border: "1px solid var(--plantel-aviso-borde, #514323)",
                 }}
               >
                 {errorEstadisticas}
@@ -833,20 +834,20 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
             <section
               className="rounded-2xl p-4 md:p-5 space-y-5"
               style={{
-                backgroundColor: '#191B21',
-                border: '1px solid #2D3038',
+                backgroundColor: P.tarjetaLista,
+                border: "1px solid var(--plantel-borde-lista, #2D3038)",
               }}
             >
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div>
-                  <h2 className="text-lg font-bold text-white">
+                  <h2 style={{ color: P.blanco }} className="text-lg font-bold ">
                     Listado de jugadoras
                   </h2>
-                  <p className="text-xs mt-1" style={{ color: '#A1A1AA' }}>
+                  <p className="text-xs mt-1" style={{ color: P.secundarioLista }}>
                     Buscá, filtrá y accedé a cada perfil.
                   </p>
                 </div>
-                <span className="text-sm" style={{ color: '#F4D21F' }}>
+                <span className="text-sm" style={{ color: P.textoAmarilloLista }}>
                   {jugadorasFiltradas.length} resultado
                   {jugadorasFiltradas.length === 1 ? '' : 's'}
                 </span>
@@ -855,7 +856,7 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
               <div className="relative">
                 <span
                   className="absolute left-3 top-1/2 -translate-y-1/2"
-                  style={{ color: '#A1A1AA' }}
+                  style={{ color: P.secundarioLista }}
                 >
                   ⌕
                 </span>
@@ -864,11 +865,11 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                   placeholder="Buscar por nombre, apellido o posición..."
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
-                  className="w-full rounded-xl py-3 pl-10 pr-4 outline-none text-sm"
+                  className="w-full rounded-xl py-3 pl-10 pr-4 ui-control outline-none text-sm"
                   style={{
-                    backgroundColor: '#101115',
-                    border: '1px solid #34363F',
-                    color: '#F4F4F5',
+                    backgroundColor: P.fondoLista,
+                    border: "1px solid var(--plantel-separador, #34363F)",
+                    color: P.textoLista,
                   }}
                 />
               </div>
@@ -876,7 +877,7 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
               <div className="space-y-2">
                 <p
                   className="text-[10px] font-bold tracking-[0.15em] uppercase"
-                  style={{ color: '#A1A1AA' }}
+                  style={{ color: P.secundarioLista }}
                 >
                   Filtrar por puesto
                 </p>
@@ -892,9 +893,9 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                         aria-pressed={activo}
                         className="px-3 py-2 rounded-lg text-xs md:text-sm font-semibold transition-colors"
                         style={{
-                          backgroundColor: activo ? '#F4D21F' : '#292B32',
-                          color: activo ? '#171717' : '#D4D4D8',
-                          border: `1px solid ${activo ? '#F4D21F' : '#41434B'}`,
+                          backgroundColor: activo ? P.amarilloLista : P.controlLista,
+                          color: activo ? '#171717' : P.textoControl,
+                          border: `1px solid ${activo ? P.amarilloLista : P.bordeControl}`,
                         }}
                       >
                         {filtro.label}
@@ -907,7 +908,7 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
               <div className="space-y-2">
                 <p
                   className="text-[10px] font-bold tracking-[0.15em] uppercase"
-                  style={{ color: '#A1A1AA' }}
+                  style={{ color: P.secundarioLista }}
                 >
                   Disponibilidad
                 </p>
@@ -919,9 +920,9 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                     className="px-3 py-2 rounded-lg text-xs md:text-sm font-semibold"
                     style={{
                       backgroundColor:
-                        filtroEstado === 'todos' ? '#34363F' : '#202127',
-                      color: '#F4F4F5',
-                      border: `1px solid ${filtroEstado === 'todos' ? '#777984' : '#34363F'}`,
+                        filtroEstado === 'todos' ? P.separador : P.controlInactivo,
+                      color: P.textoLista,
+                      border: `1px solid ${filtroEstado === 'todos' ? P.bordeSeleccionado : P.separador}`,
                     }}
                   >
                     Todos los estados
@@ -938,9 +939,9 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                         aria-pressed={activo}
                         className="px-3 py-2 rounded-lg text-xs md:text-sm font-semibold"
                         style={{
-                          backgroundColor: activo ? `${filtro.color}20` : '#202127',
-                          color: filtro.color,
-                          border: `1px solid ${activo ? filtro.color : '#34363F'}`,
+                          backgroundColor: activo ? `${filtro.color}20` : P.controlInactivo,
+                          color: textoPlantel(filtro.color),
+                          border: `1px solid ${activo ? filtro.color : P.separador}`,
                         }}
                       >
                         {filtro.label}
@@ -956,7 +957,7 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                     type="button"
                     onClick={limpiarFiltros}
                     className="text-xs font-semibold underline underline-offset-4"
-                    style={{ color: '#F4D21F' }}
+                    style={{ color: P.textoAmarilloLista }}
                   >
                     Limpiar filtros
                   </button>
@@ -978,8 +979,8 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                     title={j.estado_detalle || 'Abrir perfil'}
                     className="w-full text-left group flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-xl transition-colors hover:bg-white/[0.03]"
                     style={{
-                      backgroundColor: '#191B21',
-                      border: '1px solid #2D3038',
+                      backgroundColor: P.tarjetaLista,
+                      border: "1px solid var(--plantel-borde-lista, #2D3038)",
                       borderLeft: `3px solid ${estado.color}`,
                     }}
                   >
@@ -989,12 +990,12 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                     />
 
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm md:text-base truncate text-white">
+                      <p style={{ color: P.blanco }} className="font-semibold text-sm md:text-base truncate ">
                         {j.apellido}, {j.nombre}
                       </p>
                       <p
                         className="text-xs mt-1 truncate"
-                        style={{ color: '#A1A1AA' }}
+                        style={{ color: P.secundarioLista }}
                       >
                         {j.posicion || 'Posición sin cargar'}
                       </p>
@@ -1003,11 +1004,11 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                     <div className="hidden sm:block text-right shrink-0">
                       <p
                         className="text-sm font-bold"
-                        style={{ color: '#F4D21F' }}
+                        style={{ color: P.textoAmarilloLista }}
                       >
                         {minutos.toLocaleString('es-AR')} min
                       </p>
-                      <p className="text-[10px] mt-1" style={{ color: '#A1A1AA' }}>
+                      <p className="text-[10px] mt-1" style={{ color: P.secundarioLista }}>
                         {obtenerDato(j, estadisticas, 'goles')} goles ·{' '}
                         {obtenerDato(j, estadisticas, 'titularidades')} titularidades
                       </p>
@@ -1016,8 +1017,8 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                     <div
                       className="hidden md:inline-flex items-center px-2.5 py-1.5 rounded-full text-[11px] font-semibold shrink-0"
                       style={{
-                        color: estado.color,
-                        backgroundColor: estado.fondo,
+                        color: textoPlantel(estado.color),
+                        backgroundColor: fondoEstadoPlantel(estado.fondo),
                       }}
                     >
                       {estado.label}
@@ -1025,7 +1026,7 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
 
                     <span
                       className="sm:hidden text-[10px] font-bold shrink-0"
-                      style={{ color: estado.color }}
+                      style={{ color: textoPlantel(estado.color) }}
                     >
                       {estado.label === 'No disponible'
                         ? 'No disp.'
@@ -1034,7 +1035,7 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
 
                     <span
                       className="text-lg shrink-0 transition-transform group-hover:translate-x-0.5"
-                      style={{ color: '#F4D21F' }}
+                      style={{ color: P.textoAmarilloLista }}
                     >
                       ›
                     </span>
@@ -1046,14 +1047,14 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                 <div
                   className="rounded-xl p-8 text-center"
                   style={{
-                    backgroundColor: '#191B21',
-                    border: '1px solid #2D3038',
+                    backgroundColor: P.tarjetaLista,
+                    border: "1px solid var(--plantel-borde-lista, #2D3038)",
                   }}
                 >
-                  <p className="font-semibold text-white">
+                  <p style={{ color: P.blanco }} className="font-semibold ">
                     No hay jugadoras para mostrar
                   </p>
-                  <p className="text-sm mt-2" style={{ color: '#A1A1AA' }}>
+                  <p className="text-sm mt-2" style={{ color: P.secundarioLista }}>
                     Probá cambiar los filtros o la búsqueda.
                   </p>
                   {hayFiltrosActivos && (
@@ -1061,7 +1062,7 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                       type="button"
                       onClick={limpiarFiltros}
                       className="mt-4 text-sm font-semibold"
-                      style={{ color: '#F4D21F' }}
+                      style={{ color: P.textoAmarilloLista }}
                     >
                       Limpiar filtros
                     </button>
@@ -1074,15 +1075,15 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
             <section
               className="rounded-2xl p-4 md:p-5"
               style={{
-                backgroundColor: '#191B21',
-                border: '1px solid #2D3038',
+                backgroundColor: P.tarjetaLista,
+                border: "1px solid var(--plantel-borde-lista, #2D3038)",
               }}
             >
               <div className="mb-4">
-                <h2 className="text-lg font-bold text-white">
+                <h2 style={{ color: P.blanco }} className="text-lg font-bold ">
                   Distribución por puesto
                 </h2>
-                <p className="text-xs mt-1" style={{ color: '#A1A1AA' }}>
+                <p className="text-xs mt-1" style={{ color: P.secundarioLista }}>
                   Cantidad según las jugadoras que estás viendo.
                 </p>
               </div>
@@ -1093,25 +1094,25 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                     key={grupo.nombre}
                     className="rounded-xl p-4"
                     style={{
-                      backgroundColor: '#101115',
-                      border: '1px solid #2D3038',
+                      backgroundColor: P.fondoLista,
+                      border: "1px solid var(--plantel-borde-lista, #2D3038)",
                     }}
                   >
-                    <p className="text-xs" style={{ color: '#A1A1AA' }}>
+                    <p className="text-xs" style={{ color: P.secundarioLista }}>
                       {grupo.nombre}
                     </p>
-                    <p className="text-2xl font-bold text-white mt-2">
+                    <p style={{ color: P.blanco }} className="text-2xl font-bold  mt-2">
                       {grupo.cantidad}
                     </p>
                     <div
                       className="h-1 rounded-full mt-3 overflow-hidden"
-                      style={{ backgroundColor: '#30323A' }}
+                      style={{ backgroundColor: P.pista }}
                     >
                       <div
                         className="h-full rounded-full"
                         style={{
                           width: `${jugadorasFiltradas.length ? (grupo.cantidad / jugadorasFiltradas.length) * 100 : 0}%`,
-                          backgroundColor: '#F4D21F',
+                          backgroundColor: P.amarilloLista,
                         }}
                       />
                     </div>
@@ -1123,10 +1124,10 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
             {/* Rendimiento con estadísticas reales */}
             <section className="space-y-3">
               <div>
-                <h2 className="text-lg font-bold text-white">
+                <h2 style={{ color: P.blanco }} className="text-lg font-bold ">
                   Rendimiento del plantel
                 </h2>
-                <p className="text-xs mt-1" style={{ color: '#A1A1AA' }}>
+                <p className="text-xs mt-1" style={{ color: P.secundarioLista }}>
                   Datos registrados para las jugadoras que estás viendo.
                 </p>
               </div>
@@ -1155,33 +1156,33 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
               <div
                 className="rounded-xl p-4 flex flex-wrap items-center gap-x-6 gap-y-3"
                 style={{
-                  backgroundColor: '#191B21',
-                  border: '1px solid #2D3038',
+                  backgroundColor: P.tarjetaLista,
+                  border: "1px solid var(--plantel-borde-lista, #2D3038)",
                 }}
               >
                 <div>
-                  <p className="text-xs" style={{ color: '#A1A1AA' }}>
+                  <p className="text-xs" style={{ color: P.secundarioLista }}>
                     Goles
                   </p>
-                  <p className="text-xl font-bold text-white mt-1">
+                  <p style={{ color: P.blanco }} className="text-xl font-bold  mt-1">
                     {resumen.goles}
                   </p>
                 </div>
-                <div className="h-8 w-px" style={{ backgroundColor: '#34363F' }} />
+                <div className="h-8 w-px" style={{ backgroundColor: P.separador }} />
                 <div>
-                  <p className="text-xs" style={{ color: '#A1A1AA' }}>
+                  <p className="text-xs" style={{ color: P.secundarioLista }}>
                     Minutos acumulados
                   </p>
-                  <p className="text-xl font-bold text-white mt-1">
+                  <p style={{ color: P.blanco }} className="text-xl font-bold  mt-1">
                     {resumen.minutos.toLocaleString('es-AR')}
                   </p>
                 </div>
-                <div className="h-8 w-px" style={{ backgroundColor: '#34363F' }} />
+                <div className="h-8 w-px" style={{ backgroundColor: P.separador }} />
                 <div>
-                  <p className="text-xs" style={{ color: '#A1A1AA' }}>
+                  <p className="text-xs" style={{ color: P.secundarioLista }}>
                     Titularidades
                   </p>
-                  <p className="text-xl font-bold text-white mt-1">
+                  <p style={{ color: P.blanco }} className="text-xl font-bold  mt-1">
                     {resumen.titularidades}
                   </p>
                 </div>

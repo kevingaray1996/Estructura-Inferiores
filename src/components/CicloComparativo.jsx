@@ -1,3 +1,4 @@
+import { textoGestion } from '../appearance/gestion'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
@@ -83,7 +84,7 @@ function CicloComparativo() {
           type="date"
           value={fecha}
           onChange={(e) => setFecha(e.target.value)}
-          className="w-full sm:w-56 p-2.5 rounded-xl outline-none text-sm"
+          className="w-full sm:w-56 p-2.5 rounded-xl ui-control outline-none text-sm"
           style={inputStyle}
         />
       </div>
@@ -131,7 +132,7 @@ function CicloComparativo() {
                   className="text-xs px-2.5 py-1 rounded-full"
                   style={{
                     backgroundColor: fase ? 'rgba(242,194,48,0.08)' : 'transparent',
-                    color: fase ? FASE_COLOR[fase] || COLORES.textoSecundario : COLORES.textoMuted,
+                    color: fase ? textoGestion(FASE_COLOR[fase] || COLORES.textoSecundario) : COLORES.textoMuted,
                     border: `1px solid ${fase ? FASE_COLOR[fase] || COLORES.borde : COLORES.borde}`,
                   }}
                 >

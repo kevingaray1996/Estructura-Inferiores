@@ -1,3 +1,4 @@
+import { WELLNESS as UI, textoWellness } from '../appearance/wellness'
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -8,19 +9,7 @@ import { generarBienestarPDF } from '../utils/generarBienestarPDF'
 import { generarBienestarCategoriaPDF } from '../utils/generarBienestarCategoriaPDF'
 import { calcularWellnessZScore } from '../utils/semaforoRiesgo'
 
-const UI = {
-  fondo: '#191917',
-  tarjeta: '#242422',
-  tarjetaAlternativa: '#1E1E1C',
-  borde: '#393934',
-  acento: '#F2C230',
-  texto: '#F4F2EA',
-  secundario: '#B5B3AA',
-  muted: '#85847C',
-  exito: '#97C459',
-  peligro: '#E77970',
-  advertencia: '#F2C230',
-}
+// Paleta exclusiva de pantalla; informes y escalas conservan sus valores.
 
 function iniciales(nombre, apellido) {
   return `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
@@ -74,13 +63,13 @@ function MiniLinea({ serie, escalaMax, color }) {
       <path
         d={pathD}
         fill="none"
-        stroke={color}
+        stroke={textoWellness(color)}
         strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       {puntos.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r="3.5" fill={color} />
+        <circle key={i} cx={p.x} cy={p.y} r="3.5" fill={textoWellness(color)} />
       ))}
       {puntos.map((p, i) => (
         <text
@@ -299,7 +288,7 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
         <div
           className="relative overflow-hidden rounded-2xl p-5 sm:p-7"
           style={{
-            background: 'linear-gradient(125deg, #292925 0%, #20201D 58%, #302A19 100%)',
+            background: UI.cabeceraComparativo,
             border: `1px solid ${UI.borde}`,
           }}
         >
@@ -314,7 +303,7 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
             <div>
               <p
                 className="text-[11px] font-bold tracking-[0.2em] uppercase mb-2"
-                style={{ color: UI.acento }}
+                style={{ color: textoWellness(UI.acento) }}
               >
                 Comunicaciones · Rendimiento
               </p>
@@ -361,7 +350,7 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
                 value={jugadorId}
                 onChange={(e) => setJugadorId(e.target.value)}
                 disabled={!categoriaId}
-                className="w-full p-3 rounded-xl outline-none text-sm disabled:opacity-50"
+                className="w-full p-3 rounded-xl ui-control outline-none text-sm disabled:opacity-50"
                 style={inputStyle}
               >
                 <option value="">Todo el plantel · Vista general</option>
@@ -406,7 +395,7 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
                         style={
                           activo
                             ? {
-                                background: `linear-gradient(135deg, ${UI.acento}, #E5AE1E)`,
+                                background: UI.primarioWellness,
                                 color: '#1A1914',
                                 border: `1px solid ${UI.acento}`,
                               }
@@ -450,7 +439,7 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
                 className="w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold shrink-0"
                 style={{
                   backgroundColor: 'rgba(242,194,48,0.12)',
-                  color: UI.acento,
+                  color: textoWellness(UI.acento),
                   border: '1px solid rgba(242,194,48,0.25)',
                 }}
               >
@@ -471,7 +460,7 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
               className="ml-auto shrink-0 rounded-full px-3 py-1 text-xs font-medium"
               style={{
                 backgroundColor: 'rgba(242,194,48,0.10)',
-                color: UI.acento,
+                color: textoWellness(UI.acento),
               }}
             >
               {periodo === 'semana' ? '7 días' : '28 días'}
@@ -676,7 +665,7 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
                               : m.tendencia === 'sube'
                               ? 'rgba(231,121,112,0.12)'
                               : 'rgba(151,196,89,0.12)',
-                          color: colorTendencia,
+                          color: textoWellness(colorTendencia),
                         }}
                       >
                         {flecha}

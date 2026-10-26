@@ -1,3 +1,4 @@
+import { BOTON_GESTION, textoGestion } from '../appearance/gestion'
 import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -204,7 +205,7 @@ function CaptacionSection({ perfil }) {
 
   const inputStyle = {
     backgroundColor: COLORES.fondoTarjeta,
-    border: '1px solid COLORES.borde',
+    border: `1px solid ${COLORES.borde}`,
     color: COLORES.texto,
   }
 
@@ -221,21 +222,21 @@ function CaptacionSection({ perfil }) {
           <button
             onClick={mostrarForm ? cancelarForm : abrirNuevo}
             className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 shrink-0"
-            style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+            style={BOTON_GESTION}
           >
             {mostrarForm ? 'Cancelar' : '+ Nuevo candidato'}
           </button>
         </div>
 
         {mostrarForm && (
-          <div className="space-y-3 mb-6 p-4 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}>
+          <div className="space-y-3 mb-6 p-4 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}>
             <div className="grid sm:grid-cols-2 gap-3">
               <input
                 type="text"
                 placeholder="Nombre"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               />
               <input
@@ -243,7 +244,7 @@ function CaptacionSection({ perfil }) {
                 placeholder="Apellido"
                 value={apellido}
                 onChange={(e) => setApellido(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               />
             </div>
@@ -254,7 +255,7 @@ function CaptacionSection({ perfil }) {
                   type="date"
                   value={fechaNacimiento}
                   onChange={(e) => setFechaNacimiento(e.target.value)}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                   style={inputStyle}
                 />
               </div>
@@ -263,7 +264,7 @@ function CaptacionSection({ perfil }) {
                 placeholder="Posición"
                 value={posicion}
                 onChange={(e) => setPosicion(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm self-end"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm self-end"
                 style={inputStyle}
               />
             </div>
@@ -278,7 +279,7 @@ function CaptacionSection({ perfil }) {
                   <select
                     value={categoriaProbadaId}
                     onChange={(e) => setCategoriaProbadaId(e.target.value)}
-                    className="w-full p-2.5 rounded-xl outline-none text-sm"
+                    className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                     style={inputStyle}
                   >
                     <option value="">Seleccionar...</option>
@@ -294,7 +295,7 @@ function CaptacionSection({ perfil }) {
                   type="date"
                   value={fechaPrueba}
                   onChange={(e) => setFechaPrueba(e.target.value)}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                   style={inputStyle}
                 />
               </div>
@@ -305,7 +306,7 @@ function CaptacionSection({ perfil }) {
                 placeholder="Contacto (madre, padre, tutor)"
                 value={contactoNombre}
                 onChange={(e) => setContactoNombre(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               />
               <input
@@ -313,7 +314,7 @@ function CaptacionSection({ perfil }) {
                 placeholder="Teléfono de contacto"
                 value={telefonoContacto}
                 onChange={(e) => setTelefonoContacto(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               />
             </div>
@@ -322,7 +323,7 @@ function CaptacionSection({ perfil }) {
               value={notas}
               onChange={(e) => setNotas(e.target.value)}
               rows={3}
-              className="w-full p-2.5 rounded-xl outline-none text-sm resize-none"
+              className="w-full p-2.5 rounded-xl ui-control outline-none text-sm resize-none"
               style={inputStyle}
             />
             <div>
@@ -330,7 +331,7 @@ function CaptacionSection({ perfil }) {
               <select
                 value={estado}
                 onChange={(e) => setEstado(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               >
                 <option value="en_prueba">En prueba</option>
@@ -352,7 +353,7 @@ function CaptacionSection({ perfil }) {
               onClick={handleGuardar}
               disabled={guardando}
               className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+              style={BOTON_GESTION}
             >
               {guardando ? 'Guardando...' : candidatoEditando ? 'Guardar cambios' : 'Guardar candidato'}
             </button>
@@ -375,7 +376,7 @@ function CaptacionSection({ perfil }) {
             (grupo) =>
               grupo.lista.length > 0 && (
                 <div key={grupo.clave} className="mb-6">
-                  <p className="text-xs uppercase tracking-wide mb-2" style={{ color: grupo.config.color }}>
+                  <p className="text-xs uppercase tracking-wide mb-2" style={{ color: textoGestion(grupo.config.color) }}>
                     {grupo.config.icono} {grupo.config.label} ({grupo.lista.length})
                   </p>
                   <div className="space-y-2">
@@ -408,7 +409,7 @@ function CaptacionSection({ perfil }) {
                                 onClick={() => handleConvertir(c)}
                                 disabled={convirtiendoId === c.id}
                                 className="text-xs px-2.5 py-1 rounded-full hover:opacity-80 disabled:opacity-50"
-                                style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+                                style={BOTON_GESTION}
                               >
                                 {convirtiendoId === c.id ? 'Creando...' : '➕ Pasar a plantel'}
                               </button>

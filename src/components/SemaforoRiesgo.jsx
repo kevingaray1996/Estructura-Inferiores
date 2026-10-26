@@ -1,3 +1,5 @@
+import { PARTIDOS as P } from '../appearance/partidos'
+import { textoPlantel } from '../appearance/plantel'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
@@ -60,7 +62,7 @@ function SemaforoRiesgo() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <p className="text-sm" style={{ color: '#5B6B85' }}>
+        <p className="text-sm" style={{ color: P.tenue }}>
           Semáforo combinado: bienestar (z-score), carga de entrenamiento (sRPE/ACWR) y CMJ.
         </p>
         {jugadores.length > 0 && (
@@ -68,7 +70,7 @@ function SemaforoRiesgo() {
             onClick={handlePdfCategoria}
             disabled={generandoPdf}
             className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 disabled:opacity-50 shrink-0"
-            style={{ backgroundColor: '#1A2332', color: '#F0F2F5', border: '1px solid #2A3548' }}
+            style={{ backgroundColor: P.superficie, color: P.texto, border: "1px solid var(--ui-compartido-borde, #2A3548)" }}
           >
             {generandoPdf ? '...' : '📄 Descargar reporte completo'}
           </button>
@@ -76,12 +78,12 @@ function SemaforoRiesgo() {
       </div>
 
       {!categoria && !cargando && (
-        <p className="text-sm" style={{ color: '#5B6B85' }}>
+        <p className="text-sm" style={{ color: P.tenue }}>
           No se encontró la categoría Primera División.
         </p>
       )}
 
-      {cargando && <p style={{ color: '#5B6B85' }}>Calculando...</p>}
+      {cargando && <p style={{ color: P.tenue }}>Calculando...</p>}
 
       {!cargando && jugadores.length > 0 && (
         <div className="space-y-2">
@@ -92,7 +94,7 @@ function SemaforoRiesgo() {
               <div
                 key={j.id}
                 className="p-3 rounded-xl flex items-center justify-between gap-3"
-                style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+                style={{ backgroundColor: P.superficie, border: "1px solid var(--ui-compartido-borde, #2A3548)" }}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   {j.foto_url ? (
@@ -100,17 +102,17 @@ function SemaforoRiesgo() {
                   ) : (
                     <span
                       className="w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
-                      style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                      style={{ backgroundColor: P.fondo, color: P.secundario }}
                     >
                       {`${j.nombre?.[0] || ''}${j.apellido?.[0] || ''}`.toUpperCase()}
                     </span>
                   )}
                   <div className="min-w-0">
-                    <p className="text-sm truncate" style={{ color: '#F0F2F5' }}>
+                    <p className="text-sm truncate" style={{ color: P.texto }}>
                       {j.apellido}, {j.nombre}
                     </p>
                     {r?.cmj?.bajaConsecutiva && (
-                      <p className="text-[10px] mt-0.5" style={{ color: '#FBBF24' }}>
+                      <p className="text-[10px] mt-0.5" style={{ color: P.aviso }}>
                         CMJ en baja consecutiva
                       </p>
                     )}
@@ -120,12 +122,12 @@ function SemaforoRiesgo() {
                   {info ? (
                     <span
                       className="text-xs font-mono px-3 py-1 rounded-full"
-                      style={{ backgroundColor: '#0F1419', color: info.color, border: `1px solid ${info.color}` }}
+                      style={{ backgroundColor: P.fondo, color: textoPlantel(info.color), border: `1px solid ${info.color}` }}
                     >
                       {info.label} ({r.puntos})
                     </span>
                   ) : (
-                    <span className="text-xs" style={{ color: '#5B6B85' }}>
+                    <span className="text-xs" style={{ color: P.tenue }}>
                       Sin datos
                     </span>
                   )}
@@ -133,7 +135,7 @@ function SemaforoRiesgo() {
                     onClick={() => handlePdfIndividual(j)}
                     disabled={generandoPdf}
                     className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                    style={{ backgroundColor: '#0F1419', color: '#8A9BB8' }}
+                    style={{ backgroundColor: P.fondo, color: P.secundario }}
                   >
                     📄
                   </button>

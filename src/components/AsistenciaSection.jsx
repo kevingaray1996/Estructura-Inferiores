@@ -1,3 +1,4 @@
+import { BOTON_GESTION, textoGestion, textoSobreEstado } from '../appearance/gestion'
 import { COLORES } from '../theme'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -167,7 +168,7 @@ function AsistenciaSection({ perfil }) {
 
   const inputStyle = {
     backgroundColor: COLORES.fondoTarjeta,
-    border: '1px solid COLORES.borde',
+    border: `1px solid ${COLORES.borde}`,
     color: COLORES.texto,
   }
 
@@ -185,13 +186,13 @@ function AsistenciaSection({ perfil }) {
           <button
             onClick={() => setMostrarReporte((v) => !v)}
             className="text-xs font-medium px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
-            style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.texto, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.texto, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
           >
             {mostrarReporte ? 'Cerrar' : '📄 Exportar reporte de asistencia'}
           </button>
 
           {mostrarReporte && (
-            <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}>
+            <div className="mt-3 p-3 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}>
               <div className="grid sm:grid-cols-2 gap-3 mb-3">
                 <div>
                   <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Desde</label>
@@ -199,7 +200,7 @@ function AsistenciaSection({ perfil }) {
                     type="date"
                     value={reporteDesde}
                     onChange={(e) => setReporteDesde(e.target.value)}
-                    className="w-full p-2.5 rounded-xl outline-none text-sm"
+                    className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                     style={inputStyle}
                   />
                 </div>
@@ -209,7 +210,7 @@ function AsistenciaSection({ perfil }) {
                     type="date"
                     value={reporteHasta}
                     onChange={(e) => setReporteHasta(e.target.value)}
-                    className="w-full p-2.5 rounded-xl outline-none text-sm"
+                    className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                     style={inputStyle}
                   />
                 </div>
@@ -218,7 +219,7 @@ function AsistenciaSection({ perfil }) {
                 onClick={handleDescargarReporte}
                 disabled={!categoriaId || generandoReporte}
                 className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-                style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+                style={BOTON_GESTION}
               >
                 {generandoReporte ? 'Generando...' : 'Descargar PDF'}
               </button>
@@ -236,14 +237,14 @@ function AsistenciaSection({ perfil }) {
             type="date"
             value={fecha}
             onChange={(e) => setFecha(e.target.value)}
-            className="w-full p-2.5 rounded-xl outline-none text-sm"
+            className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
             style={inputStyle}
           />
           {!esTecnico && (
             <select
               value={categoriaId}
               onChange={(e) => setCategoriaId(e.target.value)}
-              className="w-full p-2.5 rounded-xl outline-none text-sm"
+              className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
               style={inputStyle}
             >
               <option value="">Elegí una categoría</option>
@@ -281,7 +282,7 @@ function AsistenciaSection({ perfil }) {
                   key={e.valor}
                   onClick={() => marcarTodos(e.valor)}
                   className="text-xs px-2.5 py-1 rounded-full hover:opacity-80"
-                  style={{ backgroundColor: COLORES.fondoTarjeta, color: e.color, border: '1px solid COLORES.borde' }}
+                  style={{ backgroundColor: COLORES.fondoTarjeta, color: textoGestion(e.color), border: `1px solid ${COLORES.borde}` }}
                 >
                   {e.label}
                 </button>
@@ -324,7 +325,7 @@ function AsistenciaSection({ perfil }) {
                           className="text-[10px] px-2 py-1 rounded-full transition-opacity hover:opacity-80"
                           style={{
                             backgroundColor: activo ? e.color : COLORES.fondoPagina,
-                            color: activo ? COLORES.fondoPagina : COLORES.textoSecundario,
+                            color: activo ? textoSobreEstado(e.color) : COLORES.textoSecundario,
                             fontWeight: activo ? 700 : 400,
                           }}
                         >
@@ -346,7 +347,7 @@ function AsistenciaSection({ perfil }) {
             {mensaje && (
               <p
                 className="text-sm mb-4"
-                style={{ color: mensaje.startsWith('Listo') || mensaje.includes('sincronizaron') ? COLORES.exito : mensaje.startsWith('Sin conexión') || mensaje.startsWith('No se pudo') ? COLORES.acento : COLORES.peligro }}
+                style={{ color: mensaje.startsWith('Listo') || mensaje.includes('sincronizaron') ? COLORES.exito : mensaje.startsWith('Sin conexión') || mensaje.startsWith('No se pudo') ? textoGestion(COLORES.acento) : COLORES.peligro }}
               >
                 {mensaje}
               </p>
@@ -356,7 +357,7 @@ function AsistenciaSection({ perfil }) {
               onClick={handleGuardar}
               disabled={guardando}
               className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+              style={BOTON_GESTION}
             >
               {guardando ? 'Guardando...' : 'Guardar asistencia'}
             </button>

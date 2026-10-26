@@ -1,3 +1,4 @@
+import { textoSobreEstado } from '../appearance/gestion'
 import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -185,7 +186,7 @@ function CalendarioSection({ perfil }) {
 
   const inputStyle = {
     backgroundColor: COLORES.fondoTarjeta,
-    border: '1px solid COLORES.borde',
+    border: `1px solid ${COLORES.borde}`,
     color: COLORES.texto,
   }
 
@@ -209,7 +210,7 @@ function CalendarioSection({ perfil }) {
             <button
               onClick={() => setMesActual((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
               className="text-sm px-3 py-1.5 rounded-lg hover:opacity-80"
-              style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.textoSecundario, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.textoSecundario, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
             >
               ←
             </button>
@@ -219,14 +220,14 @@ function CalendarioSection({ perfil }) {
             <button
               onClick={() => setMesActual((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
               className="text-sm px-3 py-1.5 rounded-lg hover:opacity-80"
-              style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.textoSecundario, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.textoSecundario, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
             >
               →
             </button>
             <button
               onClick={irAHoy}
               className="text-xs px-3 py-1.5 rounded-lg hover:opacity-80"
-              style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.exito, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.exito, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
             >
               Hoy
             </button>
@@ -236,7 +237,7 @@ function CalendarioSection({ perfil }) {
             <select
               value={categoriaFiltro}
               onChange={(e) => setCategoriaFiltro(e.target.value)}
-              className="p-2 rounded-xl outline-none text-sm"
+              className="p-2 rounded-xl ui-control outline-none text-sm"
               style={inputStyle}
             >
               <option value="">Todas las categorías</option>
@@ -251,7 +252,7 @@ function CalendarioSection({ perfil }) {
 
         {cargando && <p style={{ color: COLORES.textoMuted }}>Cargando...</p>}
 
-        <div className="rounded-xl overflow-hidden" style={{ border: '1px solid COLORES.borde' }}>
+        <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${COLORES.borde}` }}>
           <div className="grid grid-cols-7" style={{ backgroundColor: COLORES.fondoTarjeta }}>
             {DIAS_SEMANA.map((d) => (
               <div
@@ -265,7 +266,7 @@ function CalendarioSection({ perfil }) {
           </div>
 
           {semanas.map((semana, i) => (
-            <div key={i} className="grid grid-cols-7" style={{ borderTop: '1px solid COLORES.borde' }}>
+            <div key={i} className="grid grid-cols-7" style={{ borderTop: `1px solid ${COLORES.borde}` }}>
               {semana.map((dia) => {
                 const eventosDia = eventosPorDia[dia.iso] || []
                 const esHoy = dia.iso === hoyISO
@@ -279,7 +280,7 @@ function CalendarioSection({ perfil }) {
                     onClick={() => setDiaSeleccionado(dia.iso)}
                     className="min-h-[84px] p-1.5 cursor-pointer"
                     style={{
-                      borderLeft: '1px solid COLORES.borde',
+                      borderLeft: `1px solid ${COLORES.borde}`,
                       backgroundColor: esSeleccionado ? COLORES.fondoTarjeta : 'transparent',
                       opacity: dia.delMes ? 1 : 0.35,
                     }}
@@ -289,7 +290,7 @@ function CalendarioSection({ perfil }) {
                         className="w-5 h-5 flex items-center justify-center text-xs rounded-full"
                         style={{
                           backgroundColor: esHoy ? COLORES.exito : 'transparent',
-                          color: esHoy ? COLORES.fondoPagina : COLORES.textoSecundario,
+                          color: esHoy ? textoSobreEstado(COLORES.exito) : COLORES.textoSecundario,
                           fontWeight: esHoy ? 700 : 400,
                         }}
                       >
@@ -343,7 +344,7 @@ function CalendarioSection({ perfil }) {
                   <div
                     key={e.id}
                     className="p-3 rounded-xl flex items-center gap-3"
-                    style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+                    style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
                   >
                     {e.tipo === 'partido' ? (
                       e.escudo ? (

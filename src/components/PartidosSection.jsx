@@ -124,7 +124,7 @@ function PartidosSection({ perfil, onIrAFisico }) {
               key={c.id}
               onClick={() => elegirCategoria(c.id)}
               className="p-3 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
-              style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde', color: COLORES.texto }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}`, color: COLORES.texto }}
             >
               {c.nombre}
             </button>

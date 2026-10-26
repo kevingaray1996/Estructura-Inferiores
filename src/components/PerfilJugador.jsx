@@ -1,3 +1,4 @@
+import { PLANTEL as P, textoPlantel, tintePlantel } from '../appearance/plantel'
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -7,14 +8,14 @@ import { cargarDatosBienestar } from '../utils/bienestar'
 import { generarBienestarPDF } from '../utils/generarBienestarPDF'
 
 const COLORES = {
-  fondo: '#101010',
-  tarjeta: '#202020',
-  borde: '#383838',
-  texto: '#F5F5F5',
-  secundario: '#B8B8B8',
-  tenue: '#8A8A8A',
-  amarillo: '#F6C900',
-  amarilloOscuro: '#332B00',
+  fondo: P.fondoPerfil,
+  tarjeta: P.tarjetaPerfil,
+  borde: P.bordePerfil,
+  texto: P.textoPerfil,
+  secundario: P.secundarioPerfil,
+  tenue: P.tenuePerfil,
+  amarillo: P.amarilloPerfil,
+  amarilloOscuro: P.amarilloSuave,
 }
 
 const estadoConfig = {
@@ -655,7 +656,7 @@ function PerfilJugador({
                 {config.valor(e) && (
                   <span
                     className="text-xs font-mono px-2 py-1 rounded-full shrink-0"
-                    style={{ backgroundColor: COLORES.fondo, color: COLORES.amarillo }}
+                    style={{ backgroundColor: COLORES.fondo, color: textoPlantel(COLORES.amarillo) }}
                   >
                     {config.valor(e)}
                   </span>
@@ -686,7 +687,7 @@ function PerfilJugador({
               className="text-xs px-3 py-2 rounded-lg transition-opacity hover:opacity-80"
               style={{
                 backgroundColor: COLORES.tarjeta,
-                color: COLORES.amarillo,
+                color: textoPlantel(COLORES.amarillo),
                 border: `1px solid ${COLORES.borde}`,
               }}
             >
@@ -699,7 +700,7 @@ function PerfilJugador({
               className="text-xs px-3 py-2 rounded-lg transition-opacity hover:opacity-80 disabled:opacity-50"
               style={{
                 backgroundColor: COLORES.tarjeta,
-                color: '#F87171',
+                color: "var(--plantel-peligro, #F87171)",
                 border: `1px solid ${COLORES.borde}`,
               }}
             >
@@ -712,7 +713,7 @@ function PerfilJugador({
         <div
           className="relative overflow-hidden rounded-2xl p-5 md:p-7 mb-5"
           style={{
-            background: 'linear-gradient(135deg, #25251F 0%, #171717 60%, #101010 100%)',
+            background: P.cabecera,
             border: `1px solid ${COLORES.borde}`,
           }}
         >
@@ -735,7 +736,7 @@ function PerfilJugador({
                 style={{
                   backgroundColor: COLORES.amarilloOscuro,
                   border: `2px solid ${COLORES.amarillo}`,
-                  color: COLORES.amarillo,
+                  color: textoPlantel(COLORES.amarillo),
                   fontFamily: "'Archivo Black', sans-serif",
                 }}
               >
@@ -744,7 +745,7 @@ function PerfilJugador({
             )}
 
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] uppercase tracking-[0.25em] mb-2" style={{ color: COLORES.amarillo }}>
+              <p className="text-[10px] uppercase tracking-[0.25em] mb-2" style={{ color: textoPlantel(COLORES.amarillo) }}>
                 Perfil de jugadora
               </p>
 
@@ -759,9 +760,9 @@ function PerfilJugador({
                 <span
                   className="text-xs px-3 py-1.5 rounded-full"
                   style={{
-                    backgroundColor: `${estado.color}18`,
-                    color: estado.color,
-                    border: `1px solid ${estado.color}66`,
+                    backgroundColor: tintePlantel(estado.color, '18'),
+                    color: textoPlantel(estado.color),
+                    border: `1px solid ${tintePlantel(estado.color, '66')}`,
                   }}
                 >
                   <span className="inline-block w-1.5 h-1.5 rounded-full mr-2" style={{ backgroundColor: estado.color }} />
@@ -772,8 +773,8 @@ function PerfilJugador({
                   className="text-xs px-3 py-1.5 rounded-full"
                   style={{
                     backgroundColor: COLORES.amarilloOscuro,
-                    color: COLORES.amarillo,
-                    border: `1px solid ${COLORES.amarillo}55`,
+                    color: textoPlantel(COLORES.amarillo),
+                    border: `1px solid ${P.bordeAcento}`,
                   }}
                 >
                   {jugador.categorias?.nombre || 'Sin categoría'}
@@ -810,7 +811,7 @@ function PerfilJugador({
                 Información complementaria de la jugadora
               </span>
             </span>
-            <span style={{ color: COLORES.amarillo }}>＋</span>
+            <span style={{ color: textoPlantel(COLORES.amarillo) }}>＋</span>
           </summary>
 
           <div className="px-4 pb-4 flex flex-wrap gap-2">
@@ -847,7 +848,7 @@ function PerfilJugador({
                   Datos para situaciones de urgencia
                 </span>
               </span>
-              <span style={{ color: '#F87171' }}>＋</span>
+              <span style={{ color: "var(--plantel-peligro, #F87171)" }}>＋</span>
             </summary>
 
             <div className="px-4 pb-4">
@@ -858,7 +859,7 @@ function PerfilJugador({
               )}
 
               {jugador.telefono_emergencia && (
-                <a href={`tel:${jugador.telefono_emergencia}`} className="text-sm" style={{ color: COLORES.amarillo }}>
+                <a href={`tel:${jugador.telefono_emergencia}`} className="text-sm" style={{ color: textoPlantel(COLORES.amarillo) }}>
                   {jugador.telefono_emergencia}
                 </a>
               )}
@@ -872,14 +873,14 @@ function PerfilJugador({
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-2 text-sm mb-6 hover:opacity-80 transition-opacity"
-            style={{ color: COLORES.amarillo }}
+            style={{ color: textoPlantel(COLORES.amarillo) }}
           >
             🎬 Ver video promocional
           </a>
         )}
 
         {/* Rendimiento deportivo */}
-        <p className="text-xs tracking-widest uppercase mb-3" style={{ color: COLORES.amarillo }}>
+        <p className="text-xs tracking-widest uppercase mb-3" style={{ color: textoPlantel(COLORES.amarillo) }}>
           Rendimiento deportivo
         </p>
 
@@ -905,7 +906,7 @@ function PerfilJugador({
                 cursor: stat.key ? 'pointer' : 'default',
               }}
             >
-              <p className="text-xl" style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.amarillo }}>
+              <p className="text-xl" style={{ fontFamily: "'Archivo Black', sans-serif", color: textoPlantel(COLORES.amarillo) }}>
                 {stat.valor}
               </p>
               <p className="text-[10px] uppercase tracking-wide" style={{ color: COLORES.secundario }}>
@@ -932,13 +933,13 @@ function PerfilJugador({
             >
               <div
                 className="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0"
-                style={{ backgroundColor: COLORES.amarilloOscuro, color: COLORES.amarillo }}
+                style={{ backgroundColor: COLORES.amarilloOscuro, color: textoPlantel(COLORES.amarillo) }}
               >
                 ▤
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="text-xs tracking-widest uppercase mb-1" style={{ color: COLORES.amarillo }}>
+                <p className="text-xs tracking-widest uppercase mb-1" style={{ color: textoPlantel(COLORES.amarillo) }}>
                   Seguimiento del cuerpo técnico
                 </p>
                 <h2 className="text-lg font-bold" style={{ color: COLORES.texto }}>
@@ -951,7 +952,7 @@ function PerfilJugador({
                 </p>
               </div>
 
-              <span className="text-xl" style={{ color: COLORES.amarillo }}>
+              <span className="text-xl" style={{ color: textoPlantel(COLORES.amarillo) }}>
                 {mostrarEvaluaciones ? '−' : '+'}
               </span>
             </button>
@@ -963,7 +964,7 @@ function PerfilJugador({
                     Cargando historial de evaluaciones...
                   </p>
                 ) : evaluacionesError ? (
-                  <p className="text-sm" style={{ color: '#FBBF24' }}>
+                  <p className="text-sm" style={{ color: "var(--plantel-aviso, #FBBF24)" }}>
                     {evaluacionesError}
                   </p>
                 ) : evaluacionesPorPeriodo.length === 0 ? (
@@ -998,7 +999,7 @@ function PerfilJugador({
                         >
                           <div
                             className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
-                            style={{ backgroundColor: COLORES.amarilloOscuro, color: COLORES.amarillo }}
+                            style={{ backgroundColor: COLORES.amarilloOscuro, color: textoPlantel(COLORES.amarillo) }}
                           >
                             {esFinal ? '★' : '▤'}
                           </div>
@@ -1015,7 +1016,7 @@ function PerfilJugador({
                           </div>
 
                           <div className="text-right shrink-0">
-                            <p className="text-2xl font-bold" style={{ color: COLORES.amarillo }}>
+                            <p className="text-2xl font-bold" style={{ color: textoPlantel(COLORES.amarillo) }}>
                               {resumen.general === null ? '—' : resumen.general.toFixed(1)}
                             </p>
                             <p className="text-[10px]" style={{ color: COLORES.tenue }}>
@@ -1031,7 +1032,7 @@ function PerfilJugador({
                         {abierto && (
                           <div className="p-4 space-y-5" style={{ borderTop: `1px solid ${COLORES.borde}` }}>
                             <div>
-                              <p className="text-xs tracking-widest uppercase mb-3" style={{ color: COLORES.amarillo }}>
+                              <p className="text-xs tracking-widest uppercase mb-3" style={{ color: textoPlantel(COLORES.amarillo) }}>
                                 Promedio por criterio
                               </p>
 
@@ -1047,7 +1048,7 @@ function PerfilJugador({
                                         <span className="text-sm" style={{ color: COLORES.texto }}>
                                           {criterio.nombre}
                                         </span>
-                                        <span className="text-sm font-semibold shrink-0" style={{ color: COLORES.amarillo }}>
+                                        <span className="text-sm font-semibold shrink-0" style={{ color: textoPlantel(COLORES.amarillo) }}>
                                           {promedio === null ? '—' : promedio.toFixed(1)}
                                         </span>
                                       </div>
@@ -1072,7 +1073,7 @@ function PerfilJugador({
                             </div>
 
                             <div>
-                              <p className="text-xs tracking-widest uppercase mb-3" style={{ color: COLORES.amarillo }}>
+                              <p className="text-xs tracking-widest uppercase mb-3" style={{ color: textoPlantel(COLORES.amarillo) }}>
                                 Detalle por evaluador
                               </p>
 
@@ -1142,7 +1143,7 @@ function PerfilJugador({
                                     ].map(([titulo, contenido]) => (
                                       contenido ? (
                                         <div key={titulo} className="mt-4">
-                                          <p className="text-xs font-semibold mb-1" style={{ color: COLORES.amarillo }}>
+                                          <p className="text-xs font-semibold mb-1" style={{ color: textoPlantel(COLORES.amarillo) }}>
                                             {titulo}
                                           </p>
                                           <p className="text-sm whitespace-pre-wrap break-words" style={{ color: COLORES.secundario }}>
@@ -1159,7 +1160,7 @@ function PerfilJugador({
                                         </p>
                                         <span
                                           className="inline-block text-xs font-semibold px-3 py-1.5 rounded-full"
-                                          style={{ backgroundColor: COLORES.amarilloOscuro, color: COLORES.amarillo }}
+                                          style={{ backgroundColor: COLORES.amarilloOscuro, color: textoPlantel(COLORES.amarillo) }}
                                         >
                                           {recomendacionLabel[evaluacion.recomendacion] || evaluacion.recomendacion}
                                         </span>
@@ -1193,7 +1194,7 @@ function PerfilJugador({
         {/* Comparativa por año */}
         {estadisticasPorAnio.length >= 2 && (
           <>
-            <p className="text-xs tracking-widest uppercase mb-3" style={{ color: COLORES.amarillo }}>
+            <p className="text-xs tracking-widest uppercase mb-3" style={{ color: textoPlantel(COLORES.amarillo) }}>
               Comparativa por año
             </p>
 
@@ -1202,7 +1203,7 @@ function PerfilJugador({
                 <thead>
                   <tr style={{ backgroundColor: COLORES.tarjeta }}>
                     {['Año', 'Partidos', 'Minutos', 'Goles', 'Asist.'].map((titulo) => (
-                      <th key={titulo} className="text-left p-2.5 whitespace-nowrap" style={{ color: COLORES.amarillo }}>
+                      <th key={titulo} className="text-left p-2.5 whitespace-nowrap" style={{ color: textoPlantel(COLORES.amarillo) }}>
                         {titulo}
                       </th>
                     ))}
@@ -1211,7 +1212,7 @@ function PerfilJugador({
 
                 <tbody>
                   {estadisticasPorAnio.map((a, i) => (
-                    <tr key={a.anio} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#191919' }}>
+                    <tr key={a.anio} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : "var(--plantel-fila, #191919)" }}>
                       {[a.anio, a.partidos, a.minutos, a.goles, a.asistencias].map((valor, indice) => (
                         <td
                           key={indice}
@@ -1233,7 +1234,7 @@ function PerfilJugador({
         {resumenBienestar && (
           <>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs tracking-widest uppercase" style={{ color: COLORES.amarillo }}>
+              <p className="text-xs tracking-widest uppercase" style={{ color: textoPlantel(COLORES.amarillo) }}>
                 Bienestar · últimos 7 días
               </p>
 
@@ -1241,7 +1242,7 @@ function PerfilJugador({
                 <button
                   onClick={() => generarBienestarPDF(jugador, 'semana')}
                   className="text-xs px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
-                  style={{ backgroundColor: COLORES.tarjeta, color: COLORES.amarillo, border: `1px solid ${COLORES.borde}` }}
+                  style={{ backgroundColor: COLORES.tarjeta, color: textoPlantel(COLORES.amarillo), border: `1px solid ${COLORES.borde}` }}
                 >
                   📄 PDF
                 </button>
@@ -1285,7 +1286,7 @@ function PerfilJugador({
                       {m.label}
                     </p>
                     {flecha && tieneComparacion && (
-                      <p className="text-xs" style={{ color: colorTendencia }}>
+                      <p className="text-xs" style={{ color: textoPlantel(colorTendencia) }}>
                         {flecha} {Math.abs(m.promedioActual - m.promedioAnterior).toFixed(1)}
                       </p>
                     )}
@@ -1297,7 +1298,7 @@ function PerfilJugador({
         )}
 
         {/* Áreas: se conserva el diseño existente */}
-        <p className="text-xs tracking-widest uppercase mb-3" style={{ color: COLORES.amarillo }}>
+        <p className="text-xs tracking-widest uppercase mb-3" style={{ color: textoPlantel(COLORES.amarillo) }}>
           Áreas
         </p>
 
@@ -1314,7 +1315,7 @@ function PerfilJugador({
               <p className="text-sm font-medium" style={{ color: COLORES.texto }}>
                 {d.nombre}
               </p>
-              <p className="text-xs mt-1" style={{ color: d.resumen === 'Sin datos cargados' ? COLORES.tenue : COLORES.amarillo }}>
+              <p className="text-xs mt-1" style={{ color: d.resumen === 'Sin datos cargados' ? COLORES.tenue : textoPlantel(COLORES.amarillo) }}>
                 {d.resumen}
               </p>
               {d.detalle && (
@@ -1329,7 +1330,7 @@ function PerfilJugador({
         {/* Asistencia */}
         {totalAsistenciaMarcada > 0 && (
           <>
-            <p className="text-xs tracking-widest uppercase mb-3 mt-8" style={{ color: COLORES.amarillo }}>
+            <p className="text-xs tracking-widest uppercase mb-3 mt-8" style={{ color: textoPlantel(COLORES.amarillo) }}>
               Asistencia
             </p>
 
@@ -1342,7 +1343,7 @@ function PerfilJugador({
                 { label: 'Enfermas', valor: resumenAsistencia.enfermo, color: '#7DD3FC' },
               ].map((item) => (
                 <div key={item.label} className="p-3 rounded-xl" style={{ backgroundColor: COLORES.tarjeta, border: `1px solid ${COLORES.borde}` }}>
-                  <p className="text-xl font-bold" style={{ color: item.color }}>{item.valor}</p>
+                  <p className="text-xl font-bold" style={{ color: textoPlantel(item.color) }}>{item.valor}</p>
                   <p className="text-xs" style={{ color: COLORES.secundario }}>{item.label}</p>
                 </div>
               ))}
@@ -1353,7 +1354,7 @@ function PerfilJugador({
         {/* Trayectoria */}
         {historialCategorias.length > 0 && (
           <>
-            <p className="text-xs tracking-widest uppercase mb-3 mt-8" style={{ color: COLORES.amarillo }}>
+            <p className="text-xs tracking-widest uppercase mb-3 mt-8" style={{ color: textoPlantel(COLORES.amarillo) }}>
               Trayectoria
             </p>
 
@@ -1379,7 +1380,7 @@ function PerfilJugador({
         {/* Físico / GPS */}
         {sesionesFisicas.length > 0 && (
           <>
-            <p className="text-xs tracking-widest uppercase mb-3 mt-8" style={{ color: COLORES.amarillo }}>
+            <p className="text-xs tracking-widest uppercase mb-3 mt-8" style={{ color: textoPlantel(COLORES.amarillo) }}>
               Físico · GPS
             </p>
 
@@ -1390,7 +1391,7 @@ function PerfilJugador({
                     Distancia total (m) · últimas sesiones
                   </p>
                   <div className="overflow-x-auto mb-4">
-                    <MiniBarras datos={datosDistanciaChart} color={COLORES.amarillo} />
+                    <MiniBarras datos={datosDistanciaChart} color={textoPlantel(COLORES.amarillo)} />
                   </div>
                 </>
               )}
@@ -1402,7 +1403,7 @@ function PerfilJugador({
               <select
                 value={sesionFisicaSeleccionadaId || idSesionFisicaPorDefecto || ''}
                 onChange={(e) => setSesionFisicaSeleccionadaId(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm mb-3"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm mb-3"
                 style={{ backgroundColor: COLORES.fondo, border: `1px solid ${COLORES.borde}`, color: COLORES.texto }}
               >
                 {sesionesFisicas.slice().reverse().map((s) => (
@@ -1427,7 +1428,7 @@ function PerfilJugador({
                   ))}
 
                   <div>
-                    <p className="text-[9px] uppercase tracking-wide" style={{ color: COLORES.amarillo }}>
+                    <p className="text-[9px] uppercase tracking-wide" style={{ color: textoPlantel(COLORES.amarillo) }}>
                       RPE (1-10)
                     </p>
                     <p className="text-sm" style={{ color: COLORES.texto }}>

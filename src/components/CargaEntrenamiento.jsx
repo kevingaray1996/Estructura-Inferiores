@@ -1,21 +1,12 @@
+import { WELLNESS, textoWellness } from '../appearance/wellness'
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
 import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
 
-const UI = {
-  fondo: '#191917',
-  tarjeta: '#242422',
-  tarjetaAlternativa: '#20201E',
-  borde: '#393934',
-  acento: '#F2C230',
-  texto: '#F4F2EA',
-  secundario: '#B5B3AA',
-  muted: '#85847C',
-  exito: '#97C459',
-  peligro: '#E77970',
-}
+// Alias visual: conserva la superficie alternativa original de estos formularios.
+const UI = { ...WELLNESS, tarjetaAlternativa: WELLNESS.filaAlternativa }
 
 function CargaEntrenamiento() {
   const [categoria, setCategoria] = useState(null)
@@ -235,7 +226,7 @@ function CargaEntrenamiento() {
         className="relative overflow-hidden rounded-2xl p-5 sm:p-6"
         style={{
           background:
-            'linear-gradient(125deg, #292925 0%, #20201D 65%, #302A19 100%)',
+            UI.cabeceraCarga,
           border: `1px solid ${UI.borde}`,
         }}
       >
@@ -251,7 +242,7 @@ function CargaEntrenamiento() {
           <div>
             <p
               className="text-[11px] font-bold tracking-[0.2em] uppercase mb-2"
-              style={{ color: UI.acento }}
+              style={{ color: textoWellness(UI.acento) }}
             >
               Comunicaciones · Rendimiento
             </p>
@@ -274,7 +265,7 @@ function CargaEntrenamiento() {
             style={{
               backgroundColor: 'rgba(242,194,48,0.10)',
               border: '1px solid rgba(242,194,48,0.25)',
-              color: UI.acento,
+              color: textoWellness(UI.acento),
             }}
           >
             <span
@@ -313,7 +304,7 @@ function CargaEntrenamiento() {
               style={
                 activo
                   ? {
-                      background: `linear-gradient(135deg, ${UI.acento}, #E5AE1E)`,
+                      background: UI.primarioWellness,
                       color: '#1A1914',
                       boxShadow: '0 4px 12px rgba(242,194,48,0.10)',
                     }
@@ -356,7 +347,7 @@ function CargaEntrenamiento() {
                   type="date"
                   value={fecha}
                   onChange={(e) => setFecha(e.target.value)}
-                  className="w-full sm:w-56 p-3 rounded-xl outline-none text-sm"
+                  className="w-full sm:w-56 p-3 rounded-xl ui-control outline-none text-sm"
                   style={inputStyle}
                 />
               </div>
@@ -394,7 +385,7 @@ function CargaEntrenamiento() {
                   </p>
                   <p
                     className="text-xl font-bold tabular-nums"
-                    style={{ color: UI.acento }}
+                    style={{ color: textoWellness(UI.acento) }}
                   >
                     {totalMinutos}
                     <span className="text-xs font-medium ml-1">min</span>
@@ -425,7 +416,7 @@ function CargaEntrenamiento() {
                   <div>
                     <p
                       className="text-[10px] uppercase tracking-[0.18em] font-bold mb-1"
-                      style={{ color: UI.acento }}
+                      style={{ color: textoWellness(UI.acento) }}
                     >
                       {editandoId ? 'Modificar actividad' : 'Nueva actividad'}
                     </p>
@@ -439,7 +430,7 @@ function CargaEntrenamiento() {
                       className="text-xs px-2.5 py-1 rounded-full"
                       style={{
                         backgroundColor: 'rgba(242,194,48,0.10)',
-                        color: UI.acento,
+                        color: textoWellness(UI.acento),
                       }}
                     >
                       En edición
@@ -462,7 +453,7 @@ function CargaEntrenamiento() {
                     value={descripcion}
                     onChange={(e) => setDescripcion(e.target.value)}
                     rows={3}
-                    className="w-full p-3 rounded-xl outline-none text-sm resize-y"
+                    className="w-full p-3 rounded-xl ui-control outline-none text-sm resize-y"
                     style={inputStyle}
                   />
                 </div>
@@ -483,7 +474,7 @@ function CargaEntrenamiento() {
                     placeholder="Ej: 15"
                     value={duracion}
                     onChange={(e) => setDuracion(e.target.value)}
-                    className="w-full sm:w-48 p-3 rounded-xl outline-none text-sm"
+                    className="w-full sm:w-48 p-3 rounded-xl ui-control outline-none text-sm"
                     style={inputStyle}
                   />
                 </div>
@@ -548,7 +539,7 @@ function CargaEntrenamiento() {
                                 backgroundColor: activo
                                   ? 'rgba(242,194,48,0.13)'
                                   : UI.tarjeta,
-                                color: activo ? UI.acento : UI.secundario,
+                                color: textoWellness(activo ? UI.acento : UI.secundario),
                                 border: `1px solid ${
                                   activo
                                     ? 'rgba(242,194,48,0.45)'
@@ -572,7 +563,7 @@ function CargaEntrenamiento() {
                     disabled={guardando || !descripcion || !duracion}
                     className="flex-1 p-3 rounded-xl font-bold text-sm transition-opacity hover:opacity-85 disabled:opacity-50"
                     style={{
-                      background: `linear-gradient(135deg, ${UI.acento}, #E5AE1E)`,
+                      background: UI.primarioWellness,
                       color: '#1A1914',
                     }}
                   >
@@ -613,7 +604,7 @@ function CargaEntrenamiento() {
                     className="text-xs font-semibold px-3 py-1.5 rounded-full shrink-0"
                     style={{
                       backgroundColor: 'rgba(242,194,48,0.10)',
-                      color: UI.acento,
+                      color: textoWellness(UI.acento),
                       border: '1px solid rgba(242,194,48,0.20)',
                     }}
                   >
@@ -639,7 +630,7 @@ function CargaEntrenamiento() {
                       className="w-12 h-12 rounded-xl mx-auto mb-3 flex items-center justify-center text-xl"
                       style={{
                         backgroundColor: 'rgba(242,194,48,0.10)',
-                        color: UI.acento,
+                        color: textoWellness(UI.acento),
                       }}
                     >
                       ＋
@@ -665,7 +656,7 @@ function CargaEntrenamiento() {
                           className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold shrink-0"
                           style={{
                             backgroundColor: 'rgba(242,194,48,0.10)',
-                            color: UI.acento,
+                            color: textoWellness(UI.acento),
                             border: '1px solid rgba(242,194,48,0.18)',
                           }}
                         >
@@ -682,7 +673,7 @@ function CargaEntrenamiento() {
                               className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-lg px-2.5 py-1.5"
                               style={{
                                 backgroundColor: UI.fondo,
-                                color: UI.acento,
+                                color: textoWellness(UI.acento),
                                 border: `1px solid ${UI.borde}`,
                               }}
                             >
@@ -804,7 +795,7 @@ function CargaEntrenamiento() {
               </p>
               <p
                 className="text-2xl font-bold tabular-nums"
-                style={{ color: UI.acento }}
+                style={{ color: textoWellness(UI.acento) }}
               >
                 {historial.reduce((acc, h) => acc + h.bloques, 0)}
               </p>
@@ -826,7 +817,7 @@ function CargaEntrenamiento() {
                 className="w-12 h-12 rounded-xl mx-auto mb-3 flex items-center justify-center text-xl"
                 style={{
                   backgroundColor: 'rgba(242,194,48,0.10)',
-                  color: UI.acento,
+                  color: textoWellness(UI.acento),
                 }}
               >
                 ◷
@@ -898,7 +889,7 @@ function CargaEntrenamiento() {
 
                         <td
                           className="p-3 sm:p-4 whitespace-nowrap font-semibold tabular-nums"
-                          style={{ color: UI.acento }}
+                          style={{ color: textoWellness(UI.acento) }}
                         >
                           {h.minutos} min
                         </td>

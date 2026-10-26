@@ -1,3 +1,4 @@
+import { PLANTEL as P } from '../appearance/plantel'
 import { useState } from 'react'
 import { generarPerfilPDF } from '../utils/generarPerfilPDF'
 
@@ -75,12 +76,12 @@ function PdfPerfilModal({
       <div
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-sm p-6 rounded-2xl"
-        style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+        style={{ backgroundColor: "var(--ui-compartido-superficie, #1A2332)", border: "1px solid var(--ui-compartido-borde, #2A3548)" }}
       >
-        <h2 className="text-lg font-medium mb-1" style={{ color: '#F0F2F5' }}>
+        <h2 className="text-lg font-medium mb-1" style={{ color: "var(--ui-compartido-texto, #F0F2F5)" }}>
           Descargar PDF
         </h2>
-        <p className="text-xs mb-4" style={{ color: '#8A9BB8' }}>
+        <p className="text-xs mb-4" style={{ color: "var(--ui-compartido-secundario, #8A9BB8)" }}>
           {jugador.apellido}, {jugador.nombre} — elegí qué incluir
         </p>
         <div className="space-y-2 mb-6">
@@ -88,7 +89,7 @@ function PdfPerfilModal({
             <label
               key={o.clave}
               className="flex items-center gap-2.5 text-sm cursor-pointer p-2 rounded-lg hover:opacity-90"
-              style={{ color: '#F0F2F5' }}
+              style={{ color: "var(--ui-compartido-texto, #F0F2F5)" }}
             >
               <input
                 type="checkbox"
@@ -103,7 +104,7 @@ function PdfPerfilModal({
           <button
             onClick={onCerrar}
             className="flex-1 p-2.5 rounded-xl text-sm transition-opacity hover:opacity-80"
-            style={{ backgroundColor: '#0F1419', color: '#8A9BB8', border: '1px solid #2A3548' }}
+            style={{ backgroundColor: "var(--ui-compartido-fondo, #0F1419)", color: "var(--ui-compartido-secundario, #8A9BB8)", border: "1px solid var(--ui-compartido-borde, #2A3548)" }}
           >
             Cancelar
           </button>
@@ -111,7 +112,7 @@ function PdfPerfilModal({
             onClick={handleGenerar}
             disabled={generando || !algunaSeleccionada}
             className="flex-1 p-2.5 rounded-xl text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-            style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+            style={{ backgroundColor: P.primario, color: P.sobrePrimario }}
           >
             {generando ? 'Generando...' : 'Descargar PDF'}
           </button>

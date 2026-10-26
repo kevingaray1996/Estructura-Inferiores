@@ -1,3 +1,4 @@
+import { textoGestion } from '../appearance/gestion'
 import { COLORES } from '../theme'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -48,7 +49,7 @@ function ContratosSection({ onVolver }) {
 
   const inputStyle = {
     backgroundColor: COLORES.fondoTarjeta,
-    border: '1px solid COLORES.borde',
+    border: `1px solid ${COLORES.borde}`,
     color: COLORES.texto,
   }
 
@@ -100,7 +101,7 @@ function ContratosSection({ onVolver }) {
               type="date"
               value={fechaDesde}
               onChange={(e) => setFechaDesde(e.target.value)}
-              className="w-full p-2.5 rounded-xl outline-none text-sm"
+              className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
               style={inputStyle}
             />
           </div>
@@ -112,7 +113,7 @@ function ContratosSection({ onVolver }) {
               type="date"
               value={fechaHasta}
               onChange={(e) => setFechaHasta(e.target.value)}
-              className="w-full p-2.5 rounded-xl outline-none text-sm"
+              className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
               style={inputStyle}
             />
           </div>
@@ -131,7 +132,7 @@ function ContratosSection({ onVolver }) {
               <div
                 key={j.id}
                 className="p-3 rounded-xl flex items-center justify-between gap-3"
-                style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+                style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <span
@@ -153,7 +154,7 @@ function ContratosSection({ onVolver }) {
                   <p className="text-xs" style={{ color: COLORES.texto }}>
                     {formatearFecha(j.fecha_inicio_contrato) || '—'} → {formatearFecha(j.fecha_fin_contrato)}
                   </p>
-                  <p className="text-[10px]" style={{ color: estadoColor(dias) }}>
+                  <p className="text-[10px]" style={{ color: textoGestion(estadoColor(dias)) }}>
                     {dias < 0 ? 'Vencido' : `${dias} días`}
                   </p>
                 </div>

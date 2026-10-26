@@ -1,3 +1,4 @@
+import { PARTIDOS as P } from '../appearance/partidos'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
@@ -30,9 +31,9 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
   const esEdicion = !!partidoIdEditar
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: P.superficie,
+    border: "1px solid var(--ui-compartido-borde, #2A3548)",
+    color: P.texto,
   }
 
   useEffect(() => {
@@ -149,7 +150,7 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
   if (cargando) {
     return (
       <div className="p-6 md:p-10">
-        <p style={{ color: '#5B6B85' }}>Cargando...</p>
+        <p style={{ color: P.tenue }}>Cargando...</p>
       </div>
     )
   }
@@ -162,20 +163,20 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
         <button
           onClick={onVolver}
           className="text-sm mb-6 flex items-center gap-1 hover:opacity-70 transition-opacity"
-          style={{ color: '#8A9BB8' }}
+          style={{ color: P.secundario }}
         >
           ← Volver
         </button>
 
         <h1
           className="text-2xl md:text-3xl mb-6"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+          style={{ fontFamily: "'Archivo Black', sans-serif", color: P.texto }}
         >
           {esEdicion ? 'Editar partido' : 'Nuevo partido'}
         </h1>
 
         {esEdicion && (
-          <p className="text-xs mb-6" style={{ color: '#5B6B85' }}>
+          <p className="text-xs mb-6" style={{ color: P.tenue }}>
             Los goles, videos, informes y observaciones del partido ahora se cargan desde la pestaña
             "Post-Partido" dentro de la convocatoria del partido.
           </p>
@@ -183,7 +184,7 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
 
         <div className="space-y-3 mb-6">
           <div>
-            <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: '#5B6B85' }}>
+            <label className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: P.tenue }}>
               Rival
             </label>
             <div className="flex items-center gap-3">
@@ -192,12 +193,12 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
                   src={escudoAMostrar}
                   alt="Escudo del rival"
                   className="w-10 h-10 rounded-lg object-contain shrink-0"
-                  style={{ backgroundColor: '#0F1419', border: '1px solid #2A3548' }}
+                  style={{ backgroundColor: P.fondo, border: "1px solid var(--ui-compartido-borde, #2A3548)" }}
                 />
               ) : (
                 <span
                   className="w-10 h-10 rounded-lg flex items-center justify-center text-sm shrink-0"
-                  style={{ backgroundColor: '#0F1419', color: '#5B6B85', border: '1px solid #2A3548' }}
+                  style={{ backgroundColor: P.fondo, color: P.tenue, border: "1px solid var(--ui-compartido-borde, #2A3548)" }}
                 >
                   🛡️
                 </span>
@@ -209,7 +210,7 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
                   setRivalManual('')
                   setEscudoManual('')
                 }}
-                className="flex-1 p-2.5 rounded-xl outline-none text-sm"
+                className="flex-1 p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               >
                 <option value="">
@@ -226,20 +227,20 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
               type="button"
               onClick={() => setMostrarNuevoEquipo(!mostrarNuevoEquipo)}
               className="text-xs mt-2"
-              style={{ color: '#4ADE80' }}
+              style={{ color: P.exito }}
             >
               {mostrarNuevoEquipo ? 'Cancelar' : '+ El rival no está en la lista'}
             </button>
           </div>
 
           {mostrarNuevoEquipo && (
-            <div className="p-3 rounded-xl space-y-2" style={{ backgroundColor: '#0F1419', border: '1px solid #2A3548' }}>
+            <div className="p-3 rounded-xl space-y-2" style={{ backgroundColor: P.fondo, border: "1px solid var(--ui-compartido-borde, #2A3548)" }}>
               <input
                 type="text"
                 placeholder="Nombre del nuevo equipo"
                 value={nombreNuevoEquipo}
                 onChange={(e) => setNombreNuevoEquipo(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               />
               <div className="flex items-center gap-3">
@@ -248,12 +249,12 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
                     src={escudoNuevoEquipo}
                     alt="Escudo"
                     className="w-10 h-10 rounded-lg object-contain shrink-0"
-                    style={{ backgroundColor: '#1A2332', border: '1px solid #2A3548' }}
+                    style={{ backgroundColor: P.superficie, border: "1px solid var(--ui-compartido-borde, #2A3548)" }}
                   />
                 )}
                 <label
                   className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 cursor-pointer"
-                  style={{ backgroundColor: '#1A2332', color: '#8A9BB8', border: '1px solid #2A3548' }}
+                  style={{ backgroundColor: P.superficie, color: P.secundario, border: "1px solid var(--ui-compartido-borde, #2A3548)" }}
                 >
                   {subiendoEscudoNuevo ? 'Subiendo...' : escudoNuevoEquipo ? 'Cambiar escudo' : '📤 Subir escudo'}
                   <input
@@ -270,7 +271,7 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
                 onClick={handleGuardarNuevoEquipo}
                 disabled={guardandoEquipo || !nombreNuevoEquipo}
                 className="w-full p-2 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-                style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+                style={{ backgroundColor: P.primario, color: P.sobrePrimario }}
               >
                 {guardandoEquipo ? 'Creando...' : 'Crear equipo y usarlo'}
               </button>
@@ -282,14 +283,14 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
               type="date"
               value={fecha}
               onChange={(e) => setFecha(e.target.value)}
-              className="p-2.5 rounded-xl outline-none text-sm"
+              className="p-2.5 rounded-xl ui-control outline-none text-sm"
               style={inputStyle}
             />
             <input
               type="time"
               value={hora}
               onChange={(e) => setHora(e.target.value)}
-              className="p-2.5 rounded-xl outline-none text-sm"
+              className="p-2.5 rounded-xl ui-control outline-none text-sm"
               style={inputStyle}
             />
           </div>
@@ -298,13 +299,13 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
             placeholder="Lugar / cancha"
             value={lugar}
             onChange={(e) => setLugar(e.target.value)}
-            className="w-full p-2.5 rounded-xl outline-none text-sm"
+            className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
             style={inputStyle}
           />
           <select
             value={localVisitante}
             onChange={(e) => setLocalVisitante(e.target.value)}
-            className="w-full p-2.5 rounded-xl outline-none text-sm"
+            className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
             style={inputStyle}
           >
             <option value="local">Local</option>
@@ -315,7 +316,7 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
             placeholder="Fecha del fixture (ej: Fecha 1)"
             value={numeroFecha}
             onChange={(e) => setNumeroFecha(e.target.value)}
-            className="w-full p-2.5 rounded-xl outline-none text-sm"
+            className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
             style={inputStyle}
           />
           <input
@@ -323,13 +324,13 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
             placeholder="Link del partido (opcional)"
             value={link}
             onChange={(e) => setLink(e.target.value)}
-            className="w-full p-2.5 rounded-xl outline-none text-sm"
+            className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
             style={inputStyle}
           />
         </div>
 
         {errorMsg && (
-          <p className="text-sm mb-4" style={{ color: '#F87171' }}>
+          <p className="text-sm mb-4" style={{ color: P.peligro }}>
             {errorMsg}
           </p>
         )}
@@ -338,7 +339,7 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
           onClick={handleGuardar}
           disabled={guardando}
           className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-          style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+          style={{ backgroundColor: P.primario, color: P.sobrePrimario }}
         >
           {guardando ? 'Guardando...' : esEdicion ? 'Guardar cambios' : 'Guardar partido'}
         </button>

@@ -1,0 +1,280 @@
+/* Base oscura identica a theme.js anterior. Sin cambiar estilos de body,
+   controles nativos, canvas, colores deportivos ni reglas de impresion. */
+:root {
+  --gestion-primario-fondo: #97C459;
+  --gestion-primario-texto: #1A1A18;
+  --gestion-estado-texto: #1A1A18;
+  --gestion-estado-claro-texto: #1A1A18;
+  --gestion-info: #7DD3FC;
+  --gestion-aviso: #FB923C;
+  --marca-amarillo: #F2C230;
+  --marca-negro: #0A0A0A;
+  --ui-fondo-pagina: #1A1A18;
+  --ui-fondo-sidebar: #0A0A0A;
+  --ui-superficie: #242422;
+  --ui-superficie-alternativa: #20201E;
+  --ui-borde: #2C2C2A;
+  --ui-texto: #FFFFFF;
+  --ui-texto-secundario: #B4B2A9;
+  --ui-texto-muted: #8A8A82;
+  --ui-acento: #F2C230;
+  --ui-texto-sobre-acento: #1A1A1A;
+  --ui-control-fondo: #1A1A18;
+  --ui-control-texto: #FFFFFF;
+  --ui-control-borde: #2C2C2A;
+  --ui-foco: #F2C230;
+  --ui-exito: #97C459;
+  --ui-peligro: #E24B4A;
+  --ui-neutro: #B4B2A9;
+  --ui-texto-acento: #F2C230;
+  --ui-nav-activo-texto: #F2C230;
+  --ui-nav-activo-fondo: rgba(242,194,48,0.08);
+  --ui-estado-fondo: #0F1419;
+  --ui-estado-texto: #F0F2F5;
+  --ui-estado-secundario: #8A9BB8;
+  --ui-carga-texto: #5B6B85;
+  --ui-estado-control: #1A2332;
+  --ui-estado-borde: #2A3548;
+  --ui-compartido-fondo: #0F1419;
+  --ui-compartido-superficie: #1A2332;
+  --ui-compartido-borde: #2A3548;
+  --ui-compartido-texto: #F0F2F5;
+  --ui-compartido-secundario: #8A9BB8;
+  --ui-compartido-tenue: #5B6B85;
+  --login-control-fondo: #FFFFFF;
+  --login-control-texto: #1A1A18;
+  --login-boton-texto: #1A1A18;
+  --inicio-fondo: #101010;
+  --inicio-tarjeta: #1B1B1B;
+  --inicio-tarjeta-hover: #232323;
+  --inicio-borde: #303030;
+  --inicio-amarillo-suave: #332B00;
+  --inicio-texto: #FAFAFA;
+  --inicio-secundario: #B5B5B5;
+  --inicio-tenue: #858585;
+  --inicio-texto-acento: #F6C900;
+  --inicio-texto-exito: #72C58B;
+  --inicio-texto-peligro: #F07171;
+  --inicio-texto-aviso: #EF9F27;
+  --inicio-esqueleto: #252525;
+  --inicio-interior: #111111;
+  --inicio-alerta-fondo: #2D1919;
+  --inicio-escudo-fondo: #0F0F0F;
+  --inicio-insignia-fondo: #0F0F0F75;
+  --inicio-cabecera: linear-gradient(115deg, #242000 0%, #191919 45%, #141414 100%);
+  --inicio-escudo-opacidad: 0.025;
+  --inicio-escudo-filtro: none;
+}
+
+/* Paleta preparada para pantalla. El tema de pantalla nunca cambia las
+   variables base utilizadas por las reglas de impresion ya existentes. */
+@media screen {
+  :root[data-apariencia='claro'] {
+    --wellness-resumen-fondo: var(--ui-fondo-pagina);
+    --informes-superficie: var(--ui-superficie);
+    --analisis-azul: #1D4ED8;
+    --analisis-panel: var(--ui-superficie);
+    --analisis-control: var(--ui-control-fondo);
+    --analisis-activo: var(--ui-superficie-alternativa);
+    --analisis-seleccion: var(--inicio-amarillo-suave);
+    --analisis-zona-seleccion: var(--inicio-amarillo-suave);
+    --analisis-cabecera: var(--inicio-cabecera);
+    --analisis-error-fondo: var(--inicio-alerta-fondo);
+    --analisis-error-borde: var(--ui-peligro);
+    --analisis-error-texto: var(--ui-peligro);
+    --analisis-exito-fondo: var(--plantel-estado-exito);
+    --analisis-exito-borde: var(--ui-exito);
+    --analisis-exito-texto: var(--ui-exito);
+    --analisis-editor-superficie: var(--ui-superficie);
+    --analisis-editor-fondo: var(--ui-control-fondo);
+    --analisis-editor-texto: var(--ui-texto);
+    --analisis-editor-borde: var(--ui-borde);
+    --analisis-editor-secundario: var(--ui-texto-secundario);
+    --analisis-editor-aviso: var(--ui-texto-acento);
+    --analisis-editor-error: var(--ui-peligro);
+    --analisis-editor-exito: var(--ui-exito);
+    --analisis-editor-link: var(--ui-texto-acento);
+    --analisis-editor-primario: var(--ui-acento);
+    --analisis-editor-sobre-primario: var(--ui-texto-sobre-acento);
+
+    --riesgo-chip-texto: #FFFFFF;
+    --riesgo-boton-texto: #111111;
+    --riesgo-detalle: var(--ui-superficie-alternativa);
+    --riesgo-respaldo: var(--ui-superficie);
+    --cmj-fila: var(--ui-superficie-alternativa);
+    --wellness-borde-icono: var(--ui-borde);
+    --wellness-fondo: var(--ui-fondo-pagina);
+    --wellness-tarjeta: var(--ui-superficie);
+    --wellness-fila-alternativa: var(--ui-superficie-alternativa);
+    --wellness-tarjeta-alternativa: var(--ui-superficie-alternativa);
+    --wellness-borde: var(--ui-borde);
+    --wellness-acento: var(--ui-acento);
+    --wellness-texto: var(--ui-texto);
+    --wellness-secundario: var(--ui-texto-secundario);
+    --wellness-muted: var(--ui-texto-muted);
+    --wellness-exito: var(--ui-exito);
+    --wellness-peligro: var(--ui-peligro);
+    --wellness-advertencia: var(--ui-texto-acento);
+    --wellness-cabecera: var(--inicio-cabecera);
+    --wellness-cabecera-carga: var(--inicio-cabecera);
+    --wellness-cabecera-comparativo: var(--inicio-cabecera);
+    --wellness-panel: var(--ui-superficie);
+    --wellness-panel-datos: var(--ui-superficie);
+    --wellness-tab: var(--ui-control-fondo);
+    --wellness-control: var(--ui-control-fondo);
+    --wellness-borde-panel: var(--ui-borde);
+    --wellness-interior: var(--ui-superficie);
+    --wellness-borde-interior: var(--ui-borde);
+    --wellness-texto-insignia: var(--ui-texto-secundario);
+    --wellness-pista: var(--ui-borde);
+    --wellness-borde-seccion: var(--ui-borde);
+    --wellness-amarillo-suave: var(--inicio-amarillo-suave);
+    --wellness-icono: var(--inicio-amarillo-suave);
+    --wellness-control-oscuro: var(--ui-control-fondo);
+    --wellness-borde-detalle: var(--ui-borde);
+    --wellness-insignia: var(--inicio-amarillo-suave);
+    --wellness-fondo-accion: var(--ui-superficie);
+    --wellness-borde-accion: var(--ui-borde);
+    --wellness-fila: var(--ui-superficie-alternativa);
+    --wellness-borde-fila: var(--ui-borde);
+    --wellness-foco: var(--ui-foco);
+    --wellness-primario: var(--ui-acento);
+    --wellness-primario-corto: var(--ui-acento);
+    --wellness-primario-wellness: var(--ui-acento);
+
+    --partidos-fila: var(--ui-superficie-alternativa);
+    --partidos-primario: var(--ui-acento);
+    --partidos-sobre-primario: var(--ui-texto-sobre-acento);
+    --evaluaciones-control-fondo: var(--ui-control-fondo);
+    --evaluaciones-control-texto: var(--ui-control-texto);
+    --evaluaciones-control-borde: var(--ui-control-borde);
+    --plantel-exito-suave: #EAF5E5;
+    --plantel-fondo-lista: var(--ui-fondo-pagina);
+    --plantel-tarjeta-lista: var(--ui-superficie);
+    --plantel-borde-lista: var(--ui-borde);
+    --plantel-control-lista: var(--ui-control-fondo);
+    --plantel-borde-control: var(--ui-control-borde);
+    --plantel-separador: var(--ui-borde);
+    --plantel-pista: var(--ui-borde);
+    --plantel-control-inactivo: var(--ui-control-fondo);
+    --plantel-seleccionado: var(--inicio-amarillo-suave);
+    --plantel-borde-seleccionado: var(--ui-foco);
+    --plantel-texto-lista: var(--ui-texto);
+    --plantel-texto-detalle: var(--ui-texto);
+    --plantel-texto-control: var(--ui-texto);
+    --plantel-secundario-lista: var(--ui-texto-secundario);
+    --plantel-amarillo-lista: var(--ui-acento);
+    --plantel-texto-amarillo-lista: var(--ui-texto-acento);
+    --plantel-blanco: var(--ui-texto);
+    --plantel-fondo-perfil: var(--ui-fondo-pagina);
+    --plantel-tarjeta-perfil: var(--ui-superficie);
+    --plantel-borde-perfil: var(--ui-borde);
+    --plantel-texto-perfil: var(--ui-texto);
+    --plantel-secundario-perfil: var(--ui-texto-secundario);
+    --plantel-tenue-perfil: var(--ui-texto-muted);
+    --plantel-amarillo-perfil: var(--ui-acento);
+    --plantel-texto-amarillo-perfil: var(--ui-texto-acento);
+    --plantel-amarillo-suave: var(--inicio-amarillo-suave);
+    --plantel-fila: var(--ui-superficie-alternativa);
+    --plantel-exito: var(--ui-exito);
+    --plantel-peligro: var(--ui-peligro);
+    --plantel-aviso: var(--ui-texto-acento);
+    --plantel-informacion: var(--gestion-info);
+    --plantel-lesion: var(--gestion-aviso);
+    --plantel-error-fondo: var(--inicio-alerta-fondo);
+    --plantel-error-texto: var(--ui-peligro);
+    --plantel-error-borde: var(--ui-peligro);
+    --plantel-aviso-fondo: var(--inicio-amarillo-suave);
+    --plantel-aviso-borde: var(--ui-texto-acento);
+    --plantel-estado-exito: var(--plantel-exito-suave);
+    --plantel-estado-aviso: var(--inicio-amarillo-suave);
+    --plantel-estado-neutro: var(--ui-superficie-alternativa);
+    --plantel-primario: var(--ui-acento);
+    --plantel-sobre-primario: var(--ui-texto-sobre-acento);
+    --plantel-cabecera: var(--inicio-cabecera);
+    --plantel-borde-acento: var(--ui-acento);
+
+    --gestion-primario-fondo: #F2C230;
+    --gestion-primario-texto: #111111;
+    --gestion-estado-texto: #FFFFFF;
+    --gestion-estado-claro-texto: #111111;
+    --gestion-info: #075985;
+    --gestion-aviso: #9A3412;
+    --ui-fondo-pagina: #F5F5F2;
+    --ui-fondo-sidebar: #F5F5F2;
+    --ui-superficie: #FFFFFF;
+    --ui-superficie-alternativa: #F5F5F2;
+    --ui-borde: #DEDEDE;
+    --ui-texto: #111111;
+    --ui-texto-secundario: #666666;
+    --ui-texto-muted: #666666;
+    --ui-texto-sobre-acento: #111111;
+    --ui-control-fondo: #FFFFFF;
+    --ui-control-texto: #111111;
+    --ui-control-borde: #DEDEDE;
+    --ui-foco: #755600;
+    --ui-exito: #3B641C;
+    --ui-peligro: #B42323;
+    --ui-neutro: #666666;
+    --ui-texto-acento: #755600;
+    --ui-nav-activo-texto: #111111;
+    --ui-nav-activo-fondo: #F2C230;
+    --ui-estado-fondo: #F5F5F2;
+    --ui-estado-texto: #111111;
+    --ui-estado-secundario: #666666;
+    --ui-carga-texto: #666666;
+    --ui-estado-control: #FFFFFF;
+    --ui-estado-borde: #DEDEDE;
+    --ui-compartido-fondo: #F5F5F2;
+    --ui-compartido-superficie: #FFFFFF;
+    --ui-compartido-borde: #DEDEDE;
+    --ui-compartido-texto: #111111;
+    --ui-compartido-secundario: #666666;
+    --ui-compartido-tenue: #666666;
+    --login-control-fondo: #FFFFFF;
+    --login-control-texto: #111111;
+    --login-boton-texto: #111111;
+    --inicio-fondo: #F5F5F2;
+    --inicio-tarjeta: #FFFFFF;
+    --inicio-tarjeta-hover: #F5F5F2;
+    --inicio-borde: #DEDEDE;
+    --inicio-amarillo-suave: #FFF3BA;
+    --inicio-texto: #111111;
+    --inicio-secundario: #666666;
+    --inicio-tenue: #666666;
+    --inicio-texto-acento: #755600;
+    --inicio-texto-exito: #28633B;
+    --inicio-texto-peligro: #A52626;
+    --inicio-texto-aviso: #805000;
+    --inicio-esqueleto: #E5E5DB;
+    --inicio-interior: #F5F5F2;
+    --inicio-alerta-fondo: #FCECEC;
+    --inicio-escudo-fondo: #FFF3BA;
+    --inicio-insignia-fondo: #FFFFFFB3;
+    --inicio-cabecera: linear-gradient(115deg, #FFF0B0 0%, #FAFAF3 65%, #FFFFFF 100%);
+    --inicio-escudo-opacidad: 0.09;
+    --inicio-escudo-filtro: grayscale(1) contrast(1.2);
+  }
+}
+
+/* Solo controles compartidos marcados explicitamente. Sin selectores globales. */
+@media screen {
+  .ui-control:focus-visible {
+    outline: 2px solid var(--ui-foco);
+    outline-offset: 2px;
+  }
+}
+
+/* Edicion de pases: solo pantalla, sin alterar el informe imprimible. */
+@media screen {
+  .analisis-editor-destinataria { background-color: var(--analisis-editor-superficie, oklch(27.9% 0.041 260.031)); color: var(--analisis-editor-texto, oklch(96.8% 0.007 247.896)); border-color: var(--analisis-editor-borde, oklch(44.6% 0.043 257.281)); }
+  .analisis-editor-destino { background-color: var(--analisis-editor-superficie, oklch(20.8% 0.042 265.755)); color: var(--analisis-editor-texto, oklch(96.8% 0.007 247.896)); border-color: var(--analisis-editor-primario, oklch(85.2% 0.199 91.936)); }
+  .analisis-control { background-color: var(--analisis-editor-fondo, oklch(20.8% 0.042 265.755)); color: var(--analisis-editor-texto, oklch(96.8% 0.007 247.896)); border-color: var(--analisis-editor-borde, oklch(44.6% 0.043 257.281)); }
+  .analisis-secundario { color: var(--analisis-editor-secundario, oklch(86.9% 0.022 252.894)); }
+  .analisis-aviso { color: var(--analisis-editor-aviso, oklch(92.4% 0.12 95.746)); }
+  .analisis-error { color: var(--analisis-editor-error, oklch(80.8% 0.114 19.571)); }
+  .analisis-exito { color: var(--analisis-editor-exito, oklch(87.1% 0.15 154.449)); }
+  .analisis-link { color: var(--analisis-editor-link, oklch(90.5% 0.182 98.111)); }
+  .analisis-primario { background-color: var(--analisis-editor-primario, oklch(85.2% 0.199 91.936)); color: var(--analisis-editor-sobre-primario, oklch(20.8% 0.042 265.755)); }
+  .analisis-quitar { border-color: var(--analisis-editor-borde, oklch(55.4% 0.046 257.417)); }
+}

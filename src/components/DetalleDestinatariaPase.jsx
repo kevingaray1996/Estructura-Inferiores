@@ -5,7 +5,7 @@ import {
   guardarDestinataria, mensajeErrorDestinataria, nombreDestinataria,
 } from '../utils/destinatariasPases'
 
-const control = 'w-full rounded-lg border border-slate-600 bg-slate-900 p-3 text-sm text-slate-100'
+const control = 'w-full rounded-lg border analisis-control ui-control p-3 text-sm'
 
 export default function DetalleDestinatariaPase({ evento, partido, autora, onClose, onSaved, onVideo }) {
   const [datos, setDatos] = useState(null)
@@ -77,7 +77,7 @@ export default function DetalleDestinatariaPase({ evento, partido, autora, onClo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-4">
       <section ref={panel} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="titulo-destinataria"
-        className="my-auto w-full max-w-lg rounded-xl border border-slate-600 bg-slate-800 p-5 text-slate-100"
+        className="my-auto w-full max-w-lg rounded-xl border analisis-editor-destinataria p-5"
         onKeyDown={(e) => {
           if (e.key === 'Escape' && !guardando) onClose()
           if (e.key === 'Tab') {
@@ -92,13 +92,13 @@ export default function DetalleDestinatariaPase({ evento, partido, autora, onClo
           }
         }}>
         <h3 id="titulo-destinataria" className="text-lg font-bold">Editar destinataria</h3>
-        <p className="mt-2 text-sm text-slate-300">{autora} · {evento.tipo}</p>
-        <p className="text-sm text-slate-300">{partido?.rival || 'Partido'} · {Math.floor(evento.segundo / 60)}:{String(evento.segundo % 60).padStart(2, '0')}</p>
+        <p className="mt-2 text-sm analisis-secundario">{autora} · {evento.tipo}</p>
+        <p className="text-sm analisis-secundario">{partido?.rival || 'Partido'} · {Math.floor(evento.segundo / 60)}:{String(evento.segundo % 60).padStart(2, '0')}</p>
         <form onSubmit={guardar} className="mt-4 space-y-4" aria-busy={cargando || guardando}>
           {cargando && <p role="status">Cargando detalle y convocadas…</p>}
           {!cargando && datos && <>
-            {datos.aviso && <p className="text-sm text-amber-200">{datos.aviso}</p>}
-            {datos.guardadaEsAutora && <p className="text-sm text-amber-200">La destinataria guardada coincide con la autora actual. Seleccioná otra jugadora o un estado sin identificar.</p>}
+            {datos.aviso && <p className="text-sm analisis-aviso">{datos.aviso}</p>}
+            {datos.guardadaEsAutora && <p className="text-sm analisis-aviso">La destinataria guardada coincide con la autora actual. Seleccioná otra jugadora o un estado sin identificar.</p>}
             <label className="block text-sm">Estado de destinataria
               <select className={`${control} mt-1`} value={estado} disabled={guardando || requiereRecarga}
                 onChange={(e) => setEstado(e.target.value)}>
@@ -115,18 +115,18 @@ export default function DetalleDestinatariaPase({ evento, partido, autora, onClo
               </select>
             </label>}
           </>}
-          {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
-          {error && !guardando && <button type="button" className="text-sm font-bold text-yellow-300"
+          {error && <p role="alert" className="text-sm analisis-error">{error}</p>}
+          {error && !guardando && <button type="button" className="text-sm font-bold analisis-link"
             onClick={() => setIntentoCarga((n) => n + 1)}>Recargar datos (reemplaza la selección del formulario)</button>}
           <div className="flex flex-wrap gap-3">
             <button type="submit" disabled={cargando || guardando || requiereRecarga || !datos ||
               (estado === 'identificada' && (!destinatariaId || destinatariaId === evento.jugador_id))}
-              className="rounded-lg bg-yellow-400 px-4 py-2 font-bold text-slate-900 disabled:opacity-40">
+              className="rounded-lg analisis-primario px-4 py-2 font-bold disabled:opacity-40">
               {guardando ? 'Guardando…' : 'Guardar destinataria'}
             </button>
             <button type="button" disabled={guardando} onClick={onClose} className="px-2 py-2 disabled:opacity-40">Cancelar</button>
             <button type="button" disabled={guardando} onClick={() => { onClose(); onVideo(evento) }}
-              className="py-2 text-sm text-yellow-300 disabled:opacity-40">Ir al video</button>
+              className="py-2 text-sm analisis-link disabled:opacity-40">Ir al video</button>
           </div>
         </form>
       </section>

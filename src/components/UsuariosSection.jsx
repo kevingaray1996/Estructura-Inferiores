@@ -1,3 +1,4 @@
+import { BOTON_GESTION, textoGestion } from '../appearance/gestion'
 import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -49,7 +50,7 @@ function UsuariosSection() {
 
   const inputStyle = {
     backgroundColor: COLORES.fondoTarjeta,
-    border: '1px solid COLORES.borde',
+    border: `1px solid ${COLORES.borde}`,
     color: COLORES.texto,
   }
 
@@ -193,14 +194,14 @@ function UsuariosSection() {
               onClick={handleExportarBackup}
               disabled={exportando}
               className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.texto, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.texto, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
             >
               {exportando ? 'Generando...' : '📦 Exportar backup'}
             </button>
             <button
               onClick={mostrarForm ? cancelarForm : abrirNuevo}
               className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80"
-              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+              style={BOTON_GESTION}
             >
               {mostrarForm ? 'Cancelar' : '+ Nuevo usuario'}
             </button>
@@ -214,7 +215,7 @@ function UsuariosSection() {
         {mostrarForm && (
           <div
             className="space-y-3 mb-8 p-4 rounded-xl"
-            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
           >
             {usuarioEditando && (
               <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
@@ -235,7 +236,7 @@ function UsuariosSection() {
               </div>
               <label
                 className="text-xs font-medium px-3 py-2 rounded-lg cursor-pointer hover:opacity-80"
-                style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario, border: '1px solid COLORES.borde' }}
+                style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario, border: `1px solid ${COLORES.borde}` }}
               >
                 Cambiar foto
                 <input type="file" accept="image/*" onChange={handleElegirFoto} className="hidden" />
@@ -248,7 +249,7 @@ function UsuariosSection() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={!!usuarioEditando}
-              className="w-full p-2.5 rounded-xl outline-none text-sm disabled:opacity-50"
+              className="w-full p-2.5 rounded-xl ui-control outline-none text-sm disabled:opacity-50"
               style={inputStyle}
             />
             <input
@@ -256,13 +257,13 @@ function UsuariosSection() {
               placeholder="Nombre (opcional)"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
-              className="w-full p-2.5 rounded-xl outline-none text-sm"
+              className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
               style={inputStyle}
             />
             <select
               value={rol}
               onChange={(e) => setRol(e.target.value)}
-              className="w-full p-2.5 rounded-xl outline-none text-sm"
+              className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
               style={inputStyle}
             >
               <option value="coordinacion">Coordinación (acceso total)</option>
@@ -274,7 +275,7 @@ function UsuariosSection() {
               <select
                 value={categoriaId}
                 onChange={(e) => setCategoriaId(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               >
                 <option value="">Categoría</option>
@@ -295,7 +296,7 @@ function UsuariosSection() {
                 placeholder="Ej: Videoanalista, Director Técnico, Ayudante de campo..."
                 value={cargoPdf}
                 onChange={(e) => setCargoPdf(e.target.value)}
-                className="w-full p-2.5 rounded-xl outline-none text-sm"
+                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               />
             </div>
@@ -320,7 +321,7 @@ function UsuariosSection() {
                   placeholder="Ej: 1"
                   value={ordenPdf}
                   onChange={(e) => setOrdenPdf(e.target.value)}
-                  className="w-24 p-2.5 rounded-xl outline-none text-sm"
+                  className="w-24 p-2.5 rounded-xl ui-control outline-none text-sm"
                   style={inputStyle}
                 />
               </div>
@@ -336,7 +337,7 @@ function UsuariosSection() {
               onClick={handleGuardar}
               disabled={guardando}
               className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+              style={BOTON_GESTION}
             >
               {guardando ? 'Guardando...' : usuarioEditando ? 'Guardar cambios' : 'Guardar usuario'}
             </button>
@@ -350,7 +351,7 @@ function UsuariosSection() {
             <div
               key={u.email}
               className="p-3 rounded-xl flex items-center justify-between gap-3"
-              style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+              style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div
@@ -377,7 +378,7 @@ function UsuariosSection() {
                 {u.aparece_en_pdf && (
                   <span
                     className="text-xs px-2 py-1 rounded-full"
-                    style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.acento }}
+                    style={{ backgroundColor: COLORES.fondoPagina, color: textoGestion(COLORES.acento) }}
                     title="Aparece en el PDF de citación"
                   >
                     📄

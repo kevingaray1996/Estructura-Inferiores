@@ -14,9 +14,9 @@ function CategoriaFiltro({ categoriaId, onCategoriaChange, busqueda, onBusquedaC
   }, [bloqueada])
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: 'var(--ui-compartido-superficie, #1A2332)',
+    border: '1px solid var(--ui-compartido-borde, #2A3548)',
+    color: 'var(--ui-compartido-texto, #F0F2F5)',
   }
 
   return (
@@ -24,7 +24,7 @@ function CategoriaFiltro({ categoriaId, onCategoriaChange, busqueda, onBusquedaC
       {bloqueada ? (
         <span
           className="p-2.5 rounded-xl text-sm sm:w-48 text-center"
-          style={{ ...inputStyle, color: '#8A9BB8' }}
+          style={{ ...inputStyle, color: 'var(--ui-compartido-secundario, #8A9BB8)' }}
         >
           {categoriaNombre || 'Tu categoría'}
         </span>
@@ -32,7 +32,7 @@ function CategoriaFiltro({ categoriaId, onCategoriaChange, busqueda, onBusquedaC
         <select
           value={categoriaId}
           onChange={(e) => onCategoriaChange(e.target.value)}
-          className="p-2.5 rounded-xl outline-none text-sm sm:w-48"
+          className="ui-control p-2.5 rounded-xl outline-none text-sm sm:w-48"
           style={inputStyle}
         >
           <option value="">Todas las categorías</option>
@@ -46,7 +46,7 @@ function CategoriaFiltro({ categoriaId, onCategoriaChange, busqueda, onBusquedaC
         placeholder="Buscar jugador..."
         value={busqueda}
         onChange={(e) => onBusquedaChange(e.target.value)}
-        className="p-2.5 rounded-xl outline-none text-sm flex-1"
+        className="ui-control p-2.5 rounded-xl outline-none text-sm flex-1"
         style={inputStyle}
       />
     </div>

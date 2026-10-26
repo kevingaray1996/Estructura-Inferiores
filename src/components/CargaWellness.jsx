@@ -1,3 +1,4 @@
+import { WELLNESS as UI, textoWellness } from '../appearance/wellness'
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -14,18 +15,7 @@ const CAMPOS = [
   { clave: 'animo_entrenar', label: 'Ánimo' },
 ]
 
-const UI = {
-  fondo: '#191917',
-  tarjeta: '#242422',
-  filaAlternativa: '#20201E',
-  borde: '#393934',
-  acento: '#F2C230',
-  texto: '#F4F2EA',
-  secundario: '#B5B3AA',
-  muted: '#85847C',
-  exito: '#97C459',
-  peligro: '#E77970',
-}
+// Paleta exclusiva de pantalla; informes y escalas conservan sus valores.
 
 function CargaWellness() {
   const [categoria, setCategoria] = useState(null)
@@ -169,7 +159,7 @@ function CargaWellness() {
         className="relative overflow-hidden rounded-2xl p-5 sm:p-6"
         style={{
           background:
-            'linear-gradient(125deg, #292925 0%, #20201D 65%, #302A19 100%)',
+            UI.cabeceraCarga,
           border: `1px solid ${UI.borde}`,
         }}
       >
@@ -184,7 +174,7 @@ function CargaWellness() {
         <div className="relative">
           <p
             className="text-[11px] font-bold tracking-[0.2em] uppercase mb-2"
-            style={{ color: UI.acento }}
+            style={{ color: textoWellness(UI.acento) }}
           >
             Comunicaciones · Rendimiento
           </p>
@@ -207,7 +197,7 @@ function CargaWellness() {
               style={{
                 backgroundColor: 'rgba(242,194,48,0.10)',
                 border: '1px solid rgba(242,194,48,0.25)',
-                color: UI.acento,
+                color: textoWellness(UI.acento),
               }}
             >
               <span
@@ -238,7 +228,7 @@ function CargaWellness() {
             className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
             style={{
               backgroundColor: 'rgba(242,194,48,0.10)',
-              color: UI.acento,
+              color: textoWellness(UI.acento),
             }}
           >
             <svg
@@ -296,7 +286,7 @@ function CargaWellness() {
               type="date"
               value={fecha}
               onChange={(e) => setFecha(e.target.value)}
-              className="w-full sm:w-56 p-3 rounded-xl outline-none text-sm"
+              className="w-full sm:w-56 p-3 rounded-xl ui-control outline-none text-sm"
               style={inputStyle}
             />
           </div>
@@ -335,7 +325,7 @@ function CargaWellness() {
               </p>
               <p
                 className="text-xl font-bold tabular-nums"
-                style={{ color: UI.acento }}
+                style={{ color: textoWellness(UI.acento) }}
               >
                 {cantidadCargadas}
               </p>
@@ -486,7 +476,7 @@ function CargaWellness() {
                                 className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0"
                                 style={{
                                   backgroundColor: 'rgba(242,194,48,0.10)',
-                                  color: UI.acento,
+                                  color: textoWellness(UI.acento),
                                   border: '1px solid rgba(242,194,48,0.20)',
                                 }}
                               >
@@ -529,7 +519,7 @@ function CargaWellness() {
                                 onChange={(e) =>
                                   cambiarValor(j.id, c.clave, e.target.value)
                                 }
-                                className="w-[4.25rem] p-2 rounded-lg outline-none text-sm text-center transition-colors focus:ring-1"
+                                className="w-[4.25rem] p-2 rounded-lg ui-control outline-none text-sm text-center transition-colors focus:ring-1"
                                 style={{
                                   ...inputStyle,
                                   borderColor:
@@ -593,7 +583,7 @@ function CargaWellness() {
             disabled={guardando}
             className="w-full p-3.5 rounded-xl font-bold transition-opacity hover:opacity-85 disabled:opacity-50"
             style={{
-              background: `linear-gradient(135deg, ${UI.acento}, #E5AE1E)`,
+              background: UI.primarioWellness,
               color: '#1A1914',
             }}
           >

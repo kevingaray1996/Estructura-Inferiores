@@ -1,3 +1,4 @@
+import { COLORES as C } from '../theme'
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
@@ -8,16 +9,7 @@ const ESCUDO_CLUB_URL =
 
 const AMARILLO = '#F2C230'
 
-const C = {
-  fondoTarjeta: '#242422',
-  borde: '#2C2C2A',
-  texto: '#FFFFFF',
-  textoSecundario: '#B4B2A9',
-  textoMuted: '#8A8A82',
-  acento: '#F2C230',
-  exito: '#97C459',
-  peligro: '#E24B4A',
-}
+// Paleta de pantalla; los generadores HTML conservan sus colores propios.
 
 const ROLES_EVALUAN = ['tecnico', 'coordinacion', 'preparador_fisico']
 const ROLES_VEN_TODO = ['tecnico', 'coordinacion', 'preparador_fisico', 'medico']
@@ -425,9 +417,9 @@ const card = {
 }
 
 const inputSt = {
-  background: '#fff',
-  color: '#111',
-  border: '1px solid #ccc',
+  background: 'var(--evaluaciones-control-fondo, #fff)',
+  color: 'var(--evaluaciones-control-texto, #111)',
+  border: '1px solid var(--evaluaciones-control-borde, #ccc)',
   borderRadius: 8,
   padding: '8px 10px',
   width: '100%',
@@ -476,7 +468,7 @@ function Visor({ visor, onCerrar }) {
       display: 'flex',
       flexDirection: 'column',
     }}>
-      <div style={{ display: 'flex', gap: 8, padding: 12 }}>
+      <div style={{ display: 'flex', gap: 8, padding: 12, background: C.fondoTarjeta }}>
         <button
           type="button"
           style={btnPrim}

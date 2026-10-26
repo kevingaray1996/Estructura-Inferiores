@@ -1,3 +1,4 @@
+import { BOTON_GESTION } from '../appearance/gestion'
 import { COLORES } from '../theme'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -36,7 +37,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
 
   const inputStyle = {
     backgroundColor: COLORES.fondoTarjeta,
-    border: '1px solid COLORES.borde',
+    border: `1px solid ${COLORES.borde}`,
     color: COLORES.texto,
   }
 
@@ -259,9 +260,9 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
             onClick={() => cambiarTipo('colectivo')}
             className="px-4 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
             style={{
-              backgroundColor: tipo === 'colectivo' ? COLORES.exito : COLORES.fondoTarjeta,
-              color: tipo === 'colectivo' ? COLORES.fondoPagina : COLORES.textoSecundario,
-              border: '1px solid COLORES.borde',
+              backgroundColor: tipo === 'colectivo' ? BOTON_GESTION.backgroundColor : COLORES.fondoTarjeta,
+              color: tipo === 'colectivo' ? BOTON_GESTION.color : COLORES.textoSecundario,
+              border: `1px solid ${COLORES.borde}`,
             }}
           >
             Colectivos
@@ -270,9 +271,9 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
             onClick={() => cambiarTipo('individual')}
             className="px-4 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
             style={{
-              backgroundColor: tipo === 'individual' ? COLORES.exito : COLORES.fondoTarjeta,
-              color: tipo === 'individual' ? COLORES.fondoPagina : COLORES.textoSecundario,
-              border: '1px solid COLORES.borde',
+              backgroundColor: tipo === 'individual' ? BOTON_GESTION.backgroundColor : COLORES.fondoTarjeta,
+              color: tipo === 'individual' ? BOTON_GESTION.color : COLORES.textoSecundario,
+              border: `1px solid ${COLORES.borde}`,
             }}
           >
             Individuales
@@ -281,9 +282,9 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
             onClick={() => cambiarTipo('entrenamiento')}
             className="px-4 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
             style={{
-              backgroundColor: tipo === 'entrenamiento' ? COLORES.exito : COLORES.fondoTarjeta,
-              color: tipo === 'entrenamiento' ? COLORES.fondoPagina : COLORES.textoSecundario,
-              border: '1px solid COLORES.borde',
+              backgroundColor: tipo === 'entrenamiento' ? BOTON_GESTION.backgroundColor : COLORES.fondoTarjeta,
+              color: tipo === 'entrenamiento' ? BOTON_GESTION.color : COLORES.textoSecundario,
+              border: `1px solid ${COLORES.borde}`,
             }}
           >
             Entrenamientos
@@ -292,9 +293,9 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
             onClick={() => cambiarTipo('estadisticas')}
             className="px-4 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
             style={{
-              backgroundColor: tipo === 'estadisticas' ? COLORES.exito : COLORES.fondoTarjeta,
-              color: tipo === 'estadisticas' ? COLORES.fondoPagina : COLORES.textoSecundario,
-              border: '1px solid COLORES.borde',
+              backgroundColor: tipo === 'estadisticas' ? BOTON_GESTION.backgroundColor : COLORES.fondoTarjeta,
+              color: tipo === 'estadisticas' ? BOTON_GESTION.color : COLORES.textoSecundario,
+              border: `1px solid ${COLORES.borde}`,
             }}
           >
             📊 Estadísticas
@@ -304,7 +305,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
         {tipo === 'individual' && jugadorFiltroId && (
           <div
             className="flex items-center justify-between gap-3 p-3 rounded-xl mb-4"
-            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
           >
             <p className="text-sm" style={{ color: COLORES.textoSecundario }}>
               Mostrando videos de:{' '}
@@ -338,7 +339,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
               <select
                 value={categoriaId}
                 onChange={(e) => setCategoriaId(e.target.value)}
-                className="p-2.5 rounded-xl outline-none text-sm sm:w-48"
+                className="p-2.5 rounded-xl ui-control outline-none text-sm sm:w-48"
                 style={inputStyle}
               >
                 <option value="">Todas las categorías</option>
@@ -357,7 +358,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
               placeholder="Buscar jugador..."
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              className="p-2.5 rounded-xl outline-none text-sm flex-1"
+              className="p-2.5 rounded-xl ui-control outline-none text-sm flex-1"
               style={inputStyle}
             />
           )}
@@ -366,7 +367,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
             <select
               value={momentoFiltro}
               onChange={(e) => setMomentoFiltro(e.target.value)}
-              className="p-2.5 rounded-xl outline-none text-sm sm:w-44"
+              className="p-2.5 rounded-xl ui-control outline-none text-sm sm:w-44"
               style={inputStyle}
             >
               <option value="">Todos los análisis</option>
@@ -383,13 +384,13 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                 placeholder="Buscar por contenido (ej: definición, presión...)"
                 value={busquedaContenido}
                 onChange={(e) => setBusquedaContenido(e.target.value)}
-                className="p-2.5 rounded-xl outline-none text-sm flex-1"
+                className="p-2.5 rounded-xl ui-control outline-none text-sm flex-1"
                 style={inputStyle}
               />
               <select
                 value={cantidadFiltro}
                 onChange={(e) => setCantidadFiltro(e.target.value)}
-                className="p-2.5 rounded-xl outline-none text-sm sm:w-44"
+                className="p-2.5 rounded-xl ui-control outline-none text-sm sm:w-44"
                 style={inputStyle}
               >
                 <option value="">Cantidad de jugadores</option>
@@ -404,7 +405,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
             <button
               onClick={abrirFormulario}
               className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 shrink-0"
-              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+              style={BOTON_GESTION}
             >
               {mostrarForm ? 'Cancelar' : '+ Nuevo video'}
             </button>
@@ -415,7 +416,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
           <button
             onClick={onIrABiblioteca}
             className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 mb-4 w-full sm:w-auto"
-            style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.textoSecundario, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.textoSecundario, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
           >
             📚 Ir a Biblioteca
           </button>
@@ -424,13 +425,13 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
         {mostrarForm && tipo !== 'estadisticas' && (
           <div
             className="space-y-3 mb-6 p-4 rounded-xl"
-            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+            style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
           >
             <input
               type="date"
               value={fecha}
               onChange={(e) => setFecha(e.target.value)}
-              className="w-full p-2.5 rounded-xl outline-none text-sm"
+              className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
               style={inputStyle}
             />
 
@@ -447,7 +448,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                 <select
                   value={catForm}
                   onChange={(e) => setCatForm(e.target.value)}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                   style={inputStyle}
                 >
                   <option value="">Categoría</option>
@@ -461,7 +462,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                 <select
                   value={momentoForm}
                   onChange={(e) => setMomentoForm(e.target.value)}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                   style={inputStyle}
                 >
                   <option value="">Análisis</option>
@@ -472,7 +473,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                 <select
                   value={partidoForm}
                   onChange={(e) => setPartidoForm(e.target.value)}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                   style={inputStyle}
                 >
                   <option value="">Partido (opcional)</option>
@@ -487,7 +488,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                   value={descripcion}
                   onChange={(e) => setDescripcion(e.target.value)}
                   rows={2}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm resize-none"
+                  className="w-full p-2.5 rounded-xl ui-control outline-none text-sm resize-none"
                   style={inputStyle}
                 />
               </>
@@ -498,7 +499,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                 <select
                   value={jugadorForm}
                   onChange={(e) => setJugadorForm(e.target.value)}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                   style={inputStyle}
                 >
                   <option value="">Jugador</option>
@@ -511,7 +512,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                 <select
                   value={partidoForm}
                   onChange={(e) => setPartidoForm(e.target.value)}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                   style={inputStyle}
                 >
                   <option value="">Partido (opcional)</option>
@@ -537,7 +538,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                 <select
                   value={catForm}
                   onChange={(e) => setCatForm(e.target.value)}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                   style={inputStyle}
                 >
                   <option value="">Categoría</option>
@@ -553,7 +554,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                   placeholder="Contenido (ej: definición, presión alta, salida de arco)"
                   value={contenido}
                   onChange={(e) => setContenido(e.target.value)}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                   style={inputStyle}
                 />
                 <textarea
@@ -561,7 +562,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                   value={descripcion}
                   onChange={(e) => setDescripcion(e.target.value)}
                   rows={2}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm resize-none"
+                  className="w-full p-2.5 rounded-xl ui-control outline-none text-sm resize-none"
                   style={inputStyle}
                 />
                 <input
@@ -569,7 +570,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                   placeholder="Cantidad de jugadores"
                   value={cantidadJugadores}
                   onChange={(e) => setCantidadJugadores(e.target.value)}
-                  className="w-full p-2.5 rounded-xl outline-none text-sm"
+                  className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                   style={inputStyle}
                 />
                 <label
@@ -595,12 +596,12 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                           src={imagenBiblioteca}
                           alt="Vista previa"
                           className="w-16 h-16 rounded-lg object-cover shrink-0"
-                          style={{ border: '1px solid COLORES.borde' }}
+                          style={{ border: `1px solid ${COLORES.borde}` }}
                         />
                       )}
                       <label
                         className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 cursor-pointer"
-                        style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario, border: '1px solid COLORES.borde' }}
+                        style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario, border: `1px solid ${COLORES.borde}` }}
                       >
                         {subiendoImagenBiblioteca ? 'Subiendo...' : imagenBiblioteca ? 'Cambiar imagen' : '📤 Subir imagen'}
                         <input
@@ -632,7 +633,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
               placeholder="Link de YouTube"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="w-full p-2.5 rounded-xl outline-none text-sm"
+              className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
               style={inputStyle}
             />
 
@@ -640,7 +641,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
               onClick={handleGuardar}
               disabled={guardando}
               className="w-full p-2.5 rounded-xl font-medium text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: COLORES.exito, color: COLORES.fondoPagina }}
+              style={BOTON_GESTION}
             >
               {guardando ? 'Guardando...' : 'Guardar video'}
             </button>
@@ -676,7 +677,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
                     target="_blank"
                     rel="noreferrer"
                     className="block p-3.5 rounded-xl hover:-translate-y-0.5 transition-all duration-200"
-                    style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: '3px solid COLORES.acento', borderLeft: '1px solid COLORES.borde', borderRight: '1px solid COLORES.borde', borderBottom: '1px solid COLORES.borde' }}
+                    style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
                   >
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium" style={{ color: COLORES.texto }}>

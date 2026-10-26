@@ -1,3 +1,4 @@
+import { PLANTEL as P } from '../appearance/plantel'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
@@ -108,9 +109,9 @@ function CargaMasiva({ onVolver, onGuardado }) {
   }
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: "var(--ui-compartido-superficie, #1A2332)",
+    border: "1px solid var(--ui-compartido-borde, #2A3548)",
+    color: "var(--ui-compartido-texto, #F0F2F5)",
   }
 
   const validas = filas.filter((f) => f.errores.length === 0)
@@ -122,18 +123,18 @@ function CargaMasiva({ onVolver, onGuardado }) {
         <button
           onClick={onVolver}
           className="text-sm mb-6 flex items-center gap-1 hover:opacity-70 transition-opacity"
-          style={{ color: '#8A9BB8' }}
+          style={{ color: "var(--ui-compartido-secundario, #8A9BB8)" }}
         >
           ← Volver al plantel
         </button>
 
         <h1
           className="text-2xl md:text-3xl mb-2"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+          style={{ fontFamily: "'Archivo Black', sans-serif", color: "var(--ui-compartido-texto, #F0F2F5)" }}
         >
           Carga masiva de jugadores
         </h1>
-        <p className="text-sm mb-6" style={{ color: '#5B6B85' }}>
+        <p className="text-sm mb-6" style={{ color: "var(--ui-compartido-tenue, #5B6B85)" }}>
           Pegá los datos copiados desde Excel/Sheets, una fila por jugador. Columnas en este orden: Apellido, Nombre, Categoría, Fecha de nacimiento (DD/MM/AAAA), Posición, Pie hábil.
         </p>
 
@@ -142,7 +143,7 @@ function CargaMasiva({ onVolver, onGuardado }) {
           onChange={(e) => setTexto(e.target.value)}
           placeholder={'Pérez\tJuan\t7ma\t12/05/2011\tDelantero centro\tderecho\nGómez\tMartín\t7ma\t03/02/2011\tArquero\tizquierdo'}
           rows={8}
-          className="w-full p-3 rounded-xl outline-none text-sm font-mono resize-none mb-4"
+          className="w-full p-3 rounded-xl ui-control outline-none text-sm font-mono resize-none mb-4"
           style={inputStyle}
         />
 
@@ -150,7 +151,7 @@ function CargaMasiva({ onVolver, onGuardado }) {
           onClick={handlePrevisualizar}
           disabled={!texto.trim()}
           className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 disabled:opacity-50 mb-6"
-          style={{ backgroundColor: '#1A2332', color: '#F0F2F5', border: '1px solid #2A3548' }}
+          style={{ backgroundColor: "var(--ui-compartido-superficie, #1A2332)", color: "var(--ui-compartido-texto, #F0F2F5)", border: "1px solid var(--ui-compartido-borde, #2A3548)" }}
         >
           Previsualizar
         </button>
@@ -158,11 +159,11 @@ function CargaMasiva({ onVolver, onGuardado }) {
         {filas.length > 0 && (
           <>
             <div className="flex items-center gap-3 mb-3">
-              <span className="text-sm" style={{ color: '#4ADE80' }}>
+              <span className="text-sm" style={{ color: "var(--plantel-exito, #4ADE80)" }}>
                 {validas.length} listos para cargar
               </span>
               {invalidas.length > 0 && (
-                <span className="text-sm" style={{ color: '#F87171' }}>
+                <span className="text-sm" style={{ color: "var(--plantel-peligro, #F87171)" }}>
                   {invalidas.length} con errores
                 </span>
               )}
@@ -174,20 +175,20 @@ function CargaMasiva({ onVolver, onGuardado }) {
                   key={f.fila}
                   className="p-3 rounded-xl text-sm"
                   style={{
-                    backgroundColor: '#1A2332',
-                    border: `1px solid ${f.errores.length > 0 ? '#F87171' : '#2A3548'}`,
+                    backgroundColor: "var(--ui-compartido-superficie, #1A2332)",
+                    border: `1px solid ${f.errores.length > 0 ? "var(--plantel-peligro, #F87171)" : "var(--ui-compartido-borde, #2A3548)"}`,
                   }}
                 >
                   <div className="flex items-center justify-between">
-                    <p style={{ color: '#F0F2F5' }}>
+                    <p style={{ color: "var(--ui-compartido-texto, #F0F2F5)" }}>
                       {f.apellido}, {f.nombre}
                     </p>
-                    <span className="text-xs" style={{ color: '#8A9BB8' }}>
+                    <span className="text-xs" style={{ color: "var(--ui-compartido-secundario, #8A9BB8)" }}>
                       {f.categoriaTexto}
                     </span>
                   </div>
                   {f.errores.length > 0 && (
-                    <p className="text-xs mt-1" style={{ color: '#F87171' }}>
+                    <p className="text-xs mt-1" style={{ color: "var(--plantel-peligro, #F87171)" }}>
                       Fila {f.fila}: {f.errores.join(', ')}
                     </p>
                   )}
@@ -199,7 +200,7 @@ function CargaMasiva({ onVolver, onGuardado }) {
               onClick={handleConfirmar}
               disabled={guardando || validas.length === 0}
               className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+              style={{ backgroundColor: P.primario, color: P.sobrePrimario }}
             >
               {guardando ? 'Cargando...' : `Confirmar carga de ${validas.length} jugador${validas.length !== 1 ? 'es' : ''}`}
             </button>
@@ -210,7 +211,7 @@ function CargaMasiva({ onVolver, onGuardado }) {
           <>
             <p
               className="text-sm mt-4"
-              style={{ color: resultado.ok ? '#4ADE80' : '#F87171' }}
+              style={{ color: resultado.ok ? "var(--plantel-exito, #4ADE80)" : "var(--plantel-peligro, #F87171)" }}
             >
               {resultado.ok
                 ? `✅ Se cargaron ${resultado.cantidad} jugadores correctamente.`
@@ -220,7 +221,7 @@ function CargaMasiva({ onVolver, onGuardado }) {
               <button
                 onClick={onGuardado}
                 className="text-sm font-medium px-4 py-2.5 rounded-xl transition-opacity hover:opacity-80 mt-3"
-                style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+                style={{ backgroundColor: P.primario, color: P.sobrePrimario }}
               >
                 Volver al plantel
               </button>

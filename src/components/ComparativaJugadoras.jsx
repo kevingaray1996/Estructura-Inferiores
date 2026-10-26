@@ -1,3 +1,4 @@
+import { PARTIDOS as P } from '../appearance/partidos'
 import { useEffect, useState } from 'react'
 import { obtenerEstadisticasCategoria } from '../utils/exportarEstadisticas'
 
@@ -52,40 +53,40 @@ function ComparativaJugadoras({ categoriaId, categoriaNombre, onVolver }) {
         <button
           onClick={onVolver}
           className="text-sm mb-6 flex items-center gap-1 hover:opacity-70 transition-opacity"
-          style={{ color: '#8A9BB8' }}
+          style={{ color: P.secundario }}
         >
           ← Volver
         </button>
 
         <h1
           className="text-2xl md:text-3xl mb-1"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: '#F0F2F5' }}
+          style={{ fontFamily: "'Archivo Black', sans-serif", color: P.texto }}
         >
           Comparativa de jugadoras
         </h1>
-        <p className="text-sm mb-6" style={{ color: '#8A9BB8' }}>
+        <p className="text-sm mb-6" style={{ color: P.secundario }}>
           {categoriaNombre} — hacé click en una columna para ordenar
         </p>
 
-        {cargando && <p style={{ color: '#5B6B85' }}>Cargando...</p>}
+        {cargando && <p style={{ color: P.tenue }}>Cargando...</p>}
 
         {!cargando && filas.length === 0 && (
-          <p className="text-sm" style={{ color: '#5B6B85' }}>
+          <p className="text-sm" style={{ color: P.tenue }}>
             No hay estadísticas cargadas todavía para esta categoría.
           </p>
         )}
 
         {!cargando && filas.length > 0 && (
-          <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #2A3548' }}>
+          <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid var(--ui-compartido-borde, #2A3548)" }}>
             <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ backgroundColor: '#1A2332' }}>
+                <tr style={{ backgroundColor: P.superficie }}>
                   {COLUMNAS.map((c) => (
                     <th
                       key={c.clave}
                       onClick={() => cambiarOrden(c.clave)}
                       className="text-left p-2.5 whitespace-nowrap cursor-pointer select-none hover:opacity-80"
-                      style={{ color: ordenPor === c.clave ? '#4ADE80' : '#8A9BB8' }}
+                      style={{ color: ordenPor === c.clave ? P.exito : P.secundario }}
                     >
                       {c.label} {ordenPor === c.clave ? (ordenDesc ? '↓' : '↑') : ''}
                     </th>
@@ -94,17 +95,17 @@ function ComparativaJugadoras({ categoriaId, categoriaNombre, onVolver }) {
               </thead>
               <tbody>
                 {filasOrdenadas.map((f, i) => (
-                  <tr key={`${f.apellido}-${f.nombre}-${i}`} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : '#151D2A' }}>
-                    <td className="p-2.5 font-medium whitespace-nowrap" style={{ color: '#F0F2F5' }}>
+                  <tr key={`${f.apellido}-${f.nombre}-${i}`} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : P.fila }}>
+                    <td className="p-2.5 font-medium whitespace-nowrap" style={{ color: P.texto }}>
                       {f.apellido}, {f.nombre}
                     </td>
-                    <td className="p-2.5 whitespace-nowrap" style={{ color: '#8A9BB8' }}>{f.partidos}</td>
-                    <td className="p-2.5 whitespace-nowrap" style={{ color: '#8A9BB8' }}>{f.titularidades}</td>
-                    <td className="p-2.5 whitespace-nowrap" style={{ color: '#8A9BB8' }}>{f.minutos}</td>
-                    <td className="p-2.5 whitespace-nowrap font-bold" style={{ color: '#4ADE80' }}>{f.goles}</td>
-                    <td className="p-2.5 whitespace-nowrap" style={{ color: '#8A9BB8' }}>{f.asistencias}</td>
-                    <td className="p-2.5 whitespace-nowrap" style={{ color: '#FBBF24' }}>{f.amarillas}</td>
-                    <td className="p-2.5 whitespace-nowrap" style={{ color: '#F87171' }}>{f.rojas}</td>
+                    <td className="p-2.5 whitespace-nowrap" style={{ color: P.secundario }}>{f.partidos}</td>
+                    <td className="p-2.5 whitespace-nowrap" style={{ color: P.secundario }}>{f.titularidades}</td>
+                    <td className="p-2.5 whitespace-nowrap" style={{ color: P.secundario }}>{f.minutos}</td>
+                    <td className="p-2.5 whitespace-nowrap font-bold" style={{ color: P.exito }}>{f.goles}</td>
+                    <td className="p-2.5 whitespace-nowrap" style={{ color: P.secundario }}>{f.asistencias}</td>
+                    <td className="p-2.5 whitespace-nowrap" style={{ color: P.aviso }}>{f.amarillas}</td>
+                    <td className="p-2.5 whitespace-nowrap" style={{ color: P.peligro }}>{f.rojas}</td>
                   </tr>
                 ))}
               </tbody>

@@ -1,3 +1,4 @@
+import { PARTIDOS as P } from '../appearance/partidos'
 import { Fragment, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
@@ -41,7 +42,7 @@ function EstadoChip({ resultado }) {
   }
 
   return (
-    <span className="text-xs" style={{ color: '#5B6B85' }}>
+    <span className="text-xs" style={{ color: P.tenue }}>
       Sin datos
     </span>
   )
@@ -120,9 +121,9 @@ function RPEComparativo() {
   const jugadorSeleccionado = jugadores.find((jugador) => jugador.id === jugadorId)
 
   const inputStyle = {
-    backgroundColor: '#1A2332',
-    border: '1px solid #2A3548',
-    color: '#F0F2F5',
+    backgroundColor: P.superficie,
+    border: "1px solid var(--ui-compartido-borde, #2A3548)",
+    color: P.texto,
   }
 
   async function descargarPDF() {
@@ -139,7 +140,7 @@ function RPEComparativo() {
     }
   }
 
-  if (cargando) return <p style={{ color: '#5B6B85' }}>Cargando...</p>
+  if (cargando) return <p style={{ color: P.tenue }}>Cargando...</p>
 
   return (
     <div>
@@ -147,9 +148,9 @@ function RPEComparativo() {
         <div
           className="px-3 py-2 rounded-xl text-sm"
           style={{
-            backgroundColor: '#1A2332',
-            border: '1px solid #2A3548',
-            color: '#8A9BB8',
+            backgroundColor: P.superficie,
+            border: "1px solid var(--ui-compartido-borde, #2A3548)",
+            color: P.secundario,
           }}
         >
           Categoría fija: Primera División
@@ -158,7 +159,7 @@ function RPEComparativo() {
         <select
           value={jugadorId}
           onChange={(event) => setJugadorId(event.target.value)}
-          className="w-full sm:w-72 p-2.5 rounded-xl outline-none text-sm"
+          className="w-full sm:w-72 p-2.5 rounded-xl ui-control outline-none text-sm"
           style={inputStyle}
         >
           <option value="">Todo el plantel (general)</option>
@@ -173,27 +174,27 @@ function RPEComparativo() {
           onClick={descargarPDF}
           disabled={generando}
           className="px-4 py-2.5 rounded-xl text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-          style={{ backgroundColor: '#4ADE80', color: '#0F1419' }}
+          style={{ backgroundColor: P.primario, color: P.sobrePrimario }}
         >
           {generando ? 'Generando...' : 'Descargar PDF'}
         </button>
       </div>
 
-      <p className="text-sm mb-4" style={{ color: '#5B6B85' }}>
+      <p className="text-sm mb-4" style={{ color: P.tenue }}>
         Carga (minutos reales × RPE) y ACWR (carga aguda de 7 días / carga crónica promedio de 28 días).
       </p>
 
       {!jugadorId && (
-        <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #2A3548' }}>
+        <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid var(--ui-compartido-borde, #2A3548)" }}>
           <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ backgroundColor: '#1A2332' }}>
-                <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>Jugadora</th>
-                <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>Carga aguda (7d)</th>
-                <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>Carga crónica</th>
-                <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>ACWR</th>
-                <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>Días sin RPE (28d)</th>
-                <th className="text-left p-2.5" style={{ color: '#8A9BB8' }}>Estado</th>
+              <tr style={{ backgroundColor: P.superficie }}>
+                <th className="text-left p-2.5" style={{ color: P.secundario }}>Jugadora</th>
+                <th className="text-left p-2.5" style={{ color: P.secundario }}>Carga aguda (7d)</th>
+                <th className="text-left p-2.5" style={{ color: P.secundario }}>Carga crónica</th>
+                <th className="text-left p-2.5" style={{ color: P.secundario }}>ACWR</th>
+                <th className="text-left p-2.5" style={{ color: P.secundario }}>Días sin RPE (28d)</th>
+                <th className="text-left p-2.5" style={{ color: P.secundario }}>Estado</th>
               </tr>
             </thead>
             <tbody>
@@ -206,23 +207,23 @@ function RPEComparativo() {
                     <tr
                       onClick={() => setFilaExpandida((actual) => (actual === jugador.id ? null : jugador.id))}
                       style={{
-                        backgroundColor: index % 2 === 0 ? 'transparent' : '#151D2A',
+                        backgroundColor: index % 2 === 0 ? 'transparent' : P.fila,
                         cursor: 'pointer',
                       }}
                     >
-                      <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                      <td className="p-2.5" style={{ color: P.texto }}>
                         {jugador.apellido}, {jugador.nombre}
                       </td>
-                      <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                      <td className="p-2.5" style={{ color: P.texto }}>
                         {formatearValor(resultado?.cargaAguda, 0)}
                       </td>
-                      <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                      <td className="p-2.5" style={{ color: P.texto }}>
                         {formatearValor(resultado?.cargaCronicaSemanal, 0)}
                       </td>
-                      <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                      <td className="p-2.5" style={{ color: P.texto }}>
                         {formatearValor(resultado?.acwr, 2)}
                       </td>
-                      <td className="p-2.5" style={{ color: '#F0F2F5' }}>
+                      <td className="p-2.5" style={{ color: P.texto }}>
                         {fechasSinRPE.length}
                       </td>
                       <td className="p-2.5">
@@ -231,7 +232,7 @@ function RPEComparativo() {
                     </tr>
                     {expandida && (
                       <tr>
-                        <td className="p-2.5" colSpan={6} style={{ color: '#F0F2F5', backgroundColor: '#121A28' }}>
+                        <td className="p-2.5" colSpan={6} style={{ color: P.texto, backgroundColor: 'var(--riesgo-detalle, #121A28)' }}>
                           <div className="text-sm">
                             <div className="font-semibold mb-2">Fechas sin RPE cargado (28d)</div>
                             {fechasSinRPE.length > 0 ? (
@@ -240,14 +241,14 @@ function RPEComparativo() {
                                   <span
                                     key={fecha}
                                     className="px-2 py-1 rounded-full text-xs"
-                                    style={{ backgroundColor: '#1A2332', color: '#F0F2F5' }}
+                                    style={{ backgroundColor: P.superficie, color: P.texto }}
                                   >
                                     {fecha}
                                   </span>
                                 ))}
                               </div>
                             ) : (
-                              <span style={{ color: '#5B6B85' }}>Sin fechas pendientes</span>
+                              <span style={{ color: P.tenue }}>Sin fechas pendientes</span>
                             )}
                           </div>
                         </td>
@@ -265,28 +266,28 @@ function RPEComparativo() {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="p-3 rounded-xl" style={inputStyle}>
-              <p className="text-xs" style={{ color: '#5B6B85' }}>
+              <p className="text-xs" style={{ color: P.tenue }}>
                 Carga aguda (7 días)
               </p>
-              <p className="text-lg font-bold" style={{ color: '#F0F2F5' }}>
+              <p className="text-lg font-bold" style={{ color: P.texto }}>
                 {formatearValor(resultadoIndividual.cargaAguda, 0)}
               </p>
             </div>
 
             <div className="p-3 rounded-xl" style={inputStyle}>
-              <p className="text-xs" style={{ color: '#5B6B85' }}>
+              <p className="text-xs" style={{ color: P.tenue }}>
                 Carga crónica (prom. semanal)
               </p>
-              <p className="text-lg font-bold" style={{ color: '#F0F2F5' }}>
+              <p className="text-lg font-bold" style={{ color: P.texto }}>
                 {formatearValor(resultadoIndividual.cargaCronicaSemanal, 0)}
               </p>
             </div>
 
             <div className="p-3 rounded-xl" style={inputStyle}>
-              <p className="text-xs" style={{ color: '#5B6B85' }}>
+              <p className="text-xs" style={{ color: P.tenue }}>
                 ACWR
               </p>
-              <p className="text-lg font-bold" style={{ color: '#F0F2F5' }}>
+              <p className="text-lg font-bold" style={{ color: P.texto }}>
                 {formatearValor(resultadoIndividual.acwr, 2)}
               </p>
             </div>
@@ -296,9 +297,9 @@ function RPEComparativo() {
             <div
               className="rounded-xl p-3 text-sm"
               style={{
-                backgroundColor: '#172235',
-                border: '1px solid #2A3548',
-                color: '#F0F2F5',
+                backgroundColor: 'var(--riesgo-respaldo, #172235)',
+                border: "1px solid var(--ui-compartido-borde, #2A3548)",
+                color: P.texto,
               }}
             >
               <strong>Datos insuficientes para ACWR.</strong>{' '}
@@ -312,9 +313,9 @@ function RPEComparativo() {
             <div
               className="rounded-xl p-3 text-sm"
               style={{
-                backgroundColor: '#172235',
-                border: '1px solid #2A3548',
-                color: '#F0F2F5',
+                backgroundColor: 'var(--riesgo-respaldo, #172235)',
+                border: "1px solid var(--ui-compartido-borde, #2A3548)",
+                color: P.texto,
               }}
             >
               <div className="font-semibold mb-2">Fechas con entrenamiento/partido sin RPE cargado</div>
@@ -323,7 +324,7 @@ function RPEComparativo() {
                   <span
                     key={fecha}
                     className="px-2 py-1 rounded-full text-xs"
-                    style={{ backgroundColor: '#1A2332', color: '#F0F2F5' }}
+                    style={{ backgroundColor: P.superficie, color: P.texto }}
                   >
                     {fecha}
                   </span>
