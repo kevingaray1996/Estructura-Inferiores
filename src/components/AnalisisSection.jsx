@@ -3,6 +3,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import DetalleDestinatariaPase from './DetalleDestinatariaPase'
+import {
+  cargarResumenDestinatarias, esPase, ESTADOS_DESTINATARIA,
+  nombreDestinataria, UUID_EDITOR_PASES,
+} from '../utils/destinatariasPases'
 
 const AMARILLO = '#F2C230'
 const PANEL = '#151D29'
@@ -495,6 +500,10 @@ function cargarYouTubeAPI() {
 export default function AnalisisSection() {
   const [usuario, setUsuario] = useState(null)
   const [esAdmin, setEsAdmin] = useState(false)
+  const [puedeEditarDestinatarias, setPuedeEditarDestinatarias] = useState(false)
+  const [paseDestinataria, setPaseDestinataria] = useState(null)
+  const [resumenDestinatarias, setResumenDestinatarias] = useState({ detalles: {}, nombres: {}, cargando: true, error: '' })
+  const [recargaDestinatarias, setRecargaDestinatarias] = useState(0)
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
@@ -596,6 +605,7 @@ export default function AnalisisSection() {
       if (authError) throw authError
 
       const authUser = authData?.user
+      setPuedeEditarDestinatarias(authUser?.id === UUID_EDITOR_PASES)
 
       if (!authUser?.email) {
         setUsuario(null)
@@ -1027,6 +1037,32 @@ export default function AnalisisSection() {
     filtroExploradorMinutoDesde,
     filtroExploradorMinutoHasta,
   ])
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((_evento, sesion) => {
+      const autorizado = sesion?.user?.id === UUID_EDITOR_PASES
+      setPuedeEditarDestinatarias(autorizado)
+      if (!autorizado) setPaseDestinataria(null)
+    })
+    return () => data.subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    if (seccion !== 'explorador') return
+    let cancelado = false
+    async function cargar() {
+      setResumenDestinatarias({ detalles: {}, nombres: {}, cargando: true, error: '' })
+      try {
+        const resumen = await cargarResumenDestinatarias(supabase, eventos)
+        if (!cancelado) setResumenDestinatarias({ ...resumen, cargando: false, error: '' })
+      } catch {
+        if (!cancelado) setResumenDestinatarias({ detalles: {}, nombres: {}, cargando: false,
+          error: 'No se pudieron cargar las destinatarias. Las acciones siguen disponibles.' })
+      }
+    }
+    cargar()
+    return () => { cancelado = true }
+  }, [seccion, eventos, recargaDestinatarias])
 
   const eventosEstadisticos = useMemo(
     () => alcanceEstadisticas === 'acumulado' ? eventos : eventosPartido,
@@ -3046,6 +3082,10 @@ export default function AnalisisSection() {
                 }}>Limpiar filtros</Boton>
               </div>
 
+              {resumenDestinatarias.error && <p role="alert" className="mt-3 text-sm text-red-300">
+                {resumenDestinatarias.error}{' '}
+                <button type="button" className="font-bold underline" onClick={() => setRecargaDestinatarias((n) => n + 1)}>Reintentar</button>
+              </p>}
               <div className="mt-5 overflow-x-auto rounded-lg border" style={{ borderColor: BORDE }}>
                 <table className="w-full min-w-[760px] text-left text-sm">
                   <thead style={{ backgroundColor: FONDO, color: SECUNDARIO }}>
@@ -3056,6 +3096,7 @@ export default function AnalisisSection() {
                       <th className="p-3">Acción</th>
                       <th className="p-3">Zona</th>
                       <th className="p-3">Resultado</th>
+                      <th className="p-3">Destinataria</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -3084,6 +3125,20 @@ export default function AnalisisSection() {
                               {ev.resultado || 'Pendiente'}
                             </span>
                           </td>
+                          <td className="p-3">
+                            {esPase(ev) ? <>
+                              <span className="block text-sm">
+                                {resumenDestinatarias.cargando ? 'Cargando…' : resumenDestinatarias.error ? 'No disponible' :
+                                  resumenDestinatarias.detalles[ev.id]?.destinataria_estado === 'identificada'
+                                    ? resumenDestinatarias.nombres[resumenDestinatarias.detalles[ev.id].destinataria_id] || 'Jugadora no disponible'
+                                    : ESTADOS_DESTINATARIA[resumenDestinatarias.detalles[ev.id]?.destinataria_estado || 'pendiente']}
+                              </span>
+                              {puedeEditarDestinatarias && <button type="button"
+                                disabled={resumenDestinatarias.cargando}
+                                onClick={() => setPaseDestinataria(ev)}
+                                className="mt-2 text-xs font-bold text-yellow-300 disabled:opacity-40">Editar destinataria</button>}
+                            </> : <span style={{ color: SECUNDARIO }}>—</span>}
+                          </td>
                         </tr>
                       )
                     })}
@@ -3098,6 +3153,23 @@ export default function AnalisisSection() {
               <p className="mt-3 text-xs" style={{ color: SECUNDARIO }}>
                 Los minutos se calculan a partir del segundo guardado en cada acción. Las acciones sin zona o resultado también aparecen y se pueden revisar.
               </p>
+              {paseDestinataria && puedeEditarDestinatarias && <DetalleDestinatariaPase
+                key={paseDestinataria.id}
+                evento={paseDestinataria}
+                partido={partidos.find((p) => p.id === paseDestinataria.partido_id)}
+                autora={nombreJugadora(jugadoras.find((j) => j.id === paseDestinataria.jugador_id))}
+                onClose={() => setPaseDestinataria(null)}
+                onVideo={abrirEventoEnVideo}
+                onSaved={(detalle, jugadora) => {
+                  setResumenDestinatarias((actual) => ({ ...actual,
+                    detalles: { ...actual.detalles, [detalle.evento_id]: detalle },
+                    nombres: jugadora ? { ...actual.nombres, [jugadora.id]: nombreDestinataria(jugadora) } : actual.nombres,
+                  }))
+                  // Un guardado puede funcionar aunque la lectura del resumen haya fallado.
+                  // Reconsultar evita dejar la fila como "No disponible" tras guardar.
+                  if (resumenDestinatarias.error) setRecargaDestinatarias((n) => n + 1)
+                }}
+              />}
             </Panel>
           )}
 
