@@ -11,7 +11,7 @@ export const esPase = (evento) => ['Pase correcto', 'Pase incorrecto'].includes(
 export const nombreDestinataria = (jugadora) =>
   [jugadora?.nombre, jugadora?.apellido].filter(Boolean).join(' ') || 'Jugadora no disponible'
 
-const CAMPOS_DETALLE = 'evento_id, destinataria_id, destinataria_estado, revision'
+const CAMPOS_DETALLE = 'evento_id, destinataria_id, destinataria_estado, revision, destino_x, destino_y'
 const CAMPOS_JUGADORA = 'id, nombre, apellido, categoria_id'
 
 function comprobar(respuesta) {

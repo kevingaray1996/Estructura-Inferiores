@@ -4,6 +4,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import DetalleDestinatariaPase from './DetalleDestinatariaPase'
+import DetalleDestinoPase from './DetalleDestinoPase'
+import FlechasPases from './FlechasPases'
 import {
   cargarResumenDestinatarias, esPase, ESTADOS_DESTINATARIA,
   nombreDestinataria, UUID_EDITOR_PASES,
@@ -283,7 +285,7 @@ function colorTipo(tipo) {
   return '#60A5FA'
 }
 
-function CanchaInteractiva({ eventos = [], coordenadas, interactiva = false, onSelect, onEventClick }) {
+function CanchaInteractiva({ eventos = [], coordenadas, interactiva = false, onSelect, onEventClick, capaTrayectorias }) {
   function manejarClick(e) {
     if (!interactiva || !onSelect) return
     const rect = e.currentTarget.getBoundingClientRect()
@@ -315,6 +317,7 @@ function CanchaInteractiva({ eventos = [], coordenadas, interactiva = false, onS
         <rect x="83" y="17" width="16" height="30" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
         <rect x="93.5" y="24" width="5.5" height="16" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
         <path d="M17 25 A7 7 0 0 1 17 39 M83 25 A7 7 0 0 0 83 39" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
+        {capaTrayectorias}
         {eventos.map((evento) => {
           const punto = coordenadasEvento(evento)
           if (!punto) return null
@@ -502,6 +505,7 @@ export default function AnalisisSection() {
   const [esAdmin, setEsAdmin] = useState(false)
   const [puedeEditarDestinatarias, setPuedeEditarDestinatarias] = useState(false)
   const [paseDestinataria, setPaseDestinataria] = useState(null)
+  const [paseDestinoId, setPaseDestinoId] = useState(null)
   const [resumenDestinatarias, setResumenDestinatarias] = useState({ detalles: {}, nombres: {}, cargando: true, error: '' })
   const [recargaDestinatarias, setRecargaDestinatarias] = useState(0)
   const [cargando, setCargando] = useState(true)
@@ -980,6 +984,8 @@ export default function AnalisisSection() {
     }
   }, [eventosMapa])
 
+  const paseDestinoActual = eventosMapa.find((evento) => evento.id === paseDestinoId && esPase(evento))
+
   const eventosFiltrados = useMemo(
     () => eventosPartido.filter((e) =>
       (filtroJugador === 'todos' || e.jugador_id === filtroJugador) &&
@@ -1043,12 +1049,13 @@ export default function AnalisisSection() {
       const autorizado = sesion?.user?.id === UUID_EDITOR_PASES
       setPuedeEditarDestinatarias(autorizado)
       if (!autorizado) setPaseDestinataria(null)
+      if (!autorizado) setPaseDestinoId(null)
     })
     return () => data.subscription.unsubscribe()
   }, [])
 
   useEffect(() => {
-    if (seccion !== 'explorador') return
+    if (seccion !== 'explorador' && seccion !== 'mapa') return
     let cancelado = false
     async function cargar() {
       setResumenDestinatarias({ detalles: {}, nombres: {}, cargando: true, error: '' })
@@ -1057,7 +1064,7 @@ export default function AnalisisSection() {
         if (!cancelado) setResumenDestinatarias({ ...resumen, cargando: false, error: '' })
       } catch {
         if (!cancelado) setResumenDestinatarias({ detalles: {}, nombres: {}, cargando: false,
-          error: 'No se pudieron cargar las destinatarias. Las acciones siguen disponibles.' })
+          error: 'No se pudieron cargar los detalles de pases. Las acciones siguen disponibles.' })
       }
     }
     cargar()
@@ -3454,8 +3461,35 @@ export default function AnalisisSection() {
                 <div className="space-y-3">
                   <CanchaInteractiva
                     eventos={eventosMapa}
-                    onEventClick={abrirEventoEnVideo}
+                    onEventClick={(evento) => esPase(evento) ? setPaseDestinoId(evento.id) : abrirEventoEnVideo(evento)}
+                    capaTrayectorias={!resumenDestinatarias.cargando && !resumenDestinatarias.error && <FlechasPases
+                      eventos={eventosMapa}
+                      detalles={resumenDestinatarias.detalles}
+                      onSelect={(evento) => setPaseDestinoId(evento.id)}
+                    />}
                   />
+                  {resumenDestinatarias.cargando && <p role="status" className="text-xs" style={{ color: SECUNDARIO }}>Cargando trayectorias…</p>}
+                  {resumenDestinatarias.error && <p role="alert" className="text-sm text-red-300">
+                    {resumenDestinatarias.error} No se asume que falten destinos.{' '}
+                    <button type="button" className="font-bold underline" onClick={() => setRecargaDestinatarias((n) => n + 1)}>Reintentar</button>
+                  </p>}
+                  <p className="text-xs" style={{ color: SECUNDARIO }}>Flechas verdes: pase correcto · Rojas: pase incorrecto. Tocá un pase para consultar o editar su destino. Las flechas requieren origen y destino exactos.</p>
+                  {paseDestinoActual && <DetalleDestinoPase
+                    key={paseDestinoActual.id}
+                    evento={paseDestinoActual}
+                    partido={partidos.find((p) => p.id === paseDestinoActual.partido_id)}
+                    autora={nombreJugadora(jugadoras.find((j) => j.id === paseDestinoActual.jugador_id))}
+                    puedeEditar={puedeEditarDestinatarias}
+                    renderCancha={(props) => <CanchaInteractiva {...props} />}
+                    onClose={() => setPaseDestinoId(null)}
+                    onVideo={abrirEventoEnVideo}
+                    onSaved={(detalle) => {
+                      setResumenDestinatarias((actual) => ({ ...actual,
+                        detalles: { ...actual.detalles, [detalle.evento_id]: detalle },
+                      }))
+                      if (resumenDestinatarias.error) setRecargaDestinatarias((n) => n + 1)
+                    }}
+                  />}
                   <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs" style={{ color: SECUNDARIO }}>
                     {[
                       ['#F2C230', 'Remate / centro / gol'],
@@ -3514,8 +3548,8 @@ export default function AnalisisSection() {
                         const punto = coordenadasEvento(evento)
                         const tieneVideo = Boolean(youtubeEmbed(partido?.video_url || videoCalendario(partido?.partido_calendario || partidosCalendario.find((p) => p.id === partido?.partido_calendario_id))))
                         return (
+                          <div key={evento.id}>
                           <button
-                            key={evento.id}
                             type="button"
                             onClick={() => abrirEventoEnVideo(evento)}
                             className="w-full rounded-lg border p-3 text-left transition hover:border-yellow-400"
@@ -3539,6 +3573,9 @@ export default function AnalisisSection() {
                               {tieneVideo ? '▶ Abrir video en esta acción' : 'Video no disponible para este partido'}
                             </p>
                           </button>
+                          {esPase(evento) && <button type="button" onClick={() => setPaseDestinoId(evento.id)}
+                            className="mt-1 px-2 py-1 text-xs font-bold text-yellow-300">{puedeEditarDestinatarias ? 'Ver / editar trayectoria' : 'Ver trayectoria'}</button>}
+                          </div>
                         )
                       })}
                       {eventosMapaOrdenados.length === 0 && (
