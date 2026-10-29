@@ -6,7 +6,7 @@ import { obtenerFechaHoy } from '../utils/fecha'
 import { sanitizarNombreArchivo } from '../utils/archivos'
 import { comprimirImagen } from '../utils/comprimirImagen'
 
-function EntrenamientosSection() {
+function EntrenamientosSection({ onPlanificar }) {
   const [entrenamientos, setEntrenamientos] = useState([])
   const [contenidoFiltro, setContenidoFiltro] = useState('')
   const [cantidadFiltro, setCantidadFiltro] = useState('')
@@ -134,6 +134,7 @@ function EntrenamientosSection() {
   return (
     <div className="p-6 md:p-10">
       <div className="max-w-6xl mx-auto">
+        {onPlanificar && <button type="button" onClick={onPlanificar} className="mb-4 rounded-lg border px-4 py-2 text-sm" style={{color: COLORES.texto, borderColor: COLORES.borde, backgroundColor: COLORES.fondoTarjeta}}>▦ Planificación semanal</button>}
         <div className="flex items-start justify-between mb-6 gap-3 flex-wrap">
           <h1
             className="text-3xl md:text-4xl flex items-center gap-3"

@@ -30,6 +30,7 @@ function seccionesParaRol(rol) {
       { id: 'analisis', label: 'Análisis' },
       { id: 'partidos', label: 'Partidos' },
       { id: 'entrenamientos', label: 'Entrenamientos' },
+      { id: 'planificacion', label: 'Planificación semanal' },
       { id: 'asistencia', label: 'Asistencia' },
       { id: 'fisico', label: 'Físico' },
       { id: 'captacion', label: 'Captación' },
@@ -63,6 +64,7 @@ function seccionesParaRol(rol) {
       { id: 'nutricion', label: 'Nutrición' },
       { id: 'partidos', label: 'Partidos' },
       { id: 'entrenamientos', label: 'Entrenamientos' },
+      { id: 'planificacion', label: 'Planificación semanal' },
       { id: 'fisico', label: 'Físico' },
       { id: 'evaluaciones', label: 'Evaluaciones' },
     ]
@@ -76,6 +78,7 @@ function seccionesParaRol(rol) {
     { id: 'analisis', label: 'Análisis' },
     { id: 'partidos', label: 'Partidos' },
     { id: 'entrenamientos', label: 'Entrenamientos' },
+    { id: 'planificacion', label: 'Planificación semanal' },
     { id: 'asistencia', label: 'Asistencia' },
     { id: 'fisico', label: 'Físico' },
     { id: 'captacion', label: 'Captación' },
@@ -90,7 +93,7 @@ function seccionesParaRol(rol) {
 
 const ICONOS = {
   inicio: '⌂', plantel: '♟', medicos: '✚', nutricion: '◉', psicologia: '♡',
-  video: '▶', analisis: '▥', partidos: '⚽', entrenamientos: '◆',
+  video: '▶', analisis: '▥', partidos: '⚽', entrenamientos: '◆', planificacion: '▦',
   asistencia: '✓', fisico: '▤', captacion: '◎', representantes: '♧',
   pensiones: '⌂', seleccion: '★', contratos: '▣', pases: '⇄',
   informes: '▧', usuarios: '♙', evaluaciones: '☑', bienestar: '♥',

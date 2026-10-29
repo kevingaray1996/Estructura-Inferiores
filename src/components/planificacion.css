@@ -1,0 +1,29 @@
+.planificacion { color: var(--ui-texto); background: var(--ui-fondo-pagina); }
+.planificacion h1 { font-size: 1.7rem; font-weight: 800; }
+.planificacion h2, .planificacion h3 { font-weight: 700; }
+.planificacion p { color: var(--ui-texto-secundario); font-size: .85rem; margin: .6rem 0; }
+.planificacion fieldset { border: 0; min-width: 0; padding: 0; }
+.planificacion .planificacion-tarjeta, .planificacion-dia, .planificacion-editor { background: var(--ui-superficie); border: 1px solid var(--ui-borde); border-radius: .8rem; padding: 1rem; margin: 1rem 0; }
+.planificacion-fila { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
+.planificacion-entre { justify-content: space-between; }
+.planificacion .planificacion-rejilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: .8rem; }
+.planificacion-campo { display: flex; flex-direction: column; gap: .3rem; margin: .6rem 0; font-size: .85rem; min-width: 0; }
+.planificacion input:not([type=checkbox]), .planificacion select, .planificacion textarea { width: 100%; min-width: 0; background: var(--ui-control-fondo); color: var(--ui-control-texto); border: 1px solid var(--ui-control-borde); border-radius: .5rem; padding: .6rem; }
+.planificacion input[type=checkbox] { accent-color: var(--ui-acento); }
+.planificacion button { background: var(--ui-superficie-alternativa); color: var(--ui-texto); border: 1px solid var(--ui-borde); border-radius: .5rem; padding: .55rem .8rem; font-size: .85rem; cursor: pointer; }
+.planificacion button:disabled { opacity: .45; cursor: default; }
+.planificacion button:hover:not(:disabled) { border-color: var(--ui-foco); }
+.planificacion :is(button,input,select,textarea,summary):focus-visible { outline: 2px solid var(--ui-foco); outline-offset: 2px; }
+.planificacion button.planificacion-primario { background: var(--ui-acento); color: var(--ui-texto-sobre-acento); font-weight: 700; }
+.planificacion-semana { display: grid; grid-template-columns: repeat(7,minmax(135px,1fr)); gap: .6rem; overflow-x: auto; padding-bottom: .4rem; }
+.planificacion-dia { padding: .6rem; min-width: 0; }
+.planificacion-hoy { border-color: var(--ui-acento); }
+.planificacion .planificacion-resumen { display: flex; flex-direction: column; text-align: left; gap: .4rem; margin: .8rem 0; width: 100%; overflow-wrap: anywhere; }
+.planificacion-resumen span { font-size: .75rem; }
+.planificacion .planificacion-error { color: var(--ui-peligro); }
+.planificacion .planificacion-exito { color: var(--ui-exito); }
+.planificacion summary { cursor: pointer; font-weight: 600; padding: .4rem 0; }
+.planificacion-compartir { padding: .6rem; background: var(--ui-superficie-alternativa); border-radius: .5rem; margin: .6rem 0; }
+.planificacion-compartir > label { display: block; }
+.planificacion-ejercicio { padding: .8rem 0 .8rem .8rem; border-left: 3px solid var(--ui-acento); margin: 1rem 0; }
+.planificacion-acciones { margin: 1rem 0; }

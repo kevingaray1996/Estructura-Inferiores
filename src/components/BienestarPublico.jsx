@@ -1,3 +1,4 @@
+import EntrenamientoDeHoy from './EntrenamientoDeHoy'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
@@ -292,6 +293,8 @@ function BienestarPublico({ categoriaId }) {
             <p className="text-sm font-medium mb-4" style={{ color: COLORES.texto }}>
               Hola, {jugadorSeleccionado.nombre} 👋
             </p>
+
+            <EntrenamientoDeHoy categoriaId={categoriaId} jugadoraId={jugadorSeleccionado.id} />
 
             <div className="flex gap-2 mb-6">
               <button

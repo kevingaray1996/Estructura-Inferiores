@@ -1,3 +1,4 @@
+import EntrenamientoDeHoy from './EntrenamientoDeHoy'
 import { WELLNESS as UI, textoWellness } from '../appearance/wellness'
 
 import { useEffect, useState } from 'react'
@@ -283,6 +284,7 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
   return (
     <div className="px-4 py-5 sm:px-6 lg:px-8 lg:py-8" style={{ color: UI.texto }}>
       <div className="max-w-7xl mx-auto space-y-6">
+        {jugadorId && <EntrenamientoDeHoy categoriaId={categoriaId} jugadoraId={jugadorId} />}
 
         {/* Encabezado */}
         <div
