@@ -14,11 +14,11 @@ const ESTADOS = [
   { valor: 'enfermo', label: 'Enfermo', color: '#7DD3FC' },
 ]
 
-function AsistenciaSection({ perfil }) {
+function AsistenciaSection({ perfil, fechaInicial, categoriaInicial, onVerPlanificacion }) {
   const esTecnico = perfil.rol === 'tecnico'
   const [categorias, setCategorias] = useState([])
-  const [categoriaId, setCategoriaId] = useState(esTecnico ? perfil.categoria_id : '')
-  const [fecha, setFecha] = useState(obtenerFechaHoy())
+  const [categoriaId, setCategoriaId] = useState(esTecnico ? perfil.categoria_id : categoriaInicial || '')
+  const [fecha, setFecha] = useState(fechaInicial || obtenerFechaHoy())
   const [jugadores, setJugadores] = useState([])
   const [asistencias, setAsistencias] = useState({})
   const [cargando, setCargando] = useState(false)
@@ -256,6 +256,8 @@ function AsistenciaSection({ perfil }) {
             </select>
           )}
         </div>
+
+        {onVerPlanificacion && categoriaId && <button type="button" className="mb-4 rounded-lg border px-3 py-2 text-sm" style={{color: COLORES.texto, borderColor: COLORES.borde}} onClick={() => onVerPlanificacion(fecha, categoriaId)}>Ver planificación de este día</button>}
 
         {cargando && <p style={{ color: COLORES.textoMuted }}>Cargando...</p>}
 

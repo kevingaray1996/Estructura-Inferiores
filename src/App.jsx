@@ -1,3 +1,4 @@
+import PlanificacionSection from './components/PlanificacionSection'
 
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
@@ -34,6 +35,8 @@ function App() {
   const [sesion, setSesion] = useState(undefined)
   const [perfil, setPerfil] = useState(undefined)
   const [seccion, setSeccion] = useState('inicio')
+  const [contextoPlanificacion, setContextoPlanificacion] = useState(null)
+  const [contextoAsistencia, setContextoAsistencia] = useState(null)
   const [jugadorParaMedicos, setJugadorParaMedicos] = useState(null)
   const [jugadorParaVideo, setJugadorParaVideo] = useState(null)
   const [jugadorParaNutricion, setJugadorParaNutricion] = useState(null)
@@ -54,6 +57,8 @@ function App() {
         if (!nuevaSesion) {
           setPerfil(undefined)
           setSeccion('inicio')
+          setContextoPlanificacion(null)
+          setContextoAsistencia(null)
         }
       }
     )
@@ -280,9 +285,13 @@ function App() {
         />
       )}
 
-      {seccion === 'entrenamientos' && <EntrenamientosSection />}
+      {seccion === 'entrenamientos' && <EntrenamientosSection onPlanificar={['coordinacion', 'tecnico', 'preparador_fisico'].includes(perfil.rol) ? () => { setContextoPlanificacion(null); setSeccion('planificacion') } : undefined} />}
 
-      {seccion === 'asistencia' && <AsistenciaSection perfil={perfil} />}
+      {seccion === 'planificacion' && <PlanificacionSection perfil={perfil} fechaInicial={contextoPlanificacion?.fecha} categoriaInicial={contextoPlanificacion?.categoriaId}
+        onVerAsistencia={(fecha, categoriaId) => { setContextoAsistencia({ fecha, categoriaId }); setSeccion('asistencia') }} />}
+
+      {seccion === 'asistencia' && <AsistenciaSection perfil={perfil} fechaInicial={contextoAsistencia?.fecha} categoriaInicial={contextoAsistencia?.categoriaId}
+        onVerPlanificacion={['coordinacion', 'tecnico', 'preparador_fisico'].includes(perfil.rol) ? (fecha, categoriaId) => { setContextoPlanificacion({ fecha, categoriaId }); setSeccion('planificacion') } : undefined} />}
 
       {seccion === 'fisico' && (
         <FisicoSection
