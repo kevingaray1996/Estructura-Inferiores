@@ -1,0 +1,10 @@
+.selector-medicos { min-width: 0; color: var(--ui-control-texto); font-size: .875rem; }
+.selector-medicos > label { display: block; margin-bottom: 6px; color: var(--ui-texto); }
+.selector-medicos > button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 44px; padding: 10px 12px; text-align: left; border: 1px solid var(--ui-control-borde); border-radius: 12px; background: var(--ui-control-fondo); color: var(--ui-control-texto); cursor: pointer; }
+.selector-medicos > button:disabled { opacity: .55; cursor: not-allowed; }
+.selector-medicos > button:focus-visible { outline: 2px solid var(--ui-foco); outline-offset: 2px; }
+.selector-medicos-lista { z-index: 10000; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; box-sizing: border-box; border: 1px solid var(--ui-control-borde); border-radius: 12px; background: var(--ui-control-fondo); color: var(--ui-control-texto); box-shadow: 0 8px 28px #0004; padding: 4px; font-size: .875rem; }
+.selector-medicos-lista [role=option] { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 8px 12px; border-radius: 8px; cursor: pointer; overflow-wrap: anywhere; }
+.selector-medicos-lista [role=option][aria-selected=true] { background: #F2C230; color: #111111; font-weight: 600; }
+.selector-medicos-lista [role=option][data-activa=true] { outline: 2px solid var(--ui-foco); outline-offset: -2px; }
+@media (hover: hover) { .selector-medicos-lista [role=option]:hover { outline: 2px solid var(--ui-foco); outline-offset: -2px; } }
