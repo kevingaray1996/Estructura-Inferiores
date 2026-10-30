@@ -2,6 +2,7 @@ const cargas = new WeakMap()
 // La API debe cargarse en el Window que contiene el iframe: allí recibe
 // los mensajes reales de YouTube. No se reutiliza un listener de otra ventana.
 export function cargarYouTubeEnVentana(ventana) {
+  if (!/^https?:$/.test(ventana.location?.protocol || '')) return Promise.reject(Error('El reproductor necesita una página HTTP real de la aplicación. Volvé a separar la ventana.'))
   if (ventana.YT?.Player) return Promise.resolve(ventana.YT)
   if (cargas.has(ventana.document)) return cargas.get(ventana.document)
   const documento = ventana.document
@@ -15,4 +16,10 @@ export function cargarYouTubeEnVentana(ventana) {
   })
   cargas.set(documento, promesa)
   return promesa
+}
+
+export function mensajeErrorYouTube(codigo) {
+  if (Number(codigo) === 153) return 'YouTube no recibió una identificación válida del sitio (error 153). Reconectá desde la ventana de la aplicación; no cambies las restricciones de seguridad del navegador.'
+  if ([101, 150].includes(Number(codigo))) return 'El propietario de este video no permite reproducirlo incrustado. Podés abrirlo directamente en YouTube.'
+  return `No se pudo reproducir el video de YouTube${codigo ? ` (error ${codigo})` : ''}. Reconectá el reproductor y verificá el enlace.`
 }

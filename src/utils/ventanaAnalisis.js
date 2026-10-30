@@ -1,14 +1,21 @@
-// Una sola raíz React controla ambas ventanas. No se transmiten sesiones,
+import { CANAL_VENTANA_ANALISIS, ID_CONTENIDO_ANALISIS, RUTA_VENTANA_ANALISIS, esVentanaAnalisis } from './rutaVentanaAnalisis.js'
+
+// Una sola raíz de Análisis controla ambas ventanas. No se transmiten sesiones,
 // credenciales ni eventos de negocio por URL, storage o BroadcastChannel.
 export function crearVentanaAnalisis(host, antesDeCambiar = () => {}) {
-  let estado = { modo: null, nodo: null, conectado: true, revision: 0, aviso: '' }
+  let estado = { modo: null, nodo: null, conectado: true, revision: 0, aviso: '', reintento: null }
   let auxiliar = null, documento = null, intervalo = null, observador = null, descargas = []
+  let escuchando = false, inicioCarga = 0
+  const origen = host?.location?.origin
   const oyentes = new Set(), nombre = `comunicaciones-analisis-${crypto.randomUUID()}`
-  const avisar = cambios => { estado = { ...estado, ...cambios, revision: estado.revision + 1 }; oyentes.forEach(fn => fn()) }
+  const avisar = cambios => {
+    const traslado = ['modo', 'nodo', 'conectado'].some(k => Object.hasOwn(cambios, k) && cambios[k] !== estado[k])
+    estado = { ...estado, ...cambios, revision: estado.revision + (traslado ? 1 : 0) }; oyentes.forEach(fn => fn())
+  }
   const limpiarDocumento = () => { descargas.forEach(fn => fn()); descargas = []; observador?.disconnect(); observador = null }
   function conectado() {
     if (!estado.modo) return true
-    try { return Boolean(auxiliar && !auxiliar.closed && auxiliar.document === documento && estado.nodo?.isConnected && estado.conectado) } catch { return false }
+    try { return Boolean(auxiliar && !auxiliar.closed && esVentanaAnalisis(auxiliar.location.href, origen) && auxiliar.document === documento && estado.nodo?.isConnected && estado.conectado) } catch { return false }
   }
   function copiarEstilos() {
     if (!documento || !auxiliar || auxiliar.closed) return
@@ -23,14 +30,13 @@ export function crearVentanaAnalisis(host, antesDeCambiar = () => {}) {
     if (apariencia) documento.documentElement.setAttribute('data-apariencia', apariencia)
     else documento.documentElement.removeAttribute('data-apariencia')
   }
-  function prepararDocumento() {
+  function prepararDocumento(nodo) {
     limpiarDocumento()
     documento = auxiliar.document
-    const nodo = documento.createElement('main')
+    // El marco React de la ruta real crea este nodo. Nunca reemplazar body ni
+    // insertar HTML en about:blank: el iframe necesita una referencia HTTP real.
     nodo.setAttribute('data-sesion-analisis', nombre)
-    documento.body.replaceChildren(nodo)
     documento.title = 'Comunicaciones · Análisis en dos ventanas'
-    const viewport = documento.createElement('meta'); viewport.name = 'viewport'; viewport.content = 'width=device-width, initial-scale=1'; documento.head.appendChild(viewport)
     copiarEstilos()
     if (host.MutationObserver) {
       observador = new host.MutationObserver(copiarEstilos)
@@ -40,51 +46,89 @@ export function crearVentanaAnalisis(host, antesDeCambiar = () => {}) {
     const descargando = () => {
       if (!estado.conectado) return
       antesDeCambiar(estado.modo, estado.modo)
+      inicioCarga = Date.now()
       avisar({ conectado: false, nodo: null, aviso: 'La ventana auxiliar está reconectando. El etiquetado queda bloqueado.' })
     }
     auxiliar.addEventListener('pagehide', descargando)
     auxiliar.addEventListener('beforeunload', descargando)
     descargas.push(() => { try { auxiliar?.removeEventListener('pagehide', descargando); auxiliar?.removeEventListener('beforeunload', descargando) } catch { /* Ventana cerrada. */ } })
-    avisar({ nodo, conectado: true, aviso: '' })
+    avisar({ nodo, conectado: true, aviso: '', reintento: null })
+    confirmarConexion()
   }
-  function acoplar(aviso = '') {
+  function acoplar(aviso = '', reintento = null) {
     const modo = estado.modo
     if (modo) antesDeCambiar(modo, null)
     limpiarDocumento()
     if (intervalo) host.clearInterval(intervalo)
     intervalo = null
+    host?.removeEventListener('message', recibir)
+    escuchando = false
     const ventana = auxiliar
     auxiliar = null; documento = null
-    avisar({ modo: null, nodo: null, conectado: true, aviso })
+    avisar({ modo: null, nodo: null, conectado: true, aviso, reintento })
     try { if (ventana && !ventana.closed) ventana.close() } catch { /* Ya cerrada. */ }
   }
   function revisar() {
     if (!auxiliar) return
     try {
       if (auxiliar.closed) { acoplar('La ventana auxiliar se cerró. La vista volvió a integrarse.'); return }
-      if (auxiliar.location.href !== 'about:blank') { acoplar('Se perdió la conexión con la ventana auxiliar.'); return }
-      if (auxiliar.document === documento && !estado.conectado) return
-      if (auxiliar.document !== documento || !estado.nodo?.isConnected) {
-        if (auxiliar.document.readyState === 'loading') return
-        if (estado.conectado) antesDeCambiar(estado.modo, estado.modo)
-        prepararDocumento()
+      // Durante la navegación inicial puede existir un documento provisional.
+      // No montar el reproductor hasta que cargue la ruta real y su marco React.
+      if (Date.now() - inicioCarga > 20000 && !estado.conectado) {
+        acoplar('La ventana se abrió, pero no confirmó su conexión. Volvé a intentarlo desde el botón Reintentar separación.', estado.modo); return
       }
-    } catch { acoplar('La ventana auxiliar dejó de estar disponible. Se recuperó la vista principal.') }
+      if (auxiliar.location.href === 'about:blank') return
+      if (!esVentanaAnalisis(auxiliar.location.href, origen)) { acoplar('La ventana auxiliar salió de la ruta de Análisis. Volvé a intentarlo.', estado.modo); return }
+      if (auxiliar.document === documento && !estado.conectado) return
+      const nodo = auxiliar.document.getElementById(ID_CONTENIDO_ANALISIS)
+      if (!nodo || nodo.getAttribute('data-ventana-analisis') !== 'lista') return
+      if (auxiliar.document !== documento || estado.nodo !== nodo || !estado.nodo?.isConnected) {
+        if (estado.conectado) antesDeCambiar(estado.modo, estado.modo)
+        prepararDocumento(nodo)
+      }
+    } catch { acoplar('No se pudo acceder a la ventana auxiliar. Se recuperó la vista principal; podés reintentar.', estado.modo) }
+  }
+  function confirmarConexion() {
+    if (!conectado()) return
+    try { auxiliar.postMessage({ canal: CANAL_VENTANA_ANALISIS, tipo: 'conectada' }, origen) } catch { /* El cierre se recupera al revisar. */ }
+  }
+  function recibir(event) {
+    if (!auxiliar || event.source !== auxiliar || event.origin !== origen || event.data?.canal !== CANAL_VENTANA_ANALISIS || event.data.tipo !== 'lista') return
+    revisar()
+    confirmarConexion()
+  }
+  function enfocar() {
+    try { auxiliar.focus() }
+    catch { avisar({ aviso: 'La ventana está abierta. Si Chrome no permite traerla al frente, seleccionála desde su barra de tareas.' }) }
   }
   function separar(modo) {
     if (!['reproductor', 'botonera'].includes(modo)) return false
-    if (estado.modo === modo && conectado()) { auxiliar.focus(); return true }
+    if (conectado() && auxiliar) {
+      if (estado.modo !== modo) { antesDeCambiar(estado.modo, modo); avisar({ modo, aviso: '', reintento: null }) }
+      enfocar(); return true
+    }
     // Abrir sincrónicamente desde el clic, antes de cualquier await.
-    const ventana = host.open('', nombre, 'popup=yes,width=1100,height=800,resizable=yes,scrollbars=yes')
-    if (!ventana) { avisar({ aviso: 'El navegador bloqueó la ventana. Permití ventanas emergentes para este sitio y volvé a pulsar Separar.' }); return false }
+    let ventana
+    try {
+      if (!escuchando) { host.addEventListener('message', recibir); escuchando = true }
+      ventana = host.open(new URL(RUTA_VENTANA_ANALISIS, host.location.href).href, nombre, 'popup=yes,width=1100,height=800,resizable=yes,scrollbars=yes')
+    } catch {
+      avisar({ aviso: 'Chrome no permitió abrir la ventana auxiliar. Permití ventanas emergentes para este sitio y pulsá Reintentar separación.', reintento: modo })
+      if (!auxiliar) { host.removeEventListener('message', recibir); escuchando = false }
+      return false
+    }
+    if (!ventana) {
+      avisar({ aviso: 'El navegador bloqueó la ventana. Permití ventanas emergentes para este sitio y pulsá Reintentar separación.', reintento: modo })
+      if (!auxiliar) { host.removeEventListener('message', recibir); escuchando = false }
+      return false
+    }
     antesDeCambiar(estado.modo, modo)
     auxiliar = ventana
-    estado = { ...estado, modo }
-    try { prepararDocumento() } catch {
-      acoplar('No se pudo preparar la ventana auxiliar. Se mantuvo la vista integrada.'); return false
-    }
+    inicioCarga = Date.now()
+    avisar({ modo, nodo: null, conectado: false, aviso: 'Abriendo la ventana y esperando su conexión…', reintento: null })
     if (!intervalo) intervalo = host.setInterval(revisar, 500)
-    ventana.focus()
+    revisar()
+    enfocar()
     return true
   }
   return {
