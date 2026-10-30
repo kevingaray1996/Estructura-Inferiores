@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import PizarraCancha from './PizarraCancha'
+import PizarraPaleta from './PizarraPaleta'
 import { agregarElemento, duplicarElementos, duracionTotal, HERRAMIENTAS, historial, historialInicial, interpolar, limitar, nuevaPizarra, quitarElementos, SUPERFICIES, validarPizarra } from '../utils/pizarra'
 import { descargarArchivo, miniaturaPizarra } from '../utils/pizarraExportar'
 import './pizarra.css'
@@ -11,7 +12,9 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
   const [zoom, setZoom] = useState(1), [pan, setPan] = useState({ x: 0, y: 0 }), [borrador, setBorrador] = useState(null), [caja, setCaja] = useState(null)
   const [reproduciendo, setReproduciendo] = useState(false), [tiempo, setTiempo] = useState(0), [velocidad, setVelocidad] = useState(doc.velocidad), [bucle, setBucle] = useState(doc.bucle)
   const [error, setError] = useState(''), [guardando, setGuardando] = useState(false), [guardado, setGuardado] = useState(() => JSON.stringify(doc))
+  const [arrastrandoMaterial, setArrastrandoMaterial] = useState(null)
   const svg = useRef(null), raiz = useRef(null), arrastre = useRef(null), reloj = useRef(0), ultimo = useRef(0)
+  const punteros = useRef(new Map()), gesto = useRef(null)
   const indice = Math.min(paso, doc.pasos.length - 1), sucio = JSON.stringify(doc) !== guardado
   const activo = borrador || doc, total = duracionTotal(doc)
   const poses = reproduciendo || tiempo > 0 ? interpolar(doc, tiempo).poses : activo.pasos[indice].poses
@@ -45,14 +48,39 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
   function cambiar(siguiente) { if (soloLectura) return; setH(actual => historial(actual, 'editar', siguiente)); setTiempo(0); reloj.current = 0; setError('') }
   function historialAccion(accion) { setH(actual => historial(actual, accion)); setSeleccion([]); setTiempo(0); setReproduciendo(false) }
   function elegirPaso(i) { setReproduciendo(false); setTiempo(0); reloj.current = 0; setPaso(limitar(i, 0, doc.pasos.length - 1)) }
+  function alternarReproduccion() { if (!reproduciendo && reloj.current >= total) { reloj.current = 0; setTiempo(0) } setReproduciendo(!reproduciendo) }
   function punto(e) {
     const g = svg.current.querySelector('[data-campo]'), matrix = g.getScreenCTM()
     const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(matrix.inverse())
     const [w, h] = SUPERFICIES[doc.superficie]
     return { x: p.x * 100 / w, y: p.y * 100 / h }
   }
+  function colocar(tipo, p) {
+    const siguiente = agregarElemento(doc, tipo, limitar(p.x, 0, 100), limitar(p.y, 0, 100))
+    if (siguiente === doc) return
+    cambiar(siguiente); setSeleccion([siguiente.elementos.at(-1).id]); setHerramienta('seleccionar')
+  }
+  function coordenadaVista(x, y) { return new DOMPoint(x, y).matrixTransform(svg.current.getScreenCTM().inverse()) }
+  function registrarPuntero(e) {
+    if (e.pointerType !== 'touch' || guardando) return
+    punteros.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (punteros.current.size === 2) {
+      const [a, b] = [...punteros.current.values()], centro = coordenadaVista((a.x + b.x) / 2, (a.y + b.y) / 2)
+      gesto.current = { distancia: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)), zoom, ancla: { x: (centro.x - pan.x) / zoom, y: (centro.y - pan.y) / zoom } }
+      arrastre.current = null; setBorrador(null); setCaja(null)
+    }
+    svg.current.setPointerCapture(e.pointerId)
+  }
+  function soltarMaterial(e) {
+    if (soloLectura || guardando || reproduciendo || tiempo > 0) return
+    const tipo = e.dataTransfer.getData('application/x-comunicaciones-herramienta')
+    if (!Object.hasOwn(HERRAMIENTAS, tipo)) return
+    e.preventDefault(); setArrastrandoMaterial(null)
+    const p = punto(e)
+    if (p.x >= 0 && p.x <= 100 && p.y >= 0 && p.y <= 100) colocar(tipo, p)
+  }
   function iniciar(e, id) {
-    if (soloLectura || guardando || reproduciendo || tiempo > 0 || e.button !== 0) return
+    if (soloLectura || guardando || reproduciendo || tiempo > 0 || e.button !== 0 || gesto.current) return
     if (herramienta !== 'seleccionar') { fondo(e); return }
     const ids = e.shiftKey ? (seleccion.includes(id) ? seleccion.filter(x => x !== id) : [...seleccion, id]) : seleccion.includes(id) ? seleccion : [id]
     setSeleccion(ids)
@@ -60,15 +88,25 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
     svg.current.setPointerCapture(e.pointerId)
   }
   function fondo(e) {
-    if (soloLectura || guardando || reproduciendo || tiempo > 0 || e.button !== 0) return
+    if (soloLectura || guardando || reproduciendo || tiempo > 0 || e.button !== 0 || gesto.current) return
     const p = punto(e)
-    if (Object.hasOwn(HERRAMIENTAS, herramienta)) { cambiar(agregarElemento(doc, herramienta, limitar(p.x, 0, 100), limitar(p.y, 0, 100))); return }
+    if (Object.hasOwn(HERRAMIENTAS, herramienta)) { colocar(herramienta, p); return }
     const tipo = herramienta === 'mover' ? 'pan' : 'caja'
     arrastre.current = { tipo, inicio: p, client: { x: e.clientX, y: e.clientY }, doc, pan, pointer: e.pointerId }
     if (tipo === 'caja') { setSeleccion([]); setCaja({ ...p, x2: p.x, y2: p.y }) }
     svg.current.setPointerCapture(e.pointerId)
   }
   function mover(e) {
+    if (punteros.current.has(e.pointerId)) punteros.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (gesto.current) {
+      if (punteros.current.size === 2) {
+        const [a, b] = [...punteros.current.values()], g = gesto.current
+        const centro = coordenadaVista((a.x + b.x) / 2, (a.y + b.y) / 2)
+        const escala = limitar(g.zoom * Math.hypot(b.x - a.x, b.y - a.y) / g.distancia, .5, 3)
+        setZoom(escala); setPan({ x: centro.x - g.ancla.x * escala, y: centro.y - g.ancla.y * escala })
+      }
+      return
+    }
     const a = arrastre.current; if (!a || a.pointer !== e.pointerId) return
     const p = punto(e)
     if (a.tipo === 'mover') {
@@ -88,6 +126,12 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
     }
   }
   function terminar(e, cancelar = false) {
+    punteros.current.delete(e.pointerId)
+    if (gesto.current) {
+      if (!punteros.current.size) gesto.current = null
+      if (svg.current.hasPointerCapture(e.pointerId)) svg.current.releasePointerCapture(e.pointerId)
+      return
+    }
     const a = arrastre.current; if (!a || a.pointer !== e.pointerId) return
     if (!cancelar && a.final) cambiar(a.final)
     if (!cancelar && a.tipo === 'caja' && a.fin) setSeleccion(doc.elementos.filter(el => { const p = doc.pasos[indice].poses[el.id]; return p.x >= Math.min(a.inicio.x, a.fin.x) && p.x <= Math.max(a.inicio.x, a.fin.x) && p.y >= Math.min(a.inicio.y, a.fin.y) && p.y <= Math.max(a.inicio.y, a.fin.y) }).map(el => el.id))
@@ -130,26 +174,45 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
   }
 
   return <div ref={raiz} className={`pizarra ${soloLectura ? 'pizarra-visor' : ''}`} tabIndex={0} onKeyDown={teclado}>
-    <div className="pizarra-fila"><h2><strong>{titulo}</strong></h2>{onCerrar && <button type="button" disabled={guardando} onClick={cerrar}>Cerrar</button>}
-      <button type="button" onClick={() => { if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {}); else raiz.current.requestFullscreen?.().catch(() => setError('Pantalla completa no disponible.')) }}>Ampliar cancha</button>
-      {!soloLectura && <><button type="button" disabled={!h.antes.length || reproduciendo} onClick={() => historialAccion('deshacer')}>↶ Deshacer</button><button type="button" disabled={!h.despues.length || reproduciendo} onClick={() => historialAccion('rehacer')}>↷ Rehacer</button>
-        <button type="button" onClick={png}>Descargar PNG</button><button type="button" onClick={() => descargarArchivo(JSON.stringify(doc), 'pizarra.json', 'application/json')}>Respaldo editable</button><label>Recuperar JSON <input type="file" accept="application/json,.json" onChange={importar} /></label></>}
-    </div>
-    {error && <p role="alert" className="pizarra-error">{error}</p>}
-    {!soloLectura && <fieldset disabled={reproduciendo || guardando || tiempo > 0}>
-      <div className="pizarra-fila"><label>Superficie <select value={doc.superficie} onChange={e => cambiar({ ...doc, superficie: e.target.value })}>{Object.entries(SUPERFICIES).map(([v, s]) => <option key={v} value={v}>{s[2]}</option>)}</select></label>
-        <label>Orientación <select value={doc.orientacion} onChange={e => cambiar({ ...doc, orientacion: e.target.value })}><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select></label>
-        <label>Ataque <select value={doc.ataque} onChange={e => cambiar({ ...doc, ataque: e.target.value })}><option value="derecha">Derecha</option><option value="izquierda">Izquierda</option></select></label>
+    <header className="pizarra-cabecera">
+      <div className="pizarra-fila"><h2><strong>{titulo}</strong><small>PIZARRA DE COMUNICACIONES</small></h2>
+        {onCerrar && <button type="button" disabled={guardando} onClick={cerrar}>Cerrar</button>}
+        <button type="button" onClick={() => { if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {}); else raiz.current.requestFullscreen?.().catch(() => setError('Pantalla completa no disponible.')) }}>Ampliar cancha</button>
       </div>
-      <div className="pizarra-herramientas" aria-label="Herramientas de pizarra">{Object.entries({ seleccionar: '↖ Seleccionar', mover: '✥ Desplazar vista', ...HERRAMIENTAS }).map(([v, label]) => <button key={v} type="button" aria-pressed={herramienta === v} onClick={() => setHerramienta(v)}>{label}</button>)}</div>
-    </fieldset>}
+      <div className="pizarra-fila pizarra-rapidos">
+        {!soloLectura && <><button type="button" title="Deshacer (Ctrl+Z)" disabled={!h.antes.length || reproduciendo || guardando} onClick={() => historialAccion('deshacer')}>↶ Deshacer</button><button type="button" title="Rehacer" disabled={!h.despues.length || reproduciendo || guardando} onClick={() => historialAccion('rehacer')}>↷ Rehacer</button></>}
+        <button type="button" disabled={doc.pasos.length < 2} onClick={alternarReproduccion}>{reproduciendo ? 'Pausar' : '▶ Reproducir'}</button>
+        {!soloLectura && onGuardar && <button type="button" className="pizarra-guardar" disabled={guardando || reproduciendo || tiempo > 0} onClick={guardar}>{guardando ? 'Preparando…' : 'Aplicar pizarra al ejercicio'}</button>}
+      </div>
+      {!soloLectura && <details className="pizarra-archivo"><summary>Archivo y exportación</summary><div className="pizarra-fila"><button type="button" onClick={png}>Descargar PNG</button><button type="button" onClick={() => descargarArchivo(JSON.stringify(doc), 'pizarra.json', 'application/json')}>Respaldo editable</button><label>Recuperar JSON <input type="file" accept="application/json,.json" onChange={importar} /></label></div></details>}
+    </header>
+    {error && <p role="alert" className="pizarra-error">{error}</p>}
     <div className="pizarra-fila"><label>Zoom <input aria-label="Zoom de cancha" type="range" min=".5" max="3" step=".1" value={zoom} onChange={e => setZoom(Number(e.target.value))} /></label><button type="button" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }) }}>Ajustar vista</button>
       <button type="button" aria-label="Desplazar vista a la izquierda" onClick={() => setPan(p => ({ ...p, x: p.x - 5 }))}>←</button><button type="button" aria-label="Desplazar vista a la derecha" onClick={() => setPan(p => ({ ...p, x: p.x + 5 }))}>→</button><button type="button" aria-label="Desplazar vista arriba" onClick={() => setPan(p => ({ ...p, y: p.y - 5 }))}>↑</button><button type="button" aria-label="Desplazar vista abajo" onClick={() => setPan(p => ({ ...p, y: p.y + 5 }))}>↓</button>
     </div>
+    {!soloLectura && <details className="pizarra-configuracion"><summary>Orientación y sentido de ataque</summary><fieldset disabled={reproduciendo || guardando || tiempo > 0} className="pizarra-fila">
+      <label>Orientación <select value={doc.orientacion} onChange={e => cambiar({ ...doc, orientacion: e.target.value })}><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select></label>
+      <label>Ataque <select value={doc.ataque} onChange={e => cambiar({ ...doc, ataque: e.target.value })}><option value="derecha">Derecha</option><option value="izquierda">Izquierda</option></select></label>
+    </fieldset></details>}
     <div className={soloLectura ? '' : 'pizarra-layout'}>
-      <div className="pizarra-lienzo"><PizarraCancha ref={svg} doc={activo} poses={poses} seleccion={soloLectura ? [] : seleccion} zoom={zoom} pan={pan} caja={caja}
-        onElemento={soloLectura ? undefined : iniciar} onFondo={fondo} onPointerMove={mover} onPointerUp={e => terminar(e)} onPointerCancel={e => terminar(e, true)} /></div>
-      {!soloLectura && <fieldset className="pizarra-propiedades" disabled={reproduciendo || guardando || tiempo > 0}>
+      {!soloLectura && <PizarraPaleta herramienta={herramienta} elegir={setHerramienta} superficie={doc.superficie} cambiarSuperficie={superficie => cambiar({ ...doc, superficie })}
+        deshabilitada={reproduciendo || guardando || tiempo > 0} alArrastrar={setArrastrandoMaterial} alTerminar={() => setArrastrandoMaterial(null)} />}
+      <div className={`pizarra-lienzo ${arrastrandoMaterial ? 'pizarra-soltar' : ''}`}>
+        {!soloLectura && <div className="pizarra-modos" role="group" aria-label="Modo de interacción"><button type="button" aria-pressed={herramienta === 'seleccionar'} onClick={() => setHerramienta('seleccionar')}>↖ Seleccionar</button><button type="button" aria-pressed={herramienta === 'mover'} onClick={() => setHerramienta('mover')}>✥ Desplazar vista</button></div>}
+        <PizarraCancha ref={svg} doc={activo} poses={poses} seleccion={soloLectura ? [] : seleccion} zoom={zoom} pan={pan} caja={caja}
+        onElemento={soloLectura ? undefined : iniciar} onFondo={fondo} onPointerDownCapture={registrarPuntero}
+        onDragOver={e => { if (!soloLectura && !reproduciendo && !guardando && tiempo === 0 && Array.from(e.dataTransfer.types || []).includes('application/x-comunicaciones-herramienta')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' } }} onDrop={soltarMaterial} onPointerMove={mover} onPointerUp={e => terminar(e)} onPointerCancel={e => terminar(e, true)} />
+        {!soloLectura && elegido && <fieldset disabled={reproduciendo || guardando || tiempo > 0} className="pizarra-contexto" aria-label="Acciones del objeto seleccionado">
+          <span>{HERRAMIENTAS[elegido.tipo]}{seleccion.length > 1 ? ` · ${seleccion.length}` : ''}</span>
+          <button type="button" title="Duplicar selección" onClick={() => cambiar(duplicarElementos(doc, seleccion))}>⧉ Duplicar</button>
+          <button type="button" title="Rotar 15 grados" onClick={() => rotar(((doc.pasos[indice].poses[elegido.id].rotacion + 195) % 360) - 180)}>↻ Girar</button>
+          <button type="button" aria-label="Reducir tamaño" onClick={() => propiedad('tamano', limitar(elegido.tamano - .5, 1, 12))}>−</button>
+          <button type="button" aria-label="Aumentar tamaño" onClick={() => propiedad('tamano', limitar(elegido.tamano + .5, 1, 12))}>+</button>
+          <label className="pizarra-color-rapido">Color<input type="color" value={elegido.color} onChange={e => propiedad('color', e.target.value)} /></label>
+          <button type="button" aria-label="Eliminar selección" onClick={borrar}>⌫</button>
+        </fieldset>}
+      </div>
+      {!soloLectura && <details className="pizarra-panel"><summary>Más propiedades del objeto</summary><fieldset className="pizarra-propiedades" disabled={reproduciendo || guardando || tiempo > 0}>
         <strong>Propiedades · {seleccion.length} seleccionado(s)</strong>
         {elegido ? <>
           <label>Color<input type="color" value={elegido.color} onChange={e => propiedad('color', e.target.value)} /></label>
@@ -167,11 +230,13 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
           <button type="button" onClick={() => cambiar(duplicarElementos(doc, seleccion))}>Duplicar selección</button><button type="button" onClick={borrar}>Eliminar selección</button>
         </> : <p>Elegí una herramienta y tocá la cancha. Arrastrá para mover; Shift suma a la selección. Arrastrá el fondo para seleccionar varias.</p>}
         <button type="button" onClick={() => { if (window.confirm('¿Borrar todos los elementos y pasos? Podés deshacer.')) { cambiar(nuevaPizarra()); setPaso(0); setSeleccion([]) } }}>Borrar todo</button>
-      </fieldset>}
+      </fieldset></details>}
     </div>
-    <div className="pizarra-pasos">{doc.pasos.map((p, i) => <button type="button" key={p.id} aria-pressed={!reproduciendo && indice === i} onClick={() => elegirPaso(i)}>{i + 1}. {p.nombre}</button>)}</div>
+    <div className="pizarra-pasos" aria-label="Pasos de la animación">{doc.pasos.map((p, i) => <button type="button" key={p.id} className="pizarra-paso" aria-label={`Paso ${i + 1}: ${p.nombre}`} aria-pressed={!reproduciendo && indice === i} onClick={() => elegirPaso(i)}>
+      {doc.pasos.length <= 12 || Math.abs(indice - i) <= 2 ? <PizarraCancha miniatura doc={doc} poses={p.poses} /> : <span className="pizarra-paso-resumen">{doc.elementos.length} elementos</span>}<span>{i + 1}. {p.nombre}</span></button>)}
+      {!soloLectura && <button type="button" className="pizarra-agregar-paso" disabled={doc.pasos.length >= 60 || reproduciendo || guardando || tiempo > 0} onClick={pasoNuevo}>+ Agregar paso</button>}
+    </div>
     <div className="pizarra-fila">
-      <button type="button" disabled={doc.pasos.length < 2} onClick={() => { if (!reproduciendo && reloj.current >= total) { reloj.current = 0; setTiempo(0) } setReproduciendo(!reproduciendo) }}>{reproduciendo ? 'Pausar' : '▶ Reproducir'}</button>
       <button type="button" onClick={() => elegirPaso(0)}>Reiniciar</button><button type="button" onClick={() => elegirPaso(indice - 1)}>Paso anterior</button><button type="button" onClick={() => elegirPaso(indice + 1)}>Paso siguiente</button>
       <label>Velocidad<select value={velocidad} onChange={e => { const v = Number(e.target.value); setVelocidad(v); if (!soloLectura) cambiar({ ...doc, velocidad: v }) }}>{[.25, .5, 1, 1.5, 2, 3].map(v => <option key={v} value={v}>{v}×</option>)}</select></label>
       <label><input type="checkbox" checked={bucle} onChange={e => { setBucle(e.target.checked); if (!soloLectura) cambiar({ ...doc, bucle: e.target.checked }) }} /> Bucle</label><span>{tiempo.toFixed(1)} / {total.toFixed(1)} s</span>
@@ -179,12 +244,10 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
     {!soloLectura && <fieldset disabled={reproduciendo || guardando || tiempo > 0}>
       <div className="pizarra-fila"><label>Nombre del paso<input maxLength={80} value={doc.pasos[indice].nombre} onChange={e => cambiar({ ...doc, pasos: doc.pasos.map((p, i) => i === indice ? { ...p, nombre: e.target.value } : p) })} /></label>
         <label>Transición hacia este paso (s)<input type="number" min=".1" max="60" step=".1" value={doc.pasos[indice].duracion} onChange={e => { const v = Number(e.target.value); if (v >= .1 && v <= 60) cambiar({ ...doc, pasos: doc.pasos.map((p, i) => i === indice ? { ...p, duracion: v } : p) }) }} /></label>
-        <button type="button" disabled={doc.pasos.length >= 60} onClick={pasoNuevo}>+ Duplicar paso y continuar</button>
         <button type="button" disabled={!indice} onClick={() => ordenarPaso(-1)}>Mover paso antes</button><button type="button" disabled={indice === doc.pasos.length - 1} onClick={() => ordenarPaso(1)}>Mover paso después</button>
         <button type="button" disabled={doc.pasos.length === 1} onClick={() => { if (window.confirm('¿Eliminar este paso?')) { cambiar({ ...doc, pasos: doc.pasos.filter((_, i) => i !== indice) }); setPaso(Math.max(0, indice - 1)) } }}>Eliminar paso</button>
       </div>
     </fieldset>}
     {!soloLectura && <p className="pizarra-ayuda">Las posiciones se editan en el paso seleccionado. Número, color y tamaño pertenecen al mismo elemento en todos los pasos. Para editar tras reproducir, seleccioná un paso. Ctrl/Cmd+Z: deshacer; Shift+Z: rehacer; A: seleccionar todo; D: duplicar.</p>}
-    {!soloLectura && onGuardar && <button type="button" className="pizarra-guardar" disabled={guardando || reproduciendo || tiempo > 0} onClick={guardar}>{guardando ? 'Preparando…' : 'Aplicar pizarra al ejercicio'}</button>}
   </div>
 }
