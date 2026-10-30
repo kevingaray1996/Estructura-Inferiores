@@ -1,0 +1,21 @@
+.pizarra { color: var(--ui-texto); background: var(--ui-fondo-pagina); padding: 1rem; border: 1px solid var(--ui-borde); border-radius: .8rem; }
+.pizarra-modal { position: fixed; inset: 0; z-index: 120; overflow: auto; background: var(--ui-fondo-pagina); padding: .8rem; }
+.pizarra button, .pizarra select, .pizarra input { background: var(--ui-superficie); color: var(--ui-texto); border: 1px solid var(--ui-borde); border-radius: .4rem; padding: .35rem .5rem; max-width: 100%; }
+.pizarra button:disabled { opacity: .45; cursor: default; }
+.pizarra button[aria-pressed=true], .pizarra .pizarra-guardar { background: #F2C230; color: #111111; }
+.pizarra button:focus-visible, .pizarra input:focus-visible, .pizarra select:focus-visible { outline: 2px solid #F2C230; outline-offset: 2px; }
+.pizarra-fila { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: .6rem; }
+.pizarra-layout { display: grid; grid-template-columns: minmax(0, 1fr) 210px; gap: .75rem; }
+.pizarra-lienzo { min-width: 0; background: #24733F; border-radius: .5rem; overflow: hidden; position: relative; }
+.pizarra-cancha { width: 100%; height: min(68vh, 650px); display: block; touch-action: none; user-select: none; }
+.pizarra-visor .pizarra-cancha { height: min(65vh, 550px); }
+.pizarra-propiedades { background: var(--ui-superficie); border: 1px solid var(--ui-borde); border-radius: .5rem; padding: .65rem; display: flex; flex-direction: column; gap: .5rem; font-size: .8rem; }
+.pizarra-propiedades label { display: flex; flex-direction: column; gap: .2rem; }
+.pizarra-pasos { display: flex; overflow-x: auto; gap: .5rem; padding: .5rem 0; }
+.pizarra-pasos button { min-width: 95px; white-space: nowrap; }
+.pizarra-herramientas { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .6rem; }
+.pizarra-herramientas button { font-size: .75rem; }
+.pizarra-ayuda { color: var(--ui-texto-secundario); font-size: .8rem; margin: .5rem 0; }
+.pizarra-error { color: var(--ui-peligro-texto, #b91c1c); }
+.pizarra-miniatura { width: 100%; max-height: 150px; object-fit: contain; background: #24733F; }
+@media (max-width: 750px) { .pizarra-layout { grid-template-columns: 1fr; } .pizarra-propiedades { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); } .pizarra-cancha { height: 48vh; min-height: 230px; } }

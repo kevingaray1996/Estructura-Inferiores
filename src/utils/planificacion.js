@@ -1,5 +1,6 @@
+import { validarPizarra } from './pizarra.js'
 export const CAMPOS_BLOQUE = ['objetivo', 'duracion', 'indicaciones']
-export const CAMPOS_EJERCICIO = ['objetivo', 'duracion', 'series', 'repeticiones', 'materiales', 'indicaciones', 'imagen_url', 'link_video']
+export const CAMPOS_EJERCICIO = ['objetivo', 'duracion', 'series', 'repeticiones', 'materiales', 'indicaciones', 'imagen_url', 'link_video', 'pizarra']
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const texto = (valor) => typeof valor === 'string' ? valor : ''
 
@@ -40,7 +41,9 @@ export function nuevoEjercicio(biblioteca) {
     objetivo: '', duracion: null, series: '', repeticiones: '', materiales: '',
     indicaciones: biblioteca?.descripcion || '', notas_internas: '', visible: false,
     imagen_url: biblioteca?.imagen_url || '', link_video: biblioteca?.link_video || '',
-    campos_publicos: [...CAMPOS_EJERCICIO],
+    pizarra: biblioteca?.pizarra ? validarPizarra(structuredClone(biblioteca.pizarra)) : null,
+    pizarra_miniatura: biblioteca?.pizarra_miniatura || '',
+    campos_publicos: CAMPOS_EJERCICIO.filter(c => c !== 'pizarra'),
   }
 }
 
@@ -84,7 +87,9 @@ function prepararItem(item, esBloque) {
   if (esBloque) return { ...base, ejercicios: (item.ejercicios || []).map((e) => prepararItem(e, false)) }
   if (item.biblioteca_id && !UUID.test(item.biblioteca_id)) throw new Error('Referencia de biblioteca inválida.')
   return { ...base, biblioteca_id: item.biblioteca_id || null, series: texto(item.series), repeticiones: texto(item.repeticiones),
-    materiales: texto(item.materiales), imagen_url: texto(item.imagen_url), link_video: texto(item.link_video) }
+    materiales: texto(item.materiales), imagen_url: texto(item.imagen_url), link_video: texto(item.link_video),
+    pizarra: item.pizarra ? validarPizarra(item.pizarra) : null,
+    pizarra_miniatura: item.pizarra_miniatura || '' }
 }
 
 export function prepararSesion(sesion) {
