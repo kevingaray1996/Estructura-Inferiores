@@ -4,9 +4,10 @@ import { CAMPOS_BLOQUE, CAMPOS_EJERCICIO, cargarSemana, copiarSemana, copiarSesi
   fechaArgentina, guardarSesion, inicioSemana, mensajePlanificacion, moverElemento, nuevaSesion,
   nuevoBloque, nuevoEjercicio, puedePlanificar, sumarDias } from '../utils/planificacion'
 import './planificacion.css'
+import PizarraEjercicio from './PizarraEjercicio'
 
 const fechaTexto = (f) => new Intl.DateTimeFormat('es-AR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${f}T12:00:00Z`))
-const etiquetas = { objetivo: 'Objetivo', duracion: 'Duración (min)', indicaciones: 'Indicaciones', series: 'Series', repeticiones: 'Repeticiones', materiales: 'Materiales', imagen_url: 'Imagen', link_video: 'Video' }
+const etiquetas = { objetivo: 'Objetivo', duracion: 'Duración (min)', indicaciones: 'Indicaciones', series: 'Series', repeticiones: 'Repeticiones', materiales: 'Materiales', imagen_url: 'Imagen', link_video: 'Video', pizarra: 'Pizarra animada (publicación explícita)' }
 
 function Campo({ titulo, valor, cambiar, tipo = 'text', ...props }) {
   return <label className="planificacion-campo"><span>{titulo}</span><input type={tipo} value={valor ?? ''} onChange={(e) => cambiar(e.target.value)} {...props} /></label>
@@ -52,9 +53,11 @@ function BloqueEditor({ bloque, indice, total, cambiar, mover, quitar, bibliotec
           eliminar={() => cambiar({ ...bloque, ejercicios: bloque.ejercicios.filter((_, i) => i !== j) })} /></div>
       <Campo titulo="Nombre" valor={e.nombre} cambiar={(nombre) => tarea(j, { ...e, nombre })} />
       <details><summary>Detalles de la tarea (opcionales)</summary><div className="planificacion-rejilla">
-        {CAMPOS_EJERCICIO.map((campo) => <Campo key={campo} titulo={etiquetas[campo]} tipo={campo === 'duracion' ? 'number' : 'text'}
+        {CAMPOS_EJERCICIO.filter(c => c !== 'pizarra').map((campo) => <Campo key={campo} titulo={etiquetas[campo]} tipo={campo === 'duracion' ? 'number' : 'text'}
           valor={e[campo]} cambiar={(valor) => tarea(j, { ...e, [campo]: valor })} {...(campo === 'duracion' ? { min: '0.1', max: '1440', step: 'any' } : {})} />)}
       </div><Campo titulo="Notas internas de la tarea (privadas)" valor={e.notas_internas} cambiar={(notas_internas) => tarea(j, { ...e, notas_internas })} /></details>
+      <PizarraEjercicio valor={e.pizarra} miniatura={e.pizarra_miniatura} nombre={e.nombre} onChange={(pizarra, pizarra_miniatura) => tarea(j, { ...e, pizarra, pizarra_miniatura })} />
+      {e.pizarra && <button type="button" onClick={() => { if (window.confirm('¿Quitar la pizarra de esta tarea? La biblioteca no cambia.')) tarea(j, { ...e, pizarra: null, pizarra_miniatura: '' }) }}>Quitar pizarra de la tarea</button>}
       <Visibilidad item={e} campos={CAMPOS_EJERCICIO} cambiar={(valor) => tarea(j, valor)} />
     </div>)}
     <div className="planificacion-fila">
@@ -95,7 +98,7 @@ export default function PlanificacionSection({ perfil, fechaInicial, categoriaIn
   const autorizado = puedePlanificar(perfil, categoriaId)
 
   const cargarBiblioteca = useCallback(async () => {
-    const { data, error: fallo } = await supabase.from('biblioteca').select('id,contenido,descripcion,imagen_url,link_video').order('contenido')
+    const { data, error: fallo } = await supabase.from('biblioteca').select('*').order('contenido')
     setBiblioteca(data || [])
     setBibliotecaError(fallo ? 'No se pudo leer la biblioteca. Podés usar tareas libres y reintentar.' : '')
   }, [])
@@ -106,7 +109,7 @@ export default function PlanificacionSection({ perfil, fechaInicial, categoriaIn
     async function cargar() {
       const [{ data, error: fallo }, bibliotecaRes] = await Promise.all([
         supabase.from('categorias').select('id,nombre,orden').order('orden'),
-        supabase.from('biblioteca').select('id,contenido,descripcion,imagen_url,link_video').order('contenido'),
+        supabase.from('biblioteca').select('*').order('contenido'),
       ])
       if (activo) {
         setCategorias(data || [])

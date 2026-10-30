@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { COLORES } from '../theme'
 import { cargarEntrenamientoHoy, enlaceSeguro, fechaArgentina } from '../utils/planificacion'
+import PizarraEjercicio from './PizarraEjercicio'
 
 export function ContenidoEntrenamientoHoy({ sesiones }) {
   if (!sesiones?.length) return null
@@ -27,6 +28,7 @@ export function ContenidoEntrenamientoHoy({ sesiones }) {
           </p>}
           {e.materiales && <p className="text-sm">Materiales: {e.materiales}</p>}
           {e.indicaciones && <p className="text-sm whitespace-pre-wrap">{e.indicaciones}</p>}
+          {e.pizarra && <PizarraEjercicio valor={e.pizarra} nombre={e.nombre} objetivo={e.objetivo} indicaciones={e.indicaciones} soloLectura />}
           {enlaceSeguro(e.imagen_url) && <img src={enlaceSeguro(e.imagen_url)} alt={e.nombre || 'Ejercicio'} loading="lazy" className="max-h-48 max-w-full rounded-lg object-contain" />}
           {enlaceSeguro(e.link_video) && <a className="inline-block text-sm underline" style={{ color: 'var(--ui-texto-acento)' }} href={enlaceSeguro(e.link_video)} target="_blank" rel="noreferrer">Ver ejercicio</a>}
         </div>)}

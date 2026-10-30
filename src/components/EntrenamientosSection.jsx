@@ -5,6 +5,8 @@ import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
 import { sanitizarNombreArchivo } from '../utils/archivos'
 import { comprimirImagen } from '../utils/comprimirImagen'
+import PizarraEjercicio from './PizarraEjercicio'
+import { validarPizarra } from '../utils/pizarra'
 
 function EntrenamientosSection({ onPlanificar }) {
   const [entrenamientos, setEntrenamientos] = useState([])
@@ -22,6 +24,10 @@ function EntrenamientosSection({ onPlanificar }) {
   const [linkVideo, setLinkVideo] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [subiendoImagen, setSubiendoImagen] = useState(false)
+  const [pizarra, setPizarra] = useState(null)
+  const [miniatura, setMiniatura] = useState('')
+  const [pizarraCambiada, setPizarraCambiada] = useState(false)
+  const [errorGuardar, setErrorGuardar] = useState('')
 
   const inputStyle = {
     backgroundColor: COLORES.fondoTarjeta,
@@ -32,6 +38,13 @@ function EntrenamientosSection({ onPlanificar }) {
   useEffect(() => {
     cargarEntrenamientos()
   }, [])
+
+  useEffect(() => {
+    if (!mostrarForm || !pizarraCambiada) return
+    const avisar = e => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', avisar)
+    return () => window.removeEventListener('beforeunload', avisar)
+  }, [mostrarForm, pizarraCambiada])
 
   async function cargarEntrenamientos() {
     const { data } = await supabase
@@ -55,6 +68,7 @@ function EntrenamientosSection({ onPlanificar }) {
   })
 
   function abrirNuevo() {
+    setPizarra(null); setMiniatura(''); setPizarraCambiada(false); setErrorGuardar('')
     setEntrenamientoEditando(null)
     setFecha(obtenerFechaHoy())
     setContenido('')
@@ -66,6 +80,7 @@ function EntrenamientosSection({ onPlanificar }) {
   }
 
   function abrirEditar(e) {
+    setPizarra(e.pizarra || null); setMiniatura(e.pizarra_miniatura || ''); setPizarraCambiada(false); setErrorGuardar('')
     setEntrenamientoEditando(e)
     setFecha(e.fecha || '')
     setContenido(e.contenido || '')
@@ -77,6 +92,7 @@ function EntrenamientosSection({ onPlanificar }) {
   }
 
   function cancelarForm() {
+    if (pizarraCambiada && !window.confirm('¿Descartar la pizarra sin guardar el ejercicio?')) return
     setMostrarForm(false)
     setEntrenamientoEditando(null)
   }
@@ -100,8 +116,9 @@ function EntrenamientosSection({ onPlanificar }) {
   }
 
   async function handleGuardar() {
-    if (!fecha || !descripcion) return
+    if (!fecha || !descripcion || guardando) return
     setGuardando(true)
+    setErrorGuardar('')
 
     const datos = {
       fecha,
@@ -112,16 +129,35 @@ function EntrenamientosSection({ onPlanificar }) {
       link_video: linkVideo || null,
     }
 
-    if (entrenamientoEditando) {
-      await supabase.from('biblioteca').update(datos).eq('id', entrenamientoEditando.id)
-    } else {
-      await supabase.from('biblioteca').insert(datos)
+    try {
+      let respuesta
+      if (pizarraCambiada || entrenamientoEditando?.pizarra) {
+        const doc = pizarra ? validarPizarra(pizarra) : null
+        respuesta = await supabase.rpc('guardar_ejercicio_pizarra', { p_id: entrenamientoEditando?.id || null,
+          p_revision: entrenamientoEditando ? entrenamientoEditando.pizarra_revision : null,
+          p_datos: { ...datos, pizarra: doc, pizarra_miniatura: miniatura } })
+        if (!respuesta.error && !respuesta.data?.id) throw Error('No se pudo confirmar el guardado. Recargá antes de reintentar.')
+      } else if (entrenamientoEditando) {
+        respuesta = await supabase.from('biblioteca').update(datos).eq('id', entrenamientoEditando.id)
+      } else {
+        respuesta = await supabase.from('biblioteca').insert(datos)
+      }
+      if (respuesta.error) throw respuesta.error
+    } catch (e) {
+      setErrorGuardar(e.code === '40001' ? 'El ejercicio cambió en otra sesión. Conservá un respaldo JSON y recargá antes de guardar.' :
+        ['PGRST202', '42883'].includes(e.code) ? 'Falta aplicar la migración de pizarra. El diseño sigue en este formulario; podés descargar su respaldo JSON.' : e.message || 'No se pudo guardar el ejercicio.')
+      setGuardando(false); return
     }
 
     setGuardando(false)
     setMostrarForm(false)
     setEntrenamientoEditando(null)
     cargarEntrenamientos()
+  }
+
+  function duplicarEjercicio(e) {
+    if (mostrarForm && !window.confirm('¿Abrir una copia? Se descartará el formulario actual.')) return
+    abrirEditar(e); setEntrenamientoEditando(null); setFecha(obtenerFechaHoy()); setPizarraCambiada(Boolean(e.pizarra))
   }
 
   async function handleEliminar(id) {
@@ -254,6 +290,9 @@ function EntrenamientosSection({ onPlanificar }) {
             >
               {guardando ? 'Guardando...' : entrenamientoEditando ? 'Guardar cambios' : 'Guardar entrenamiento'}
             </button>
+            <PizarraEjercicio key={entrenamientoEditando?.id || 'nuevo'} valor={pizarra} miniatura={miniatura} nombre={contenido || 'Ejercicio'} onChange={(doc, vista) => { setPizarra(doc); setMiniatura(vista); setPizarraCambiada(true) }} />
+            {pizarra && <button type="button" onClick={() => { if (window.confirm('¿Quitar la pizarra de este ejercicio? Las copias de planificación no cambian.')) { setPizarra(null); setMiniatura(''); setPizarraCambiada(true) } }}>Quitar pizarra</button>}
+            {errorGuardar && <p role="alert" style={{ color: COLORES.peligro }}>{errorGuardar}</p>}
           </div>
         )}
 
@@ -303,11 +342,15 @@ function EntrenamientosSection({ onPlanificar }) {
               >
                 {e.imagen_url ? (
                   <img src={e.imagen_url} alt={e.contenido || 'Entrenamiento'} className="w-full h-full object-cover" />
+                ) : e.pizarra_miniatura?.startsWith('data:image/png;base64,') ? (
+                  <img src={e.pizarra_miniatura} alt={`Pizarra de ${e.contenido || 'entrenamiento'}`} className="w-full h-full object-contain" />
                 ) : (
                   <span className="text-3xl">🏟️</span>
                 )}
               </div>
               <div className="p-3 flex-1 flex flex-col">
+                {e.pizarra && <PizarraEjercicio valor={e.pizarra} nombre={e.contenido || 'Ejercicio'} soloLectura />}
+                <button type="button" onClick={() => duplicarEjercicio(e)} className="text-xs underline text-left" style={{ color: COLORES.textoSecundario }}>Duplicar ejercicio</button>
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   {e.contenido && (
                     <span
