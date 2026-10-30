@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
-function CategoriaFiltro({ categoriaId, onCategoriaChange, busqueda, onBusquedaChange, bloqueada, categoriaNombre }) {
+function CategoriaFiltro({ categoriaId, onCategoriaChange, busqueda, onBusquedaChange, bloqueada, categoriaNombre, Selector }) {
   const [categorias, setCategorias] = useState([])
 
   useEffect(() => {
@@ -28,6 +28,9 @@ function CategoriaFiltro({ categoriaId, onCategoriaChange, busqueda, onBusquedaC
         >
           {categoriaNombre || 'Tu categoría'}
         </span>
+      ) : Selector ? (
+        <Selector label="Categoría" value={categoriaId} onChange={onCategoriaChange} className="sm:w-48"
+          options={[{ value: '', label: 'Todas las categorías' }, ...categorias.map(c => ({ value: c.id, label: c.nombre }))]} />
       ) : (
         <select
           value={categoriaId}

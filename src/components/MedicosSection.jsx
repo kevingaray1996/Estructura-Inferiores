@@ -3,6 +3,7 @@ import { COLORES } from '../theme'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import CategoriaFiltro from './CategoriaFiltro'
+import SelectorMedicos from './SelectorMedicos'
 import MapaCorporal from './MapaCorporal'
 import CamposIncidenciaCorporal from './CamposIncidenciaCorporal'
 import { ESTADOS_CORPORALES, LADOS_CORPORALES, colorZona, fichasZona, nombreZona, puedeVerMedicos, ubicacionFicha, validarIncidencia } from '../utils/mapaCorporal'
@@ -574,31 +575,17 @@ function MedicosContenido({ perfil, jugadorInicialId, onConsumirJugadorInicial }
               Elegí categoría y jugador para abrir su ficha médica
             </p>
             <div className="grid sm:grid-cols-2 gap-3">
-              <select
+              <SelectorMedicos label="Categoría de la jugadora"
                 value={categoriaAgregar}
-                onChange={(e) => {
-                  setCategoriaAgregar(e.target.value)
+                onChange={(valor) => {
+                  setCategoriaAgregar(valor)
                   setJugadorAgregarId('')
                 }}
-                className="p-2.5 rounded-xl ui-control outline-none text-sm"
-                style={inputStyle}
-              >
-                <option value="">Todas las categorías</option>
-                {categoriasDisponibles.map(([id, nombre]) => (
-                  <option key={id} value={id}>{nombre}</option>
-                ))}
-              </select>
-              <select
+                options={[{ value: '', label: 'Todas las categorías' }, ...categoriasDisponibles.map(([id, nombre]) => ({ value: id, label: nombre }))]} />
+              <SelectorMedicos label="Jugadora"
                 value={jugadorAgregarId}
-                onChange={(e) => setJugadorAgregarId(e.target.value)}
-                className="p-2.5 rounded-xl ui-control outline-none text-sm"
-                style={inputStyle}
-              >
-                <option value="">Seleccionar jugador...</option>
-                {jugadoresParaAgregar.map((j) => (
-                  <option key={j.id} value={j.id}>{j.apellido}, {j.nombre}</option>
-                ))}
-              </select>
+                onChange={setJugadorAgregarId}
+                options={[{ value: '', label: 'Seleccionar jugador...' }, ...jugadoresParaAgregar.map(j => ({ value: j.id, label: `${j.apellido}, ${j.nombre}` }))]} />
             </div>
             <button
               onClick={irAAgregar}
@@ -612,6 +599,7 @@ function MedicosContenido({ perfil, jugadorInicialId, onConsumirJugadorInicial }
         )}
 
         <CategoriaFiltro
+          Selector={SelectorMedicos}
           categoriaId={categoriaId}
           onCategoriaChange={setCategoriaId}
           busqueda={busqueda}

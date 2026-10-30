@@ -40,7 +40,7 @@ test('Mapa: SVG, formulario, guardado, historial, resolución, conflictos y acce
   const texto=()=>document.body.textContent
   const click=async(el)=>{assert.ok(el);assert.equal(!!el.disabled,false);await act(()=>el.dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true})))}
   const boton=t=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes(t))
-  const cambiar=async(el,value)=>act(()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLSelectElement.prototype,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event('change',{bubbles:true}))})
+  const cambiar=async(el,label)=>{await click(el); await click([...document.querySelectorAll('[role=option]')].find(o=>o.querySelector('span').textContent===label))}
   try {
     const {default:Medicos}=await server.ssrLoadModule('/src/components/MedicosSection.jsx')
     const props={perfil:{rol:'preparador_fisico'},jugadorInicialId:'j',onConsumirJugadorInicial(){}}
@@ -55,26 +55,26 @@ test('Mapa: SVG, formulario, guardado, historial, resolución, conflictos y acce
     assert.equal(izquierda(espalda).getAttribute('transform'),null)
     await act(()=>derecha(frente).dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Enter',bubbles:true})))
     assert.match(texto(),/Situación informada/)
-    assert.equal(document.querySelectorAll('fieldset select')[0].value,'rodilla')
-    assert.equal(document.querySelectorAll('fieldset select')[1].value,'derecha')
+    assert.match(document.querySelectorAll('fieldset [role=combobox]')[0].textContent,/Rodillas/)
+    assert.match(document.querySelectorAll('fieldset [role=combobox]')[1].textContent,/Derecha/)
     await click(boton('Guardar registro'))
     assert.equal(escrituras.length,1)
     assert.equal(fichas[0].tipo_incidencia,'molestia')
     assert.equal(fichas[0].recuperado,false)
     assert.equal(derecha(frente).getAttribute('fill'),'#F2C230')
     await click(document.querySelector('button[aria-label^="Editar registro"]'))
-    await cambiar(document.querySelectorAll('fieldset select')[2],'lesion_informada')
+    await cambiar(document.querySelectorAll('fieldset [role=combobox]')[2],'Lesión informada')
     await click(boton('Guardar cambios'))
     assert.deepEqual(escrituras[1].filtros,[['id','f1'],['revision',0]])
     assert.equal(derecha(frente).getAttribute('fill'),'#DC2626')
     await click(document.querySelector('button[aria-label^="Editar registro"]'))
     // Resolver sin fecha se rechaza y no escribe.
-    await cambiar(document.querySelectorAll('fieldset select')[3],'resuelta')
+    await cambiar(document.querySelectorAll('fieldset [role=combobox]')[3],'Resuelta')
     await click(boton('Guardar cambios'))
     assert.match(document.querySelector('[role=alert]').textContent,/fecha de resolución/)
     assert.equal(escrituras.length,2)
     // Conflicto conserva el formulario y solicita releer; nunca pisa el dato actual.
-    await cambiar(document.querySelectorAll('fieldset select')[3],'derivada')
+    await cambiar(document.querySelectorAll('fieldset [role=combobox]')[3],'Derivada a evaluación profesional')
     conflicto=true
     await click(boton('Guardar cambios'))
     assert.match(document.querySelector('[role=alert]').textContent,/historial fue actualizado/)
@@ -83,11 +83,11 @@ test('Mapa: SVG, formulario, guardado, historial, resolución, conflictos y acce
     conflicto=false
     await click(boton('Cancelar'))
     await click(document.querySelector('button[aria-label^="Editar registro"]'))
-    assert.equal(document.querySelectorAll('fieldset select')[3].value,'seguimiento')
+    assert.match(document.querySelectorAll('fieldset [role=combobox]')[3].textContent,/En seguimiento/)
     // El cambio de tema no desmonta el formulario.
-    document.documentElement.dataset.tema='claro'
-    assert.equal(document.querySelectorAll('fieldset select')[2].value,'lesion_informada')
-    await cambiar(document.querySelectorAll('fieldset select')[3],'resuelta')
+    document.documentElement.dataset.apariencia='claro'
+    assert.match(document.querySelectorAll('fieldset [role=combobox]')[2].textContent,/Lesión informada/)
+    await cambiar(document.querySelectorAll('fieldset [role=combobox]')[3],'Resuelta')
     const fechaResolucion=document.querySelector('fieldset fieldset input[type=date]')
     const fechaInicio=[...document.querySelectorAll('input[type=date]')].find(el=>el!==fechaResolucion).value
     await act(()=>{
