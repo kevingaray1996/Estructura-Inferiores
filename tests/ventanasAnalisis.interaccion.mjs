@@ -36,10 +36,11 @@ test('Análisis: dos ventanas, un reproductor, comandos confirmados y un guardad
   dom.window.YT=YT
   dom.window.setInterval=fn=>{const id=Symbol();timers.set(id,fn);return id};dom.window.clearInterval=id=>timers.delete(id)
   let popup=null, bloqueada=false
-  function nuevoDocumento(){const hija=new JSDOM('<!doctype html><html><head></head><body></body></html>',{url:'about:blank'});hija.window.YT=YT;hijas.push(hija);return hija.window.document}
-  dom.window.open=()=>{
+  function nuevoDocumento(){const hija=new JSDOM('<!doctype html><html><head></head><body><main id="analisis-auxiliar-contenido" data-ventana-analisis="lista"></main></body></html>',{url:'https://comunicaciones.test/analisis-ventana.html'});hija.window.YT=YT;hijas.push(hija);return hija.window.document}
+  dom.window.open=(url)=>{
+    assert.equal(url,'https://comunicaciones.test/analisis-ventana.html')
     if(bloqueada)return null
-    if(!popup || popup.closed){const listeners=new Map();popup={document:nuevoDocumento(),location:{href:'about:blank'},closed:false,focus(){},close(){this.closed=true},addEventListener:(k,fn)=>listeners.set(k,fn),removeEventListener:(k,fn)=>{if(listeners.get(k)===fn)listeners.delete(k)},listeners}}
+    if(!popup || popup.closed){const listeners=new Map();popup={document:nuevoDocumento(),location:{href:'https://comunicaciones.test/analisis-ventana.html'},closed:false,focus(){},close(){this.closed=true},addEventListener:(k,fn)=>listeners.set(k,fn),removeEventListener:(k,fn)=>{if(listeners.get(k)===fn)listeners.delete(k)},listeners}}
     return popup
   }
   const server=await createServer({server:{middlewareMode:true,hmr:false},appType:'custom',plugins:[{name:'ventanas-backend-simulado',enforce:'pre',resolveId(s){if(s.endsWith('/supabaseClient'))return '\0ventanas-mock'},load(id){if(id==='\0ventanas-mock')return 'export const supabase=globalThis.__analisisSupabase;'}}]})
@@ -55,8 +56,9 @@ test('Análisis: dos ventanas, un reproductor, comandos confirmados y un guardad
     await act(async()=>{root.render(createElement(Analisis));await Promise.resolve()})
     assert.equal(document.querySelectorAll('iframe').length,1);assert.equal(players.filter(p=>p.alive).length,1)
     activo().time=125.9
-    bloqueada=true;await click(main(),'Separar reproductor');assert.match(document.body.textContent,/bloqueó/);assert.equal(document.querySelectorAll('iframe').length,1)
-    bloqueada=false;const original=activo();await click(main(),'Separar botonera')
+    bloqueada=true;await click(main(),'Separar botonera');assert.match(document.body.textContent,/bloqueó/);assert.equal(document.querySelectorAll('iframe').length,1)
+    assert.ok(boton(main(),'Reintentar separación'))
+    bloqueada=false;const original=activo();await click(main(),'Reintentar separación')
     assert.equal(activo(),original);assert.match(remoto().body.textContent,/Etiquetado rápido/)
     assert.ok(![...document.querySelectorAll('h2')].some(h=>h.textContent==='Etiquetado rápido'))
     await click(remoto(),'Pase +')
@@ -75,6 +77,10 @@ test('Análisis: dos ventanas, un reproductor, comandos confirmados y un guardad
     await click(main(),'Separar reproductor')
     assert.equal(document.querySelectorAll('iframe').length,0);assert.equal(remoto().querySelectorAll('iframe').length,1)
     assert.equal(players.filter(p=>p.alive).length,1);assert.equal(activo().iframe.ownerDocument,remoto())
+    assert.equal(activo().iframe.ownerDocument.URL,'https://comunicaciones.test/analisis-ventana.html')
+    const embed=new URL(activo().iframe.src)
+    assert.equal(embed.searchParams.get('enablejsapi'),'1');assert.equal(embed.searchParams.get('origin'),'https://comunicaciones.test')
+    assert.equal(activo().iframe.getAttribute('referrerpolicy'),'strict-origin-when-cross-origin')
     await act(()=>activo().confirmarSalto());await tick()
     assert.equal(activo().state,2)
     await click(remoto(),'▶ Reproducir')
@@ -110,6 +116,21 @@ test('Análisis: dos ventanas, un reproductor, comandos confirmados y un guardad
     await act(async()=>resolverInsert())
     await act(()=>window.dispatchEvent(new window.Event('pagehide')))
     assert.equal(popup.closed,true);assert.equal(writes.length,3)
+    // Marco real de la ruta auxiliar: conexión sin iniciar otra aplicación ni cliente.
+    const mensajes=[];const principal={closed:false,postMessage:(d,o)=>mensajes.push({d,o})}
+    Object.defineProperty(window,'opener',{value:principal,configurable:true})
+    window.history.replaceState({},'', '/analisis-ventana.html')
+    const {default:Marco}=await server.ssrLoadModule('/src/components/VentanaAuxiliarAnalisis.jsx')
+    await act(()=>root.render(createElement(Marco)))
+    assert.equal(mensajes.length,1);assert.equal(mensajes[0].o,'https://comunicaciones.test')
+    assert.deepEqual(mensajes[0].d,{canal:'comunicaciones:analisis-auxiliar:v1',tipo:'lista'})
+    const destino=document.getElementById('analisis-auxiliar-contenido')
+    assert.ok(destino);assert.match(document.body.textContent,/Conectando/)
+    const confirmar=async origin=>act(()=>{const e=new window.MessageEvent('message',{origin,data:{canal:'comunicaciones:analisis-auxiliar:v1',tipo:'conectada'}});Object.defineProperty(e,'source',{value:principal});window.dispatchEvent(e)})
+    await confirmar('https://ajeno.test');assert.match(document.body.textContent,/Conectando/)
+    await confirmar('https://comunicaciones.test');assert.doesNotMatch(document.body.textContent,/Conectando/)
+    assert.equal(document.getElementById('analisis-auxiliar-contenido'),destino)
+    assert.equal(writes.length,3)
   } finally {
     await act(()=>root.unmount());await server.close();for(const hija of hijas)hija.window.close();dom.window.close()
     for(const[n,p]of previos){if(p)Object.defineProperty(globalThis,n,p);else delete globalThis[n]}

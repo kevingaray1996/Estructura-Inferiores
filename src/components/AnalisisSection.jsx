@@ -8,7 +8,7 @@ import useVentanaAnalisis from '../hooks/useVentanaAnalisis'
 import ZonaVentanaAnalisis from './ZonaVentanaAnalisis'
 import ControlesVideoAnalisis from './ControlesVideoAnalisis'
 import { crearBloqueoEtiquetado, leerTiempoActivo, registroInciertoTrasError } from '../utils/ventanaAnalisis'
-import { cargarYouTubeEnVentana } from '../utils/youtubeVentana'
+import { cargarYouTubeEnVentana, mensajeErrorYouTube } from '../utils/youtubeVentana'
 import './ventanasAnalisis.css'
 import DetalleDestinatariaPase from './DetalleDestinatariaPase'
 import DetalleDestinoPase from './DetalleDestinoPase'
@@ -954,12 +954,10 @@ export default function AnalisisSection() {
             onAutoplayBlocked: () => {
               if (!cancelado) setError('El navegador bloqueó la reproducción automática. Pulsá reproducir dentro del video y reconectá si no responde.')
             },
-            onError: () => {
+            onError: (evento) => {
               if (!cancelado) {
                 setVideoListo(false)
-                setError(
-                  'YouTube no permite reproducir este video incrustado. Probá abrirlo directamente en YouTube.',
-                )
+                setError(mensajeErrorYouTube(evento.data))
               }
             },
           },
@@ -1830,6 +1828,7 @@ export default function AnalisisSection() {
     <div className="flex flex-wrap gap-2">
       <Boton secundario disabled={guardando || !videoActual} onClick={() => ventanas.gestor.separar('reproductor')}>Separar reproductor</Boton>
       <Boton secundario disabled={guardando} onClick={() => ventanas.gestor.separar('botonera')}>Separar botonera</Boton>
+      {ventanas.reintento && <Boton disabled={guardando} onClick={() => ventanas.gestor.separar(ventanas.reintento)}>Reintentar separación</Boton>}
       {ventanas.modo && <Boton secundario onClick={() => ventanas.gestor.acoplar()}>Volver a integrar</Boton>}
       {videoActual && <Boton secundario disabled={guardando} onClick={reconectarVideo}>Reconectar video</Boton>}
     </div>

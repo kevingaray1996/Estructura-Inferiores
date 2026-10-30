@@ -4,7 +4,11 @@ En **Análisis → Video y etiquetas**, elegir **Separar reproductor** o **Separ
 
 ## Una sesión, un reproductor y un escritor
 
-Se usa `createPortal` sobre los componentes existentes, no una segunda aplicación. El estado, autenticación, permisos, selección de partido/jugadora/acción/resultado/zona/coordenadas y guardados viven exclusivamente en la raíz React principal. Los eventos del portal llaman a los mismos handlers. No hay BroadcastChannel global, mensajes con credenciales ni parámetros de sesión en URL/storage. Cada pestaña principal crea un nombre aleatorio de ventana; no reclama la auxiliar de otra pestaña.
+Se usa `createPortal` sobre los componentes existentes, no una segunda sesión de Análisis. El estado, autenticación, permisos, selección de partido/jugadora/acción/resultado/zona/coordenadas y guardados viven exclusivamente en la raíz React principal. Los eventos del portal llaman a los mismos handlers. No hay BroadcastChannel global, mensajes con credenciales ni parámetros de sesión en URL/storage. Cada pestaña principal crea un nombre aleatorio de ventana; no reclama la auxiliar de otra pestaña.
+
+La auxiliar navega a `/analisis-ventana.html`, una entrada HTTP real de React del mismo origen, compilada junto con `index.html` mediante la configuración de Vite. No necesita reglas de reescritura de Vercel. Su componente sólo crea el marco y el contenedor del portal; no importa App ni Supabase. La principal espera ese contenedor antes de trasladar contenido. El handshake por `postMessage` lleva únicamente estado de conexión; ambos extremos verifican origen y ventana emisora. El tiempo y los datos de análisis continúan compartidos en memoria.
+
+Se eliminó el montaje de HTML en `about:blank`. YouTube exige identificación HTTP del cliente: un parámetro `origin` no sustituye un `Referer` válido. El documento real y el iframe usan `strict-origin-when-cross-origin`, manteniendo `enablejsapi=1` y `origin` del sitio, sin falsear cabeceras ni desactivar seguridad. El error 153 se informa específicamente; 101/150 se distinguen como restricciones de incrustación del video.
 
 Hay un solo iframe activo. Al separar/acoplar el video se pausa el anterior y se conserva una lectura de tiempo, estado y velocidad; se desmonta y se crea el reproductor en su nueva ventana, cargando allí su API de YouTube. Puede existir una breve reconexión o recarga del buffer; no se garantiza continuidad sin interrupción. La restauración sólo se aplica al mismo partido y video.
 
@@ -16,11 +20,11 @@ Un bloqueo síncrono compartido impide envíos concurrentes entre el formulario 
 
 ## Cierres y recuperación
 
-- Popup bloqueado: se informa cómo permitirlo, sin desmontar el video actual.
+- Popup bloqueado o excepción de apertura: se informa cómo permitirlo, sin desmontar el video actual, y se ofrece **Reintentar separación** desde otro clic directo. Un fallo de foco no se confunde con un popup cerrado: se informa cómo localizar la ventana. Si la página no confirma conexión en veinte segundos, se recupera la principal y se ofrece reintentar.
 - Recarga de la auxiliar: se bloquean controles dependientes del tiempo y se reconstruye el portal cuando el documento vuelve a estar disponible.
 - Cierre de la auxiliar: se recupera automáticamente la vista integrada. Los campos permanecen en el estado principal y las acciones guardadas no se eliminan.
 - Recarga/cierre/navegación de la principal: se cierra la auxiliar; no queda una segunda aplicación guardando ni un video auxiliar reproduciéndose sin su sesión. Después de recargar, volver a separar si se desea. Se recuperan de Supabase las acciones persistidas; los campos sin guardar no sobreviven a la recarga completa.
-- Cambio de sección o salida de Análisis: se acopla/cierra la auxiliar. Si el documento deja de ser accesible o navega fuera de `about:blank`, se desconecta y se recupera la principal.
+- Cambio de sección o salida de Análisis: se acopla/cierra la auxiliar. Si el documento deja de ser accesible o navega fuera de la ruta auxiliar del mismo origen, se desconecta y se recupera la principal. El documento provisional `about:blank` de una apertura nunca recibe un iframe ni contenido de Análisis.
 
 La sincronización usa memoria y eventos de una sola raíz, más una comprobación local de disponibilidad cada 500 ms; no consulta Supabase para transmitir tiempo ni estado de reproducción. Los estilos y el tema efectivo se reflejan desde la principal. No se añaden atajos globales duplicados; los controles nativos de YouTube actúan sobre el único iframe.
 
@@ -42,4 +46,4 @@ Con YouTube real y una cuenta autorizada, sin crear datos ficticios:
 4. Recargar y cerrar la auxiliar; cambiar partido y recuperar la vista. No debe quedar un segundo video reproduciéndose.
 5. Revisar claro/oscuro/automático y funcionamiento con un solo monitor. Comprobar en el uso real autorizado que una etiqueta se guarda una sola vez y actualiza el explorador.
 
-La simulación DOM no verifica el protocolo real de la API entre ventanas, autoplay, buffering, políticas del navegador ni dos monitores físicos. Esas comprobaciones quedan pendientes antes de afirmar que la experiencia real está validada.
+La simulación DOM no verifica el protocolo real de la API entre ventanas, el Referer enviado por Chrome, autoplay, buffering, políticas del navegador ni dos monitores físicos. Se comprobó la respuesta HTTP 200 de la nueva entrada local y su inclusión en el build. El acceso automatizado a Chrome no fue aprobado; la validación de reproducción real de YouTube sigue pendiente.
