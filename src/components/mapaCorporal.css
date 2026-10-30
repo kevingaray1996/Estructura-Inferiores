@@ -1,0 +1,18 @@
+.mapa-corporal { background: var(--ui-superficie, var(--ui-fondo-tarjeta)); color: var(--ui-texto); border: 1px solid var(--ui-borde); border-radius: 16px; padding: 16px; margin-bottom: 20px; }
+.mapa-corporal h2 { font-weight: 700; font-size: 1.15rem; }
+.mapa-corporal p { color: var(--ui-texto-secundario); font-size: .8rem; margin: 8px 0; }
+.mapa-corporal-vistas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 620px; margin: auto; }
+.mapa-corporal-vistas h3 { text-align: center; font-weight: 600; }
+.mapa-corporal-vistas[data-ampliada=true] { grid-template-columns: minmax(0, 1fr); max-width: 340px; }
+.mapa-corporal-vistas[data-ampliada=true] svg { max-height: 720px; }
+.mapa-corporal-controles { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.mapa-corporal-controles button { min-height: 44px; padding: 6px 12px; border: 1px solid var(--ui-borde); border-radius: 10px; background: var(--ui-superficie-alternativa); color: var(--ui-texto); font-size: .8rem; }
+.mapa-corporal-controles button[aria-pressed=true] { background: #F2C230; color: #111111; border-color: #F2C230; }
+.mapa-corporal-lados { display: flex; justify-content: space-between; font-size: .65rem; color: var(--ui-texto-secundario); }
+.mapa-corporal svg { width: 100%; max-height: 480px; overflow: visible; }
+.mapa-corporal path[role=button] { cursor: pointer; touch-action: manipulation; }
+.mapa-corporal path[role=button]:hover, .mapa-corporal path[role=button]:focus-visible { stroke: var(--ui-texto); stroke-width: 3px; outline: none; filter: brightness(1.12); }
+.mapa-corporal-leyenda { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: .75rem; margin: 12px 0; }
+.mapa-corporal-leyenda li { display: flex; align-items: center; gap: 6px; }
+.mapa-corporal-leyenda span { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 1px solid var(--ui-borde); }
+@media (max-width: 420px) { .mapa-corporal { padding: 10px; } .mapa-corporal-vistas { gap: 6px; } }
