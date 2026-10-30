@@ -65,7 +65,7 @@ test('Render SVG/editor y visor: controles reales, sin edición pública ni tarj
     const doc = agregarElemento(nuevaPizarra(), 'jugadora')
     const render = (C, props) => renderToStaticMarkup(createElement(C, props))
     const html = render(Editor, { inicial: doc, onGuardar() {} })
-    assert.match(html, /<svg/); assert.match(html, /Duplicar paso/); assert.match(html, /Descargar PNG/); assert.match(html, /Herramientas de pizarra/)
+    assert.match(html, /<svg/); assert.match(html, /Agregar paso/); assert.match(html, /Descargar PNG/); assert.match(html, /Herramientas de pizarra/)
     const lector = render(Editor, { inicial: doc, soloLectura: true })
     assert.doesNotMatch(lector, /Herramientas de pizarra|Propiedades|Borrar todo|Aplicar pizarra|Notas internas|Recuperar JSON/)
     const { default: Entrada } = await server.ssrLoadModule('/src/components/PizarraEjercicio.jsx')
