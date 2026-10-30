@@ -247,6 +247,7 @@ function App() {
 
       {seccion === 'medicos' && (
         <MedicosSection
+          perfil={perfil}
           jugadorInicialId={jugadorParaMedicos}
           onConsumirJugadorInicial={consumirJugadorParaMedicos}
         />

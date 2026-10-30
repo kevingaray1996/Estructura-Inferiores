@@ -1,8 +1,13 @@
 import { BOTON_GESTION, textoGestion } from '../appearance/gestion'
 import { COLORES } from '../theme'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import CategoriaFiltro from './CategoriaFiltro'
+import MapaCorporal from './MapaCorporal'
+import CamposIncidenciaCorporal from './CamposIncidenciaCorporal'
+import { ESTADOS_CORPORALES, LADOS_CORPORALES, colorZona, fichasZona, nombreZona, puedeVerMedicos, ubicacionFicha, validarIncidencia } from '../utils/mapaCorporal'
+
+const incidenciaVacia = { zona_corporal: '', lateralidad: 'derecha', tipo_incidencia: 'molestia', estado_seguimiento: 'seguimiento', fecha_resolucion: '' }
 
 const estadoConfig = {
   disponible: { color: COLORES.exito, label: 'Disponible' },
@@ -13,7 +18,16 @@ function iniciales(nombre, apellido) {
   return `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
 }
 
-function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
+function MedicosContenido({ perfil, jugadorInicialId, onConsumirJugadorInicial }) {
+  const [mapaDisponible, setMapaDisponible] = useState(false)
+  const [incidencia, setIncidencia] = useState(incidenciaVacia)
+  const [seleccionZona, setSeleccionZona] = useState(null)
+  const [error, setError] = useState('')
+  const [cargandoFicha, setCargandoFicha] = useState(false)
+  const [falloLecturaFicha, setFalloLecturaFicha] = useState(false)
+  const solicitudFicha = useRef(0)
+  const guardadoEnCurso = useRef(false)
+  const esPreparador = perfil.rol === 'preparador_fisico'
   const [jugadores, setJugadores] = useState([])
   const [idsConHistorial, setIdsConHistorial] = useState(new Set())
   const [todasLasFichas, setTodasLasFichas] = useState([])
@@ -38,17 +52,26 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
   const [guardandoEstado, setGuardandoEstado] = useState(false)
 
   const cargarFichas = useCallback(async (jugadorId) => {
-    const { data } = await supabase
+    const solicitud = ++solicitudFicha.current
+    setCargandoFicha(true)
+    setFalloLecturaFicha(false)
+    const { data, error: fallo } = await supabase
       .from('fichas_medicas')
       .select('*')
       .eq('jugador_id', jugadorId)
       .order('fecha', { ascending: false })
+    if (solicitud !== solicitudFicha.current) return
+    setCargandoFicha(false)
+    if (fallo) { setFalloLecturaFicha(true); setError('No se pudo consultar el historial. Volvé a abrir la ficha.'); return }
     setFichas(data || [])
   }, [])
 
   const abrirJugador = useCallback(
     (j) => {
       setJugadorSeleccionado(j)
+      setFichas([])
+      setError('')
+      setSeleccionZona(null)
       setMostrarForm(false)
       setFichaEditando(null)
       cargarFichas(j.id)
@@ -58,13 +81,16 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
 
   useEffect(() => {
     async function cargar() {
-      const { data } = await supabase
+      const { error: errorEsquema } = await supabase.from('fichas_medicas').select('zona_corporal,revision').limit(0)
+      setMapaDisponible(!errorEsquema)
+      const { data, error: errorJugadores } = await supabase
         .from('jugadores')
         .select('*, categorias(nombre)')
         .order('apellido')
       setJugadores(data || [])
 
-      const { data: historial } = await supabase.from('fichas_medicas').select('*')
+      const { data: historial, error: errorHistorial } = await supabase.from('fichas_medicas').select('*')
+      if (errorJugadores || errorHistorial) { setError('No se pudieron cargar las fichas médicas. Revisá tu acceso y volvé a ingresar.'); return }
       setTodasLasFichas(historial || [])
       setIdsConHistorial(new Set((historial || []).map((f) => f.jugador_id)))
 
@@ -73,14 +99,15 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
         if (encontrado) {
           abrirJugador(encontrado)
         }
-        onConsumirJugadorInicial()
+        onConsumirJugadorInicial?.()
       }
     }
     cargar()
   }, [jugadorInicialId, abrirJugador, onConsumirJugadorInicial])
 
   async function refrescarTodasLasFichas() {
-    const { data } = await supabase.from('fichas_medicas').select('*')
+    const { data, error: fallo } = await supabase.from('fichas_medicas').select('*')
+    if (fallo) { setError('Se guardó el registro, pero no se pudo actualizar la vista general. Volvé a ingresar.'); return }
     setTodasLasFichas(data || [])
     setIdsConHistorial(new Set((data || []).map((f) => f.jugador_id)))
   }
@@ -93,7 +120,9 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
     return `${anio}-${mes}-${dia}`
   }
 
-  function abrirNuevoRegistro() {
+  function abrirNuevoRegistro(zona = null) {
+    setError('')
+    setIncidencia({ ...incidenciaVacia, zona_corporal: zona?.zona || '', lateralidad: zona?.lado || 'derecha' })
     setFichaEditando(null)
     setFecha(obtenerFechaHoy())
     setDescripcion('')
@@ -105,6 +134,9 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
   }
 
   function abrirEditarRegistro(f) {
+    setError('')
+    const u = ubicacionFicha(f)
+    setIncidencia({ ...incidenciaVacia, zona_corporal: u?.zona || '', lateralidad: u?.lado || 'derecha', tipo_incidencia: f.tipo_incidencia || 'lesion_informada', estado_seguimiento: f.estado_seguimiento || (f.recuperado ? 'resuelta' : 'seguimiento'), fecha_resolucion: f.fecha_resolucion || '' })
     setFichaEditando(f)
     setFecha(f.fecha || '')
     setDescripcion(f.descripcion || '')
@@ -121,9 +153,15 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
   }
 
   async function handleGuardar() {
-    if (!fecha) return
+    if (guardadoEnCurso.current || !fecha) return
+    const estructurada = mapaDisponible && !!incidencia.zona_corporal
+    if (mapaDisponible && (!fichaEditando || fichaEditando.zona_corporal || esPreparador) && !estructurada) { setError('Seleccioná la zona corporal.'); return }
+    const validacion = estructurada ? validarIncidencia({ ...incidencia, fecha }) : null
+    if (validacion) { setError(validacion); return }
+    setError('')
+    guardadoEnCurso.current = true
     setGuardando(true)
-
+    try {
     const datos = {
       fecha,
       descripcion,
@@ -131,17 +169,27 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
       fecha_estimada_alta: fechaEstimadaAlta || null,
       recuperado,
       link_informe: linkInforme || null,
+      ...(estructurada ? { ...incidencia, fecha_resolucion: incidencia.fecha_resolucion || null, recuperado: incidencia.estado_seguimiento === 'resuelta' } : {}),
     }
 
     if (fichaEditando) {
-      await supabase.from('fichas_medicas').update(datos).eq('id', fichaEditando.id)
+      let consulta = supabase.from('fichas_medicas').update(datos).eq('id', fichaEditando.id)
+      if (mapaDisponible) consulta = consulta.eq('revision', fichaEditando.revision)
+      const { data, error: fallo } = await consulta.select('id')
+      if (fallo) throw fallo
+      if (!data?.length) {
+        await cargarFichas(jugadorSeleccionado.id)
+        throw Error('El registro cambió o no tenés permiso. El historial fue actualizado: cancelá y volvé a editar el registro antes de guardar.')
+      }
     } else {
-      await supabase.from('fichas_medicas').insert({
+      const { error: fallo } = await supabase.from('fichas_medicas').insert({
         jugador_id: jugadorSeleccionado.id,
         ...datos,
       })
+      if (fallo) throw fallo
     }
-
+    // Los nuevos seguimientos no diagnostican ni habilitan/bloquean jugadoras.
+    if (!estructurada) {
     const nuevoEstado = recuperado ? 'disponible' : 'lesionado'
     const nuevoDetalle = recuperado ? null : descripcion || 'Lesión'
 
@@ -156,6 +204,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
         j.id === jugadorSeleccionado.id ? { ...j, estado: nuevoEstado, estado_detalle: nuevoDetalle } : j
       )
     )
+    }
     setIdsConHistorial((prev) => new Set(prev).add(jugadorSeleccionado.id))
 
     setGuardando(false)
@@ -169,6 +218,9 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
     setFichaEditando(null)
     cargarFichas(jugadorSeleccionado.id)
     refrescarTodasLasFichas()
+    } catch (fallo) {
+      setError(fallo?.code === '42501' ? 'No tenés permiso para guardar este registro.' : fallo?.message || 'No se pudo guardar. Revisá la conexión antes de reintentar.')
+    } finally { guardadoEnCurso.current = false; setGuardando(false) }
   }
 
   async function handleEliminarFicha(fichaId) {
@@ -200,11 +252,13 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
       .from('jugadores')
       .update({ estado: 'disponible', estado_detalle: null })
       .eq('id', jugadorSeleccionado.id)
-    await supabase
+    let resolver = supabase
       .from('fichas_medicas')
       .update({ recuperado: true })
       .eq('jugador_id', jugadorSeleccionado.id)
       .eq('recuperado', false)
+    if (mapaDisponible) resolver = resolver.is('zona_corporal', null)
+    await resolver
 
     setGuardandoEstado(false)
     setJugadorSeleccionado((prev) => ({ ...prev, estado: 'disponible', estado_detalle: null }))
@@ -265,9 +319,11 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
 
     return (
       <div className="p-6 md:p-10">
-        <div className="max-w-xl mx-auto">
+        <div className="max-w-3xl mx-auto">
+          {error && <p role="alert" className="p-3 mb-4 rounded-xl" style={{ color: COLORES.peligro, background: COLORES.fondoTarjeta }}>{error}</p>}
           <button
-            onClick={() => setJugadorSeleccionado(null)}
+            disabled={guardando}
+            onClick={() => { solicitudFicha.current++; setJugadorSeleccionado(null); setError('') }}
             className="text-sm mb-6 flex items-center gap-1 hover:opacity-70 transition-opacity"
             style={{ color: COLORES.textoSecundario }}
           >
@@ -304,7 +360,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
               >
                 {estadoActual.label}
               </span>
-              {jugadorSeleccionado.estado === 'lesionado' && (
+              {!esPreparador && jugadorSeleccionado.estado === 'lesionado' && (
                 <button
                   onClick={handleMarcarDisponible}
                   disabled={guardandoEstado}
@@ -316,16 +372,25 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
               )}
             </div>
             <p className="text-xs mt-2" style={{ color: COLORES.textoMuted }}>
-              El estado se actualiza automáticamente al agregar un registro médico o marcarlo como recuperado.
+              Los seguimientos del mapa no cambian la disponibilidad deportiva ni constituyen un alta médica.
             </p>
           </div>
+
+          {!mapaDisponible && <p className="text-sm mb-4" style={{ color: COLORES.textoSecundario }}>El mapa requiere habilitar la migración de mapa corporal. El historial existente se conserva.</p>}
+          {cargandoFicha ? <p role="status">Cargando historial…</p> : mapaDisponible && !falloLecturaFicha && <MapaCorporal fichas={fichas} seleccion={seleccionZona} onSeleccionar={zona => { if (guardadoEnCurso.current) return; setSeleccionZona(zona); abrirNuevoRegistro(zona) }} />}
+          {seleccionZona && <div className="mb-4 text-sm" style={{ color: COLORES.texto }}>
+            <strong>{nombreZona(seleccionZona.zona)} · {LADOS_CORPORALES[seleccionZona.lado]}</strong>
+            <p>{fichasZona(fichas, seleccionZona.zona, seleccionZona.lado).length} registros en esta zona. Consultá todos en el historial, sin perder los anteriores.</p>
+            <button type="button" className="underline" onClick={() => setSeleccionZona(null)}>Mostrar todo el historial</button>
+          </div>}
 
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs uppercase tracking-wide" style={{ color: COLORES.textoMuted }}>
               Historial médico
             </p>
             <button
-              onClick={mostrarForm ? cancelarForm : abrirNuevoRegistro}
+              onClick={mostrarForm ? cancelarForm : () => abrirNuevoRegistro()}
+              disabled={guardando || cargandoFicha || falloLecturaFicha || (esPreparador && !mapaDisponible)}
               className="text-sm font-medium px-4 py-2 rounded-xl transition-opacity hover:opacity-80 shrink-0"
               style={BOTON_GESTION}
             >
@@ -335,27 +400,31 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
 
           {mostrarForm && (
             <div className="space-y-3 mb-6 p-4 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}>
+              <fieldset disabled={guardando} className="space-y-3">
+              <p className="text-sm" style={{ color: COLORES.texto }}>{jugadorSeleccionado.apellido}, {jugadorSeleccionado.nombre}</p>
+              {mapaDisponible && <CamposIncidenciaCorporal valor={incidencia} onChange={setIncidencia} disabled={guardando} />}
               {fichaEditando && (
                 <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
                   Editando registro del {fichaEditando.fecha}
                 </p>
               )}
-              <input
+              <label className="block text-sm" style={{ color: COLORES.texto }}>Fecha de inicio<input
                 type="date"
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
                 className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
-              />
+              /></label>
               <textarea
-                placeholder="Descripción / diagnóstico / tratamiento"
+                aria-label="Observaciones"
+                placeholder="Observaciones: qué informó la jugadora y cómo se hará el seguimiento"
                 value={descripcion}
                 onChange={(e) => setDescripcion(e.target.value)}
                 rows={3}
                 className="w-full p-2.5 rounded-xl ui-control outline-none text-sm resize-none"
                 style={inputStyle}
               />
-              <input
+              {(!mapaDisponible || !incidencia.zona_corporal) && <><input
                 type="text"
                 placeholder="Tiempo estimado de recuperación (ej: 2 semanas)"
                 value={tiempoRecuperacion}
@@ -381,8 +450,9 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                   checked={recuperado}
                   onChange={(e) => setRecuperado(e.target.checked)}
                 />
-                Ya está recuperado
+                Situación resuelta (registro anterior)
               </label>
+              </>}
               <input
                 type="text"
                 placeholder="Link del informe (Drive, PDF, etc.)"
@@ -399,11 +469,12 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
               >
                 {guardando ? 'Guardando...' : fichaEditando ? 'Guardar cambios' : 'Guardar registro'}
               </button>
+              </fieldset>
             </div>
           )}
 
           <div className="space-y-2">
-            {fichas.map((f) => (
+            {(seleccionZona ? fichasZona(fichas, seleccionZona.zona, seleccionZona.lado) : fichas).map((f) => (
               <div key={f.id} className="p-3.5 rounded-xl" style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}>
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-xs font-mono" style={{ color: COLORES.textoSecundario }}>{f.fecha}</p>
@@ -423,25 +494,33 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                         color: f.recuperado ? COLORES.exito : COLORES.peligro,
                       }}
                     >
-                      {f.recuperado ? 'Recuperado' : 'Activo'}
+                      {f.recuperado ? (f.zona_corporal ? 'Resuelta' : 'Recuperado') : 'Activo'}
                     </span>
                     <button
+                      aria-label={`Editar registro del ${f.fecha}`}
+                      disabled={guardando || cargandoFicha || (esPreparador && !mapaDisponible)}
                       onClick={() => abrirEditarRegistro(f)}
                       className="text-xs px-2 py-0.5 rounded-full hover:opacity-80"
                       style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
                     >
                       ✏️
                     </button>
-                    <button
+                    {!f.zona_corporal && !esPreparador && <button
                       onClick={() => handleEliminarFicha(f.id)}
                       className="text-xs px-2 py-0.5 rounded-full hover:opacity-80"
                       style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.peligro }}
                     >
                       🗑
-                    </button>
+                    </button>}
                   </div>
                 </div>
                 <p className="text-sm" style={{ color: COLORES.texto }}>{f.descripcion}</p>
+                <p className="text-xs mt-2" style={{ color: COLORES.textoSecundario }}>
+                  {ubicacionFicha(f) ? `${nombreZona(ubicacionFicha(f).zona)} · ${LADOS_CORPORALES[ubicacionFicha(f).lado]}${ubicacionFicha(f).inferida ? ' (asociación por descripción exacta; confirmar al editar)' : ''}` : 'Zona sin clasificar: editar para ubicarla, sin interpretar el diagnóstico.'}
+                  {' · '}{f.tipo_incidencia === 'molestia' ? 'Molestia' : f.tipo_incidencia === 'lesion_informada' ? 'Lesión informada' : 'Registro anterior'}
+                  {' · '}{ESTADOS_CORPORALES[f.estado_seguimiento] || (f.recuperado ? 'Resuelta' : 'En seguimiento')}
+                  {f.fecha_resolucion && ` · Resuelta el ${f.fecha_resolucion}`}
+                </p>
                 {f.fecha_estimada_alta && !f.recuperado && (
                   <p className="text-xs mt-1" style={{ color: textoGestion('#7DD3FC') }}>
                     📅 Alta estimada: {f.fecha_estimada_alta}
@@ -460,7 +539,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
                 )}
               </div>
             ))}
-            {fichas.length === 0 && (
+            {!cargandoFicha && !error && fichas.length === 0 && (
               <p className="text-sm" style={{ color: COLORES.textoMuted }}>Sin registros médicos todavía.</p>
             )}
           </div>
@@ -472,6 +551,7 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
   return (
     <div className="p-6 md:p-10">
       <div className="max-w-2xl mx-auto">
+        {error && <p role="alert" className="mb-4" style={{ color: COLORES.peligro }}>{error}</p>}
         <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
           <h1
             className="text-3xl md:text-4xl flex items-center gap-3"
@@ -537,6 +617,18 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
           busqueda={busqueda}
           onBusquedaChange={setBusqueda}
         />
+
+        {mapaDisponible && <section className="mb-6 p-4 rounded-xl" style={{ background: COLORES.fondoTarjeta, color: COLORES.texto, border: `1px solid ${COLORES.borde}` }} aria-label="Seguimiento del plantel">
+          <h2 className="font-semibold mb-2">Seguimiento del plantel</h2>
+          {filtrados.filter(j => todasLasFichas.some(f => f.jugador_id === j.id && !f.recuperado)).map(j => {
+            const activas = todasLasFichas.filter(f => f.jugador_id === j.id && !f.recuperado).sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''))
+            return <button key={j.id} type="button" className="block text-left w-full py-3 border-b" style={{ borderColor: COLORES.borde }} onClick={() => abrirJugador(j)}>
+              <strong>{j.apellido}, {j.nombre}</strong>
+              {activas.map(f => { const u = ubicacionFicha(f); return <span key={f.id} className="block text-xs mt-1" style={{ color: COLORES.textoSecundario }}><span aria-hidden="true" style={{ color: u ? colorZona([f], u.zona, u.lado) : COLORES.textoSecundario }}>● </span>{f.tipo_incidencia === 'molestia' ? 'Molestia' : f.tipo_incidencia ? 'Lesión informada' : 'Registro anterior'} · {u ? `${nombreZona(u.zona)} (${LADOS_CORPORALES[u.lado]})` : 'Sin clasificar'} · {f.fecha} · {ESTADOS_CORPORALES[f.estado_seguimiento] || 'En seguimiento'}</span> })}
+            </button>
+          })}
+          {!filtrados.some(j => todasLasFichas.some(f => f.jugador_id === j.id && !f.recuperado)) && <p className="text-sm" style={{ color: COLORES.textoSecundario }}>No hay situaciones activas para este filtro.</p>}
+        </section>}
 
         <input
           type="text"
@@ -647,6 +739,9 @@ function MedicosSection({ jugadorInicialId, onConsumirJugadorInicial }) {
   )
 }
 
-export default MedicosSection
+export default function MedicosSection(props) {
+  if (!puedeVerMedicos(props.perfil)) return <div className="p-6" style={{ color: COLORES.texto }}><h1>Médicos</h1><p>No tenés acceso autorizado a las fichas médicas.</p></div>
+  return <MedicosContenido {...props} />
+}
 
 
