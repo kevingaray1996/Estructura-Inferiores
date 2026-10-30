@@ -1,0 +1,9 @@
+.analisis-auxiliar { min-height: 100vh; background: var(--ui-fondo-pagina); color: var(--ui-texto); padding: 1rem; }
+.analisis-auxiliar-cabecera { border-bottom: 1px solid var(--ui-borde); padding-bottom: 1rem; margin-bottom: 1rem; }
+.analisis-auxiliar-cabecera button, .analisis-controles-video button { border-radius: .5rem; padding: .6rem .8rem; min-height: 44px; }
+.analisis-controles-video button:disabled { opacity: .45; cursor: not-allowed; }
+.analisis-auxiliar-cabecera > p { margin: .5rem 0; }
+.analisis-ventanas { border: 1px solid var(--ui-borde); border-radius: .7rem; padding: .8rem; }
+.analisis-ventanas button { min-height: 44px; }
+.analisis-controles-video { margin-top: 1rem; border: 1px solid var(--ui-borde); padding: .75rem; border-radius: .6rem; }
+@media (max-width: 600px) { .analisis-auxiliar { padding: .5rem; } }

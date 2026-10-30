@@ -2,8 +2,14 @@ import { ANALISIS as A, textoAnalisis } from '../appearance/analisis'
 
 
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import useVentanaAnalisis from '../hooks/useVentanaAnalisis'
+import ZonaVentanaAnalisis from './ZonaVentanaAnalisis'
+import ControlesVideoAnalisis from './ControlesVideoAnalisis'
+import { crearBloqueoEtiquetado, leerTiempoActivo, registroInciertoTrasError } from '../utils/ventanaAnalisis'
+import { cargarYouTubeEnVentana } from '../utils/youtubeVentana'
+import './ventanasAnalisis.css'
 import DetalleDestinatariaPase from './DetalleDestinatariaPase'
 import DetalleDestinoPase from './DetalleDestinoPase'
 import FlechasPases from './FlechasPases'
@@ -580,6 +586,15 @@ export default function AnalisisSection() {
   const [videoReproduciendo, setVideoReproduciendo] = useState(false)
   const [tiempoVideo, setTiempoVideo] = useState(0)
   const [segundoIr, setSegundoIr] = useState('0')
+  const [velocidadVideo, setVelocidadVideo] = useState(1)
+  const [velocidadesVideo, setVelocidadesVideo] = useState([])
+  const [comandoPendiente, setComandoPendiente] = useState(false)
+  const [revisionReproductor, setRevisionReproductor] = useState(0)
+  const [registroIncierto, setRegistroIncierto] = useState(false)
+  const comandoRef = useRef(null)
+  const restaurarVideoRef = useRef(null)
+  const contextoAnalisisRef = useRef(null)
+  const [bloqueoEtiquetado] = useState(crearBloqueoEtiquetado)
 
   const partidoActual = partidos.find((p) => p.id === partidoId)
   const direccionPrimerTiempo = partidoActual?.direccion_primer_tiempo === 'izquierda' ? 'izquierda' : 'derecha'
@@ -595,6 +610,71 @@ export default function AnalisisSection() {
     partidoActual?.video_url || videoCalendario(partidoCalendarioActual)
 
   const videoActual = youtubeEmbed(videoUrlActual)
+  useLayoutEffect(() => { contextoAnalisisRef.current = { partidoId, videoActual, seccion } }, [partidoId, videoActual, seccion])
+  const ventanas = useVentanaAnalisis((anterior, siguiente) => {
+    if (anterior !== 'reproductor' && siguiente !== 'reproductor') return
+    try {
+      const player = playerRef.current
+      const tiempo = player?.getCurrentTime?.()
+      if (videoListo && Number.isFinite(tiempo)) restaurarVideoRef.current = { partidoId, videoActual, tiempo, reproduciendo: player.getPlayerState?.() === 1, velocidad: player.getPlaybackRate?.() || 1 }
+      player?.pauseVideo?.()
+    } catch { /* El iframe puede haberse cerrado. Se conserva la ultima lectura confirmada. */ }
+    comandoRef.current = null
+    setComandoPendiente(false); setVideoListo(false); setVideoListoPartidoId(null)
+  })
+  const destinoReproductor = ventanas.modo === 'reproductor' ? ventanas.revision : 0
+
+  const tiempoActivo = useCallback(() => leerTiempoActivo({
+    player: playerRef.current, iframe: iframeRef.current, listo: videoListo,
+    partidoId, partidoListo: videoListoPartidoId,
+    conectado: ventanas.gestor.conectado(), pendiente: Boolean(comandoRef.current),
+  }), [videoListo, partidoId, videoListoPartidoId, ventanas.gestor])
+
+  const confirmarComando = useCallback((player) => {
+    const comando = comandoRef.current
+    if (!comando) return
+    if (comando.partidoId !== contextoAnalisisRef.current?.partidoId) {
+      comandoRef.current = null; setComandoPendiente(false); return
+    }
+    const estado = player.getPlayerState?.(), tiempo = player.getCurrentTime?.()
+    const confirmado = comando.tipo === 'salto' ? Number.isFinite(tiempo) && Math.abs(tiempo - comando.valor) <= 1.5 && [0, 1, 2, 5].includes(estado)
+      : comando.tipo === 'velocidad' ? player.getPlaybackRate?.() === comando.valor
+      : estado === (comando.tipo === 'pausa' ? 2 : 1)
+    if (confirmado) { comandoRef.current = null; setComandoPendiente(false) }
+    else if (Date.now() - comando.inicio > 10000) {
+      comandoRef.current = null; setComandoPendiente(false); setVideoListo(false)
+      setError('YouTube no confirmó el comando. Reconectá el video antes de etiquetar; no se guardaron acciones.')
+      return false
+    }
+  }, [])
+
+  const solicitarVideo = useCallback((accion, valor) => {
+    let emitido = null
+    try {
+      const tiempo = tiempoActivo(), player = playerRef.current
+      const tipoComando = accion === 'alternar' ? player.getPlayerState?.() === 1 ? 'pausa' : 'reproducir' : accion
+      if (tipoComando === 'salto' && (!Number.isFinite(Number(valor)) || Number(valor) < 0)) throw Error('Ingresá un segundo válido.')
+      if (tipoComando === 'velocidad' && !player.getAvailablePlaybackRates?.().includes(valor)) throw Error('Esta velocidad no está disponible en el video.')
+      const objetivo = tipoComando === 'salto' ? Math.floor(Number(valor)) : valor
+      comandoRef.current = { tipo: tipoComando, valor: objetivo, partidoId, inicio: Date.now() }
+      emitido = comandoRef.current
+      setComandoPendiente(true); setError('')
+      if (tipoComando === 'salto') { player.seekTo(objetivo, true); player.playVideo(); setSegundoIr(String(objetivo)) }
+      else if (tipoComando === 'velocidad') player.setPlaybackRate(valor)
+      else if (tipoComando === 'pausa') player.pauseVideo()
+      else player.playVideo()
+      // Confirmación por eventos o lectura posterior de la API, no por un reloj inventado.
+      setTiempoVideo(tiempo)
+      return true
+    } catch (e) {
+      if (emitido && comandoRef.current === emitido) { comandoRef.current = null; setComandoPendiente(false) }
+      setError(e.message || 'No se pudo controlar el video.'); return false
+    }
+  }, [partidoId, tiempoActivo])
+
+  useEffect(() => {
+    if ((seccion !== 'video' || !usuario) && ventanas.gestor.getSnapshot().modo) ventanas.gestor.acoplar()
+  }, [seccion, usuario, ventanas.gestor])
 
   const cargarDatos = useCallback(async () => {
     setCargando(true)
@@ -826,8 +906,12 @@ export default function AnalisisSection() {
     setVideoListoPartidoId(null)
     setVideoReproduciendo(false)
     setTiempoVideo(0)
+    comandoRef.current = null
+    setComandoPendiente(false)
 
-    cargarYouTubeAPI()
+    const duena = iframe.ownerDocument.defaultView
+    const carga = duena === window ? cargarYouTubeAPI() : cargarYouTubeEnVentana(duena)
+    carga
       .then((YT) => {
         if (cancelado || !iframe.isConnected) return
 
@@ -840,16 +924,39 @@ export default function AnalisisSection() {
               setTiempoVideo(
                 Math.floor(evento.target.getCurrentTime() || 0),
               )
+              setVelocidadVideo(evento.target.getPlaybackRate?.() || 1)
+              setVelocidadesVideo(evento.target.getAvailablePlaybackRates?.() || [])
+              const restaurar = restaurarVideoRef.current
+              if (restaurar?.partidoId === partidoId && restaurar.videoActual === videoActual) {
+                // Al inicio, pausado, el iframe ya está en cero; no esperar un
+                // salto que YouTube puede no emitir hasta la primera reproducción.
+                if (restaurar.tiempo > 0 || restaurar.reproduciendo) {
+                  comandoRef.current = { tipo: 'salto', valor: restaurar.tiempo, partidoId, inicio: Date.now() }
+                  setComandoPendiente(true)
+                  evento.target.seekTo(restaurar.tiempo, true)
+                }
+                if (evento.target.getAvailablePlaybackRates?.().includes(restaurar.velocidad)) evento.target.setPlaybackRate(restaurar.velocidad)
+                if (restaurar.reproduciendo) evento.target.playVideo()
+                else evento.target.pauseVideo()
+              }
             },
             onStateChange: (evento) => {
               if (!cancelado) {
                 setVideoReproduciendo(
                   evento.data === YT.PlayerState.PLAYING,
                 )
+                confirmarComando(evento.target)
               }
+            },
+            onPlaybackRateChange: (evento) => {
+              if (!cancelado) { setVelocidadVideo(evento.data); confirmarComando(evento.target) }
+            },
+            onAutoplayBlocked: () => {
+              if (!cancelado) setError('El navegador bloqueó la reproducción automática. Pulsá reproducir dentro del video y reconectá si no responde.')
             },
             onError: () => {
               if (!cancelado) {
+                setVideoListo(false)
                 setError(
                   'YouTube no permite reproducir este video incrustado. Probá abrirlo directamente en YouTube.',
                 )
@@ -883,7 +990,7 @@ export default function AnalisisSection() {
       setVideoListoPartidoId(null)
       setVideoReproduciendo(false)
     }
-  }, [videoActual, partidoId, seccion])
+  }, [videoActual, partidoId, seccion, cargando, destinoReproductor, revisionReproductor, confirmarComando])
 
   useEffect(() => {
     if (!videoListo || !playerRef.current) return undefined
@@ -894,6 +1001,9 @@ export default function AnalisisSection() {
 
         if (Number.isFinite(tiempoActual)) {
           setTiempoVideo(Math.floor(tiempoActual))
+          const confirmacion = confirmarComando(playerRef.current)
+          if (!comandoRef.current && confirmacion !== false) restaurarVideoRef.current = { partidoId, videoActual, tiempo: tiempoActual,
+            reproduciendo: playerRef.current.getPlayerState?.() === 1, velocidad: playerRef.current.getPlaybackRate?.() || 1 }
         }
       } catch {
         // El reproductor puede estar cambiando de estado.
@@ -901,31 +1011,26 @@ export default function AnalisisSection() {
     }, 500)
 
     return () => window.clearInterval(intervalo)
-  }, [videoListo, partidoId])
+  }, [videoListo, partidoId, videoActual, confirmarComando])
 
   useEffect(() => {
     if (
       !segundoPendiente ||
       !videoListo ||
       videoListoPartidoId !== segundoPendiente.partidoId ||
-      !playerRef.current ||
+      !playerRef.current || comandoPendiente ||
       seccion !== 'video' ||
       partidoId !== segundoPendiente.partidoId
     ) return
 
     try {
       // Evita consumir el salto mientras todavía está montado el reproductor anterior.
-      playerRef.current.seekTo(segundoPendiente.segundo, true)
-      playerRef.current.playVideo()
-      setTiempoVideo(segundoPendiente.segundo)
-      setSegundoIr(String(segundoPendiente.segundo))
-      setError('')
-      setSegundoPendiente(null)
+      if (solicitarVideo('salto', segundoPendiente.segundo)) setSegundoPendiente(null)
     } catch (e) {
       console.error('No se pudo abrir la acción desde el mapa/explorador:', e)
       setError('No se pudo saltar a ese momento del video. Probá tocar la acción nuevamente cuando el video termine de cargar.')
     }
-  }, [segundoPendiente, videoListo, videoListoPartidoId, seccion, partidoId])
+  }, [segundoPendiente, videoListo, videoListoPartidoId, seccion, partidoId, comandoPendiente, solicitarVideo])
 
   const eventosPartido = useMemo(
     () => eventos.filter((e) => e.partido_id === partidoId),
@@ -1299,71 +1404,44 @@ export default function AnalisisSection() {
     })
   }
 
-  function irAlSegundo(valor) {
-    const tiempo = Number(valor)
-
-    if (!Number.isFinite(tiempo) || tiempo < 0) {
-      setError('Ingresá un segundo válido.')
-      return
-    }
-
-    if (!videoListo || !playerRef.current) {
-      setError('Esperá a que el reproductor de YouTube esté listo.')
-      return
-    }
-
-    try {
-      playerRef.current.seekTo(Math.floor(tiempo), true)
-      playerRef.current.playVideo()
-      setTiempoVideo(Math.floor(tiempo))
-      setError('')
-    } catch (e) {
-      console.error('No se pudo saltar al tiempo:', e)
-      setError('No se pudo ir a ese momento del video.')
-    }
-  }
-
+  function irAlSegundo(valor) { solicitarVideo('salto', Number(valor)) }
   function tomarTiempoActual() {
-    if (!videoListo || !playerRef.current) {
-      setError('Esperá a que el reproductor de YouTube esté listo.')
-      return
-    }
-
-    const tiempo = Math.floor(playerRef.current.getCurrentTime() || 0)
-
-    setSegundo(String(tiempo))
-    setSegundoIr(String(tiempo))
-    setError('')
+    try { const tiempo = tiempoActivo(); setSegundo(String(tiempo)); setSegundoIr(String(tiempo)); setError('') }
+    catch (e) { setError(e.message) }
   }
-
-  function alternarReproduccion() {
-    if (!videoListo || !playerRef.current) {
-      setError('Esperá a que el reproductor de YouTube esté listo.')
-      return
-    }
-
-    if (videoReproduciendo) playerRef.current.pauseVideo()
-    else playerRef.current.playVideo()
+  function alternarReproduccion() { solicitarVideo('alternar') }
+  function desplazarVideo(delta) {
+    try { solicitarVideo('salto', Math.max(0, tiempoActivo() + delta)) } catch (e) { setError(e.message) }
+  }
+  function reconectarVideo() {
+    try { playerRef.current?.pauseVideo?.() } catch { /* Ventana cerrada. */ }
+    comandoRef.current = null; setComandoPendiente(false); setVideoListo(false); setVideoListoPartidoId(null)
+    setRevisionReproductor(n => n + 1)
   }
 
   async function registrarAccionRapida(tipoSeleccionado, idJugadora) {
-    if (!esAdmin || !partidoActual || guardando) return
+    if (!esAdmin || !partidoActual || guardando || registroIncierto) return
 
-    if (!videoListo || !playerRef.current) {
+    if (!ventanas.gestor.conectado() || contextoAnalisisRef.current?.partidoId !== partidoId || contextoAnalisisRef.current?.seccion !== 'video' || !videoListo || !playerRef.current) {
       setError('Esperá a que el video esté conectado antes de etiquetar.')
       return
     }
+    if (!bloqueoEtiquetado.entrar()) return
+    let enviado = false
 
     setGuardando(true)
     setError('')
     setMensaje('')
 
     try {
-      const tiempo = Math.floor(playerRef.current.getCurrentTime() || 0)
+      const tiempo = tiempoActivo()
+      const idRegistro = crypto.randomUUID()
 
+      enviado = true
       const { data, error: insertError } = await supabase
         .from('analisis_eventos')
         .insert({
+          id: idRegistro,
           partido_id: partidoId,
           jugador_id: idJugadora,
           segundo: tiempo,
@@ -1377,6 +1455,7 @@ export default function AnalisisSection() {
         .single()
 
       if (insertError) throw insertError
+      if (data?.id !== idRegistro) throw Error('No se pudo confirmar el registro de la acción.')
 
       setEventos((actuales) =>
         [...actuales, data].sort(
@@ -1391,12 +1470,14 @@ export default function AnalisisSection() {
         )}. Resultado pendiente.`,
       )
     } catch (e) {
+      if (enviado && registroInciertoTrasError(e)) setRegistroIncierto(true)
       console.error('Error al etiquetar acción:', e)
       setError(
-        e.message ||
+        enviado && registroInciertoTrasError(e) ? 'No se pudo confirmar el guardado. Revisá las acciones y recargá Análisis antes de intentar nuevamente; no se reintentó el envío.' : e.message ||
         'No se pudo guardar la acción rápida. Verificá que la base de datos permita resultado y zona nulos.',
       )
     } finally {
+      bloqueoEtiquetado.salir()
       setGuardando(false)
     }
   }
@@ -1660,7 +1741,12 @@ export default function AnalisisSection() {
   async function guardarEvento(e) {
     e.preventDefault()
 
-    if (!esAdmin || !partidoActual || guardando) return
+    if (!esAdmin || !partidoActual || guardando || registroIncierto) return
+    if (!ventanas.gestor.conectado() || contextoAnalisisRef.current?.partidoId !== partidoId || contextoAnalisisRef.current?.seccion !== 'video') {
+      setError('La sesión de video no está conectada al partido actual. No se registró la acción.'); return
+    }
+    if (!bloqueoEtiquetado.entrar()) return
+    let enviado = false
 
     setGuardando(true)
     setError('')
@@ -1668,8 +1754,8 @@ export default function AnalisisSection() {
 
     try {
       validarResultadoAccion(tipo, resultado)
-      const tiempo = tiempoAutomatico && videoListo && playerRef.current
-        ? Math.floor(playerRef.current.getCurrentTime() || 0)
+      const tiempo = tiempoAutomatico
+        ? tiempoActivo()
         : Number(segundo)
 
       if (!Number.isInteger(tiempo) || tiempo < 0) {
@@ -1680,9 +1766,12 @@ export default function AnalisisSection() {
         throw new Error('La jugadora seleccionada no está disponible.')
       }
 
+      const idRegistro = crypto.randomUUID()
+      enviado = true
       const { data, error: insertError } = await supabase
         .from('analisis_eventos')
         .insert({
+          id: idRegistro,
           partido_id: partidoId,
           jugador_id: jugadorId || null,
           segundo: tiempo,
@@ -1698,6 +1787,7 @@ export default function AnalisisSection() {
         .single()
 
       if (insertError) throw insertError
+      if (data?.id !== idRegistro) throw Error('No se pudo confirmar el registro de la acción.')
 
       setEventos((actuales) =>
         [...actuales, data].sort(
@@ -1710,9 +1800,11 @@ export default function AnalisisSection() {
       setObservaciones('')
       setCoordenadasAccion(null)
     } catch (e) {
+      if (enviado && registroInciertoTrasError(e)) setRegistroIncierto(true)
       console.error('Error al registrar acción:', e)
-      setError(e.message || 'No se pudo registrar la acción.')
+      setError(enviado && registroInciertoTrasError(e) ? 'No se pudo confirmar el guardado. Revisá las acciones y recargá Análisis antes de intentar nuevamente; no se reintentó el envío.' : e.message || 'No se pudo registrar la acción.')
     } finally {
+      bloqueoEtiquetado.salir()
       setGuardando(false)
     }
   }
@@ -1720,6 +1812,31 @@ export default function AnalisisSection() {
   function imprimirInforme() {
     window.print()
   }
+
+  const controlesVideo = <ControlesVideoAnalisis listo={videoListo && ventanas.conectado} reproduciendo={videoReproduciendo}
+    tiempo={tiempoVideo} segundo={segundoIr} cambiarSegundo={setSegundoIr} reproducir={alternarReproduccion}
+    tomarTiempo={tomarTiempoActual} saltar={irAlSegundo} desplazar={desplazarVideo}
+    velocidad={velocidadVideo} velocidades={velocidadesVideo} cambiarVelocidad={v => solicitarVideo('velocidad', v)} pendiente={comandoPendiente} />
+  const encabezadoVentana = <>
+    <div className="flex flex-wrap items-center justify-between gap-3"><strong>Club Comunicaciones · {ventanas.modo === 'reproductor' ? 'Reproductor' : 'Botonera'}</strong>
+      <Boton secundario onClick={() => ventanas.gestor.acoplar()}>Acoplar ventana</Boton></div>
+    <p>{partidoActual?.rival} · {partidoActual ? datosEncuentro(partidoActual) : ''} · {periodoActual === 1 ? 'Primer' : 'Segundo'} tiempo</p>
+    <p className="text-xs">Sesión única: mantené abierta la ventana principal. Las acciones se guardan desde ella.</p>
+    {error && <p role="alert" style={{ color: textoAnalisis('#F87171') }}>{error}</p>}
+    {mensaje && <p role="status">{mensaje}</p>}
+    {ventanas.modo === 'botonera' && controlesVideo}
+  </>
+  const barraVentanas = <>
+    <div className="flex flex-wrap gap-2">
+      <Boton secundario disabled={guardando || !videoActual} onClick={() => ventanas.gestor.separar('reproductor')}>Separar reproductor</Boton>
+      <Boton secundario disabled={guardando} onClick={() => ventanas.gestor.separar('botonera')}>Separar botonera</Boton>
+      {ventanas.modo && <Boton secundario onClick={() => ventanas.gestor.acoplar()}>Volver a integrar</Boton>}
+      {videoActual && <Boton secundario disabled={guardando} onClick={reconectarVideo}>Reconectar video</Boton>}
+    </div>
+    <p role="status" className="mt-2 text-xs" style={{ color: A.secundario }}>{ventanas.aviso || (ventanas.modo ? ventanas.conectado ? 'Ventana conectada a esta sesión de Análisis.' : 'Sin conexión: no registres acciones hasta recuperar la sesión.' : 'Una sola sesión. Podés separar el reproductor o la botonera y mover la ventana al segundo monitor.')}</p>
+    {registroIncierto && <p role="alert" className="mt-2 text-sm">El último guardado no pudo confirmarse. Revisá el explorador y recargá Análisis antes de registrar otra acción.</p>}
+    {ventanas.modo === 'reproductor' && controlesVideo}
+  </>
 
   if (cargando) {
     return (
@@ -2026,8 +2143,10 @@ export default function AnalisisSection() {
           </nav>
 
           {seccion === 'video' && (
-            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.3fr)_minmax(350px,0.9fr)]">
+            <div className={ventanas.modo ? 'grid items-start gap-5 lg:grid-cols-2' : 'grid items-start gap-5 xl:grid-cols-[minmax(0,1.3fr)_minmax(350px,0.9fr)]'}>
+              <div className="analisis-ventanas" style={{ gridColumn: '1 / -1' }}>{barraVentanas}</div>
               <div className="space-y-5">
+                <ZonaVentanaAnalisis tipo="reproductor" ventana={ventanas} encabezado={encabezadoVentana}>
                 <Panel>
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <div>
@@ -2078,7 +2197,7 @@ export default function AnalisisSection() {
                   {videoActual ? (
                     <div className="aspect-video overflow-hidden rounded-lg bg-black">
                       <iframe
-                        key={`${partidoActual.id}-${videoActual}`}
+                        key={`${partidoActual.id}-${videoActual}-${destinoReproductor}-${revisionReproductor}`}
                         ref={iframeRef}
                         title={`Video del partido contra ${partidoActual.rival}`}
                         src={videoActual}
@@ -2108,71 +2227,10 @@ export default function AnalisisSection() {
                     </div>
                   )}
 
-                  {videoActual && (
-                    <div className="mt-4 space-y-3">
-                      <div
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
-                        style={{ backgroundColor: A.fondo, borderColor: A.borde }}
-                      >
-                        <div>
-                          <p className="text-xs" style={{ color: A.secundario }}>
-                            TIEMPO ACTUAL
-                          </p>
-                          <p
-                            className="font-mono text-3xl font-black"
-                            style={{ color: textoAnalisis(AMARILLO) }}
-                          >
-                            {formatearTiempo(tiempoVideo)}
-                          </p>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          <Boton secundario disabled={!videoListo} onClick={alternarReproduccion}>
-                            {videoReproduciendo ? 'Ⅱ Pausar' : '▶ Reproducir'}
-                          </Boton>
-                          <Boton secundario disabled={!videoListo} onClick={tomarTiempoActual}>
-                            Tomar tiempo
-                          </Boton>
-                        </div>
-                      </div>
-
-                      <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-                        <Campo label="Ir a un segundo del video">
-                          <input
-                            className={inputClass}
-                            style={inputStyle}
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={segundoIr}
-                            onChange={(e) => setSegundoIr(e.target.value)}
-                            placeholder="Ej.: 754"
-                          />
-                        </Campo>
-                        <div className="flex items-end">
-                          <Boton
-                            secundario
-                            disabled={!videoListo}
-                            onClick={() => irAlSegundo(segundoIr)}
-                          >
-                            Ir al momento
-                          </Boton>
-                        </div>
-                      </div>
-
-                      {videoUrlActual && (
-                        <a
-                          href={videoUrlActual}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-block text-sm font-bold"
-                          style={{ color: textoAnalisis(AMARILLO) }}
-                        >
-                          Abrir video en YouTube ↗
-                        </a>
-                      )}
-                    </div>
-                  )}
+                  {videoActual && <>
+                    {controlesVideo}
+                    {videoUrlActual && <a href={videoUrlActual} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-bold" style={{ color: textoAnalisis(AMARILLO) }}>Abrir video en YouTube</a>}
+                  </>}
 
                   {partidoActual.notas && (
                     <div
@@ -2188,6 +2246,7 @@ export default function AnalisisSection() {
                     </div>
                   )}
                 </Panel>
+                </ZonaVentanaAnalisis>
 
                 <Panel>
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -2364,6 +2423,7 @@ export default function AnalisisSection() {
               </div>
 
               <div className="space-y-5">
+                <ZonaVentanaAnalisis tipo="botonera" ventana={ventanas} encabezado={encabezadoVentana}>
                 <Panel>
                   <div className="mb-4">
                     <p
@@ -2456,7 +2516,7 @@ export default function AnalisisSection() {
                               <button
                                 key={c.id}
                                 type="button"
-                                disabled={guardando || !videoListo}
+                                disabled={guardando || !videoListo || comandoPendiente || !ventanas.conectado || registroIncierto}
                                 onClick={() =>
                                   registrarAccionRapida(tipoRapido, c.jugador_id)
                                 }
@@ -2632,7 +2692,7 @@ export default function AnalisisSection() {
                             />
                           </Campo>
 
-                          <Boton submit disabled={guardando}>
+                          <Boton submit disabled={guardando || registroIncierto || !ventanas.conectado || (tiempoAutomatico && comandoPendiente)}>
                             {guardando ? 'Guardando...' : 'Registrar acción'}
                           </Boton>
                         </form>
@@ -2640,6 +2700,7 @@ export default function AnalisisSection() {
                     </>
                   )}
                 </Panel>
+                </ZonaVentanaAnalisis>
 
                 <Panel>
                   <div className="mb-4 flex items-center justify-between gap-3">
