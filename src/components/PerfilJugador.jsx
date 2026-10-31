@@ -1,3 +1,4 @@
+import { filtrarSeccionesVisibles } from '../config/visibilidadSecciones'
 import { PLANTEL as P, textoPlantel, tintePlantel } from '../appearance/plantel'
 
 import { useEffect, useState } from 'react'
@@ -525,7 +526,7 @@ function PerfilJugador({
     { label: 'Obra social', valor: jugador.obra_social, extra: jugador.nro_afiliado },
   ].filter((d) => d.valor)
 
-  const disciplinas = [
+  const disciplinas = filtrarSeccionesVisibles([
     {
       nombre: 'Kinesiología / Médica',
       icono: '🩺',
@@ -537,6 +538,7 @@ function PerfilJugador({
     },
     {
       nombre: 'Nutrición',
+      seccion: 'nutricion',
       icono: '🥗',
       resumen: fichasNutricion.length === 0
         ? 'Sin datos cargados'
@@ -545,6 +547,7 @@ function PerfilJugador({
     },
     {
       nombre: 'Psicología',
+      seccion: 'psicologia',
       icono: '🧠',
       resumen: fichasPsicologicas.length === 0
         ? 'Sin datos cargados'
@@ -559,7 +562,7 @@ function PerfilJugador({
         : `${videos.length} video${videos.length > 1 ? 's' : ''}`,
       onClick: () => onVerVideos(jugadorId),
     },
-  ]
+  ])
 
   const evaluacionesPorPeriodo = Object.values(
     evaluaciones.reduce((grupos, evaluacion) => {

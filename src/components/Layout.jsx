@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { COLORES } from '../theme'
 import SelectorApariencia from '../appearance/SelectorApariencia'
+import { filtrarSeccionesVisibles, resolverSeccionVisible } from '../config/visibilidadSecciones'
 
 const rolLabel = {
   coordinacion: 'Coordinación',
@@ -100,7 +101,7 @@ const ICONOS = {
 }
 
 function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
-  const secciones = seccionesParaRol(perfil?.rol)
+  const secciones = filtrarSeccionesVisibles(seccionesParaRol(perfil?.rol), 'id')
 
   const subtitulo =
     perfil?.rol === 'tecnico' && perfil?.categorias?.nombre
@@ -163,7 +164,7 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
   }
 
   function seleccionarSeccion(id) {
-    onCambiarSeccion(id)
+    onCambiarSeccion(resolverSeccionVisible(id))
     setMenuAbierto(false)
   }
 

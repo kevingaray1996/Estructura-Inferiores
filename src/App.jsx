@@ -1,4 +1,5 @@
 import PlanificacionSection from './components/PlanificacionSection'
+import { resolverSeccionVisible } from './config/visibilidadSecciones'
 
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
@@ -34,7 +35,10 @@ function App() {
   )
   const [sesion, setSesion] = useState(undefined)
   const [perfil, setPerfil] = useState(undefined)
-  const [seccion, setSeccion] = useState('inicio')
+  const [seccionSolicitada, setSeccionSolicitada] = useState('inicio')
+  // Resuelve también una sección que ya estuviera abierta al cambiar la configuración.
+  const seccion = resolverSeccionVisible(seccionSolicitada)
+  const setSeccion = useCallback(id => setSeccionSolicitada(resolverSeccionVisible(id)), [])
   const [contextoPlanificacion, setContextoPlanificacion] = useState(null)
   const [contextoAsistencia, setContextoAsistencia] = useState(null)
   const [jugadorParaMedicos, setJugadorParaMedicos] = useState(null)
@@ -64,7 +68,7 @@ function App() {
     )
 
     return () => listener.subscription.unsubscribe()
-  }, [categoriaBienestarId])
+  }, [categoriaBienestarId, setSeccion])
 
   useEffect(() => {
     async function cargarPerfil() {
