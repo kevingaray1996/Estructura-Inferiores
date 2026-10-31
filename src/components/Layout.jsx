@@ -4,6 +4,7 @@ import { supabase } from '../supabaseClient'
 import { COLORES } from '../theme'
 import SelectorApariencia from '../appearance/SelectorApariencia'
 import { filtrarSeccionesVisibles, resolverSeccionVisible } from '../config/visibilidadSecciones'
+import { puedePlanificar } from '../utils/planificacion'
 
 const rolLabel = {
   coordinacion: 'Coordinación',
@@ -102,6 +103,7 @@ const ICONOS = {
 
 function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
   const secciones = filtrarSeccionesVisibles(seccionesParaRol(perfil?.rol), 'id')
+    .filter(s => s.id !== 'planificacion' || puedePlanificar(perfil))
 
   const subtitulo =
     perfil?.rol === 'tecnico' && perfil?.categorias?.nombre

@@ -151,20 +151,22 @@ function UsuariosSection() {
       email: email.trim().toLowerCase(),
       nombre: nombre || null,
       rol,
-      categoria_id: rol === 'tecnico' ? categoriaId : null,
+      categoria_id: ['tecnico', 'preparador_fisico'].includes(rol) ? categoriaId || null : null,
       cargo_pdf: cargoPdf || null,
       aparece_en_pdf: apareceEnPdf,
       orden_pdf: ordenPdf === '' ? null : Number(ordenPdf),
       foto_url: fotoUrlFinal || null,
     }
 
-    const { error } = usuarioEditando
-      ? await supabase.from('perfiles').update(datos).eq('email', usuarioEditando.email)
-      : await supabase.from('perfiles').insert(datos)
+    const { data, error } = usuarioEditando
+      ? await supabase.from('perfiles').update(datos).eq('email', usuarioEditando.email).select('email')
+      : await supabase.from('perfiles').insert(datos).select('email')
 
     setGuardando(false)
     if (error) {
-      setErrorMsg('Error al guardar: ' + error.message)
+      setErrorMsg(error.code === '42501' ? 'No tenés permiso para guardar este perfil. Revisá tu sesión.' : 'Error al guardar: ' + error.message)
+    } else if (!data?.length) {
+      setErrorMsg('No se confirmó el guardado del perfil. Puede haber cambiado o no tenés permiso; revisá tu acceso antes de reintentar.')
     } else {
       setMostrarForm(false)
       setUsuarioEditando(null)
@@ -271,14 +273,15 @@ function UsuariosSection() {
               <option value="tecnico">Cuerpo técnico (una sola categoría)</option>
               <option value="preparador_fisico">Preparador Físico (Físico + Carga + CMJ)</option>
             </select>
-            {rol === 'tecnico' && (
+            {['tecnico', 'preparador_fisico'].includes(rol) && (
               <select
+                aria-label="Categoría asignada"
                 value={categoriaId}
                 onChange={(e) => setCategoriaId(e.target.value)}
                 className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
                 style={inputStyle}
               >
-                <option value="">Categoría</option>
+                <option value="">{rol === 'tecnico' ? 'Categoría (obligatoria)' : 'Sin categoría — Planificación no habilitada'}</option>
                 {categorias.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.nombre}
@@ -389,7 +392,8 @@ function UsuariosSection() {
                   style={{ backgroundColor: COLORES.fondoPagina, color: COLORES.textoSecundario }}
                 >
                   {rolLabel[u.rol] || u.rol}
-                  {u.rol === 'tecnico' && u.categorias?.nombre ? ` · ${u.categorias.nombre}` : ''}
+                  {['tecnico', 'preparador_fisico'].includes(u.rol) && u.categorias?.nombre ? ` · ${u.categorias.nombre}` : ''}
+                  {u.rol === 'preparador_fisico' && !u.categoria_id ? ' · Sin categoría (Planificación no habilitada)' : ''}
                 </span>
                 <button
                   onClick={() => abrirEditar(u)}

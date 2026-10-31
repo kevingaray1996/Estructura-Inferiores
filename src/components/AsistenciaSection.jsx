@@ -5,6 +5,7 @@ import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
 import { agregarPendiente, contarPendientes, sincronizarPendientes } from '../utils/colaOffline'
 import { generarAsistenciaPDF } from '../utils/generarAsistenciaPDF'
+import { puedePlanificar } from '../utils/planificacion'
 
 const ESTADOS = [
   { valor: 'presente', label: 'Presente', color: COLORES.exito },
@@ -257,7 +258,7 @@ function AsistenciaSection({ perfil, fechaInicial, categoriaInicial, onVerPlanif
           )}
         </div>
 
-        {onVerPlanificacion && categoriaId && <button type="button" className="mb-4 rounded-lg border px-3 py-2 text-sm" style={{color: COLORES.texto, borderColor: COLORES.borde}} onClick={() => onVerPlanificacion(fecha, categoriaId)}>Ver planificación de este día</button>}
+        {onVerPlanificacion && categoriaId && puedePlanificar(perfil, categoriaId) && <button type="button" className="mb-4 rounded-lg border px-3 py-2 text-sm" style={{color: COLORES.texto, borderColor: COLORES.borde}} onClick={() => onVerPlanificacion(fecha, categoriaId)}>Ver planificación de este día</button>}
 
         {cargando && <p style={{ color: COLORES.textoMuted }}>Cargando...</p>}
 

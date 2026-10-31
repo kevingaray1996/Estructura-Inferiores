@@ -1,5 +1,6 @@
 import PlanificacionSection from './components/PlanificacionSection'
 import { resolverSeccionVisible } from './config/visibilidadSecciones'
+import { puedePlanificar } from './utils/planificacion'
 
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
@@ -9,6 +10,7 @@ import InicioSection from './components/InicioSection'
 import CalendarioSection from './components/CalendarioSection'
 import PlantelSection from './components/PlantelSection'
 import MedicosSection from './components/MedicosSection'
+import BienestarComparativo from './components/BienestarComparativo'
 import NutricionSection from './components/NutricionSection'
 import PsicologiaSection from './components/PsicologiaSection'
 import VideoSection from './components/VideoSection'
@@ -257,6 +259,10 @@ function App() {
         />
       )}
 
+      {seccion === 'bienestar' && (perfil.rol === 'medico'
+        ? <BienestarComparativo perfil={perfil} />
+        : <InicioSection perfil={perfil} onCambiarSeccion={setSeccion} />)}
+
       {seccion === 'nutricion' && (
         <NutricionSection
           jugadorInicialId={jugadorParaNutricion}
@@ -290,13 +296,13 @@ function App() {
         />
       )}
 
-      {seccion === 'entrenamientos' && <EntrenamientosSection onPlanificar={['coordinacion', 'tecnico', 'preparador_fisico'].includes(perfil.rol) ? () => { setContextoPlanificacion(null); setSeccion('planificacion') } : undefined} />}
+      {seccion === 'entrenamientos' && <EntrenamientosSection onPlanificar={puedePlanificar(perfil) ? () => { setContextoPlanificacion(null); setSeccion('planificacion') } : undefined} />}
 
       {seccion === 'planificacion' && <PlanificacionSection perfil={perfil} fechaInicial={contextoPlanificacion?.fecha} categoriaInicial={contextoPlanificacion?.categoriaId}
         onVerAsistencia={(fecha, categoriaId) => { setContextoAsistencia({ fecha, categoriaId }); setSeccion('asistencia') }} />}
 
       {seccion === 'asistencia' && <AsistenciaSection perfil={perfil} fechaInicial={contextoAsistencia?.fecha} categoriaInicial={contextoAsistencia?.categoriaId}
-        onVerPlanificacion={['coordinacion', 'tecnico', 'preparador_fisico'].includes(perfil.rol) ? (fecha, categoriaId) => { setContextoPlanificacion({ fecha, categoriaId }); setSeccion('planificacion') } : undefined} />}
+        onVerPlanificacion={puedePlanificar(perfil) ? (fecha, categoriaId) => { if (!puedePlanificar(perfil, categoriaId)) return; setContextoPlanificacion({ fecha, categoriaId }); setSeccion('planificacion') } : undefined} />}
 
       {seccion === 'fisico' && (
         <FisicoSection
