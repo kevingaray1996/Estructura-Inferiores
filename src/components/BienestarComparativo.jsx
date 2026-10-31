@@ -101,8 +101,18 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
 
   const [resumenGeneral, setResumenGeneral] = useState([])
   const [cargandoGeneral, setCargandoGeneral] = useState(false)
+  const [erroresLectura, setErroresLectura] = useState({})
+  const [errorPdf, setErrorPdf] = useState('')
+  const errorLectura = Object.values(erroresLectura).find(Boolean)
+  function informarLectura(clave, error = null) {
+    setErroresLectura(prev => ({ ...prev, [clave]: !error ? '' : ['42501', 'PGRST301', 'PGRST302'].includes(error.code)
+      ? 'Tu sesión no tiene acceso a estos datos de bienestar. Revisá tu acceso; no se modificaron permisos.'
+      : 'No se pudieron consultar los datos de bienestar. Revisá la conexión y volvé a abrir la sección.' }))
+  }
 
   async function handleDescargarPdf() {
+    if (errorLectura) return
+    setErrorPdf('')
     setGenerandoPdf(true)
     try {
       if (jugadorId && jugadorSeleccionado) {
@@ -111,6 +121,8 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
         const categoriaNombre = categorias.find((c) => c.id === categoriaId)?.nombre
         await generarBienestarCategoriaPDF(categoriaNombre, resumenGeneral)
       }
+    } catch {
+      setErrorPdf('No se pudo generar el PDF. Revisá tu acceso y la conexión antes de reintentar.')
     } finally {
       setGenerandoPdf(false)
     }
@@ -118,90 +130,122 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
 
   useEffect(() => {
     if (esTecnico) return
+    let activo = true
 
     async function cargarCategoriaPrimera() {
-      const [{ data }, primera] = await Promise.all([
+      informarLectura('categorias')
+      try {
+      const [{ data, error }, primera] = await Promise.all([
         supabase.from('categorias').select('*').order('orden'),
-        obtenerCategoriaPrimeraDivision(),
+        obtenerCategoriaPrimeraDivision({ exigirLectura: true }),
       ])
-
+      if (error) throw error
+      if (!activo) return
       const lista = data || []
       setCategorias(lista)
-      setCategoriaId(primera?.id || '')
+      if (!jugadorInicialId) setCategoriaId(actual => actual || primera?.id || '')
+      } catch (error) { if (activo) informarLectura('categorias', error) }
     }
 
     cargarCategoriaPrimera()
-  }, [esTecnico])
+    return () => { activo = false }
+  }, [esTecnico, jugadorInicialId])
 
   useEffect(() => {
+    let activo = true
     async function aplicarJugadorInicial() {
       if (!jugadorInicialId) return
-
-      const { data: jugadorData } = await supabase
+      informarLectura('jugadoraInicial')
+      try {
+      const { data: jugadorData, error } = await supabase
         .from('jugadores')
         .select('id, categoria_id')
         .eq('id', jugadorInicialId)
         .single()
 
+      if (error) throw error
+      if (!activo) return
       if (jugadorData) {
         setCategoriaId(jugadorData.categoria_id)
         setJugadorId(jugadorData.id)
       }
 
       onConsumirJugadorInicial?.()
+      } catch (error) { if (activo) informarLectura('jugadoraInicial', error) }
     }
 
     aplicarJugadorInicial()
+    return () => { activo = false }
   }, [jugadorInicialId, onConsumirJugadorInicial])
 
   useEffect(() => {
+    let activo = true
     async function cargarJugadores() {
       if (!categoriaId) {
         setJugadores([])
         return
       }
 
-      const { data: categoriasData } = await supabase
+      informarLectura('jugadoras')
+      setJugadores([])
+      try {
+      const { data: categoriasData, error: errorCategorias } = await supabase
         .from('categorias')
         .select('id, es_reserva')
 
-      const { data } = await obtenerJugadoresDeCategoria(
+      if (errorCategorias) throw errorCategorias
+      const { data, error } = await obtenerJugadoresDeCategoria(
         supabase,
         categoriaId,
         categoriasData,
         { soloDisponibles: true }
       )
 
-      setJugadores(data || [])
+      if (error) throw error
+      if (activo) setJugadores(data || [])
+      } catch (error) { if (activo) informarLectura('jugadoras', error) }
     }
 
     cargarJugadores()
+    return () => { activo = false }
   }, [categoriaId])
 
   useEffect(() => {
+    let activo = true
     async function cargar() {
+      informarLectura('individual')
       if (!jugadorId) {
         setMetricas(null)
+        setCargando(false)
         return
       }
 
       setCargando(true)
-      const { metricas: m } = await cargarDatosBienestar(jugadorId, periodo)
-      setMetricas(m)
-      setCargando(false)
+      setMetricas(null)
+      try {
+        const { metricas: m } = await cargarDatosBienestar(jugadorId, periodo, { exigirLectura: true })
+        if (activo) setMetricas(m)
+      } catch (error) { if (activo) informarLectura('individual', error) }
+      finally { if (activo) setCargando(false) }
     }
 
     cargar()
+    return () => { activo = false }
   }, [jugadorId, periodo])
 
   useEffect(() => {
+    let activo = true
     async function cargarGeneral() {
+      informarLectura('general')
       if (jugadorId || jugadores.length === 0) {
         setResumenGeneral([])
+        setCargandoGeneral(false)
         return
       }
 
       setCargandoGeneral(true)
+      setResumenGeneral([])
+      try {
 
       const hoy = new Date()
       const desdeSemana = fechaISO(restarDias(hoy, 6))
@@ -210,13 +254,14 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
 
       const ids = jugadores.map((j) => j.id)
 
-      const { data: bienestarData } = await supabase
+      const { data: bienestarData, error } = await supabase
         .from('bienestar')
         .select('jugador_id, fecha, sueno, dolor_muscular, fatiga, estres, animo_entrenar')
         .in('jugador_id', ids)
         .gte('fecha', desdeMes)
         .lte('fecha', hoyISO)
 
+      if (error) throw error
       const porJugador = {}
 
       ;(bienestarData || []).forEach((b) => {
@@ -236,7 +281,7 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
       })
 
       const resultadosNivel = await Promise.all(
-        jugadores.map((j) => calcularWellnessZScore(j.id))
+        jugadores.map((j) => calcularWellnessZScore(j.id, { exigirLectura: true }))
       )
 
       const filas = jugadores.map((j, i) => {
@@ -255,11 +300,13 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
         }
       })
 
-      setResumenGeneral(filas)
-      setCargandoGeneral(false)
+      if (activo) setResumenGeneral(filas)
+      } catch (error) { if (activo) informarLectura('general', error) }
+      finally { if (activo) setCargandoGeneral(false) }
     }
 
     cargarGeneral()
+    return () => { activo = false }
   }, [jugadorId, jugadores])
 
   const jugadorSeleccionado = jugadores.find((j) => j.id === jugadorId)
@@ -284,6 +331,8 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
   return (
     <div className="px-4 py-5 sm:px-6 lg:px-8 lg:py-8" style={{ color: UI.texto }}>
       <div className="max-w-7xl mx-auto space-y-6">
+        {errorLectura && <p role="alert" style={{ color: UI.peligro }}>{errorLectura}</p>}
+        {errorPdf && <p role="alert" style={{ color: UI.peligro }}>{errorPdf}</p>}
         {jugadorId && <EntrenamientoDeHoy categoriaId={categoriaId} jugadoraId={jugadorId} />}
 
         {/* Encabezado */}
@@ -373,7 +422,7 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
             </div>
           </div>
 
-          {!categoriaId && (
+          {!categoriaId && !errorLectura && (
             <p className="text-sm mt-4" style={{ color: UI.peligro }}>
               No se pudo determinar la categoría para mostrar el comparativo.
             </p>
@@ -413,7 +462,7 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
 
               <button
                 onClick={handleDescargarPdf}
-                disabled={generandoPdf}
+                disabled={generandoPdf || !!errorLectura || cargando || cargandoGeneral}
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-85 disabled:opacity-50"
                 style={{
                   backgroundColor: UI.fondo,
@@ -471,7 +520,7 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
         )}
 
         {/* Resumen general */}
-        {categoriaId && !jugadorId && (
+        {categoriaId && !jugadorId && !errorLectura && (
           <div className="rounded-2xl overflow-hidden" style={tarjetaStyle}>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 sm:px-5" style={{ borderBottom: `1px solid ${UI.borde}` }}>
               <div>
@@ -599,7 +648,7 @@ function BienestarComparativo({ perfil, jugadorInicialId, onConsumirJugadorInici
         )}
 
         {/* Métricas individuales */}
-        {!cargando && jugadorId && metricas && (
+        {!cargando && !errorLectura && jugadorId && metricas && (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {metricas.map((m) => {
               const colorLinea = m.clave === 'rpe' ? UI.acento : UI.exito

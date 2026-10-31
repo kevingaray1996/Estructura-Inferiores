@@ -94,10 +94,10 @@ function calcularMetricasDesdeFilas(bienestarFilas, rpeFilas, periodo) {
 }
 
 // Para un solo jugador (usado en el perfil y en la pantalla de comparativo).
-export async function cargarDatosBienestar(jugadorId, periodo) {
+export async function cargarDatosBienestar(jugadorId, periodo, { exigirLectura = false } = {}) {
   const { inicioAnteriorISO, finActualISO } = rangoPeriodo(periodo)
 
-  const { data: bienestarData } = await supabase
+  const { data: bienestarData, error: errorBienestar } = await supabase
     .from('bienestar')
     .select('*')
     .eq('jugador_id', jugadorId)
@@ -105,7 +105,7 @@ export async function cargarDatosBienestar(jugadorId, periodo) {
     .lte('fecha', finActualISO)
     .order('fecha', { ascending: true })
 
-  const { data: fisicoData } = await supabase
+  const { data: fisicoData, error: errorFisico } = await supabase
     .from('sesiones_fisicas')
     .select('fecha, rpe')
     .eq('jugador_id', jugadorId)
@@ -114,6 +114,7 @@ export async function cargarDatosBienestar(jugadorId, periodo) {
     .lte('fecha', finActualISO)
     .order('fecha', { ascending: true })
 
+  if (exigirLectura && (errorBienestar || errorFisico)) throw errorBienestar || errorFisico
   const metricas = calcularMetricasDesdeFilas(bienestarData || [], fisicoData || [], periodo)
   return { metricas }
 }

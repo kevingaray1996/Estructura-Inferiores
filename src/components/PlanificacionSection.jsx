@@ -159,7 +159,7 @@ export default function PlanificacionSection({ perfil, fechaInicial, categoriaIn
       setError(mensajePlanificacion(fallo))
       // Validaciones rechazadas antes de escribir pueden corregirse sin perder el formulario.
       // Un conflicto o resultado incierto exige recarga y nunca se reintenta automáticamente.
-      if (!['VALIDACION_LOCAL', '22023', '23503', '23514', '22007', '22008', '22P02', '42501'].includes(fallo?.code)) setConflicto(true)
+      if (!['VALIDACION_LOCAL', '22023', '23503', '23514', '22007', '22008', '22P02'].includes(fallo?.code)) setConflicto(true)
     } finally { enCurso.current = false; setOcupado(false) }
   }
   function guardar(estado = form.estado) {

@@ -162,7 +162,7 @@ export async function cargarEntrenamientoHoy(cliente, categoriaId, jugadoraId) {
 export function mensajePlanificacion(error) {
   if (['PGRST205', 'PGRST202', '42P01', '42883'].includes(error?.code)) return 'Falta aplicar la migración de planificación semanal en Supabase. No se modificaron datos.'
   if (error?.code === '40001') return 'Otra persona modificó o eliminó esta sesión. Recargá la versión guardada; tus cambios no se sobrescribieron.'
-  if (error?.code === '42501') return 'Tu cuenta no tiene permiso para planificar esta categoría.'
+  if (error?.code === '42501') return 'Tu cuenta no tiene permiso para planificar esta categoría. Se conservó el formulario; actualizá tu sesión o perfil y recargá antes de reintentar.'
   return error?.message || 'No se pudo completar la operación. Revisá la conexión y recargá antes de reintentar.'
 }
 

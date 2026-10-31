@@ -33,13 +33,13 @@ const WELLNESS_MIN_RESPUESTAS = 15
 // contra la media/desvío de los últimos días previos (sin contar hoy).
 // Necesita al menos 15 respuestas en los últimos 28 días para ser confiable;
 // si no las tiene, se marca como datos insuficientes y no dispara alerta.
-export async function calcularWellnessZScore(jugadorId) {
+export async function calcularWellnessZScore(jugadorId, { exigirLectura = false } = {}) {
   const hoy = new Date()
   hoy.setHours(0, 0, 0, 0)
   const hoyISO = fechaISO(hoy)
   const desde28ISO = fechaISO(restarDias(hoy, 27))
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('bienestar')
     .select('fecha, sueno, dolor_muscular, fatiga, estres, animo_entrenar')
     .eq('jugador_id', jugadorId)
@@ -47,6 +47,7 @@ export async function calcularWellnessZScore(jugadorId) {
     .lte('fecha', hoyISO)
     .order('fecha', { ascending: true })
 
+  if (exigirLectura && error) throw error
   const porDia = (data || [])
     .map((d) => ({
       fecha: d.fecha,
