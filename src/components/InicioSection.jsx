@@ -997,7 +997,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
             <div className="grid lg:grid-cols-2 gap-4">
               <Tarjeta
                 accent={C.amarillo}
-                onClick={() => onCambiarSeccion('partidos')}
+                onClick={() => onCambiarSeccion('calendario')}
                 className="inicio-click"
               >
                 <div className="flex items-center justify-between gap-3 mb-5">

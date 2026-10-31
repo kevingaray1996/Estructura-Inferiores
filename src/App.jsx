@@ -236,7 +236,12 @@ function App() {
         />
       )}
 
-      {seccion === 'calendario' && <CalendarioSection perfil={perfil} />}
+      {seccion === 'calendario' && <CalendarioSection perfil={perfil}
+        onVerPlanificacion={(fecha, categoriaId, sesionId) => {
+          if (!puedePlanificar(perfil, categoriaId)) return
+          setContextoPlanificacion({ fecha, categoriaId, sesionId })
+          setSeccion('planificacion')
+        }} />}
 
       {seccion === 'plantel' && (
         <PlantelSection
@@ -298,7 +303,7 @@ function App() {
 
       {seccion === 'entrenamientos' && <EntrenamientosSection onPlanificar={puedePlanificar(perfil) ? () => { setContextoPlanificacion(null); setSeccion('planificacion') } : undefined} />}
 
-      {seccion === 'planificacion' && <PlanificacionSection perfil={perfil} fechaInicial={contextoPlanificacion?.fecha} categoriaInicial={contextoPlanificacion?.categoriaId}
+      {seccion === 'planificacion' && <PlanificacionSection perfil={perfil} fechaInicial={contextoPlanificacion?.fecha} categoriaInicial={contextoPlanificacion?.categoriaId} sesionInicialId={contextoPlanificacion?.sesionId}
         onVerAsistencia={(fecha, categoriaId) => { setContextoAsistencia({ fecha, categoriaId }); setSeccion('asistencia') }} />}
 
       {seccion === 'asistencia' && <AsistenciaSection perfil={perfil} fechaInicial={contextoAsistencia?.fecha} categoriaInicial={contextoAsistencia?.categoriaId}
