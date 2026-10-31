@@ -1,3 +1,4 @@
+import { esSeccionVisible, filtrarSeccionesVisibles } from '../config/visibilidadSecciones'
 import { tintePlantel } from '../appearance/plantel'
 
 import { useEffect, useState } from 'react'
@@ -238,7 +239,8 @@ function InicioSection({ perfil, onCambiarSeccion }) {
   const [estadisticasRapidas, setEstadisticasRapidas] = useState(null)
   const [alertasNutricion, setAlertasNutricion] = useState([])
   const [cumpleanieros, setCumpleanieros] = useState([])
-  const [alertas, setAlertas] = useState([])
+  const [alertasRegistradas, setAlertas] = useState([])
+  const alertas = filtrarSeccionesVisibles(alertasRegistradas)
   const [alertasWellnessDetalle, setAlertasWellnessDetalle] = useState([])
   const [wellnessExpandido, setWellnessExpandido] = useState(false)
   const [cargando, setCargando] = useState(true)
@@ -693,7 +695,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
       visible: perfil.rol !== 'medico',
       seccion: 'partidos',
     },
-  ].filter((item) => item.visible)
+  ].filter((item) => item.visible && esSeccionVisible(item.seccion))
 
   return (
     <div
@@ -1405,7 +1407,7 @@ function InicioSection({ perfil, onCambiarSeccion }) {
               </div>
             </Tarjeta>
 
-            {perfil.rol !== 'tecnico' && (
+            {perfil.rol !== 'tecnico' && esSeccionVisible('nutricion') && (
               <Tarjeta
                 accent={alertasNutricion.length > 0 ? C.rojo : C.verde}
                 onClick={() => onCambiarSeccion('nutricion')}
