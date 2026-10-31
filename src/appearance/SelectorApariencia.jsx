@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import { useApariencia } from './contextoApariencia'
+import IconoNavegacion from '../components/IconoNavegacion'
 
 export default function SelectorApariencia({ compacto = false }) {
   const id = useId()
@@ -18,8 +19,8 @@ export default function SelectorApariencia({ compacto = false }) {
     <div className={compacto ? 'md:hidden' : ''}>{selector()}</div>
     {compacto && <details className="relative hidden md:block">
       <summary aria-label="Configurar apariencia" title="Configurar apariencia"
-        className="flex h-9 w-full cursor-pointer list-none items-center justify-center rounded-lg border text-lg"
-        style={{ color: 'var(--ui-texto)', borderColor: 'var(--ui-borde)' }}>◐</summary>
+        className="flex min-h-11 w-full cursor-pointer list-none items-center justify-center rounded-lg border"
+        style={{ color: 'var(--ui-texto)', borderColor: 'var(--ui-borde)' }}><IconoNavegacion nombre="apariencia" /></summary>
       <div className="absolute bottom-0 left-full z-[60] ml-3 w-64 rounded-xl border p-3 shadow-lg"
         style={{ backgroundColor: 'var(--ui-superficie)', borderColor: 'var(--ui-borde)' }}>{selector('-compacto')}</div>
     </details>}

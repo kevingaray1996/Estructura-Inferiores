@@ -1,10 +1,12 @@
 
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { COLORES } from '../theme'
 import SelectorApariencia from '../appearance/SelectorApariencia'
 import { filtrarSeccionesVisibles, resolverSeccionVisible } from '../config/visibilidadSecciones'
 import { puedePlanificar } from '../utils/planificacion'
+import IconoNavegacion from './IconoNavegacion'
+import './layout.css'
 
 const rolLabel = {
   coordinacion: 'Coordinación',
@@ -96,14 +98,6 @@ function seccionesParaRol(rol) {
   ]
 }
 
-const ICONOS = {
-  inicio: '⌂', plantel: '♟', medicos: '✚', nutricion: '◉', psicologia: '♡',
-  video: '▶', analisis: '▥', partidos: '⚽', calendario: '📅', entrenamientos: '◆', planificacion: '▦',
-  asistencia: '✓', fisico: '▤', captacion: '◎', representantes: '♧',
-  pensiones: '⌂', seleccion: '★', contratos: '▣', pases: '⇄',
-  informes: '▧', usuarios: '♙', evaluaciones: '☑', bienestar: '♥',
-}
-
 function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
   const secciones = filtrarSeccionesVisibles(seccionesParaRol(perfil?.rol), 'id')
     .filter(s => s.id !== 'planificacion' || puedePlanificar(perfil))
@@ -117,6 +111,13 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
   const [categoriasLink, setCategoriasLink] = useState([])
   const [linkCopiado, setLinkCopiado] = useState('')
   const [menuAbierto, setMenuAbierto] = useState(false)
+  const [esMovil, setEsMovil] = useState(() => typeof window.matchMedia === 'function' && !window.matchMedia('(min-width: 768px)').matches)
+  const [ayuda, setAyuda] = useState(null)
+  const panel = useRef(null)
+  const abrirMenu = useRef(null)
+  const cerrarMenu = useRef(null)
+  const menuId = useId()
+  const ayudaId = useId()
   const [menuCompacto, setMenuCompacto] = useState(() => {
     try {
       const guardado = window.localStorage.getItem('comunicaciones-menu-compacto')
@@ -130,7 +131,69 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
     if (seccionActiva === 'analisis') setMenuCompacto(true)
   }, [seccionActiva])
 
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return
+    const media = window.matchMedia('(min-width: 768px)')
+    const actualizar = () => {
+      setEsMovil(!media.matches)
+      setAyuda(null)
+      if (media.matches) setMenuAbierto(false)
+    }
+    media.addEventListener?.('change', actualizar)
+    return () => media.removeEventListener?.('change', actualizar)
+  }, [])
+
+  useEffect(() => {
+    if (!esMovil || !menuAbierto) return
+    const anterior = document.activeElement
+    const panelActual = panel.current
+    const botonApertura = abrirMenu.current
+    const overflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    cerrarMenu.current?.focus()
+    function teclado(event) {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setMenuAbierto(false)
+        return
+      }
+      if (event.key !== 'Tab') return
+      const controles = [...panelActual.querySelectorAll('button,select,summary,a[href],[tabindex="0"]')]
+        .filter(el => !el.disabled && !el.closest('[inert]') && el.getClientRects().length > 0)
+      const primero = controles[0], ultimo = controles.at(-1)
+      if (!primero) { event.preventDefault(); panelActual.focus(); return }
+      if (event.shiftKey && (document.activeElement === primero || !panelActual.contains(document.activeElement))) {
+        event.preventDefault(); ultimo.focus()
+      } else if (!event.shiftKey && (document.activeElement === ultimo || !panelActual.contains(document.activeElement))) {
+        event.preventDefault(); primero.focus()
+      }
+    }
+    document.addEventListener('keydown', teclado)
+    return () => {
+      document.removeEventListener('keydown', teclado)
+      document.body.style.overflow = overflow
+      if (botonApertura?.isConnected && botonApertura.getClientRects().length) botonApertura.focus()
+      else if (anterior?.isConnected && anterior.getClientRects().length && !panelActual.contains(anterior)) anterior.focus()
+      else if (panelActual.isConnected) (panelActual.querySelector('[aria-current="page"]') || panelActual.querySelector('nav button'))?.focus()
+    }
+  }, [esMovil, menuAbierto])
+
+  function mostrarAyuda(event, id, texto) {
+    if (!menuCompacto || esMovil) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    setAyuda({ id, texto, left: rect.right + 10, top: Math.max(8, Math.min(rect.top, window.innerHeight - 44)) })
+  }
+
+  function propsAyuda(id, texto) {
+    return {
+      onMouseEnter: event => mostrarAyuda(event, id, texto), onMouseLeave: () => setAyuda(null),
+      onFocus: event => mostrarAyuda(event, id, texto), onBlur: () => setAyuda(null),
+      'aria-describedby': ayuda?.id === id && menuCompacto && !esMovil ? ayudaId : undefined,
+    }
+  }
+
   function alternarMenuCompacto() {
+    setAyuda(null)
     setMenuCompacto((actual) => {
       const siguiente = !actual
       try { window.localStorage.setItem('comunicaciones-menu-compacto', String(siguiente)) } catch { /* almacenamiento no disponible */ }
@@ -171,226 +234,78 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
   function seleccionarSeccion(id) {
     onCambiarSeccion(resolverSeccionVisible(id))
     setMenuAbierto(false)
+    setAyuda(null)
   }
 
-  const iconBtnStyle = (activo) => ({
-    backgroundColor: activo ? COLORES.acento : COLORES.fondoSidebar,
-    color: activo ? '#1A1A1A' : COLORES.textoMuted,
-    border: `1px solid ${COLORES.borde}`,
-  })
+  const seccionNombre = secciones.find(s => s.id === seccionActiva)?.label || (seccionActiva === 'buscar' ? 'Buscar' : 'Club Comunicaciones')
+  const bloqueado = esMovil && menuAbierto
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: COLORES.fondoPagina }}>
-      {/* Barra superior solo mobile */}
-      <div
-        className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center gap-3 px-4 h-14"
-        style={{
-          backgroundColor: COLORES.fondoSidebar,
-          borderBottom: `1px solid ${COLORES.borde}`,
-        }}
-      >
-        <button
-          onClick={() => setMenuAbierto(true)}
-          aria-label="Abrir menú"
-          className="w-9 h-9 flex items-center justify-center rounded-lg text-xl"
-          style={{ color: 'var(--ui-texto-acento, #F2C230)' }}
-        >
-          ☰
+    <div className="club-layout">
+      <header className="club-mobile-header md:hidden fixed top-0 left-0 right-0 z-30 flex items-center gap-3 px-3 h-14" inert={bloqueado}>
+        <button ref={abrirMenu} type="button" onClick={() => setMenuAbierto(true)} aria-label="Abrir menú"
+          aria-expanded={menuAbierto} aria-controls={menuId} className="club-icon-button">
+          <IconoNavegacion nombre="menu" />
         </button>
-        <p
-          className="text-xs tracking-widest uppercase font-medium truncate"
-          style={{ color: COLORES.texto }}
-        >
-          Club Comunicaciones
-        </p>
-      </div>
-
-      {/* Fondo oscuro al abrir menú en mobile */}
-      {menuAbierto && (
-        <div
-          onClick={() => setMenuAbierto(false)}
-          className="md:hidden fixed inset-0 z-40"
-          style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={`w-64 ${menuCompacto ? 'md:w-[68px]' : 'md:w-56'} shrink-0 min-h-screen flex flex-col fixed md:static inset-y-0 left-0 z-50 transition-all duration-200 ${
-          menuAbierto ? 'translate-x-0' : '-translate-x-full'
-        } md:translate-x-0`}
-        style={{
-          backgroundColor: COLORES.fondoSidebar,
-          borderRight: `1px solid ${COLORES.borde}`,
-        }}
-      >
-        <div
-          className={`pt-6 pb-4 flex items-start justify-between ${menuCompacto ? 'px-3 md:px-2' : 'px-5'}`}
-          style={{ borderBottom: `1px solid ${COLORES.borde}` }}
-        >
-          <div className={menuCompacto ? 'md:hidden' : ''}>
-            <p
-              className="text-xs tracking-widest uppercase font-medium"
-              style={{ color: COLORES.texto }}
-            >
-              Club Comunicaciones
-            </p>
-            {subtitulo && (
-              <p className="text-xs mt-1" style={{ color: 'var(--ui-texto-acento, #F2C230)' }}>
-                {subtitulo}
-              </p>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={alternarMenuCompacto}
-            title={menuCompacto ? 'Expandir menú' : 'Plegar menú'}
-            aria-label={menuCompacto ? 'Expandir menú lateral' : 'Plegar menú lateral'}
-            className="hidden md:flex items-center justify-center rounded-lg w-9 h-9 shrink-0 hover:opacity-80"
-            style={{ color: 'var(--ui-texto-acento, #F2C230)', border: `1px solid ${COLORES.borde}` }}
-          >
-            {menuCompacto ? '»' : '«'}
+        <div className="min-w-0"><p className="text-[10px] uppercase tracking-widest truncate">Club Comunicaciones</p>
+          <p className="club-section-name truncate">{seccionNombre}</p></div>
+      </header>
+      {menuAbierto && <div className="club-overlay md:hidden fixed inset-0 z-40" aria-hidden="true" onClick={() => setMenuAbierto(false)} />}
+      <aside ref={panel} id={menuId} tabIndex={-1} aria-label="Menú principal"
+        role={esMovil && menuAbierto ? 'dialog' : undefined} aria-modal={bloqueado || undefined}
+        aria-hidden={esMovil && !menuAbierto ? true : undefined} inert={esMovil && !menuAbierto}
+        onKeyDown={e => { if (e.key === 'Escape') setAyuda(null) }}
+        className={'club-sidebar w-64 ' + (menuCompacto ? 'compacto md:w-[68px]' : 'md:w-56') + ' shrink-0 flex flex-col fixed md:static inset-y-0 left-0 z-50 ' + (menuAbierto ? 'translate-x-0' : '-translate-x-full') + ' md:translate-x-0'}>
+        <div className="club-sidebar-header">
+          <div className="club-identidad"><strong>Club Comunicaciones</strong>{subtitulo && <small>{subtitulo}</small>}</div>
+          <button type="button" onClick={alternarMenuCompacto} data-solo-escritorio
+            title={menuCompacto ? 'Expandir menú' : 'Plegar menú'} aria-label={menuCompacto ? 'Expandir menú lateral' : 'Plegar menú lateral'}
+            aria-expanded={!menuCompacto} aria-controls={menuId + '-secciones'} className="club-icon-button hidden md:flex">
+            <IconoNavegacion nombre={menuCompacto ? 'expandir' : 'plegar'} />
           </button>
-          <button
-            onClick={() => setMenuAbierto(false)}
-            aria-label="Cerrar menú"
-            className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-lg shrink-0"
-            style={{ color: COLORES.textoMuted }}
-          >
-            ✕
+          <button ref={cerrarMenu} type="button" onClick={() => setMenuAbierto(false)} aria-label="Cerrar menú" className="club-icon-button club-mobile-close md:hidden">
+            <IconoNavegacion nombre="cerrar" />
           </button>
         </div>
-
-        <nav className="flex-1 overflow-y-auto py-3 px-2">
-          {secciones.map((s) => {
-            const activa = seccionActiva === s.id
-
-            return (
-              <button
-                key={s.id}
-                onClick={() => seleccionarSeccion(s.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 mb-0.5 text-sm rounded-lg transition-colors ${menuCompacto ? 'md:justify-center md:px-1' : ''}`}
-                title={s.label}
-                aria-label={s.label}
-                style={{
-                  color: activa ? 'var(--ui-nav-activo-texto, #F2C230)' : COLORES.textoSecundario,
-                  backgroundColor: activa ? 'var(--ui-nav-activo-fondo, rgba(242,194,48,0.08))' : 'transparent',
-                  borderLeft: activa
-                    ? `3px solid ${COLORES.acento}`
-                    : '3px solid transparent',
-                  fontWeight: activa ? 500 : 400,
-                }}
-              >
-                <span aria-hidden="true" className={`text-lg shrink-0 text-center ${menuCompacto ? 'md:w-full' : 'w-6'}`}>{ICONOS[s.id] || '•'}</span>
-                <span className={menuCompacto ? 'md:hidden' : ''}>{s.label}</span>
-              </button>
-            )
-          })}
+        <nav id={menuId + '-secciones'} aria-label="Secciones" onScroll={() => setAyuda(null)} className="club-nav flex-1 overflow-y-auto py-3 px-2">
+          {secciones.map(s => <button key={s.id} type="button" onClick={() => seleccionarSeccion(s.id)}
+            className="club-nav-item" title={s.label} aria-label={s.label}
+            aria-current={seccionActiva === s.id ? 'page' : undefined} {...propsAyuda(s.id, s.label)}>
+            <IconoNavegacion nombre={s.id} />
+            <span className="club-nav-label" aria-hidden={menuCompacto && !esMovil}>{s.label}</span>
+          </button>)}
         </nav>
-
-        <div
-          className="px-3 py-3"
-          style={{ borderTop: `1px solid ${COLORES.borde}` }}
-        >
-          <div className={`flex items-center gap-2 mb-3 ${menuCompacto ? 'md:flex-col' : ''}`}>
-            <button
-              onClick={() => seleccionarSeccion('buscar')}
-              aria-label="Buscar"
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:opacity-80"
-              style={iconBtnStyle(seccionActiva === 'buscar')}
-            >
-              🔍
+        <footer className="club-sidebar-footer">
+          <div className="club-footer-actions">
+            <button type="button" onClick={() => seleccionarSeccion('buscar')} aria-label="Buscar" title="Buscar"
+              aria-current={seccionActiva === 'buscar' ? 'page' : undefined} className="club-icon-button" {...propsAyuda('buscar', 'Buscar')}>
+              <IconoNavegacion nombre="buscar" />
             </button>
-
-            {(perfil?.rol === 'tecnico' || perfil?.rol === 'coordinacion') && (
-              <div className="relative">
-                <button
-                  onClick={toggleLinkBienestar}
-                  aria-label="Link de bienestar"
-                  title="Copiar link de bienestar para los jugadores"
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:opacity-80"
-                  style={iconBtnStyle(false)}
-                >
-                  🔗
-                </button>
-
-                {mostrarLinkBienestar && perfil?.rol === 'coordinacion' && (
-                  <div
-                    className="absolute left-0 bottom-10 p-2 rounded-xl z-10"
-                    style={{
-                      backgroundColor: COLORES.fondoPagina,
-                      border: `1px solid ${COLORES.borde}`,
-                      minWidth: '180px',
-                    }}
-                  >
-                    <p
-                      className="text-[10px] uppercase px-2 pb-1.5"
-                      style={{ color: COLORES.textoMuted }}
-                    >
-                      Copiar link por categoría
-                    </p>
-
-                    {categoriasLink.map((c) => (
-                      <button
-                        key={c.id}
-                        onClick={() => copiarLink(c.id, c.nombre)}
-                        className="block w-full text-left text-sm px-2 py-1.5 rounded-lg hover:opacity-80"
-                        style={{ color: COLORES.texto }}
-                      >
-                        {c.nombre}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            {(perfil?.rol === 'tecnico' || perfil?.rol === 'coordinacion') && <div className="relative">
+              <button type="button" onClick={toggleLinkBienestar} aria-label="Link de bienestar" title="Copiar link de bienestar"
+                aria-expanded={perfil?.rol === 'coordinacion' ? mostrarLinkBienestar : undefined}
+                aria-controls={perfil?.rol === 'coordinacion' ? menuId + '-bienestar' : undefined}
+                className="club-icon-button" {...propsAyuda('enlace', 'Link de bienestar')}><IconoNavegacion nombre="enlace" /></button>
+              {mostrarLinkBienestar && perfil?.rol === 'coordinacion' && <div id={menuId + '-bienestar'} className="club-link-popover">
+                <p className="text-[10px] uppercase px-2 pb-2" style={{ color: COLORES.textoMuted }}>Copiar link por categoría</p>
+                {categoriasLink.map(c => <button key={c.id} type="button" onClick={() => copiarLink(c.id, c.nombre)}
+                  className="block w-full text-left text-sm px-2 py-3 rounded-lg hover:opacity-80">{c.nombre}</button>)}
+              </div>}
+            </div>}
           </div>
-
-          {linkCopiado && (
-            <p className="text-xs mb-2" style={{ color: COLORES.exito }}>
-              ✓ Link de {linkCopiado} copiado
-            </p>
-          )}
-
-          <div className={`flex items-center gap-2 mb-2 ${menuCompacto ? 'md:justify-center' : ''}`}>
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium shrink-0"
-              style={{ backgroundColor: COLORES.acento, color: '#1A1A1A' }}
-            >
-              {iniciales(perfil?.nombre || rolLabel[perfil?.rol])}
-            </div>
-
-            <div className={`min-w-0 ${menuCompacto ? 'md:hidden' : ''}`}>
-              <p className="text-xs truncate" style={{ color: COLORES.texto }}>
-                {perfil?.nombre || rolLabel[perfil?.rol] || 'Usuario'}
-              </p>
-              <p className="text-xs truncate" style={{ color: COLORES.textoMuted }}>
-                {rolLabel[perfil?.rol] || ''}
-              </p>
-            </div>
+          {linkCopiado && <p role="status" className="text-xs mb-2" style={{ color: COLORES.exito }}>Link de {linkCopiado} copiado</p>}
+          <div className="club-perfil">
+            <div className="club-avatar">{iniciales(perfil?.nombre || rolLabel[perfil?.rol])}</div>
+            <div className="club-perfil-nombre"><p>{perfil?.nombre || rolLabel[perfil?.rol] || 'Usuario'}</p><p>{rolLabel[perfil?.rol] || ''}</p></div>
           </div>
-
           <SelectorApariencia compacto={menuCompacto} />
-
-          <button
-            onClick={() => supabase.auth.signOut()}
-            className={`w-full text-xs px-3 py-2 rounded-lg hover:opacity-80 ${menuCompacto ? 'md:text-center md:px-1' : 'text-left'}`}
-            title="Cerrar sesión"
-            aria-label="Cerrar sesión"
-            style={{
-              backgroundColor: COLORES.fondoPagina,
-              color: COLORES.textoSecundario,
-              border: `1px solid ${COLORES.borde}`,
-            }}
-          >
-            <span className={menuCompacto ? 'md:hidden' : ''}>Cerrar sesión</span>
-            {menuCompacto && <span className="hidden md:inline" aria-hidden="true">⇥</span>}
+          <button type="button" onClick={() => supabase.auth.signOut()} title="Cerrar sesión" aria-label="Cerrar sesión" className="club-salir" {...propsAyuda('salir', 'Cerrar sesión')}>
+            <IconoNavegacion nombre="salir" /><span className="club-nav-label" aria-hidden={menuCompacto && !esMovil}>Cerrar sesión</span>
           </button>
-        </div>
+        </footer>
       </aside>
-
-      {/* Contenido */}
-      <div className="flex-1 min-w-0 pt-14 md:pt-0 transition-all duration-200">{children}</div>
+      {ayuda && menuCompacto && !esMovil && <div id={ayudaId} role="tooltip" className="club-tooltip" style={{ left: ayuda.left, top: ayuda.top }}>{ayuda.texto}</div>}
+      <div className="club-contenido" inert={bloqueado}>{children}</div>
     </div>
   )
 }
