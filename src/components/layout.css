@@ -1,0 +1,52 @@
+.club-layout { min-height: 100vh; display: flex; background: var(--ui-fondo-pagina); color: var(--ui-texto); }
+.club-sidebar { height: 100vh; height: 100dvh; min-height: 0; background: var(--ui-fondo-sidebar); border-right: 1px solid var(--ui-borde); transition: width 200ms ease, transform 200ms ease; }
+.club-sidebar button, .club-sidebar summary, .club-mobile-header button { -webkit-tap-highlight-color: transparent; }
+.club-sidebar :is(button,summary,select):focus-visible, .club-mobile-header button:focus-visible { outline: 2px solid var(--ui-foco); outline-offset: 2px; }
+.club-sidebar-header { display: flex; align-items: center; gap: 8px; padding: 20px 12px 16px; border-bottom: 1px solid var(--ui-borde); }
+.club-identidad { min-width: 0; flex: 1; max-width: 180px; opacity: 1; overflow: hidden; transition: max-width 200ms ease, opacity 140ms ease; }
+.club-identidad strong { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.club-identidad small { display: block; font-size: 11px; margin-top: 4px; color: var(--ui-texto-acento); }
+.club-nav { min-height: 0; }
+.club-nav-item { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; margin: 2px 0; padding: 10px 12px; border: 1px solid transparent; border-left: 3px solid transparent; border-radius: 9px; text-align: left; color: var(--ui-texto-secundario); background: transparent; transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease; }
+.club-nav-item:hover { background: var(--ui-superficie); color: var(--ui-texto); }
+.club-nav-item[aria-current='page'] { color: var(--ui-nav-activo-texto); background: var(--ui-nav-activo-fondo); border-left-color: var(--ui-acento); font-weight: 600; }
+.club-nav-item svg, .club-icon-button svg, .club-salir svg { flex: 0 0 20px; }
+.club-nav-label { display: block; min-width: 0; max-width: 180px; overflow: hidden; white-space: nowrap; font-size: 13px; opacity: 1; transition: max-width 200ms ease, opacity 140ms ease; }
+.club-icon-button { display: inline-flex; flex: 0 0 44px; width: 44px; min-height: 44px; align-items: center; justify-content: center; border: 1px solid var(--ui-borde); border-radius: 10px; background: var(--ui-fondo-sidebar); color: var(--ui-texto-secundario); transition: background-color 140ms ease, color 140ms ease; }
+.club-icon-button:hover { background: var(--ui-superficie); color: var(--ui-texto); }
+.club-icon-button[aria-current='page'] { background: var(--ui-acento); color: var(--ui-texto-sobre-acento); }
+.club-sidebar [data-solo-escritorio] { display: none; }
+.club-sidebar-footer { flex-shrink: 0; padding: 12px; border-top: 1px solid var(--ui-borde); }
+.club-footer-actions { display: flex; gap: 8px; margin-bottom: 12px; }
+.club-perfil { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.club-avatar { width: 32px; height: 32px; flex: 0 0 32px; display: grid; place-items: center; border-radius: 50%; background: var(--ui-acento); color: var(--ui-texto-sobre-acento); font-size: 11px; font-weight: 700; }
+.club-perfil-nombre { min-width: 0; max-width: 160px; opacity: 1; overflow: hidden; transition: max-width 200ms ease, opacity 140ms ease; }
+.club-perfil-nombre p { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.club-perfil-nombre p + p { color: var(--ui-texto-muted); }
+.club-salir { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; padding: 8px; border: 1px solid var(--ui-borde); border-radius: 10px; color: var(--ui-texto-secundario); background: var(--ui-fondo-pagina); }
+.club-salir:hover { color: var(--ui-texto); border-color: var(--ui-texto-muted); }
+.club-link-popover { position: absolute; bottom: 52px; left: 0; width: 224px; max-width: calc(100vw - 32px); max-height: 45vh; overflow-y: auto; padding: 8px; border-radius: 12px; z-index: 65; background: var(--ui-superficie); border: 1px solid var(--ui-borde); box-shadow: 0 10px 30px #0003; }
+.club-tooltip { position: fixed; z-index: 100; max-width: 240px; padding: 7px 10px; border: 1px solid var(--ui-borde); border-radius: 8px; background: var(--ui-superficie); color: var(--ui-texto); font-size: 12px; pointer-events: none; box-shadow: 0 4px 16px #0003; }
+.club-mobile-header { background: var(--ui-fondo-sidebar); border-bottom: 1px solid var(--ui-borde); }
+.club-section-name { font-size: 12px; font-weight: 600; color: var(--ui-texto-acento); }
+.club-overlay { background: #0009; }
+.club-contenido { flex: 1; min-width: 0; padding-top: 56px; }
+@media (min-width: 768px) {
+  .club-sidebar [data-solo-escritorio] { display: inline-flex; }
+  .club-sidebar .club-mobile-close { display: none; }
+  .club-sidebar { position: sticky; top: 0; align-self: flex-start; }
+  .club-contenido { padding-top: 0; }
+  .club-sidebar.compacto .club-sidebar-header { justify-content: center; padding-inline: 8px; }
+  .club-sidebar.compacto .club-identidad { flex: 0 0 0; max-width: 0; opacity: 0; }
+  .club-sidebar.compacto .club-nav-item { gap: 0; justify-content: center; padding-inline: 0; }
+  .club-sidebar.compacto .club-nav-label { max-width: 0; opacity: 0; }
+  .club-sidebar.compacto .club-sidebar-footer { padding-inline: 10px; }
+  .club-sidebar.compacto .club-footer-actions { flex-direction: column; align-items: center; }
+  .club-sidebar.compacto .club-perfil { justify-content: center; gap: 0; }
+  .club-sidebar.compacto .club-perfil-nombre { max-width: 0; opacity: 0; }
+  .club-sidebar.compacto .club-salir { gap: 0; }
+  .club-sidebar.compacto .club-link-popover { left: 52px; bottom: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .club-sidebar, .club-nav-item, .club-nav-label, .club-icon-button, .club-identidad, .club-perfil-nombre { transition: none; }
+}
