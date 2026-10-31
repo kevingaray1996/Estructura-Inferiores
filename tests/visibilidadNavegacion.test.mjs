@@ -47,6 +47,9 @@ test('Navegación real: menú por rol, Inicio, perfil, buscador y recuperación 
       const menu=html.match(/<nav[^>]*>([\s\S]*?)<\/nav>/)[1]
       for(const nombre of etiquetas)assert.ok(!menu.includes(nombre),`${rol}: ${nombre}`)
       for(const nombre of ['Inicio','Evaluaciones'])assert.ok(menu.includes(nombre),`${rol}: ${nombre}`)
+      const calendarios = (html.match(/aria-label="Calendario"/g) || []).length
+      assert.equal(calendarios, rol === 'medico' ? 0 : 1, `${rol}: un único acceso a Calendario`)
+      if(rol !== 'medico') assert.ok(menu.indexOf('aria-label="Partidos"') < menu.indexOf('aria-label="Calendario"') && menu.indexOf('aria-label="Calendario"') < menu.indexOf('aria-label="Entrenamientos"'), `${rol}: orden del menú`)
       if(rol==='coordinacion')for(const nombre of ['Análisis','Médicos','Plantel','Entrenamientos','Planificación semanal','Usuarios'])assert.ok(menu.includes(nombre),nombre)
       assert.match(html,/Abrir menú|Abrir men/)
     }

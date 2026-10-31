@@ -72,7 +72,7 @@ function BloqueEditor({ bloque, indice, total, cambiar, mover, quitar, bibliotec
   </section>
 }
 
-export default function PlanificacionSection({ perfil, fechaInicial, categoriaInicial, onVerAsistencia }) {
+export default function PlanificacionSection({ perfil, fechaInicial, categoriaInicial, sesionInicialId, onVerAsistencia }) {
   const hoy = fechaArgentina()
   const [lunes, setLunes] = useState(() => inicioSemana(fechaInicial || hoy))
   const [categoriaId, setCategoriaId] = useState(() => perfil?.rol === 'coordinacion' ? categoriaInicial || '' : perfil?.categoria_id || '')
@@ -94,6 +94,7 @@ export default function PlanificacionSection({ perfil, fechaInicial, categoriaIn
   const [realError, setRealError] = useState('')
   const peticion = useRef(0)
   const enCurso = useRef(false)
+  const aperturaInicial = useRef(false)
   const rolPermitido = ['coordinacion', 'tecnico', 'preparador_fisico'].includes(perfil?.rol)
   const autorizado = puedePlanificar(perfil, categoriaId)
 
@@ -131,7 +132,17 @@ export default function PlanificacionSection({ perfil, fechaInicial, categoriaIn
       setError('')
       try {
         const data = await cargarSemana(supabase, categoriaId, lunes)
-        if (activo && numero === peticion.current) setSesiones(data)
+        if (activo && numero === peticion.current) {
+          setSesiones(data)
+          if (sesionInicialId && !aperturaInicial.current) {
+            aperturaInicial.current = true
+            const elegida = data.find(s => s.id === sesionInicialId && s.categoria_id === categoriaId)
+            if (elegida) {
+              setForm(structuredClone(elegida))
+              setFechaCopia(sumarDias(elegida.fecha, 1))
+            } else setError('La sesión seleccionada ya no está disponible en esta semana o tu cuenta perdió acceso. Actualizá Calendario; no se abrió otra sesión.')
+          }
+        }
       } catch (fallo) {
         if (activo) { setSesiones([]); setError(mensajePlanificacion(fallo)) }
       } finally { if (activo) setCargando(false) }
@@ -140,16 +151,18 @@ export default function PlanificacionSection({ perfil, fechaInicial, categoriaIn
     }
     void cargar()
     return () => { activo = false }
-  }, [categoriaId, lunes, recarga, autorizado])
+  }, [categoriaId, lunes, recarga, autorizado, sesionInicialId])
 
   function puedeSalir() { return !sucio || window.confirm('Hay cambios sin guardar. ¿Querés descartarlos?') }
   function abrir(valor) {
     if (!puedeSalir()) return
+    aperturaInicial.current = true
     setForm(structuredClone(valor)); setSucio(false); setConflicto(false); setError(''); setMensaje(''); setFechaCopia(sumarDias(valor.fecha, 1))
   }
   function cambiar(valor) { setForm(valor); setSucio(true); setMensaje('') }
   function navegar(semana, categoria = categoriaId) {
     if (!puedeSalir()) return
+    aperturaInicial.current = true
     setForm(null); setSucio(false); setSesiones([]); setReales([]); setLunes(semana); setCategoriaId(categoria); setConflicto(false); setError(''); setMensaje('')
   }
   async function operacion(fn) {

@@ -31,6 +31,7 @@ function seccionesParaRol(rol) {
       { id: 'video', label: 'Videoanálisis' },
       { id: 'analisis', label: 'Análisis' },
       { id: 'partidos', label: 'Partidos' },
+      { id: 'calendario', label: 'Calendario' },
       { id: 'entrenamientos', label: 'Entrenamientos' },
       { id: 'planificacion', label: 'Planificación semanal' },
       { id: 'asistencia', label: 'Asistencia' },
@@ -65,6 +66,7 @@ function seccionesParaRol(rol) {
       { id: 'medicos', label: 'Médicos' },
       { id: 'nutricion', label: 'Nutrición' },
       { id: 'partidos', label: 'Partidos' },
+      { id: 'calendario', label: 'Calendario' },
       { id: 'entrenamientos', label: 'Entrenamientos' },
       { id: 'planificacion', label: 'Planificación semanal' },
       { id: 'fisico', label: 'Físico' },
@@ -79,6 +81,7 @@ function seccionesParaRol(rol) {
     { id: 'video', label: 'Videoanálisis' },
     { id: 'analisis', label: 'Análisis' },
     { id: 'partidos', label: 'Partidos' },
+    { id: 'calendario', label: 'Calendario' },
     { id: 'entrenamientos', label: 'Entrenamientos' },
     { id: 'planificacion', label: 'Planificación semanal' },
     { id: 'asistencia', label: 'Asistencia' },
@@ -95,7 +98,7 @@ function seccionesParaRol(rol) {
 
 const ICONOS = {
   inicio: '⌂', plantel: '♟', medicos: '✚', nutricion: '◉', psicologia: '♡',
-  video: '▶', analisis: '▥', partidos: '⚽', entrenamientos: '◆', planificacion: '▦',
+  video: '▶', analisis: '▥', partidos: '⚽', calendario: '📅', entrenamientos: '◆', planificacion: '▦',
   asistencia: '✓', fisico: '▤', captacion: '◎', representantes: '♧',
   pensiones: '⌂', seleccion: '★', contratos: '▣', pases: '⇄',
   informes: '▧', usuarios: '♙', evaluaciones: '☑', bienestar: '♥',
@@ -290,17 +293,6 @@ function Layout({ seccionActiva, onCambiarSeccion, perfil, children }) {
           style={{ borderTop: `1px solid ${COLORES.borde}` }}
         >
           <div className={`flex items-center gap-2 mb-3 ${menuCompacto ? 'md:flex-col' : ''}`}>
-            {perfil?.rol !== 'medico' && (
-              <button
-                onClick={() => seleccionarSeccion('calendario')}
-                aria-label="Calendario"
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:opacity-80"
-                style={iconBtnStyle(seccionActiva === 'calendario')}
-              >
-                📅
-              </button>
-            )}
-
             <button
               onClick={() => seleccionarSeccion('buscar')}
               aria-label="Buscar"
