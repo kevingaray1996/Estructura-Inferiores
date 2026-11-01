@@ -1,14 +1,13 @@
 import { COLORES, nombrePeriodo, calcularResumenEvaluacion, valorPuntaje, recomendacionLabel } from './presentacionPerfil'
 import { textoPlantel } from '../../appearance/plantel'
 import EncabezadoSeccion from '../ui/EncabezadoSeccion'
-import TarjetaIndicador from '../ui/TarjetaIndicador'
+import SintesisEvaluacionPerfil from './SintesisEvaluacionPerfil'
 export default function EvaluacionesPerfil({ evaluacionesCargando, evaluacionesError, evaluacionesPorPeriodo, criteriosEvaluacion, mostrarEvaluaciones, setMostrarEvaluaciones, periodoAbierto, setPeriodoAbierto }) {
 const periodoActivo = periodoAbierto ?? evaluacionesPorPeriodo[0]?.periodo ?? ''
 const seleccionada = evaluacionesPorPeriodo.find(g => g.periodo === periodoActivo)
-const resumenSeleccionado = seleccionada ? calcularResumenEvaluacion(seleccionada.evaluaciones, criteriosEvaluacion) : null
 return <div className="perfil-evaluaciones"><EncabezadoSeccion titulo="Evaluaciones del cuerpo técnico" descripcion="Períodos mensuales y finales; cada evaluador conserva su registro." nivel={2} />
 <label className="perfil-selector-periodo">Período de evaluación<select value={periodoActivo} onChange={e => { setPeriodoAbierto(e.target.value); setMostrarEvaluaciones(true) }}><option value="">Seleccionar un período</option>{evaluacionesPorPeriodo.map(g => <option key={g.periodo} value={g.periodo}>{nombrePeriodo(g.periodo, g.tipo)}</option>)}</select></label>
-{seleccionada && <div className="perfil-evaluacion-resumen"><div><h3>{nombrePeriodo(seleccionada.periodo, seleccionada.tipo)}</h3><p>{seleccionada.evaluaciones.length} evaluador{seleccionada.evaluaciones.length !== 1 ? 'es' : ''} · {seleccionada.tipo === 'final' ? 'Final de temporada' : 'Evaluación mensual'}</p></div><TarjetaIndicador etiqueta="Promedio general / 5" valor={resumenSeleccionado.general == null ? null : resumenSeleccionado.general.toFixed(1)} /></div>}
+{seleccionada && <SintesisEvaluacionPerfil grupo={seleccionada} criterios={criteriosEvaluacion} />}
         {/* Historial de evaluaciones desplegable */}
         <section className="mb-8">
           <div

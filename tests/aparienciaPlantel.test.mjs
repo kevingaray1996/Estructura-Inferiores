@@ -64,7 +64,9 @@ test('Pantallas y formularios con datos simulados; informes independientes del t
       assert.match(html, /var\(--(?:plantel|ui)-/, nombre)
       assert.doesNotMatch(html, /var\([^;]+\)(?:18|55|66)/, nombre)
       if (nombre === 'ListaJugadores') { assert.match(html, /Ana/); assert.match(html, /No disponible/); assert.match(html, /#194D38/); assert.match(html, /text-white/); }
-      if (nombre === 'PerfilJugador') { assert.match(html, /Prueba, Ana/); assert.match(html, /color-mix/); assert.match(html, /Descargar PDF del perfil/); }
+      // La portada cinematográfica es oscura en ambos temas: la insignia neutra
+      // debe conservar texto claro, sin heredar el texto oscuro del tema claro.
+      if (nombre === 'PerfilJugador') { assert.match(html, /Prueba, Ana/); assert.match(html, /color:#ddd;background:#171917/); assert.match(html, /Descargar PDF del perfil/); }
       if (nombre === 'AgregarJugador') assert.match(html, /ui-control/)
       if (nombre === 'PdfPerfilModal') assert.match(html, /type="checkbox"/)
     }

@@ -4,7 +4,9 @@ import { CAMPOS_FISICOS } from '../../utils/camposFisicos'
 import { textoPlantel } from '../../appearance/plantel'
 import FuentePerfil from './FuentePerfil'
 import EstadoContenido from '../ui/EstadoContenido'
+import EncabezadoSeccion from '../ui/EncabezadoSeccion'
 export default function SeguimientoPerfil({ resumenBienestar, disciplinas, totalAsistenciaMarcada, resumenAsistencia, sesionesFisicas, datosDistanciaChart, sesionFisicaSeleccionadaId, idSesionFisicaPorDefecto, setSesionFisicaSeleccionadaId, sesionFisicaSeleccionada, fuentes, puedeWellness, puedeFisico }) { return <div className="perfil-seguimiento">
+<EncabezadoSeccion titulo="Seguimiento integral" descripcion="Asistencia acumulada, comparación semanal de bienestar y registros físicos. Cada fuente conserva su período y su escala." nivel={2} />
 <FuentePerfil fuente={fuentes.wellness} permitido={puedeWellness} titulo="Wellness semanal">
         {/* Bienestar semanal: se conserva el diseño existente */}
         {resumenBienestar && (
@@ -64,7 +66,7 @@ export default function SeguimientoPerfil({ resumenBienestar, disciplinas, total
           </>
         )}
 
-{resumenBienestar && !resumenBienestar.some(m => m.promedioActual != null) && <EstadoContenido estado="vacio" titulo="Sin respuestas en la semana" mensaje="Los valores ausentes no indican bienestar normal." />}
+{(!resumenBienestar || !resumenBienestar.some(m => m.promedioActual != null)) && <EstadoContenido estado="vacio" titulo="Sin respuestas en la semana" mensaje="Los valores ausentes no indican bienestar normal." />}
 </FuentePerfil>
         {/* Áreas: se conserva el diseño existente */}
         <p className="text-xs tracking-widest uppercase mb-3" style={{ color: textoPlantel(COLORES.amarillo) }}>
