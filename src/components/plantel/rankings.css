@@ -1,0 +1,44 @@
+@media screen {
+  .rankings-premium { display:grid; gap:20px; min-width:0; color:var(--ui-texto); }
+  .ranking-cabecera { padding:24px; background:var(--ui-superficie); border:1px solid var(--ui-borde); border-left:4px solid #F2C230; border-radius:18px; }
+  .ranking-cabecera>p { color:var(--ui-texto-acento); font-size:12px; letter-spacing:.12em; font-weight:800; }
+  .ranking-cabecera h3 { font-size:clamp(30px,4vw,46px); font-weight:900; letter-spacing:-.04em; margin:4px 0 12px; }
+  .rankings-premium p { line-height:1.6; }
+  .rankings-premium h4 { font-size:20px; font-weight:800; margin:0 0 16px; }
+  .rankings-premium small { display:block; font-size:12px; line-height:1.6; color:var(--ui-texto-secundario); }
+  .ranking-filtros { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; padding:18px; border:1px solid var(--ui-borde); border-radius:14px; background:var(--ui-superficie); }
+  .ranking-filtros label { display:grid; gap:7px; min-width:0; font-size:13px; }
+  .ranking-filtros select,.ranking-filtros input { width:100%; min-width:0; box-sizing:border-box; min-height:44px; border:1px solid var(--ui-control-borde); border-radius:9px; background:var(--ui-control-fondo); color:var(--ui-control-texto); padding:10px; }
+  .rankings-premium button,.rankings-premium summary { min-height:44px; padding:10px; border-radius:8px; cursor:pointer; }
+  .rankings-premium button { background:#F2C230; color:#111; font-weight:750; }
+  .rankings-premium :focus-visible { outline:3px solid var(--ui-foco); outline-offset:3px; }
+  .ranking-aviso { padding:14px; background:var(--ui-superficie); border-left:3px solid #F2C230; font-size:13px; }
+  .ranking-podio>div { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+  .ranking-podio article { position:relative; min-width:0; padding:22px 16px; text-align:center; border:1px solid var(--ui-borde); border-radius:18px; background:var(--ui-superficie); transition:border-color .2s; }
+  .ranking-podio article:hover { border-color:var(--ui-texto-acento); }
+  .ranking-podio article.ranking-primera { border:2px solid #F2C230; }
+  .ranking-podio h5 { font-size:20px; font-weight:800; overflow-wrap:anywhere; margin:14px 0 4px; }
+  .ranking-podio img,.ranking-podio .ranking-iniciales { width:112px; max-width:100%; height:130px; border-radius:12px; object-fit:cover; margin:0 auto; }
+  .ranking-podio .ranking-puesto { position:absolute; left:12px; top:12px; }
+  .ranking-puesto { color:var(--ui-texto-acento); font-weight:900; font-size:22px; }
+  .ranking-valor { display:block; font-size:clamp(24px,3vw,36px); font-weight:900; color:var(--ui-texto-acento); }
+  .ranking-iniciales { display:grid; place-items:center; background:var(--ui-superficie-alternativa); font-size:24px; font-weight:800; }
+  .ranking-lista { list-style:none; padding:0; display:grid; gap:10px; }
+  .ranking-lista li { display:grid; grid-template-columns:42px 60px minmax(0,1fr) minmax(100px,180px); gap:16px; align-items:center; padding:18px; border:1px solid var(--ui-borde); border-radius:14px; background:var(--ui-superficie); }
+  .ranking-lista img,.ranking-lista .ranking-iniciales { width:60px; height:70px; border-radius:8px; object-fit:cover; }
+  .ranking-identidad { min-width:0; overflow-wrap:anywhere; }
+  .ranking-cifra { text-align:right; min-width:0; overflow-wrap:anywhere; }
+  .ranking-barra { display:block; height:6px; margin:10px 0; border-radius:5px; background:var(--ui-superficie-alternativa); overflow:hidden; }
+  .ranking-barra>span { display:block; height:100%; background:#F2C230; border-radius:5px; }
+  @media(max-width:900px) { .ranking-filtros { grid-template-columns:repeat(2,minmax(0,1fr)); } .ranking-lista li { gap:10px; padding:12px; } }
+  @media(max-width:600px) {
+    .ranking-filtros { grid-template-columns:minmax(0,1fr); }
+    .ranking-podio>div { grid-template-columns:minmax(0,1fr); }
+    .ranking-podio article { padding:18px; }
+    .ranking-lista li { grid-template-columns:32px 48px minmax(0,1fr); }
+    .ranking-lista img,.ranking-lista .ranking-iniciales { width:48px; height:58px; }
+    .ranking-cifra { grid-column:3; text-align:left; }
+    .ranking-cabecera { padding:16px; }
+  }
+  @media(prefers-reduced-motion:reduce) { .ranking-podio article { transition:none; } }
+}

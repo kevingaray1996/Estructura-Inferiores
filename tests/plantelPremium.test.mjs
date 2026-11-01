@@ -33,13 +33,15 @@ test('Tarjetas 2.0 iluminan fotos con hover y foco, sin oscurecer nombres ni dep
 test('Plantel Premium conserva consultas, filtros, cálculos y asignación de las dos formaciones', () => {
   const anterior = execFileSync('git', ['show', 'HEAD:src/components/ListaJugadores.jsx'], { encoding: 'utf8' }).replaceAll('\r', '')
   const actual = readFileSync(new URL('../src/components/ListaJugadores.jsx', import.meta.url), 'utf8').replaceAll('\r', '')
-  const funciones = s => s.slice(s.indexOf('const estadoConfig'), s.indexOf('function FotoJugadora'))
-  assert.equal(funciones(actual), funciones(anterior))
+  assert.equal(actual.slice(actual.indexOf('function coincideEstado'), actual.indexOf('function obtenerDato')),
+    anterior.slice(anterior.indexOf('function coincideEstado'), anterior.indexOf('function obtenerMinutos')))
   const cargaYCalculos = s => s.slice(s.indexOf('function ListaJugadores'), s.indexOf('  return (\n    <div', s.indexOf('function ListaJugadores')))
     .replace("  const [vistaPlantel, setVistaPlantel] = useState('jugadoras')\n", '')
   assert.equal(cargaYCalculos(actual), cargaYCalculos(anterior))
   assert.match(actual, /jugadoras=\{jugadores\}/, 'La cancha conserva todo el plantel, no solo el filtro')
-  assert.match(actual, /No representa una convocatoria oficial/)
+  const formaciones = readFileSync(new URL('../src/components/plantel/FormacionesPlantel.jsx', import.meta.url), 'utf8')
+  assert.match(formaciones, /No representa una convocatoria oficial/)
+  assert.match(formaciones, /Formación automática por minutos/)
 })
 
 test('Plantel Premium usa tokens, grillas adaptables y foco sin modificar impresión', () => {

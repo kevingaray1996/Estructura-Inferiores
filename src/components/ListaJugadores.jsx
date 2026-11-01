@@ -1,3 +1,4 @@
+import RendimientoPlantel from './plantel/RendimientoPlantel'
 import PestanasAccesibles from './ui/PestanasAccesibles'
 import { agruparPlantel } from './plantel/posicionesPlantel'
 import BarraFiltros from './ui/BarraFiltros'
@@ -12,29 +13,6 @@ import { generarPlantelPDF } from '../utils/generarPlantelPDF'
 import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
 import { obtenerEstadisticasCategoria } from '../utils/exportarEstadisticas'
 import { COLORES } from '../theme'
-
-const estadoConfig = {
-  disponible: {
-    label: 'Disponible',
-    color: '#4ADE80',
-    fondo: '#163627',
-  },
-  lesionado: {
-    label: 'Lesionada',
-    color: '#F87171',
-    fondo: '#402326',
-  },
-  suspendido: {
-    label: 'Suspendida',
-    color: '#FBBF24',
-    fondo: '#40351B',
-  },
-  no_disponible: {
-    label: 'No disponible',
-    color: '#A1A1AA',
-    fondo: '#292B32',
-  },
-}
 
 const posiciones = [
   'Arquero',
@@ -62,56 +40,11 @@ const filtrosEstado = [
   { id: 'no_disponible', label: 'No disponibles', color: '#A1A1AA' },
 ]
 
-const FORMACIONES = {
-  '4-4-2': [
-    [
-      { id: 'DC1', nombre: 'Delantera', acepta: ['Delantero centro'] },
-      { id: 'DC2', nombre: 'Delantera', acepta: ['Delantero centro'] },
-    ],
-    [
-      { id: 'EI', nombre: 'Volante izquierdo', acepta: ['Extremo izquierdo'] },
-      { id: 'MC1', nombre: 'Mediocampista', acepta: ['Mediocampista central'] },
-      { id: 'MC2', nombre: 'Mediocampista', acepta: ['Mediocampista central'] },
-      { id: 'ED', nombre: 'Volante derecho', acepta: ['Extremo derecho'] },
-    ],
-    [
-      { id: 'LI', nombre: 'Lateral izquierdo', acepta: ['Lateral izquierdo'] },
-      { id: 'DFC1', nombre: 'Defensora central', acepta: ['Defensor central'] },
-      { id: 'DFC2', nombre: 'Defensora central', acepta: ['Defensor central'] },
-      { id: 'LD', nombre: 'Lateral derecho', acepta: ['Lateral derecho'] },
-    ],
-    [{ id: 'ARQ', nombre: 'Arquera', acepta: ['Arquero'] }],
-  ],
-  '4-2-3-1': [
-    [{ id: 'DC', nombre: 'Delantera', acepta: ['Delantero centro'] }],
-    [
-      { id: 'EI', nombre: 'Extrema izquierda', acepta: ['Extremo izquierdo'] },
-      { id: 'VO', nombre: 'Volante ofensiva', acepta: ['Volante ofensivo'] },
-      { id: 'ED', nombre: 'Extrema derecha', acepta: ['Extremo derecho'] },
-    ],
-    [
-      { id: 'MC1', nombre: 'Mediocampista', acepta: ['Mediocampista central'] },
-      { id: 'MC2', nombre: 'Mediocampista', acepta: ['Mediocampista central'] },
-    ],
-    [
-      { id: 'LI', nombre: 'Lateral izquierdo', acepta: ['Lateral izquierdo'] },
-      { id: 'DFC1', nombre: 'Defensora central', acepta: ['Defensor central'] },
-      { id: 'DFC2', nombre: 'Defensora central', acepta: ['Defensor central'] },
-      { id: 'LD', nombre: 'Lateral derecho', acepta: ['Lateral derecho'] },
-    ],
-    [{ id: 'ARQ', nombre: 'Arquera', acepta: ['Arquero'] }],
-  ],
-}
-
 const normalizar = (valor) =>
   (valor || '').trim().toLocaleLowerCase('es-AR')
 
 function iniciales(nombre, apellido) {
   return `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
-}
-
-function obtenerEstado(jugadora) {
-  return estadoConfig[jugadora.estado] || estadoConfig.disponible
 }
 
 function coincideEstado(jugadora, filtro) {
@@ -152,69 +85,8 @@ function coincidePuesto(jugadora, filtro) {
   return posicionesJugadora.some((p) => grupos[filtro]?.includes(p))
 }
 
-function obtenerMinutos(jugadora, estadisticas) {
-  return Number(estadisticas[String(jugadora.id)]?.minutos || 0)
-}
-
 function obtenerDato(jugadora, estadisticas, campo) {
   return Number(estadisticas[String(jugadora.id)]?.[campo] || 0)
-}
-
-function asignarOnce(jugadoras, estadisticas, formacion) {
-  const filas = FORMACIONES[formacion]
-  const puestos = filas.flat()
-  const asignadas = new Map()
-  const usadas = new Set()
-
-  const ordenadas = [...jugadoras].sort((a, b) => {
-    const diferencia =
-      obtenerMinutos(b, estadisticas) - obtenerMinutos(a, estadisticas)
-
-    if (diferencia !== 0) return diferencia
-
-    return `${a.apellido || ''} ${a.nombre || ''}`.localeCompare(
-      `${b.apellido || ''} ${b.nombre || ''}`,
-      'es'
-    )
-  })
-
-  for (const jugadora of ordenadas) {
-    const principal = normalizar(jugadora.posicion)
-    const secundaria = normalizar(jugadora.posicion_secundaria)
-
-    const puestoPrincipal = puestos.find(
-      (puesto) =>
-        !asignadas.has(puesto.id) &&
-        puesto.acepta.some((p) => normalizar(p) === principal)
-    )
-
-    if (puestoPrincipal) {
-      asignadas.set(puestoPrincipal.id, jugadora)
-      usadas.add(String(jugadora.id))
-      continue
-    }
-
-    const puestoSecundario = puestos.find(
-      (puesto) =>
-        !asignadas.has(puesto.id) &&
-        puesto.acepta.some((p) => normalizar(p) === secundaria)
-    )
-
-    if (puestoSecundario) {
-      asignadas.set(puestoSecundario.id, jugadora)
-      usadas.add(String(jugadora.id))
-    }
-  }
-
-  return {
-    filas: filas.map((fila) =>
-      fila.map((puesto) => ({
-        ...puesto,
-        jugadora: asignadas.get(puesto.id) || null,
-      }))
-    ),
-    usadas,
-  }
 }
 
 function FotoJugadora({ jugadora, className = '' }) {
@@ -362,148 +234,6 @@ function GraficoRanking({
         </div>
       )}
     </div>
-  )
-}
-
-function CanchaTactica({
-  jugadoras,
-  estadisticas,
-  formacion,
-  onCambiarFormacion,
-  onSelectJugador,
-}) {
-  const { filas, usadas } = useMemo(
-    () => asignarOnce(jugadoras, estadisticas, formacion),
-    [jugadoras, estadisticas, formacion]
-  )
-
-  return (
-    <section
-      className="plantel-cancha rounded-2xl p-4 md:p-6"
-      style={{
-        backgroundColor: P.tarjetaLista,
-        border: "1px solid var(--plantel-borde-lista, #2D3038)",
-      }}
-    >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <div>
-          <h2 style={{ color: P.blanco }} className="text-lg md:text-xl font-bold ">
-            Cancha táctica
-          </h2>
-          <p className="text-xs mt-1" style={{ color: P.secundarioLista }}>
-            Distribución automática según minutos y posiciones. No representa una convocatoria oficial.
-          </p>
-        </div>
-
-        <div className="flex gap-2">
-          {Object.keys(FORMACIONES).map((opcion) => (
-            <button
-              key={opcion}
-              type="button"
-              onClick={() => onCambiarFormacion(opcion)}
-              aria-pressed={formacion === opcion}
-              className="px-3 py-2 rounded-lg text-sm font-bold"
-              style={{
-                backgroundColor: formacion === opcion ? P.amarilloLista : P.controlLista,
-                color: formacion === opcion ? '#171717' : P.textoDetalle,
-                border: `1px solid ${formacion === opcion ? P.amarilloLista : P.bordeControl}`,
-              }}
-            >
-              {opcion}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex justify-between items-center gap-2 mb-3">
-        <span className="text-xs" style={{ color: P.secundarioLista }}>
-          {usadas.size} de 11 puestos cubiertos
-        </span>
-        <span className="text-xs" style={{ color: P.textoAmarilloLista }}>
-          {formacion}
-        </span>
-      </div>
-
-      <div
-        className="relative rounded-xl overflow-hidden px-1 py-4 md:px-3 md:py-5"
-        style={{
-          background:
-            'repeating-linear-gradient(0deg, #194D38 0px, #194D38 45px, #20583F 45px, #20583F 90px)',
-          border: '1px solid #4A8065',
-        }}
-      >
-        <div className="absolute inset-2 border border-white/30 rounded-lg pointer-events-none" />
-        <div className="absolute left-0 right-0 top-1/2 border-t border-white/30 pointer-events-none" />
-        <div className="absolute w-16 h-16 rounded-full border border-white/30 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col justify-around gap-3 md:gap-4 min-h-[390px] md:min-h-[420px]">
-          {filas.map((fila, indiceFila) => (
-            <div
-              key={`${formacion}-${indiceFila}`}
-              className="flex flex-wrap justify-center items-start gap-x-1 gap-y-2 md:gap-x-4"
-            >
-              {fila.map((puesto) => {
-                const j = puesto.jugadora
-                const estado = j ? obtenerEstado(j) : null
-
-                return (
-                  <div
-                    key={puesto.id}
-                    className="flex flex-col items-center w-[65px] sm:w-[78px] md:w-[88px] min-h-[92px]"
-                  >
-                    {j ? (
-                      <button
-                        type="button"
-                        onClick={() => onSelectJugador(j.id)}
-                        title={`${j.nombre} ${j.apellido} — ${puesto.nombre}`}
-                        className="flex flex-col items-center w-full rounded-lg p-1 hover:scale-105 transition-transform focus:outline-none focus:ring-2 focus:ring-white"
-                      >
-                        <div
-                          className="rounded-full p-0.5"
-                          style={{ backgroundColor: estado.color }}
-                        >
-                          <FotoJugadora
-                            jugadora={j}
-                            className="w-9 h-9 md:w-11 md:h-11"
-                          />
-                        </div>
-                        <span className="plantel-cancha-nombre text-[10px] md:text-xs font-bold mt-1 text-center leading-tight text-white">
-                          {j.apellido || j.nombre}
-                        </span>
-                        <span
-                          className="text-[9px] mt-1 px-1.5 py-0.5 rounded"
-                          style={{ backgroundColor: P.amarilloLista, color: '#171717' }}
-                        >
-                          {obtenerMinutos(j, estadisticas)} min
-                        </span>
-                      </button>
-                    ) : (
-                      <div
-                        className="flex flex-col items-center justify-center w-full rounded-lg p-1 min-h-[76px]"
-                        style={{
-                          border: '1px dashed rgba(255,255,255,0.45)',
-                          backgroundColor: 'rgba(10,25,18,0.25)',
-                        }}
-                      >
-                        <span className="text-xl text-white/80">+</span>
-                        <span className="text-[9px] text-white/80 text-center leading-tight">
-                          {puesto.nombre}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <p className="text-xs mt-3" style={{ color: P.secundarioLista }}>
-        Seleccioná una jugadora para abrir su perfil. Los puestos vacíos indican
-        que no se encontró una jugadora compatible con esa posición.
-      </p>
-    </section>
   )
 }
 
@@ -900,7 +630,8 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
     {hayFiltrosActivos && <button type="button" className="dp-boton" onClick={limpiarFiltros}>Limpiar filtros</button>}
   </EstadoContenido>}
 </div>) },
-                { id: 'rendimiento', etiqueta: 'Rendimiento', contenido: (<div className="plantel-rendimiento">
+                { id: 'rendimiento', etiqueta: 'Rendimiento', contenido: (<RendimientoPlantel activo={vistaPlantel === 'rendimiento'} jugadoras={jugadores} estadisticas={estadisticas}
+                  formacion={formacion} onCambiarFormacion={setFormacion} onSelectJugador={onSelectJugador} FotoJugadora={FotoJugadora}>
             {/* Resumen del plantel */}
             <section className="grid grid-cols-2 xl:grid-cols-4 gap-3">
               <TarjetaResumen
@@ -1050,20 +781,9 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                 </div>
               </div>
             </section>
-
-
-                  <p className="plantel-grupo-aviso">Comparativas y evolución ampliadas se incorporarán en una próxima etapa. Los indicadores y rankings mostrados corresponden a los registros actuales.</p>
-                </div>) },
+                </RendimientoPlantel>) },
               ]} />
 
-            {/* Cancha táctica al final */}
-            <CanchaTactica
-              jugadoras={jugadores}
-              estadisticas={estadisticas}
-              formacion={formacion}
-              onCambiarFormacion={setFormacion}
-              onSelectJugador={onSelectJugador}
-            />
           </>
         )}
       </div>

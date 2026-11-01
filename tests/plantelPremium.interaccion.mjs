@@ -76,10 +76,18 @@ test('Plantel Premium: filtros, fotos, cancha, acciones y regreso sin servicios 
     assert.deepEqual(ids(), ['arq', 'def', 'lat', 'mc'])
     assert.equal(document.querySelector('.plantel-portada-foto').getAttribute('src'), '/images/plantel/plantel-femenino-portada.jpg')
     assert.match(document.querySelector('#grupo-arqueras').parentElement.textContent, /ARQUERAS\(1\)/)
+    const lecturasAntes = consultas.length
     const tabRendimiento = document.querySelector('[role="tab"][id$="rendimiento"]')
     await click(tabRendimiento)
     assert.equal(tabRendimiento.getAttribute('aria-selected'), 'true')
     assert.match(document.getElementById(tabRendimiento.getAttribute('aria-controls')).textContent, /Minutos acumulados/)
+    for (const area of ['comparativas', 'rankings', 'evolucion', 'formaciones']) {
+      const tab = document.querySelector(`[role="tab"][id$="${area}"]`)
+      await click(tab)
+      assert.equal(document.getElementById(tab.getAttribute('aria-controls')).hidden, false)
+    }
+    assert.equal(consultas.length, lecturasAntes, 'Los paneles ocultos y la navegación no repiten consultas')
+    assert.equal(consultas.some(c => c.tabla === 'analisis_eventos'), false, 'El motor de lectura no se conecta todavía a producción')
     await click(document.querySelector('[role="tab"][id$="jugadoras"]'))
     await act(() => document.querySelector('[data-jugadora-id="arq"]').focus())
     assert.equal(document.activeElement.dataset.jugadoraId, 'arq')
@@ -102,6 +110,9 @@ test('Plantel Premium: filtros, fotos, cancha, acciones y regreso sin servicios 
     assert.equal(ids().length, 0); assert.match(document.body.textContent, /No hay jugadoras para mostrar/)
     await click(botones('Limpiar filtros')[0])
     await click(document.querySelector('[data-jugadora-id="arq"]')); assert.equal(perfiles.at(-1), 'arq')
+    await click(document.querySelector('[role="tab"][id$="rendimiento"]'))
+    await click(document.querySelector('[role="tab"][id$="formaciones"]'))
+    assert.equal(document.querySelector('[role="tab"][id$="formaciones"]').getAttribute('aria-selected'), 'true')
     const cancha = botones('4-4-2')[0].closest('section')
     const puestos = () => [...cancha.querySelectorAll('button[title]')].map(n => n.title).sort()
     const iniciales = puestos()
