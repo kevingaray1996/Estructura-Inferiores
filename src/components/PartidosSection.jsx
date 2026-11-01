@@ -6,6 +6,8 @@ import ConvocarPartido from './ConvocarPartido'
 import AgregarPartido from './AgregarPartido'
 import EquiposSection from './EquiposSection'
 import ComparativaJugadoras from './ComparativaJugadoras'
+import EncabezadoFotografico from './EncabezadoFotografico'
+import './partidosCalendarioPremium.css'
 
 function PartidosSection({ perfil, onIrAFisico }) {
   const esTecnico = perfil?.rol === 'tecnico'
@@ -107,14 +109,9 @@ function PartidosSection({ perfil, onIrAFisico }) {
   }
 
   return (
-    <div className="p-6 md:p-10">
-      <div className="max-w-xl mx-auto">
-        <h1
-          className="text-3xl md:text-4xl mb-6"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
-        >
-          Partidos
-        </h1>
+    <div className="pc-premium">
+      <div className="pc-contenido">
+        <EncabezadoFotografico titulo="Partidos" imagen="/images/fotos-comunicaciones/camiseta-escudo-comunicaciones.jpeg" descripcionImagen="Camiseta amarilla con el escudo de Club Comunicaciones" />
         <p className="text-xs uppercase tracking-wide mb-2" style={{ color: COLORES.textoMuted }}>
           Elegí una categoría
         </p>
