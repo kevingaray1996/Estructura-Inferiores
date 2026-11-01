@@ -1,4 +1,8 @@
-import { esSeccionVisible, filtrarSeccionesVisibles } from '../config/visibilidadSecciones'
+import './inicio.css'
+import IconoNavegacion from './IconoNavegacion'
+import { fechaArgentina, sumarDias, puedePlanificar } from '../utils/planificacion'
+import { cargarSesionesAgenda } from '../utils/calendario'
+import { filtrarSeccionesVisibles } from '../config/visibilidadSecciones'
 import { tintePlantel } from '../appearance/plantel'
 
 import { useEffect, useState } from 'react'
@@ -138,85 +142,6 @@ function fechaLegible(fecha) {
   }).format(date)
 }
 
-function SeccionTitulo({ icono, titulo, detalle, cantidad }) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-      <div className="flex items-center gap-3">
-        <div
-          className="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0"
-          style={{
-            background: C.amarilloSuave,
-            border: `1px solid ${C.amarillo}35`,
-          }}
-        >
-          {icono}
-        </div>
-        <div>
-          <h2
-            className="text-lg md:text-xl font-bold"
-            style={{ color: C.blanco }}
-          >
-            {titulo}
-          </h2>
-          {detalle && (
-            <p className="text-sm mt-0.5" style={{ color: C.tenue }}>
-              {detalle}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {cantidad != null && (
-        <span
-          className="px-3 py-1 rounded-full text-xs font-bold"
-          style={{
-            color: textoInicio(C.amarillo),
-            background: C.amarilloSuave,
-            border: `1px solid ${C.amarillo}35`,
-          }}
-        >
-          {cantidad}
-        </span>
-      )}
-    </div>
-  )
-}
-
-function Tarjeta({ children, accent, onClick, className = '' }) {
-  return (
-    <div
-      onClick={onClick}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onKeyDown={
-        onClick
-          ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                onClick()
-              }
-            }
-          : undefined
-      }
-      className={`rounded-2xl p-5 md:p-6 transition-all duration-200 ${className}`}
-      style={{
-        background: C.tarjeta,
-        border: `1px solid ${C.borde}`,
-        borderTop: accent ? `3px solid ${accent}` : `1px solid ${C.borde}`,
-        cursor: onClick ? 'pointer' : 'default',
-      }}
-      onMouseEnter={(e) => {
-        if (onClick) e.currentTarget.style.background = C.tarjetaHover
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = C.tarjeta
-      }}
-    >
-      {children}
-    </div>
-  )
-}
-
 function EtiquetaEstado({ children, color = C.amarillo }) {
   return (
     <span
@@ -232,17 +157,17 @@ function EtiquetaEstado({ children, color = C.amarillo }) {
   )
 }
 
-function InicioSection({ perfil, onCambiarSeccion }) {
+function InicioSection({ perfil, onCambiarSeccion, onAbrirCalendario }) {
   const [lesionados, setLesionados] = useState([])
   const [proximoPartido, setProximoPartido] = useState(null)
   const [ultimoPartidoPrincipal, setUltimoPartidoPrincipal] = useState(null)
   const [estadisticasRapidas, setEstadisticasRapidas] = useState(null)
-  const [alertasNutricion, setAlertasNutricion] = useState([])
+  const [, setAlertasNutricion] = useState([])
   const [cumpleanieros, setCumpleanieros] = useState([])
   const [alertasRegistradas, setAlertas] = useState([])
   const alertas = filtrarSeccionesVisibles(alertasRegistradas)
   const [alertasWellnessDetalle, setAlertasWellnessDetalle] = useState([])
-  const [wellnessExpandido, setWellnessExpandido] = useState(false)
+
   const [cargando, setCargando] = useState(true)
 
   useEffect(() => {
@@ -640,959 +565,132 @@ function InicioSection({ perfil, onCambiarSeccion }) {
     : C.tenue
 
   const fechaActual = new Intl.DateTimeFormat('es-AR', {
+    timeZone: 'America/Argentina/Buenos_Aires',
     weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
   }).format(new Date())
 
-  const tarjetasResumen = [
-    {
-      label: 'Próximo partido',
-      icono: '⚽',
-      valor: proximoPartido ? proximoPartido.rival || 'Rival por confirmar' : '—',
-      detalle: proximoPartido
-        ? `${fechaLegible(proximoPartido.fecha)}${proximoPartido.hora ? ` · ${proximoPartido.hora}` : ''}`
-        : 'No hay partidos próximos cargados',
-      accent: C.amarillo,
-      visible: perfil.rol !== 'medico',
-      seccion: 'partidos',
-    },
-    {
-      label: 'Lesionados activos',
-      icono: '🩺',
-      valor: lesionados.length,
-      detalle:
-        lesionados.length === 1
-          ? 'Jugador con estado lesionado'
-          : 'Jugadores con estado lesionado',
-      accent: lesionados.length ? C.rojo : C.verde,
-      visible: true,
-      seccion: perfil.rol === 'medico' ? 'medicos' : 'plantel',
-    },
-    {
-      label: 'Alertas de nutrición',
-      icono: '🥗',
-      valor: perfil.rol === 'tecnico' ? '—' : alertasNutricion.length,
-      detalle:
-        perfil.rol === 'tecnico'
-          ? 'No disponible para este perfil'
-          : 'Jugadoras con alerta de peso',
-      accent: alertasNutricion.length ? C.rojo : C.verde,
-      visible: perfil.rol !== 'tecnico',
-      seccion: 'nutricion',
-    },
-    {
-      label: 'Último resultado',
-      icono: '🏆',
-      valor: resultadoUltimo
-        ? resultadoUltimo.texto
-        : 'Sin resultado',
-      detalle: ultimoPartidoPrincipal
-        ? `${ultimoPartidoPrincipal.rival || 'Rival'} · ${fechaLegible(ultimoPartidoPrincipal.fecha)}`
-        : 'Todavía no hay resultados cargados',
-      accent: colorUltimo,
-      visible: perfil.rol !== 'medico',
-      seccion: 'partidos',
-    },
-  ].filter((item) => item.visible && esSeccionVisible(item.seccion))
+  const abrirCalendario = (fecha, categoriaId) => onAbrirCalendario
+    ? onAbrirCalendario(fecha, categoriaId) : onCambiarSeccion('calendario')
 
   return (
-    <div
-      className="relative min-h-full p-4 sm:p-6 lg:p-8 xl:p-10"
-      style={{ color: C.blanco }}
-    >
-      <style>{`
-        .inicio-panel {
-          animation: inicioAparecer .35s ease-out both;
-        }
-        @keyframes inicioAparecer {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .inicio-acento {
-          height: 3px;
-          background: linear-gradient(90deg, ${C.amarillo}, #8d7600 75%, transparent);
-        }
-        .inicio-numero {
-          font-variant-numeric: tabular-nums;
-          letter-spacing: -0.04em;
-        }
-        .inicio-click:focus-visible {
-          outline: 2px solid ${C.amarillo};
-          outline-offset: 3px;
-        }
-      `}</style>
-
-      <img
-        src={ESCUDO_CLUB_URL}
-        alt=""
-        aria-hidden="true"
-        className="pointer-events-none select-none"
-        style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 'min(70vw, 820px)',
-          minWidth: 280,
-          opacity: 'var(--inicio-escudo-opacidad, 0.025)',
-          filter: 'var(--inicio-escudo-filtro, none)',
-          zIndex: 0,
-        }}
-      />
-
-      <div className="max-w-[1600px] mx-auto relative" style={{ zIndex: 1 }}>
-        {/* Encabezado */}
-        <header
-          className="inicio-panel relative overflow-hidden rounded-2xl md:rounded-3xl mb-7 md:mb-9"
-          style={{
-            background:
-              'var(--inicio-cabecera, linear-gradient(115deg, #242000 0%, #191919 45%, #141414 100%))',
-            border: `1px solid ${C.amarillo}40`,
-          }}
-        >
-          <div className="inicio-acento" />
-
-          <div className="relative p-5 sm:p-7 lg:p-9 flex flex-col sm:flex-row sm:items-center gap-5">
-            <div
-              className="w-[76px] h-[76px] md:w-24 md:h-24 rounded-2xl flex items-center justify-center shrink-0"
-              style={{
-                background: 'var(--inicio-escudo-fondo, #0F0F0F)',
-                border: `1px solid ${C.amarillo}50`,
-                boxShadow: '0 8px 30px #00000040',
-              }}
-            >
-              <img
-                src={ESCUDO_CLUB_URL}
-                alt="Escudo Club Comunicaciones"
-                className="w-[62px] h-[62px] md:w-20 md:h-20 object-contain"
-              />
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <p
-                className="text-xs md:text-sm font-bold tracking-[0.22em] uppercase mb-2"
-                style={{ color: textoInicio(C.amarillo) }}
-              >
-                Club Comunicaciones · Fútbol femenino
-              </p>
-
-              <h1
-                className="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight"
-                style={{
-                  color: C.blanco,
-                  fontFamily: "'Archivo Black', sans-serif",
-                }}
-              >
-                Inicio
-              </h1>
-
-              <p className="text-sm md:text-base mt-2 capitalize" style={{ color: C.gris }}>
-                {fechaActual}
-              </p>
-            </div>
-
-            <div
-              className="self-start sm:self-center rounded-xl px-4 py-3 min-w-[145px]"
-              style={{
-                background: 'var(--inicio-insignia-fondo, #0F0F0F75)',
-                border: `1px solid ${C.amarillo}30`,
-              }}
-            >
-              <p
-                className="text-[10px] uppercase tracking-widest font-bold"
-                style={{ color: C.tenue }}
-              >
-                Panel de gestión
-              </p>
-              <p className="text-sm font-bold mt-1" style={{ color: textoInicio(C.amarillo) }}>
-                Temporada actual
-              </p>
-            </div>
-          </div>
+    <div className="inicio-dashboard" style={{ color: C.blanco }}>
+      <img src={ESCUDO_CLUB_URL} alt="" aria-hidden="true" className="inicio-marca" />
+      <div className="inicio-contenido">
+        <header className="inicio-cabecera">
+          <img src={ESCUDO_CLUB_URL} alt="Escudo Club Comunicaciones" />
+          <div><p className="inicio-marca-texto">Club Comunicaciones · Fútbol femenino</p>
+            <h1>Inicio</h1><p className="inicio-secundario capitalize">{fechaActual}</p></div>
+          <span className="inicio-insignia">Panel de gestión deportiva</span>
         </header>
 
-        {/* Alertas generales */}
-        {alertas.length > 0 && (
-          <section className="inicio-panel mb-8">
-            <SeccionTitulo
-              icono="🔔"
-              titulo="Alertas y tareas pendientes"
-              detalle="Situaciones que requieren atención"
-              cantidad={alertas.length}
-            />
+        <div className="inicio-avisos">
+          {alertas.length > 0 && <AvisoCompacto titulo="Alertas y tareas pendientes" cantidad={alertas.length} icono="medicos">
+            {alertas.map(a => <button type="button" key={a.id} className="inicio-fila" onClick={() => onCambiarSeccion(a.seccion)}>
+              <span style={{ color: textoInicio(a.color) }}>{a.icono}</span><span>{a.texto}</span><span aria-hidden="true">→</span>
+            </button>)}
+          </AvisoCompacto>}
+          {alertasWellnessDetalle.length > 0 && <AvisoCompacto titulo="Wellness" cantidad={alertasWellnessDetalle.length} icono="fisico">
+            {alertasWellnessDetalle.map(a => <button type="button" key={a.id} className="inicio-fila" onClick={() => onCambiarSeccion(a.seccion)}>
+              <span>{a.icono}</span><span>{a.texto}</span><span aria-hidden="true">→</span>
+            </button>)}
+          </AvisoCompacto>}
+          {cumpleanieros.length > 0 && <AvisoCompacto titulo="Cumpleaños de la semana" cantidad={cumpleanieros.length} icono="usuarios">
+            {cumpleanieros.map(j => <div key={j.id} className="inicio-fila"><span className="inicio-avatar">{iniciales(j.nombre, j.apellido)}</span>
+              <span>{j.apellido}, {j.nombre}<small>{j.categorias?.nombre || 'Categoría no indicada'}</small></span>
+              <EtiquetaEstado>{j.diasFaltan === 0 ? '¡Hoy!' : j.diasFaltan === 1 ? 'Mañana' : 'En ' + j.diasFaltan + ' días'}</EtiquetaEstado>
+            </div>)}
+          </AvisoCompacto>}
+        </div>
 
-            <div className="grid lg:grid-cols-2 gap-3">
-              {alertas.map((a) => (
-                <button
-                  key={a.id}
-                  type="button"
-                  onClick={() => onCambiarSeccion(a.seccion)}
-                  className="inicio-click text-left flex items-start gap-4 p-4 md:p-5 rounded-xl transition-all hover:-translate-y-0.5"
-                  style={{
-                    background: C.tarjeta,
-                    border: `1px solid ${a.color}70`,
-                  }}
-                >
-                  <span
-                    className="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0"
-                    style={{ background: `${a.color}16` }}
-                  >
-                    {a.icono}
-                  </span>
-                  <span className="flex-1 min-w-0">
-                    <span
-                      className="block text-sm md:text-base leading-relaxed"
-                      style={{ color: C.blanco }}
-                    >
-                      {a.texto}
-                    </span>
-                    <span
-                      className="inline-block mt-2 text-xs font-bold"
-                      style={{ color: textoInicio(a.color) }}
-                    >
-                      Ir a la sección →
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
+        {perfil.rol !== 'medico' && <AgendaInicio key={[perfil.id, perfil.rol, perfil.categoria_id].join(':')}
+          perfil={perfil} proximoPartido={proximoPartido} abrirCalendario={abrirCalendario} />}
 
-        {/* Wellness */}
-        {alertasWellnessDetalle.length > 0 && (
-          <section className="inicio-panel mb-8">
-            <SeccionTitulo
-              icono="💛"
-              titulo="Seguimiento de Wellness"
-              detalle="Registros del día que conviene revisar"
-              cantidad={alertasWellnessDetalle.length}
-            />
-
-            {alertasWellnessDetalle.length > 3 && (
-              <button
-                type="button"
-                onClick={() => setWellnessExpandido(!wellnessExpandido)}
-                className="inicio-click w-full text-left flex items-center justify-between gap-4 p-4 rounded-xl mb-3"
-                style={{
-                  background: C.tarjeta,
-                  border: `1px solid ${
-                    alertasWellnessDetalle.some((a) => a.icono === '🔴')
-                      ? `${C.rojo}80`
-                      : `${C.amarillo}70`
-                  }`,
-                }}
-              >
-                <span className="flex items-center gap-3">
-                  <span className="text-xl">
-                    {alertasWellnessDetalle.some((a) => a.icono === '🔴')
-                      ? '🔴'
-                      : '🟡'}
-                  </span>
-                  <span className="text-sm md:text-base" style={{ color: C.blanco }}>
-                    {alertasWellnessDetalle.length} jugadoras con indicadores para revisar
-                  </span>
-                </span>
-                <span className="text-sm font-bold shrink-0" style={{ color: textoInicio(C.amarillo) }}>
-                  {wellnessExpandido ? 'Ver menos ↑' : 'Ver detalle ↓'}
-                </span>
-              </button>
-            )}
-
-            {(alertasWellnessDetalle.length <= 3 || wellnessExpandido) && (
-              <div className="grid lg:grid-cols-2 gap-3">
-                {alertasWellnessDetalle.map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => onCambiarSeccion(a.seccion)}
-                    className="inicio-click text-left flex items-start gap-3 p-4 rounded-xl"
-                    style={{
-                      background: C.tarjeta,
-                      border: `1px solid ${a.color}65`,
-                    }}
-                  >
-                    <span className="text-lg shrink-0">{a.icono}</span>
-                    <span className="text-sm leading-relaxed" style={{ color: C.blanco }}>
-                      {a.texto}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* Indicadores principales */}
-        <section className="inicio-panel mb-8">
-          <SeccionTitulo
-            icono="📊"
-            titulo="Resumen del equipo"
-            detalle="Información principal para el seguimiento diario"
-          />
-
-          <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            {tarjetasResumen.map((item) => (
-              <Tarjeta
-                key={item.label}
-                accent={item.accent}
-                onClick={() => onCambiarSeccion(item.seccion)}
-                className="inicio-click min-w-0"
-              >
-                <div className="flex items-start justify-between gap-3 mb-5">
-                  <p
-                    className="text-xs md:text-sm font-bold uppercase tracking-wider"
-                    style={{ color: C.gris }}
-                  >
-                    {item.label}
-                  </p>
-                  <span
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
-                    style={{
-                      background: tintePlantel(item.accent, '16'),
-                      border: "1px solid " + tintePlantel(item.accent, '30'),
-                    }}
-                  >
-                    {item.icono}
-                  </span>
-                </div>
-
-                <p
-                  className="text-2xl md:text-3xl font-black leading-tight break-words"
-                  style={{
-                    color: textoInicio(item.accent),
-                    overflowWrap: 'anywhere',
-                  }}
-                >
-                  {item.valor}
-                </p>
-
-                <p className="text-sm mt-3 leading-relaxed" style={{ color: C.tenue }}>
-                  {item.detalle}
-                </p>
-
-                <div
-                  className="mt-5 pt-4 flex items-center justify-between text-xs font-bold"
-                  style={{ borderTop: `1px solid ${C.borde}`, color: C.gris }}
-                >
-                  <span>Ver información</span>
-                  <span style={{ color: textoInicio(C.amarillo) }}>→</span>
-                </div>
-              </Tarjeta>
-            ))}
+        {perfil.rol !== 'medico' && <section className="inicio-bloque" aria-labelledby="inicio-deportivo">
+          <div className="inicio-titulo"><h2 id="inicio-deportivo">Resumen deportivo</h2>
+            <button type="button" onClick={() => onCambiarSeccion('partidos')}><span>Consultar partidos</span> →</button></div>
+          <div className="inicio-resultado">
+            <span>Último resultado</span>{ultimoPartidoPrincipal?.escudo_url && <img className="inicio-rival" src={ultimoPartidoPrincipal.escudo_url} alt={'Escudo de ' + ultimoPartidoPrincipal.rival} />}<strong style={{color: textoInicio(colorUltimo)}}>{resultadoUltimo?.texto || 'Sin resultado'}</strong>
+            <span>{ultimoPartidoPrincipal ? (ultimoPartidoPrincipal.rival || 'Rival') + ' · ' + fechaLegible(ultimoPartidoPrincipal.fecha) : 'Todavía no hay resultados cargados'}</span>
+            {resultadoUltimo && <EtiquetaEstado color={colorUltimo}>{resultadoUltimo.etiqueta}</EtiquetaEstado>}
           </div>
+          <div className="inicio-estadisticas">
+            {[
+              ['Jugados', estadisticasRapidas?.pj ?? '—', C.blanco], ['Victorias', estadisticasRapidas?.pg ?? '—', C.verde],
+              ['Empates', estadisticasRapidas?.pe ?? '—', C.amarillo], ['Derrotas', estadisticasRapidas?.pp ?? '—', C.rojo],
+              ['Goles a favor', estadisticasRapidas?.gf ?? '—', C.verde], ['Goles en contra', estadisticasRapidas?.gc ?? '—', C.rojo],
+              ['Diferencia de gol', !estadisticasRapidas ? '—' : estadisticasRapidas.gf - estadisticasRapidas.gc > 0 ? '+' + (estadisticasRapidas.gf - estadisticasRapidas.gc) : estadisticasRapidas.gf - estadisticasRapidas.gc,
+                !estadisticasRapidas || estadisticasRapidas.gf - estadisticasRapidas.gc >= 0 ? C.verde : C.rojo],
+            ].map(([label, valor, color]) => <div className="inicio-indicador" key={label}><span>{label}</span>
+              <strong style={{color: textoInicio(color)}}>{valor}</strong></div>)}
+          </div>
+          {!estadisticasRapidas && <p className="inicio-vacio">Todavía no hay estadísticas disponibles. Se mostrarán cuando existan partidos con resultados cargados.</p>}
+        </section>}
+
+        <section className="inicio-bloque" aria-labelledby="inicio-plantel">
+          <div className="inicio-titulo"><h2 id="inicio-plantel">Estado del plantel</h2><EtiquetaEstado color={lesionados.length ? C.rojo : C.verde}>{lesionados.length} lesionados activos</EtiquetaEstado></div>
+          {lesionados.length === 0 ? <p className="inicio-vacio">No hay jugadores marcados como lesionados.</p> :
+            <div className="inicio-plantel-lista">{lesionados.slice(0, 3).map(j => <div key={j.id} className="inicio-fila">
+              <span className="inicio-avatar">{iniciales(j.nombre, j.apellido)}</span><span>{j.apellido}, {j.nombre}<small>{j.categorias?.nombre || 'Categoría no indicada'}</small></span>
+              <EtiquetaEstado color={C.rojo}>Lesionado</EtiquetaEstado></div>)}</div>}
+          {lesionados.length > 3 && <p className="inicio-secundario">Y {lesionados.length - 3} más en el listado completo.</p>}
+          <button type="button" className="inicio-enlace" onClick={() => onCambiarSeccion(perfil.rol === 'medico' ? 'medicos' : 'plantel')}>
+            {perfil.rol === 'medico' ? 'Consultar Médicos' : 'Consultar plantel'} →</button>
         </section>
-
-        {/* Partidos */}
-        {perfil.rol !== 'medico' && (
-          <section className="inicio-panel mb-8">
-            <SeccionTitulo
-              icono="⚽"
-              titulo="Actualidad deportiva"
-              detalle="Próximo compromiso, último resultado y rendimiento"
-            />
-
-            <div className="grid lg:grid-cols-2 gap-4">
-              <Tarjeta
-                accent={C.amarillo}
-                onClick={() => onCambiarSeccion('calendario')}
-                className="inicio-click"
-              >
-                <div className="flex items-center justify-between gap-3 mb-5">
-                  <p
-                    className="text-xs font-bold uppercase tracking-widest"
-                    style={{ color: C.gris }}
-                  >
-                    Próximo partido
-                  </p>
-                  <EtiquetaEstado>Agenda</EtiquetaEstado>
-                </div>
-
-                {proximoPartido ? (
-                  <>
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="w-[68px] h-[68px] rounded-2xl flex items-center justify-center shrink-0"
-                        style={{
-                          background: 'var(--inicio-interior, #111111)',
-                          border: `1px solid ${C.borde}`,
-                        }}
-                      >
-                        {proximoPartido.escudo_url ? (
-                          <img
-                            src={proximoPartido.escudo_url}
-                            alt={`Escudo de ${proximoPartido.rival}`}
-                            className="w-14 h-14 object-contain"
-                          />
-                        ) : (
-                          <span className="text-3xl">🛡️</span>
-                        )}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className="text-xs uppercase tracking-wider mb-1"
-                          style={{ color: C.tenue }}
-                        >
-                          Rival
-                        </p>
-                        <h3 className="text-xl md:text-2xl font-bold break-words" style={{ color: C.blanco }}>
-                          {proximoPartido.rival || 'Rival por confirmar'}
-                        </h3>
-                        <p className="text-sm mt-1" style={{ color: C.gris }}>
-                          {fechaLegible(proximoPartido.fecha)}
-                          {proximoPartido.hora && ` · ${proximoPartido.hora}`}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div
-                      className="mt-5 rounded-xl p-4 flex items-center justify-between gap-3"
-                      style={{
-                        background: C.amarilloSuave,
-                        border: `1px solid ${C.amarillo}25`,
-                      }}
-                    >
-                      <span className="text-sm font-medium" style={{ color: C.gris }}>
-                        Cuenta regresiva
-                      </span>
-                      <span className="text-sm md:text-base font-bold text-right" style={{ color: textoInicio(C.amarillo) }}>
-                        {calcularCuentaRegresiva(
-                          proximoPartido.fecha,
-                          proximoPartido.hora
-                        )}
-                      </span>
-                    </div>
-
-                    {proximoPartido.categoriasNombres?.length > 0 && (
-                      <p className="text-xs mt-4" style={{ color: C.tenue }}>
-                        Categorías: {proximoPartido.categoriasNombres.join(', ')}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <div className="py-6 text-center">
-                    <span className="text-3xl">📅</span>
-                    <p className="mt-3 font-semibold" style={{ color: C.blanco }}>
-                      No hay partidos próximos cargados
-                    </p>
-                    <p className="text-sm mt-1" style={{ color: C.tenue }}>
-                      Los próximos compromisos aparecerán acá.
-                    </p>
-                  </div>
-                )}
-
-                <div
-                  className="mt-5 pt-4 flex items-center justify-between text-xs font-bold"
-                  style={{ borderTop: `1px solid ${C.borde}`, color: C.gris }}
-                >
-                  <span>Consultar calendario</span>
-                  <span style={{ color: textoInicio(C.amarillo) }}>→</span>
-                </div>
-              </Tarjeta>
-
-              <Tarjeta
-                accent={colorUltimo}
-                onClick={() => onCambiarSeccion('partidos')}
-                className="inicio-click"
-              >
-                <div className="flex items-center justify-between gap-3 mb-5">
-                  <p
-                    className="text-xs font-bold uppercase tracking-widest"
-                    style={{ color: C.gris }}
-                  >
-                    Último resultado
-                  </p>
-                  {resultadoUltimo && (
-                    <EtiquetaEstado color={colorUltimo}>
-                      {resultadoUltimo.etiqueta}
-                    </EtiquetaEstado>
-                  )}
-                </div>
-
-                {ultimoPartidoPrincipal ? (
-                  <>
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="w-[68px] h-[68px] rounded-2xl flex items-center justify-center shrink-0"
-                        style={{
-                          background: 'var(--inicio-interior, #111111)',
-                          border: `1px solid ${C.borde}`,
-                        }}
-                      >
-                        {ultimoPartidoPrincipal.escudo_url ? (
-                          <img
-                            src={ultimoPartidoPrincipal.escudo_url}
-                            alt={`Escudo de ${ultimoPartidoPrincipal.rival}`}
-                            className="w-14 h-14 object-contain"
-                          />
-                        ) : (
-                          <span className="text-3xl">🛡️</span>
-                        )}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className="text-xs uppercase tracking-wider mb-1"
-                          style={{ color: C.tenue }}
-                        >
-                          Último rival registrado
-                        </p>
-                        <h3 className="text-xl md:text-2xl font-bold break-words" style={{ color: C.blanco }}>
-                          {ultimoPartidoPrincipal.rival || 'Rival'}
-                        </h3>
-                        <p className="text-sm mt-1" style={{ color: C.gris }}>
-                          {fechaLegible(ultimoPartidoPrincipal.fecha)}
-                        </p>
-                      </div>
-                    </div>
-
-                    {resultadoUltimo && (
-                      <div
-                        className="mt-5 rounded-xl p-4 flex items-center justify-between gap-3"
-                        style={{
-                          background: tintePlantel(colorUltimo, '12'),
-                          border: "1px solid " + tintePlantel(colorUltimo, '35'),
-                        }}
-                      >
-                        <span className="text-sm" style={{ color: C.gris }}>
-                          Resultado
-                        </span>
-                        <span
-                          className="text-lg md:text-xl font-black"
-                          style={{ color: textoInicio(colorUltimo) }}
-                        >
-                          {resultadoUltimo.texto}
-                        </span>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="py-6 text-center">
-                    <span className="text-3xl">🏟️</span>
-                    <p className="mt-3 font-semibold" style={{ color: C.blanco }}>
-                      Todavía no hay resultados cargados
-                    </p>
-                    <p className="text-sm mt-1" style={{ color: C.tenue }}>
-                      Los resultados aparecerán una vez registrados.
-                    </p>
-                  </div>
-                )}
-
-                <div
-                  className="mt-5 pt-4 flex items-center justify-between text-xs font-bold"
-                  style={{ borderTop: `1px solid ${C.borde}`, color: C.gris }}
-                >
-                  <span>Consultar partidos</span>
-                  <span style={{ color: textoInicio(C.amarillo) }}>→</span>
-                </div>
-              </Tarjeta>
-            </div>
-          </section>
-        )}
-
-        {/* Estadísticas */}
-        {perfil.rol !== 'medico' && (
-          <section className="inicio-panel mb-8">
-            <SeccionTitulo
-              icono="📈"
-              titulo="Estadísticas de la temporada"
-              detalle="Resumen de los partidos con resultado registrado"
-            />
-
-            <Tarjeta accent={C.amarillo}>
-              {estadisticasRapidas ? (
-                <>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                    {[
-                      { label: 'Jugados', valor: estadisticasRapidas.pj, color: C.blanco },
-                      { label: 'Victorias', valor: estadisticasRapidas.pg, color: textoInicio(C.verde) },
-                      { label: 'Empates', valor: estadisticasRapidas.pe, color: textoInicio(C.amarillo) },
-                      { label: 'Derrotas', valor: estadisticasRapidas.pp, color: textoInicio(C.rojo) },
-                    ].map((stat) => (
-                      <div
-                        key={stat.label}
-                        className="rounded-xl p-4 md:p-5"
-                        style={{
-                          background: 'var(--inicio-interior, #111111)',
-                          border: `1px solid ${C.borde}`,
-                        }}
-                      >
-                        <p className="text-xs md:text-sm font-medium" style={{ color: C.gris }}>
-                          {stat.label}
-                        </p>
-                        <p
-                          className="inicio-numero text-3xl md:text-4xl font-black mt-2"
-                          style={{ color: textoInicio(stat.color) }}
-                        >
-                          {stat.valor}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="grid sm:grid-cols-3 gap-3 mt-4">
-                    {[
-                      { label: 'Goles a favor', valor: estadisticasRapidas.gf, color: textoInicio(C.verde) },
-                      { label: 'Goles en contra', valor: estadisticasRapidas.gc, color: textoInicio(C.rojo) },
-                      {
-                        label: 'Diferencia de gol',
-                        valor:
-                          estadisticasRapidas.gf - estadisticasRapidas.gc > 0
-                            ? `+${estadisticasRapidas.gf - estadisticasRapidas.gc}`
-                            : estadisticasRapidas.gf - estadisticasRapidas.gc,
-                        color:
-                          estadisticasRapidas.gf - estadisticasRapidas.gc >= 0
-                            ? C.verde
-                            : C.rojo,
-                      },
-                    ].map((stat) => (
-                      <div
-                        key={stat.label}
-                        className="rounded-xl p-4 flex items-center justify-between gap-3"
-                        style={{
-                          background: 'var(--inicio-interior, #111111)',
-                          border: `1px solid ${C.borde}`,
-                        }}
-                      >
-                        <span className="text-sm" style={{ color: C.gris }}>
-                          {stat.label}
-                        </span>
-                        <span className="text-xl font-black" style={{ color: textoInicio(stat.color) }}>
-                          {stat.valor}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => onCambiarSeccion('partidos')}
-                    className="inicio-click w-full mt-4 rounded-xl p-4 flex items-center justify-between gap-3 text-left"
-                    style={{
-                      background: C.amarilloSuave,
-                      border: `1px solid ${C.amarillo}30`,
-                    }}
-                  >
-                    <span className="text-sm font-semibold" style={{ color: C.blanco }}>
-                      Ver detalle de los partidos
-                    </span>
-                    <span style={{ color: textoInicio(C.amarillo) }}>→</span>
-                  </button>
-                </>
-              ) : (
-                <div className="py-7 text-center">
-                  <p className="font-semibold" style={{ color: C.blanco }}>
-                    Todavía no hay estadísticas disponibles
-                  </p>
-                  <p className="text-sm mt-2" style={{ color: C.tenue }}>
-                    Se mostrarán cuando existan partidos con resultados cargados.
-                  </p>
-                </div>
-              )}
-            </Tarjeta>
-          </section>
-        )}
-
-        {/* Tabla DataFem - Primera B Femenina */}
         <TablaDataFem />
-
-        {/* Plantel: lesionados y nutrición */}
-        <section className="inicio-panel mb-8">
-          <SeccionTitulo
-            icono="👥"
-            titulo="Seguimiento del plantel"
-            detalle="Estado de salud y alertas para el equipo"
-          />
-
-          <div className="grid lg:grid-cols-2 gap-4">
-            <Tarjeta
-              accent={lesionados.length > 0 ? C.rojo : C.verde}
-              onClick={() =>
-                onCambiarSeccion(perfil.rol === 'medico' ? 'medicos' : 'plantel')
-              }
-              className="inicio-click"
-            >
-              <div className="flex items-start justify-between gap-3 mb-5">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest" style={{ color: C.gris }}>
-                    Estado físico
-                  </p>
-                  <h3 className="text-xl font-bold mt-2" style={{ color: C.blanco }}>
-                    Lesionados activos
-                  </h3>
-                </div>
-                <span
-                  className="w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0"
-                  style={{ background: `${lesionados.length ? C.rojo : C.verde}16` }}
-                >
-                  🩺
-                </span>
-              </div>
-
-              <div className="flex items-end gap-3 mb-5">
-                <span
-                  className="inicio-numero text-5xl font-black"
-                  style={{ color: textoInicio(lesionados.length ? C.rojo : C.verde) }}
-                >
-                  {lesionados.length}
-                </span>
-                <span className="text-sm pb-2" style={{ color: C.gris }}>
-                  {lesionados.length === 1 ? 'jugador registrado' : 'jugadores registrados'}
-                </span>
-              </div>
-
-              {lesionados.length === 0 ? (
-                <div
-                  className="rounded-xl p-4 text-sm"
-                  style={{
-                    background: 'var(--inicio-interior, #111111)',
-                    border: `1px solid ${C.borde}`,
-                    color: textoInicio(C.verde),
-                  }}
-                >
-                  ✓ No hay jugadores marcados como lesionados.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {lesionados.slice(0, 6).map((j) => (
-                    <div
-                      key={j.id}
-                      className="flex items-center gap-3 rounded-xl p-3"
-                      style={{
-                        background: 'var(--inicio-interior, #111111)',
-                        border: `1px solid ${C.borde}`,
-                      }}
-                    >
-                      <span
-                        className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                        style={{
-                          background: 'var(--inicio-alerta-fondo, #2D1919)',
-                          color: textoInicio(C.rojo),
-                          border: `1px solid ${C.rojo}30`,
-                        }}
-                      >
-                        {iniciales(j.nombre, j.apellido)}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate" style={{ color: C.blanco }}>
-                          {j.apellido}, {j.nombre}
-                        </p>
-                        <p className="text-xs mt-0.5" style={{ color: C.tenue }}>
-                          {j.categorias?.nombre || 'Categoría no indicada'}
-                        </p>
-                      </div>
-                      <span className="text-xs shrink-0" style={{ color: textoInicio(C.rojo) }}>
-                        Lesionado
-                      </span>
-                    </div>
-                  ))}
-
-                  {lesionados.length > 6 && (
-                    <p className="text-xs pt-2" style={{ color: C.tenue }}>
-                      Y {lesionados.length - 6} más…
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div
-                className="mt-5 pt-4 flex items-center justify-between text-xs font-bold"
-                style={{ borderTop: `1px solid ${C.borde}`, color: C.gris }}
-              >
-                <span>Consultar plantel</span>
-                <span style={{ color: textoInicio(C.amarillo) }}>→</span>
-              </div>
-            </Tarjeta>
-
-            {perfil.rol !== 'tecnico' && esSeccionVisible('nutricion') && (
-              <Tarjeta
-                accent={alertasNutricion.length > 0 ? C.rojo : C.verde}
-                onClick={() => onCambiarSeccion('nutricion')}
-                className="inicio-click"
-              >
-                <div className="flex items-start justify-between gap-3 mb-5">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-widest" style={{ color: C.gris }}>
-                      Área nutricional
-                    </p>
-                    <h3 className="text-xl font-bold mt-2" style={{ color: C.blanco }}>
-                      Alertas de nutrición
-                    </h3>
-                  </div>
-                  <span
-                    className="w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0"
-                    style={{
-                      background: `${alertasNutricion.length ? C.rojo : C.verde}16`,
-                    }}
-                  >
-                    🥗
-                  </span>
-                </div>
-
-                <div className="flex items-end gap-3 mb-5">
-                  <span
-                    className="inicio-numero text-5xl font-black"
-                    style={{ color: textoInicio(alertasNutricion.length ? C.rojo : C.verde) }}
-                  >
-                    {alertasNutricion.length}
-                  </span>
-                  <span className="text-sm pb-2" style={{ color: C.gris }}>
-                    {alertasNutricion.length === 1
-                      ? 'alerta de peso'
-                      : 'alertas de peso'}
-                  </span>
-                </div>
-
-                {alertasNutricion.length === 0 ? (
-                  <div
-                    className="rounded-xl p-4 text-sm"
-                    style={{
-                      background: 'var(--inicio-interior, #111111)',
-                      border: `1px solid ${C.borde}`,
-                      color: textoInicio(C.verde),
-                    }}
-                  >
-                    ✓ Sin alertas de peso activas.
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {alertasNutricion.slice(0, 6).map((f) => (
-                      <div
-                        key={f.id}
-                        className="flex items-center gap-3 rounded-xl p-3"
-                        style={{
-                          background: 'var(--inicio-interior, #111111)',
-                          border: `1px solid ${C.borde}`,
-                        }}
-                      >
-                        <span
-                          className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                          style={{
-                            background: 'var(--inicio-alerta-fondo, #2D1919)',
-                            color: textoInicio(C.rojo),
-                            border: `1px solid ${C.rojo}30`,
-                          }}
-                        >
-                          {iniciales(f.jugadores?.nombre, f.jugadores?.apellido)}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold truncate" style={{ color: C.blanco }}>
-                            {f.jugadores?.apellido}, {f.jugadores?.nombre}
-                          </p>
-                          <p className="text-xs mt-0.5" style={{ color: C.tenue }}>
-                            {f.jugadores?.categorias?.nombre || 'Categoría no indicada'}
-                          </p>
-                        </div>
-                        <span className="text-xs shrink-0" style={{ color: textoInicio(C.rojo) }}>
-                          Revisar
-                        </span>
-                      </div>
-                    ))}
-
-                    {alertasNutricion.length > 6 && (
-                      <p className="text-xs pt-2" style={{ color: C.tenue }}>
-                        Y {alertasNutricion.length - 6} más…
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                <div
-                  className="mt-5 pt-4 flex items-center justify-between text-xs font-bold"
-                  style={{ borderTop: `1px solid ${C.borde}`, color: C.gris }}
-                >
-                  <span>Consultar nutrición</span>
-                  <span style={{ color: textoInicio(C.amarillo) }}>→</span>
-                </div>
-              </Tarjeta>
-            )}
-          </div>
-        </section>
-
-        {/* Cumpleaños */}
-        {cumpleanieros.length > 0 && (
-          <section className="inicio-panel mb-8">
-            <SeccionTitulo
-              icono="🎂"
-              titulo="Cumpleaños de la semana"
-              detalle="Jugadoras y jugadores que cumplen en los próximos días"
-              cantidad={cumpleanieros.length}
-            />
-
-            <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
-              {cumpleanieros.map((j) => (
-                <div
-                  key={j.id}
-                  className="flex items-center gap-3 p-4 rounded-xl"
-                  style={{
-                    background: C.tarjeta,
-                    border: `1px solid ${C.borde}`,
-                  }}
-                >
-                  <span
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                    style={{
-                      background: C.amarilloSuave,
-                      color: textoInicio(C.amarillo),
-                      border: `1px solid ${C.amarillo}35`,
-                    }}
-                  >
-                    {iniciales(j.nombre, j.apellido)}
-                  </span>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold truncate" style={{ color: C.blanco }}>
-                      {j.apellido}, {j.nombre}
-                    </p>
-                    <p className="text-xs mt-1 truncate" style={{ color: C.tenue }}>
-                      {j.categorias?.nombre || 'Categoría no indicada'}
-                    </p>
-                  </div>
-
-                  <EtiquetaEstado>
-                    {j.diasFaltan === 0
-                      ? '¡Hoy!'
-                      : j.diasFaltan === 1
-                        ? 'Mañana'
-                        : `En ${j.diasFaltan} días`}
-                  </EtiquetaEstado>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Pie */}
-        <footer
-          className="mt-10 pt-5 pb-3 flex flex-col sm:flex-row items-center justify-between gap-3"
-          style={{ borderTop: `1px solid ${C.borde}` }}
-        >
-          <div className="flex items-center gap-3">
-            <img
-              src={ESCUDO_CLUB_URL}
-              alt=""
-              className="w-8 h-8 object-contain"
-            />
-            <div>
-              <p className="text-xs font-bold tracking-widest uppercase" style={{ color: C.gris }}>
-                Club Comunicaciones
-              </p>
-              <p className="text-xs mt-1" style={{ color: C.tenue }}>
-                Gestión deportiva · Fútbol femenino
-              </p>
-            </div>
-          </div>
-
-          <p className="text-xs" style={{ color: C.tenue }}>
-            Panel interno del cuerpo técnico
-          </p>
-        </footer>
+        <footer className="inicio-pie">Club Comunicaciones · Panel de gestión deportiva</footer>
       </div>
     </div>
   )
+}
+
+function AvisoCompacto({ titulo, cantidad, icono, children }) {
+  const [abierto, setAbierto] = useState(false)
+  return <section className="inicio-aviso"><button type="button" aria-expanded={abierto} onClick={() => setAbierto(v => !v)}>
+    <IconoNavegacion nombre={icono} /><span>{titulo}</span><strong>{cantidad}</strong><span aria-hidden="true">{abierto ? '−' : '+'}</span>
+  </button>{abierto && <div className="inicio-aviso-detalle">{children}</div>}</section>
+}
+
+function AgendaInicio({ perfil, proximoPartido, abrirCalendario }) {
+  const [lectura, setLectura] = useState(null)
+  const [expandido, setExpandido] = useState(false)
+  const [intento, setIntento] = useState(0)
+  const hoy = fechaArgentina()
+  const manana = sumarDias(hoy, 1)
+  const { rol, categoria_id } = perfil
+  const autorizado = puedePlanificar(perfil)
+  const clave = [perfil.id, perfil.rol, perfil.categoria_id, hoy].join(':')
+  useEffect(() => {
+    let activo = true
+    if (autorizado) cargarSesionesAgenda(supabase, { rol, categoria_id }, hoy, manana, true)
+      .then(sesiones => { if (activo) setLectura({ clave, sesiones }) })
+      .catch(error => { if (activo) setLectura({ clave, sesiones: [], error: error.message || 'No se pudo consultar Planificación. Reintentá.' }) })
+    return () => { activo = false }
+  }, [clave, autorizado, hoy, manana, rol, categoria_id, intento])
+  const vigente = lectura?.clave === clave
+  const sesiones = autorizado && vigente ? lectura.sesiones : []
+  return <section className="inicio-bloque" aria-labelledby="inicio-actividades">
+    <div className="inicio-titulo"><h2 id="inicio-actividades">Próximas actividades</h2>
+      <button type="button" onClick={() => abrirCalendario(hoy)}><span>Consultar calendario</span> →</button></div>
+    {autorizado && !vigente && <p role="status">Consultando entrenamientos…</p>}
+    {autorizado && vigente && lectura.error && <div role="alert"><p>{lectura.error}</p><button type="button" onClick={() => setIntento(n => n + 1)}>Reintentar</button></div>}
+    <div className="inicio-agenda">
+      {(expandido ? sesiones : sesiones.slice(0, 4)).map(s => <button type="button" className="inicio-actividad" key={s.id} onClick={() => abrirCalendario(s.fecha, s.categoria_id)}>
+        <span className="inicio-dia">{s.fecha === hoy ? 'Hoy' : 'Mañana'} · {fechaLegible(s.fecha)}<strong>{s.hora?.slice(0, 5) || 'Horario a confirmar'}</strong></span>
+        <span><strong>{s.objetivo || 'Entrenamiento'}</strong><small>{s.categorias?.nombre || 'Categoría no informada'}</small></span>
+        <EtiquetaEstado>{s.estado === 'publicado' ? 'Publicado' : 'Borrador'}</EtiquetaEstado>
+      </button>)}
+      {proximoPartido && <button type="button" className="inicio-actividad" onClick={() => abrirCalendario(proximoPartido.fecha, proximoPartido.categoria_id)}>
+        {proximoPartido.escudo_url && <img className="inicio-rival" src={proximoPartido.escudo_url} alt={'Escudo de ' + proximoPartido.rival} />}<span className="inicio-dia">{fechaLegible(proximoPartido.fecha)}<strong>{proximoPartido.hora?.slice(0, 5) || 'Horario a confirmar'}</strong></span>
+        <span><strong>Próximo partido · {proximoPartido.rival || 'Rival por confirmar'}</strong><small>{[proximoPartido.lugar, proximoPartido.categoriasNombres?.join(', ')].filter(Boolean).join(' · ')}</small>
+          <small>{calcularCuentaRegresiva(proximoPartido.fecha, proximoPartido.hora)}</small></span><span aria-hidden="true">→</span>
+      </button>}
+    </div>
+    {sesiones.length > 4 && <button type="button" aria-expanded={expandido} onClick={() => setExpandido(v => !v)}>{expandido ? 'Ver menos entrenamientos' : 'Ver todos los entrenamientos (' + sesiones.length + ')'}</button>}
+    {(!autorizado || vigente && !lectura.error) && sesiones.length === 0 && !proximoPartido && <p className="inicio-vacio">Sin próximas actividades registradas.</p>}
+  </section>
 }
 
 export default InicioSection

@@ -48,8 +48,10 @@ test('modo claro conserva amarillo institucional y contraste de textos principal
 test('Inicio reutiliza el escudo decorativo y no introduce una clave de remontaje por tema', () => {
   const inicio = readFileSync(new URL('../src/components/InicioSection.jsx', import.meta.url), 'utf8')
   assert.match(inicio, /src=\{ESCUDO_CLUB_URL\}\s+alt=""\s+aria-hidden="true"/)
-  assert.match(inicio, /pointer-events-none select-none/)
-  assert.match(inicio, /--inicio-escudo-opacidad/)
+  const estilosInicio = readFileSync(new URL('../src/components/inicio.css', import.meta.url), 'utf8')
+  assert.match(inicio, /className="inicio-marca"/)
+  assert.match(estilosInicio, /pointer-events: none/)
+  assert.match(estilosInicio, /--inicio-escudo-opacidad/)
   assert.doesNotMatch(inicio, /key=\{(?:tema|preferencia|apariencia)/)
   assert.ok(css.indexOf('--inicio-escudo-filtro: grayscale') > css.indexOf('@media screen'))
   assert.ok(!css.includes('@media print'))

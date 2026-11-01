@@ -2,7 +2,7 @@ import { textoSobreEstado } from '../appearance/gestion'
 import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
-import { fechaArgentina, puedePlanificar } from '../utils/planificacion'
+import { fechaArgentina, fechaValida, puedePlanificar } from '../utils/planificacion'
 import { cambiarMes, cargarEventosCalendario, matrizMes } from '../utils/calendario'
 
 const MESES = [
@@ -63,16 +63,22 @@ function agruparPartidosPorRival(eventos) {
   return resultado
 }
 
-function CalendarioSection({ perfil, onVerPlanificacion }) {
+function CalendarioSection({ perfil, onVerPlanificacion, contextoInicial, onConsumirContexto }) {
   const { rol, categoria_id } = perfil
-  const [mesActual, setMesActual] = useState(() => fechaArgentina().slice(0, 7) + '-01')
+  const fechaEntrada = fechaValida(contextoInicial?.fecha) ? contextoInicial.fecha : fechaArgentina()
+  const [mesActual, setMesActual] = useState(() => fechaEntrada.slice(0, 7) + '-01')
   const [lectura, setLectura] = useState(null)
   const [recarga, setRecarga] = useState(0)
   const [errorCategorias, setErrorCategorias] = useState('')
   const [cargando, setCargando] = useState(true)
   const [categorias, setCategorias] = useState([])
-  const [categoriaFiltro, setCategoriaFiltro] = useState('')
-  const [diaSeleccionado, setDiaSeleccionado] = useState(() => fechaArgentina())
+  const [categoriaFiltro, setCategoriaFiltro] = useState(() => contextoInicial?.categoriaId &&
+    (perfil.rol === 'coordinacion' || perfil.categoria_id === contextoInicial.categoriaId) ? contextoInicial.categoriaId : '')
+  const [diaSeleccionado, setDiaSeleccionado] = useState(() => fechaEntrada)
+
+  useEffect(() => {
+    if (contextoInicial) onConsumirContexto?.()
+  }, [contextoInicial, onConsumirContexto])
 
   useEffect(() => {
     let activo = true

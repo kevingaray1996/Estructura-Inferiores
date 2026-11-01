@@ -1,3 +1,4 @@
+import { esComunicaciones as identificarComunicaciones, resumenComunicaciones } from '../utils/datafem'
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -58,7 +59,7 @@ export function TablaPosiciones({ titulo, filas = [], destacarComunicaciones = f
               {filas.map((fila, indice) => {
                 const esComunicaciones =
                   destacarComunicaciones &&
-                  String(fila.equipo || '').toLowerCase().includes('comunicaciones')
+                  identificarComunicaciones(fila.equipo)
 
                 return (
                   <tr
@@ -93,7 +94,9 @@ export function TablaPosiciones({ titulo, filas = [], destacarComunicaciones = f
 }
 
 export default function TablaDataFem() {
+  const [expandido, setExpandido] = useState(false)
   const [datos, setDatos] = useState(null)
+  const resumen = resumenComunicaciones(datos)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -130,7 +133,7 @@ export default function TablaDataFem() {
   }, [])
 
   return (
-    <section className="mb-8">
+    <section className="inicio-bloque" aria-label="Posiciones DataFem">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
           <div
@@ -177,22 +180,28 @@ export default function TablaDataFem() {
           </p>
         ) : (
           <>
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div className="inicio-datafem-resumen">
+              {resumen ? <><span>{resumen.zona}</span><span>Posición <strong>{resumen.posicion}</strong></span><span>Puntos <strong>{resumen.puntos}</strong></span></> :
+                <p className="text-sm">No se pudo identificar inequívocamente la posición de Comunicaciones.</p>}
+              <button type="button" className="inicio-enlace" aria-expanded={expandido} aria-controls="inicio-datafem-tablas"
+                onClick={() => setExpandido(v => !v)}>{expandido ? 'Contraer posiciones' : 'Ver todas las posiciones'}</button>
+            </div>
+            {expandido && <div id="inicio-datafem-tablas" className="grid grid-cols-1 xl:grid-cols-2 gap-4 mt-4">
               {TABLAS.map((tabla) => (
                 <TablaPosiciones
                   key={tabla.key}
                   titulo={`${tabla.icono} ${tabla.titulo}`}
                   filas={datos?.[tabla.key] || []}
-                  destacarComunicaciones={tabla.key === 'zona_b'}
+                  destacarComunicaciones={true}
                 />
               ))}
-            </div>
+            </div>}
 
             <div
               className="mt-4 pt-4 flex flex-wrap items-center justify-between gap-2 text-xs"
               style={{ color: C.tenue, borderTop: `1px solid ${C.borde}` }}
             >
-              <span>★ Comunicaciones destacado en Zona B</span>
+              <span>{resumen ? '★ Comunicaciones · ' + resumen.zona : 'Fuente: DataFem'}</span>
               <span>Última actualización: {fechaActualizacion(datos?.updated_at)}</span>
             </div>
           </>
