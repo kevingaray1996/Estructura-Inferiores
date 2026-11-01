@@ -93,10 +93,12 @@ export function TablaPosiciones({ titulo, filas = [], destacarComunicaciones = f
   )
 }
 
-export default function TablaDataFem() {
+export default function TablaDataFem({ compacto = false }) {
   const [expandido, setExpandido] = useState(false)
   const [datos, setDatos] = useState(null)
   const resumen = resumenComunicaciones(datos)
+  const partidos = resumen && datos?.[resumen.zona === 'Zona A' ? 'zona_a' : 'zona_b']
+    ?.find(fila => identificarComunicaciones(fila.equipo))?.partidos
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
@@ -133,7 +135,7 @@ export default function TablaDataFem() {
   }, [])
 
   return (
-    <section className="inicio-bloque" aria-label="Posiciones DataFem">
+    <section className={`inicio-bloque${compacto ? ' inicio-datafem-compacta' : ''}`} aria-label="Posiciones DataFem">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
           <div
@@ -181,7 +183,7 @@ export default function TablaDataFem() {
         ) : (
           <>
             <div className="inicio-datafem-resumen">
-              {resumen ? <><span>{resumen.zona}</span><span>Posición <strong>{resumen.posicion}</strong></span><span>Puntos <strong>{resumen.puntos}</strong></span></> :
+              {resumen ? <><span>{resumen.zona}</span><span>Posición <strong>{resumen.posicion}</strong></span><span>Puntos <strong>{resumen.puntos}</strong></span>{compacto && partidos != null && <span>Jugados <strong>{partidos}</strong></span>}</> :
                 <p className="text-sm">No se pudo identificar inequívocamente la posición de Comunicaciones.</p>}
               <button type="button" className="inicio-enlace" aria-expanded={expandido} aria-controls="inicio-datafem-tablas"
                 onClick={() => setExpandido(v => !v)}>{expandido ? 'Contraer posiciones' : 'Ver todas las posiciones'}</button>

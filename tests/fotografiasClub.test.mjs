@@ -12,10 +12,12 @@ const FOTOS = {
   'camiseta-escudo-comunicaciones.jpeg': '08faae975701c8efe7f5f7f93307a99b6222a90d33d7fdc07e17872c4814d4bf',
   'pelotas-entrenamiento-comunicaciones.jpeg': 'da020b5ad52b369e2eaf996af4572dda1beca8021d050c609d61949b0e67f0ad',
   'plantel-femenino-comunicaciones.jpeg': '06886172c49565ea329f5efdc16a0282767f645dfebf731ae90b27041bf88aee',
+  'inicio-equipo-cuerpo-tecnico-original.jpeg': '776bc91021fa8f683121557276eb09814efd9dcc4a3ca67c33f76a825ce31931',
+  'entrenamientos-abrazo-equipo-original.jpeg': 'b1f84c627683b22889941c55eb1212849077b1f4e07880a8bddf698627aabfd5',
 }
 const hash = datos => createHash('sha256').update(datos).digest('hex')
 
-test('Fotografías: cinco rutas HTTP sirven exactamente los originales, sin transformaciones', async () => {
+test('Fotografías: siete rutas HTTP sirven exactamente los originales, sin transformaciones', async () => {
   const vite = await crearServidorVitePrueba({ configFile: false, server: { middlewareMode: true, hmr: false }, appType: 'custom' })
   const http = createServer(vite.middlewares)
   try {

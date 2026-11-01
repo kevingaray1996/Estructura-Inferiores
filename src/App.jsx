@@ -224,7 +224,12 @@ function App() {
       perfil={perfil}
     >
       {seccion === 'inicio' && (
-        <InicioSection perfil={perfil} onCambiarSeccion={setSeccion}
+        <InicioSection perfil={perfil} onCambiarSeccion={setSeccion} onVerBienestar={irABienestarDesdePerfil}
+          onVerPlanificacion={(fecha, categoriaId, sesionId) => {
+            if (!puedePlanificar(perfil, categoriaId)) return
+            setContextoPlanificacion({ fecha, categoriaId, sesionId })
+            setSeccion('planificacion')
+          }}
           onAbrirCalendario={(fecha, categoriaId) => {
             if (perfil.rol === 'medico') return
             setContextoCalendario({ fecha, categoriaId })
