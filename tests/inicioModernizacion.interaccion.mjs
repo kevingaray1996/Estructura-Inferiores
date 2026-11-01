@@ -18,7 +18,7 @@ test('Inicio: datos deportivos intactos, avisos, agenda por rol, DataFem sin rec
   const hoy = fechaArgentina(), manana = sumarDias(hoy, 1), ayer = sumarDias(hoy, -1)
   const jugadores = Array.from({ length: 12 }, (_, i) => ({ id: 'j' + i, nombre: 'Ana', apellido: 'Jugadora ' + i,
     categoria_id: 'cat', estado: i < 5 ? 'lesionado' : 'disponible', fecha_nacimiento: hoy, categorias: { nombre: 'Primera' } }))
-  const bienestar = jugadores.map((j, i) => ({ jugador_id: j.id, fecha: hoy, sueno: 1, dolor_muscular: 1,
+  let bienestar = jugadores.map((j, i) => ({ jugador_id: j.id, fecha: hoy, sueno: 1, dolor_muscular: 1,
     fatiga: i === 0 ? 5 : 1, estres: i < 10 ? 4 : 3, animo_entrenar: 1 }))
   const partidos = [
     { id: 'p1', fecha: ayer, rival: 'Rival anterior', local_visitante: 'local', goles_local: 2, goles_visitante: 1 },
@@ -28,7 +28,7 @@ test('Inicio: datos deportivos intactos, avisos, agenda por rol, DataFem sin rec
   ]
   let sesiones = Array.from({ length: 5 }, (_, i) => ({ id: 's' + i, fecha: i === 4 ? manana : hoy, hora: '18:00', tipo: 'entrenamiento', estado: i ? 'publicado' : 'borrador', categoria_id: 'cat', objetivo: 'Actividad ' + i, categorias: { nombre: 'Primera' } }))
   const consultas = [], pendientes = []
-  let errorAgenda = null, demorar = false
+  let errorAgenda = null, errorWellness = null, demorar = false
   poner('__inicioDB', { storage: { from() { return { getPublicUrl() { return { data: { publicUrl: '/logo.png' } } } } } }, from(tabla) {
     const filtros = []; let singular = false
     const q = { select(campos) { consultas.push({ tabla, campos, filtros }); return q }, order() { return q }, limit() { return q },
@@ -41,7 +41,7 @@ test('Inicio: datos deportivos intactos, avisos, agenda por rol, DataFem sin rec
           tabla === 'categorias' ? [{ id: 'cat', nombre: 'Primera', es_reserva: false }] : tabla === 'bienestar' ? bienestar :
           tabla === 'datafem_tablas' ? [{ id: 1, zona_a: [{ equipo: 'Comunicaciones', posicion: 3, puntos: 0 }], zona_b: [], general: [], updated_at: '2026-10-31T12:00:00Z' }] : []
         data = data.filter(r => filtros.every(([op, k, v]) => op === 'eq' ? r[k] === v : op === 'gte' ? r[k] >= v : op === 'lte' ? r[k] <= v : r[k] < v))
-        const respuesta = { data: structuredClone(singular ? data[0] || null : data), error: tabla === 'planificacion_sesiones' ? errorAgenda : null }
+        const respuesta = { data: structuredClone(singular ? data[0] || null : data), error: tabla === 'planificacion_sesiones' ? errorAgenda : tabla === 'bienestar' ? errorWellness : null }
         return (demorar && tabla === 'planificacion_sesiones' ? new Promise(resolve => pendientes.push(resolve)) : Promise.resolve(respuesta)).then(ok, mal)
       } }; return q
   } })
@@ -57,28 +57,31 @@ test('Inicio: datos deportivos intactos, avisos, agenda por rol, DataFem sin rec
   try {
     const { default: Inicio } = await server.ssrLoadModule('/src/components/InicioSection.jsx')
     const { default: Calendario } = await server.ssrLoadModule('/src/components/CalendarioSection.jsx')
-    const destinos = [], perfil = { id: 'coord', rol: 'coordinacion' }
-    await render(Inicio, { perfil, onCambiarSeccion: s => destinos.push(s), onAbrirCalendario: (...args) => destinos.push(args) })
+    const destinos = [], planes = [], bienestarAbierto = [], perfil = { id: 'coord', rol: 'coordinacion' }
+    await render(Inicio, { perfil, onCambiarSeccion: s => destinos.push(s), onVerPlanificacion: (...args) => planes.push(args), onVerBienestar: id => bienestarAbierto.push(id), onAbrirCalendario: (...args) => destinos.push(args) })
     const indicadores = [...document.querySelectorAll('.inicio-indicador strong')].map(n => n.textContent)
     assert.deepEqual(indicadores, ['3', '1', '1', '1', '3', '4', '-1'])
     assert.equal(document.querySelectorAll('.inicio-plantel-lista .inicio-fila').length, 3)
     assert.match(document.body.textContent, /5 lesionados activos/)
     assert.match(document.body.textContent, /Borrador/)
-    assert.equal(document.querySelectorAll('.inicio-actividad').length, 5) // cuatro sesiones más partido
-    await click(botones('Ver todos los entrenamientos')[0]); assert.equal(document.querySelectorAll('.inicio-actividad').length, 6)
-    await click(botones('Actividad 4')[0]); assert.deepEqual(destinos.at(-1), [manana, 'cat'])
-    await click(botones('Próximo partido')[0]); assert.deepEqual(destinos.at(-1), [manana, 'cat'])
+    assert.equal(document.querySelectorAll('.inicio-actividad').length, 6) // cuatro hoy, una mañana y el partido, sin duplicar hoy
+    assert.equal(document.querySelectorAll('.inicio-hoy .inicio-actividad').length, 4)
+    assert.equal(document.querySelectorAll('.inicio-proximas .inicio-actividad').length, 2)
+    await click(botones('Actividad 4')[0]); assert.deepEqual(planes.at(-1), [manana, 'cat', 's4'])
+    await click(botones('vs Próximo rival')[0]); assert.deepEqual(destinos.at(-1), [manana, 'cat'])
     await click(botones('Consultar partidos')[0]); assert.equal(destinos.at(-1), 'partidos')
     await click(botones('Consultar plantel')[0]); assert.equal(destinos.at(-1), 'plantel')
     await click(botones('Cumpleaños de la semana')[0]); assert.match(document.body.textContent, /¡Hoy!/)
     assert.equal(botones('Cumpleaños de la semana')[0].getAttribute('aria-expanded'), 'true')
-    const wellness = document.querySelectorAll('.inicio-aviso')[1]
-    assert.match(wellness.textContent, /Wellness10/)
-    await click(wellness.querySelector('button'))
+    const wellness = document.querySelector('.inicio-wellness')
+    assert.deepEqual([...wellness.querySelectorAll('.inicio-wellness-indicadores strong')].map(n => n.textContent), ['12','10','0','12'])
     assert.match(wellness.textContent, /Fatiga 5/)
-    assert.equal(wellness.querySelectorAll('.inicio-fila').length, 10)
-    await click(botones('Alertas y tareas pendientes')[0])
-    assert.match(document.body.textContent, /10 jugadoras con estrés alto hoy/)
+    assert.equal(wellness.querySelectorAll('.inicio-seguimiento-fila').length, 10)
+    await click(wellness.querySelector('.inicio-seguimiento-fila button')); assert.equal(bienestarAbierto.at(-1), 'j0')
+    assert.match(wellness.textContent, /10 jugadoras con estrés alto hoy/)
+    const lecturasPrevias = consultas.filter(q => q.tabla === 'bienestar').length
+    await click(botones('Actualizar Wellness')[0])
+    assert.equal(consultas.filter(q => q.tabla === 'bienestar').length, lecturasPrevias + 1)
     assert.equal(document.querySelectorAll('table').length, 0)
     const lecturasDataFem = consultas.filter(q => q.tabla === 'datafem_tablas').length
     await click(botones('Ver todas las posiciones')[0]); assert.match(document.body.textContent, /Comunicaciones/)
@@ -92,10 +95,24 @@ test('Inicio: datos deportivos intactos, avisos, agenda por rol, DataFem sin rec
       assert.equal(agenda.length, rol === 'tecnico' ? 1 : 0)
       assert.equal(document.querySelectorAll('.inicio-indicador').length, rol === 'medico' ? 0 : 7)
       if (rol === 'medico') {
-        assert.equal(botones('Wellness').length, 0)
+        assert.equal(document.querySelectorAll('.inicio-seguimiento-fila').length, 0)
+        assert.equal(consultas.slice(inicioConsultas).filter(q => q.tabla === 'bienestar').length, 0)
         await click(botones('Consultar Médicos')[0]); assert.equal(destinos.at(-1), 'medicos')
       }
     }
+    errorWellness = { code: '42501' }
+    await render(Inicio, { perfil, onCambiarSeccion() {} })
+    assert.match(document.querySelector('.inicio-wellness').textContent, /no tiene acceso/)
+    assert.equal(document.querySelectorAll('.inicio-wellness-indicadores strong').length, 0)
+    assert.doesNotMatch(document.querySelector('.inicio-wellness').textContent, /Sin alertas registradas|Sin respuestas disponibles/)
+    errorWellness = null; bienestar = []
+    await render(Inicio, { perfil, onCambiarSeccion() {} })
+    assert.match(document.querySelector('.inicio-wellness').textContent, /Sin respuestas disponibles/)
+    assert.deepEqual([...document.querySelectorAll('.inicio-wellness-indicadores strong')].map(n => n.textContent), ['0','0','12','12'])
+    const inicioOtra = consultas.length
+    await render(Inicio, { perfil: { rol: 'tecnico', categoria_id: 'otra' }, onCambiarSeccion() {} })
+    assert.equal(consultas.slice(inicioOtra).filter(q => q.tabla === 'bienestar').length, 0)
+    assert.equal(document.querySelectorAll('.inicio-seguimiento-fila').length, 0)
     errorAgenda = { code: '42501' }
     await render(Inicio, { perfil, onCambiarSeccion() {} })
     assert.match(document.querySelector('[role="alert"]').textContent, /no tiene acceso/)
