@@ -48,19 +48,31 @@ function errorFuente(fuente, fallo) {
   return `${fuente}: ${permisos ? 'tu sesión no tiene acceso; revisá tus permisos.' : 'no se pudo consultar; revisá la conexión o reintentá.'}`
 }
 
+// Lectura de agenda: nunca obtiene bloques ni observaciones internas.
+export async function cargarSesionesAgenda(cliente, perfil, desde, hasta, soloEntrenamientos = false) {
+  if (!puedePlanificar(perfil)) return []
+  let q = cliente.from('planificacion_sesiones')
+    .select(soloEntrenamientos
+      ? 'id,categoria_id,fecha,hora,tipo,estado,objetivo,categorias(nombre)'
+      : 'id,categoria_id,fecha,hora,tipo,estado,lugar,objetivo,entrenamiento_real_id,categorias(nombre)')
+    .gte('fecha', desde).lte('fecha', hasta)
+  if (perfil.rol !== 'coordinacion') q = q.eq('categoria_id', perfil.categoria_id)
+  if (soloEntrenamientos) q = q.eq('tipo', 'entrenamiento')
+  const { data, error } = await Promise.resolve(q).catch(error => ({ error }))
+  if (error) throw Object.assign(new Error(errorFuente('Planificación', error)), { code: error.code, status: error.status })
+  return (data || []).filter(s => puedePlanificar(perfil, s.categoria_id) &&
+    (!soloEntrenamientos || s.tipo === 'entrenamiento'))
+    .sort((a, b) => a.fecha.localeCompare(b.fecha) || (a.hora || '').localeCompare(b.hora || '') || a.id.localeCompare(b.id))
+}
+
 export async function cargarEventosCalendario(cliente, perfil, desde, hasta) {
   const fuentes = [
     ['Partidos', 'partidos', () => cliente.from('partidos').select('*, categorias(nombre)').gte('fecha', desde).lte('fecha', hasta)],
     ['Videos', 'videos', () => cliente.from('videos').select('*, categorias(nombre)').eq('tipo', 'entrenamiento').gte('fecha', desde).lte('fecha', hasta)],
   ]
   // La interfaz no concede acceso: todas las lecturas siguen sujetas a RLS.
-  if (puedePlanificar(perfil)) fuentes.push(['Planificación', 'planificaciones', () => {
-    let q = cliente.from('planificacion_sesiones')
-      .select('id,categoria_id,fecha,hora,tipo,estado,lugar,objetivo,entrenamiento_real_id,categorias(nombre)')
-      .gte('fecha', desde).lte('fecha', hasta)
-    if (perfil.rol !== 'coordinacion') q = q.eq('categoria_id', perfil.categoria_id)
-    return q
-  }])
+  if (puedePlanificar(perfil)) fuentes.push(['Planificación', 'planificaciones', async () =>
+    ({ data: await cargarSesionesAgenda(cliente, perfil, desde, hasta) })])
   const resultados = await Promise.allSettled(fuentes.map(([, , leer]) => Promise.resolve().then(leer)))
   const datos = {}, errores = []
   resultados.forEach((r, i) => {

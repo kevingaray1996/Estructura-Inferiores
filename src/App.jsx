@@ -41,6 +41,7 @@ function App() {
   // Resuelve también una sección que ya estuviera abierta al cambiar la configuración.
   const seccion = resolverSeccionVisible(seccionSolicitada)
   const setSeccion = useCallback(id => setSeccionSolicitada(resolverSeccionVisible(id)), [])
+  const [contextoCalendario, setContextoCalendario] = useState(null)
   const [contextoPlanificacion, setContextoPlanificacion] = useState(null)
   const [contextoAsistencia, setContextoAsistencia] = useState(null)
   const [jugadorParaMedicos, setJugadorParaMedicos] = useState(null)
@@ -223,7 +224,12 @@ function App() {
       perfil={perfil}
     >
       {seccion === 'inicio' && (
-        <InicioSection perfil={perfil} onCambiarSeccion={setSeccion} />
+        <InicioSection perfil={perfil} onCambiarSeccion={setSeccion}
+          onAbrirCalendario={(fecha, categoriaId) => {
+            if (perfil.rol === 'medico') return
+            setContextoCalendario({ fecha, categoriaId })
+            setSeccion('calendario')
+          }} />
       )}
 
       {seccion === 'buscar' && (
@@ -236,7 +242,8 @@ function App() {
         />
       )}
 
-      {seccion === 'calendario' && <CalendarioSection perfil={perfil}
+      {seccion === 'calendario' && <CalendarioSection perfil={perfil} contextoInicial={contextoCalendario}
+        onConsumirContexto={() => setContextoCalendario(null)}
         onVerPlanificacion={(fecha, categoriaId, sesionId) => {
           if (!puedePlanificar(perfil, categoriaId)) return
           setContextoPlanificacion({ fecha, categoriaId, sesionId })

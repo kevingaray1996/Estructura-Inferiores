@@ -19,7 +19,7 @@ test('Transparencias de Inicio admiten el estado sin ultimo resultado', () => {
   assert.match(tintePlantel('var(--inicio-tenue, #858585)', '16'), /^color-mix\(/)
   const inicio = readFileSync(new URL('../src/components/InicioSection.jsx', import.meta.url), 'utf8')
   assert.doesNotMatch(inicio, /\$\{(?:color|colorUltimo|item\.accent)\}[\da-f]{2}/i)
-  assert.match(inicio, /tintePlantel\(item\.accent, '16'\)/)
+  assert.match(inicio, /tintePlantel\(color, '16'\)/)
 })
 
 test('Informes conserva las consultas disponibles por rol y renderiza tablas y errores sin backend', async () => {

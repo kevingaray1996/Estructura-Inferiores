@@ -58,8 +58,11 @@ test('Navegación real: menú por rol, Inicio, perfil, buscador y recuperación 
       const html=render(Inicio,{perfil:{rol}})
       assert.doesNotMatch(html,/Alertas de nutrición|Área nutricional/)
       assert.doesNotMatch(html,/ACCESO OCULTO/)
-      assert.match(html,/ACCESO MEDICO VISIBLE/)
-      assert.match(html,/Resumen del equipo/)
+      // Los avisos conservan el contador; sus detalles ahora se abren por teclado/clic.
+      assert.match(html,/Alertas y tareas pendientes/)
+      assert.match(html,/aria-expanded="false"/)
+      assert.match(html,/Estado del plantel/)
+      if (rol !== 'medico') assert.match(html,/Resumen deportivo/)
     }
     const {default:Perfil}=await server.ssrLoadModule('/src/components/PerfilJugador.jsx')
     const perfil=render(Perfil,{perfil:{rol:'coordinacion'},jugadorId:'prueba'})
