@@ -15,7 +15,7 @@ test('Calendario y navegación: tres fuentes, recarga, mes tardío y sesión exa
   poner('IS_REACT_ACT_ENVIRONMENT',true)
   const { act, createElement:h } = await import('react')
   const { createRoot } = await import('react-dom/client')
-  const { createServer } = await import('vite')
+  const { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs')
   const cat='10000000-0000-4000-8000-000000000001', hoy=fechaArgentina()
   const perfil={rol:'coordinacion',email:'prueba@example.invalid',nombre:'Prueba'}
   const base={id:'20000000-0000-4000-8000-000000000001',categoria_id:cat,fecha:hoy,hora:'18:30:00',objetivo:'Circuito',tipo:'entrenamiento',estado:'borrador',revision:1,bloques:[],responsable:'Primera',observaciones_internas:'NOTA PRIVADA',categorias:{nombre:'Primera'}}

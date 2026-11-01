@@ -17,7 +17,7 @@ test('Accesos Calendario: Inicio, orden por rol, menú compacto y móvil, sin du
   poner('IS_REACT_ACT_ENVIRONMENT', true)
   const { act, createElement: h } = await import('react')
   const { createRoot } = await import('react-dom/client')
-  const { createServer } = await import('vite')
+  const { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs')
   poner('__accesosCalendarioDB', {
     storage: { from() { return { getPublicUrl() { return { data: { publicUrl: 'https://example.invalid/logo.png' } } } } } },
     from() {

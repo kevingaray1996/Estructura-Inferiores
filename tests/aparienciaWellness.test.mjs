@@ -37,7 +37,7 @@ test('Acceso publico comparte el proveedor existente y no fija un tema independi
 })
 
 test('Render de cinco interfaces con datos simulados, grafico y acceso publico sin sesion', async () => {
-  const { createServer } = await import('vite')
+  const { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs')
   const { createServer: socketServer } = await import('node:net')
   const { createElement } = await import('react')
   const { renderToStaticMarkup } = await import('react-dom/server')

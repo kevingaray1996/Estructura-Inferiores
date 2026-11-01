@@ -33,7 +33,7 @@ test('Chips CMJ, RPE y textos del semaforo mantienen contraste en ambos temas', 
 })
 
 test('Render de los seis componentes, alertas, chips y grafico con datos simulados', async () => {
-  const { createServer } = await import('vite')
+  const { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs')
   const { createServer: socketServer } = await import('node:net')
   const { createElement } = await import('react')
   const { renderToStaticMarkup } = await import('react-dom/server')

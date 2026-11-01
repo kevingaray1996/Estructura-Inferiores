@@ -37,7 +37,7 @@ test('Layout: SVG, foco móvil, Escape, resize, temas y módulos sin remontaje n
   }
   const { act, createElement: h, useEffect, useState } = await import('react')
   const { createRoot } = await import('react-dom/client')
-  const { createServer } = await import('vite')
+  const { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs')
   const server = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom', plugins: [{
     name: 'layout-sin-servidores', enforce: 'pre',
     resolveId(s) { if (s.endsWith('/supabaseClient')) return '\0layout-db' },

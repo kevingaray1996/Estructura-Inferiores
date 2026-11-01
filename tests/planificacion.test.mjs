@@ -100,7 +100,7 @@ test('Publico sin jugadora no consulta; ausencia, fecha o categoria incorrecta n
 })
 
 test('Render de planificador y Wellness sin tarjetas vacias ni exposicion de notas internas', async () => {
-  const {createServer}=await import('vite')
+  const { crearServidorVitePrueba: createServer }=await import('./helpers/servidorVite.mjs')
   const {createServer:socketServer}=await import('node:net')
   const {createElement}=await import('react')
   const {renderToStaticMarkup}=await import('react-dom/server')

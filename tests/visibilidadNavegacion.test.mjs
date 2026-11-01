@@ -15,7 +15,7 @@ test('Visibilidad: solo seis secciones ocultas, sin eliminar otras ni mutar los 
 })
 
 test('Navegación real: menú por rol, Inicio, perfil, buscador y recuperación de sección abierta', async () => {
-  const {createServer}=await import('vite')
+  const { crearServidorVitePrueba: createServer }=await import('./helpers/servidorVite.mjs')
   const {createElement}=await import('react')
   const {renderToStaticMarkup}=await import('react-dom/server')
   const prevWindow=Object.getOwnPropertyDescriptor(globalThis,'window')

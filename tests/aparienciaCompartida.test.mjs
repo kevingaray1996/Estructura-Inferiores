@@ -35,7 +35,7 @@ test('estilos interactivos estan acotados a controles compartidos y al medio pan
 })
 
 test('render compartido sin consultas: Login, busqueda, categoria y tabla DataFem', async () => {
-  const { createServer } = await import('vite')
+  const { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs')
   const { createServer: crearSocket } = await import('node:net')
   const { createElement } = await import('react')
   const { renderToStaticMarkup } = await import('react-dom/server')

@@ -31,7 +31,7 @@ test('Textos de estados y acentos son legibles sobre tarjetas claras y sus insig
 })
 
 test('Pantallas y formularios con datos simulados; informes independientes del tema', async () => {
-  const { createServer } = await import('vite')
+  const { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs')
   const { createServer: socketServer } = await import('node:net')
   const { createElement } = await import('react')
   const { renderToStaticMarkup } = await import('react-dom/server')

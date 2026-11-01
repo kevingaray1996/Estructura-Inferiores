@@ -25,7 +25,7 @@ test('Textos de acciones, errores, avisos y editores tienen contraste sobre supe
 })
 
 test('Cinco vistas internas y editores de pases con datos simulados, sin consultas ni escrituras', async () => {
-  const { createServer } = await import('vite')
+  const { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs')
   const { createServer: socketServer } = await import('node:net')
   const { createElement } = await import('react')
   const { renderToStaticMarkup } = await import('react-dom/server')

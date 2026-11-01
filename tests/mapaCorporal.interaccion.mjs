@@ -13,7 +13,7 @@ test('Mapa: SVG, formulario, guardado, historial, resolución, conflictos y acce
   global('IS_REACT_ACT_ENVIRONMENT',true)
   const { act, createElement } = await import('react')
   const { createRoot } = await import('react-dom/client')
-  const { createServer } = await import('vite')
+  const { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs')
   const j = { id:'j',nombre:'Ana',apellido:'Prueba',categoria_id:'c',categorias:{nombre:'Reserva'},estado:'disponible' }
   const fichas = [], escrituras = [], lecturas = []
   let conflicto = false, falloLectura = false

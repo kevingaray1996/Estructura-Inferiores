@@ -58,7 +58,7 @@ test('Planificación usa snapshot independiente, sin publicación de pizarra por
 })
 
 test('Render SVG/editor y visor: controles reales, sin edición pública ni tarjeta sin contenido', async () => {
-  const { createServer } = await import('vite'), { createElement } = await import('react'), { renderToStaticMarkup } = await import('react-dom/server')
+  const { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs'), { createElement } = await import('react'), { renderToStaticMarkup } = await import('react-dom/server')
   const server = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom' })
   try {
     const { default: Editor } = await server.ssrLoadModule('/src/components/PizarraTactica.jsx')

@@ -1,4 +1,9 @@
-import { PLANTEL as P, textoPlantel, fondoEstadoPlantel } from '../appearance/plantel'
+import EncabezadoSeccion from './ui/EncabezadoSeccion'
+import BarraFiltros from './ui/BarraFiltros'
+import EstadoContenido from './ui/EstadoContenido'
+import TarjetaJugadora from './plantel/TarjetaJugadora'
+import './plantel/plantel.css'
+import { PLANTEL as P, textoPlantel } from '../appearance/plantel'
 
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -373,7 +378,7 @@ function CanchaTactica({
 
   return (
     <section
-      className="rounded-2xl p-4 md:p-6"
+      className="plantel-cancha rounded-2xl p-4 md:p-6"
       style={{
         backgroundColor: P.tarjetaLista,
         border: "1px solid var(--plantel-borde-lista, #2D3038)",
@@ -385,7 +390,7 @@ function CanchaTactica({
             Cancha táctica
           </h2>
           <p className="text-xs mt-1" style={{ color: P.secundarioLista }}>
-            Once ideal según minutos y posiciones registradas
+            Distribución automática según minutos y posiciones. No representa una convocatoria oficial.
           </p>
         </div>
 
@@ -461,7 +466,7 @@ function CanchaTactica({
                             className="w-9 h-9 md:w-11 md:h-11"
                           />
                         </div>
-                        <span className="text-[10px] md:text-xs font-bold mt-1 text-center leading-tight text-white">
+                        <span className="plantel-cancha-nombre text-[10px] md:text-xs font-bold mt-1 text-center leading-tight text-white">
                           {j.apellido || j.nombre}
                         </span>
                         <span
@@ -678,52 +683,12 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
 
   return (
     <div
-      className="min-h-full p-4 md:p-8"
+      className="min-h-full plantel-premium"
       style={{ backgroundColor: P.fondoLista }}
     >
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Encabezado */}
-        <header className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden"
-              style={{ backgroundColor: P.controlLista }}
-            >
-              <img
-                src="/escudo%20simplificado.png"
-                alt="Escudo de Comunicaciones"
-                className="w-full h-full object-contain p-1"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none'
-                  const fallback = e.currentTarget.nextElementSibling
-                  if (fallback) fallback.style.display = 'flex'
-                }}
-              />
-              <div
-                className="w-full h-full items-center justify-center font-black text-2xl"
-                style={{ display: 'none', color: P.textoAmarilloLista }}
-                aria-label="Comunicaciones"
-              >
-                C
-              </div>
-            </div>
-            <div>
-              <p
-                className="text-[10px] md:text-xs font-bold tracking-[0.18em] uppercase"
-                style={{ color: P.textoAmarilloLista }}
-              >
-                Comunicaciones · Fútbol femenino
-              </p>
-              <h1 style={{ color: P.blanco }} className="text-3xl md:text-4xl font-black  mt-1">
-                Plantel
-              </h1>
-              <p className="text-sm mt-1" style={{ color: P.secundarioLista }}>
-                Primera División
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
+      <div className="plantel-premium-contenido">
+        <EncabezadoSeccion titulo="Plantel" descripcion="Primera División · Comunicaciones · Fútbol femenino"
+          acciones={<>
             <button
               type="button"
               onClick={generarPlantelPDF}
@@ -758,31 +723,16 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
             >
               + Nueva jugadora
             </button>
-          </div>
-        </header>
+
+          </>}>
+          <div className="plantel-marca"><img src="/escudo%20simplificado.png" alt="Escudo de Comunicaciones"
+            onError={e => { e.currentTarget.hidden = true }} /><span>Comunicaciones · Fútbol femenino</span></div>
+        </EncabezadoSeccion>
 
         {cargando ? (
-          <div
-            className="rounded-2xl p-12 text-center"
-            style={{
-              backgroundColor: P.tarjetaLista,
-              border: "1px solid var(--plantel-borde-lista, #2D3038)",
-              color: P.secundarioLista,
-            }}
-          >
-            Cargando plantel...
-          </div>
+          <EstadoContenido estado="cargando" titulo="Cargando plantel…" />
         ) : errorCarga ? (
-          <div
-            className="rounded-xl p-4 text-sm"
-            style={{
-              backgroundColor: P.errorFondo,
-              color: P.errorTexto,
-              border: "1px solid var(--plantel-error-borde, #653337)",
-            }}
-          >
-            {errorCarga}
-          </div>
+          <EstadoContenido estado="error" mensaje={errorCarga} />
         ) : (
           <>
             {errorEstadisticas && (
@@ -831,13 +781,7 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
             </section>
 
             {/* Buscador y filtros */}
-            <section
-              className="rounded-2xl p-4 md:p-5 space-y-5"
-              style={{
-                backgroundColor: P.tarjetaLista,
-                border: "1px solid var(--plantel-borde-lista, #2D3038)",
-              }}
-            >
+            <section className="plantel-filtros" aria-label="Listado y filtros de jugadoras">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div>
                   <h2 style={{ color: P.blanco }} className="text-lg font-bold ">
@@ -853,7 +797,10 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                 </span>
               </div>
 
-              <div className="relative">
+              <BarraFiltros etiqueta="Filtros del plantel">
+              <div className="plantel-busqueda">
+                <label htmlFor="plantel-busqueda">Buscar jugadora</label>
+                <div className="relative">
                 <span
                   className="absolute left-3 top-1/2 -translate-y-1/2"
                   style={{ color: P.secundarioLista }}
@@ -861,7 +808,8 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                   ⌕
                 </span>
                 <input
-                  type="text"
+                  id="plantel-busqueda"
+                  type="search"
                   placeholder="Buscar por nombre, apellido o posición..."
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
@@ -874,7 +822,8 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                 />
               </div>
 
-              <div className="space-y-2">
+              </div>
+              <div className="space-y-2 plantel-grupo-filtro">
                 <p
                   className="text-[10px] font-bold tracking-[0.15em] uppercase"
                   style={{ color: P.secundarioLista }}
@@ -905,7 +854,7 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 plantel-grupo-filtro">
                 <p
                   className="text-[10px] font-bold tracking-[0.15em] uppercase"
                   style={{ color: P.secundarioLista }}
@@ -963,112 +912,19 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                   </button>
                 </div>
               )}
+              </BarraFiltros>
             </section>
 
-            {/* Lista compacta: prioridad de la pantalla */}
-            <section className="space-y-2">
-              {jugadorasFiltradas.map((j) => {
-                const estado = obtenerEstado(j)
-                const minutos = obtenerMinutos(j, estadisticas)
-
-                return (
-                  <button
-                    key={j.id}
-                    type="button"
-                    onClick={() => onSelectJugador(j.id)}
-                    title={j.estado_detalle || 'Abrir perfil'}
-                    className="w-full text-left group flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-xl transition-colors hover:bg-white/[0.03]"
-                    style={{
-                      backgroundColor: P.tarjetaLista,
-                      border: "1px solid var(--plantel-borde-lista, #2D3038)",
-                      borderLeft: `3px solid ${estado.color}`,
-                    }}
-                  >
-                    <FotoJugadora
-                      jugadora={j}
-                      className="w-11 h-11 md:w-12 md:h-12"
-                    />
-
-                    <div className="flex-1 min-w-0">
-                      <p style={{ color: P.blanco }} className="font-semibold text-sm md:text-base truncate ">
-                        {j.apellido}, {j.nombre}
-                      </p>
-                      <p
-                        className="text-xs mt-1 truncate"
-                        style={{ color: P.secundarioLista }}
-                      >
-                        {j.posicion || 'Posición sin cargar'}
-                      </p>
-                    </div>
-
-                    <div className="hidden sm:block text-right shrink-0">
-                      <p
-                        className="text-sm font-bold"
-                        style={{ color: P.textoAmarilloLista }}
-                      >
-                        {minutos.toLocaleString('es-AR')} min
-                      </p>
-                      <p className="text-[10px] mt-1" style={{ color: P.secundarioLista }}>
-                        {obtenerDato(j, estadisticas, 'goles')} goles ·{' '}
-                        {obtenerDato(j, estadisticas, 'titularidades')} titularidades
-                      </p>
-                    </div>
-
-                    <div
-                      className="hidden md:inline-flex items-center px-2.5 py-1.5 rounded-full text-[11px] font-semibold shrink-0"
-                      style={{
-                        color: textoPlantel(estado.color),
-                        backgroundColor: fondoEstadoPlantel(estado.fondo),
-                      }}
-                    >
-                      {estado.label}
-                    </div>
-
-                    <span
-                      className="sm:hidden text-[10px] font-bold shrink-0"
-                      style={{ color: textoPlantel(estado.color) }}
-                    >
-                      {estado.label === 'No disponible'
-                        ? 'No disp.'
-                        : estado.label}
-                    </span>
-
-                    <span
-                      className="text-lg shrink-0 transition-transform group-hover:translate-x-0.5"
-                      style={{ color: P.textoAmarilloLista }}
-                    >
-                      ›
-                    </span>
-                  </button>
-                )
-              })}
-
-              {jugadorasFiltradas.length === 0 && (
-                <div
-                  className="rounded-xl p-8 text-center"
-                  style={{
-                    backgroundColor: P.tarjetaLista,
-                    border: "1px solid var(--plantel-borde-lista, #2D3038)",
-                  }}
-                >
-                  <p style={{ color: P.blanco }} className="font-semibold ">
-                    No hay jugadoras para mostrar
-                  </p>
-                  <p className="text-sm mt-2" style={{ color: P.secundarioLista }}>
-                    Probá cambiar los filtros o la búsqueda.
-                  </p>
-                  {hayFiltrosActivos && (
-                    <button
-                      type="button"
-                      onClick={limpiarFiltros}
-                      className="mt-4 text-sm font-semibold"
-                      style={{ color: P.textoAmarilloLista }}
-                    >
-                      Limpiar filtros
-                    </button>
-                  )}
-                </div>
-              )}
+            {/* Tarjetas: mismas jugadoras y valores que el listado anterior. */}
+            <section className="plantel-listado" aria-label="Jugadoras del plantel">
+              {jugadorasFiltradas.map(j => <TarjetaJugadora key={j.id} jugadora={j} estado={obtenerEstado(j)}
+                minutos={obtenerMinutos(j, estadisticas)} goles={obtenerDato(j, estadisticas, 'goles')}
+                titularidades={obtenerDato(j, estadisticas, 'titularidades')}
+                foto={<FotoJugadora jugadora={j} />} onAbrir={onSelectJugador} />)}
+              {jugadorasFiltradas.length === 0 && <EstadoContenido estado="vacio" titulo="No hay jugadoras para mostrar"
+                mensaje="Probá cambiar los filtros o la búsqueda.">
+                {hayFiltrosActivos && <button type="button" className="dp-boton" onClick={limpiarFiltros}>Limpiar filtros</button>}
+              </EstadoContenido>}
             </section>
 
             {/* Distribución por puesto debajo del listado */}

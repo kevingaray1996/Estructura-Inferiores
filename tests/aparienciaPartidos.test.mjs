@@ -24,7 +24,7 @@ test('Resultados, advertencias, titulares y filas alternas mantienen contraste e
 })
 
 test('Render de partidos, convocatorias, Video y estadisticas sin acceso al backend', async () => {
-  const { createServer } = await import('vite')
+  const { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs')
   const { createServer: socketServer } = await import('node:net')
   const { createElement } = await import('react')
   const { renderToStaticMarkup } = await import('react-dom/server')

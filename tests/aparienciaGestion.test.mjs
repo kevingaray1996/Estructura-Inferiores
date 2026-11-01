@@ -37,7 +37,7 @@ test('Los 13 modulos usan controles semanticos sin bordes literales invalidos', 
 })
 
 test('Render de Gestion y Salud sin conexion a Supabase ni efectos de guardado', async () => {
-  const { createServer } = await import('vite')
+  const { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs')
   const { createServer: crearSocket } = await import('node:net')
   const { createElement } = await import('react')
   const { renderToStaticMarkup } = await import('react-dom/server')

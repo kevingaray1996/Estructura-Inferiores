@@ -133,7 +133,7 @@ test('respuesta incierta no se reintenta automaticamente', async () => {
 })
 
 test('SVG muestra flechas correctas/incorrectas solo con extremos exactos y puntos coincidentes sin linea', async () => {
-  const { createServer } = await import('vite')
+  const { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs')
   const { createElement } = await import('react')
   const { renderToStaticMarkup } = await import('react-dom/server')
   const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
