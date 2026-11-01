@@ -2,6 +2,33 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
+import { agruparPlantel, puestoPlantel } from '../src/components/plantel/posicionesPlantel.js'
+
+test('Galería 2.0 agrupa una sola vez por posición principal y conserva casos desconocidos', () => {
+  const jugadoras = [
+    { id: 'a', posicion: 'Arquero' }, { id: 'b', posicion: 'Defensor central', posicion_secundaria: 'Delantero centro' },
+    { id: 'c', posicion: ' Extremo izquierdo ' }, { id: 'd', posicion: 'Delantero centro' },
+    { id: 'e', posicion: null }, { id: 'f', posicion: 'Puesto no definido' },
+  ]
+  const grupos = agruparPlantel(jugadoras)
+  assert.deepEqual(grupos.map(g => [g.id, g.jugadoras.length]), [['arqueras', 1], ['defensoras', 1], ['mediocampistas', 1], ['delanteras', 1], ['sin_equivalencia', 2]])
+  assert.equal(new Set(grupos.flatMap(g => g.jugadoras.map(j => j.id))).size, jugadoras.length)
+  assert.equal(puestoPlantel('LATERAL DERECHO').abreviatura, 'LD')
+  assert.equal(puestoPlantel('Puesto no definido').abreviatura, '—')
+})
+
+test('Tarjetas 2.0 iluminan fotos con hover y foco, sin oscurecer nombres ni depender del hover táctil', () => {
+  const css = readFileSync(new URL('../src/components/plantel/plantel.css', import.meta.url), 'utf8')
+  assert.match(css, /brightness\(\.76\)/)
+  assert.match(css, /filter 280ms/)
+  assert.match(css, /hover: hover/)
+  assert.match(css, /:focus-visible img/)
+  assert.match(css, /:active img/)
+  assert.match(css, /brightness\(1\)/)
+  assert.match(css, /object-fit: contain/)
+  const tarjeta = readFileSync(new URL('../src/components/plantel/TarjetaJugadora.jsx', import.meta.url), 'utf8')
+  assert.doesNotMatch(tarjeta, /<dl|minutos|goles|titularidades|disabled=|aria-disabled/)
+})
 
 test('Plantel Premium conserva consultas, filtros, cálculos y asignación de las dos formaciones', () => {
   const anterior = execFileSync('git', ['show', 'HEAD:src/components/ListaJugadores.jsx'], { encoding: 'utf8' }).replaceAll('\r', '')
@@ -9,6 +36,7 @@ test('Plantel Premium conserva consultas, filtros, cálculos y asignación de la
   const funciones = s => s.slice(s.indexOf('const estadoConfig'), s.indexOf('function FotoJugadora'))
   assert.equal(funciones(actual), funciones(anterior))
   const cargaYCalculos = s => s.slice(s.indexOf('function ListaJugadores'), s.indexOf('  return (\n    <div', s.indexOf('function ListaJugadores')))
+    .replace("  const [vistaPlantel, setVistaPlantel] = useState('jugadoras')\n", '')
   assert.equal(cargaYCalculos(actual), cargaYCalculos(anterior))
   assert.match(actual, /jugadoras=\{jugadores\}/, 'La cancha conserva todo el plantel, no solo el filtro')
   assert.match(actual, /No representa una convocatoria oficial/)

@@ -1,4 +1,5 @@
-import EncabezadoSeccion from './ui/EncabezadoSeccion'
+import PestanasAccesibles from './ui/PestanasAccesibles'
+import { agruparPlantel } from './plantel/posicionesPlantel'
 import BarraFiltros from './ui/BarraFiltros'
 import EstadoContenido from './ui/EstadoContenido'
 import TarjetaJugadora from './plantel/TarjetaJugadora'
@@ -507,6 +508,7 @@ function CanchaTactica({
 }
 
 function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
+  const [vistaPlantel, setVistaPlantel] = useState('jugadoras')
   const [jugadores, setJugadores] = useState([])
   const [estadisticas, setEstadisticas] = useState({})
   const [formacion, setFormacion] = useState('4-4-2')
@@ -687,9 +689,13 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
       style={{ backgroundColor: P.fondoLista }}
     >
       <div className="plantel-premium-contenido">
-        <EncabezadoSeccion titulo="Plantel" descripcion="Primera División · Comunicaciones · Fútbol femenino"
-          acciones={<>
-            <button
+        <header className="plantel-portada">
+          <img className="plantel-portada-foto" src="/images/plantel/plantel-femenino-portada.jpg" width="1920" height="704"
+            alt="Plantel femenino de Club Comunicaciones" fetchPriority="high" />
+          <div className="plantel-portada-textos"><p>CLUB COMUNICACIONES</p><h1>PLANTEL <span aria-hidden="true">//</span></h1>
+            <span className="plantel-portada-subtitulo">PRIMERA DIVISIÓN · FÚTBOL FEMENINO</span></div>
+        </header>
+        <div className="plantel-herramientas" role="group" aria-label="Acciones del plantel">            <button
               type="button"
               onClick={generarPlantelPDF}
               className="text-sm font-semibold px-3 py-2.5 rounded-xl"
@@ -724,10 +730,7 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
               + Nueva jugadora
             </button>
 
-          </>}>
-          <div className="plantel-marca"><img src="/escudo%20simplificado.png" alt="Escudo de Comunicaciones"
-            onError={e => { e.currentTarget.hidden = true }} /><span>Comunicaciones · Fútbol femenino</span></div>
-        </EncabezadoSeccion>
+</div>
 
         {cargando ? (
           <EstadoContenido estado="cargando" titulo="Cargando plantel…" />
@@ -747,38 +750,6 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                 {errorEstadisticas}
               </div>
             )}
-
-            {/* Resumen del plantel */}
-            <section className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-              <TarjetaResumen
-                titulo="Jugadoras"
-                valor={resumen.total}
-                detalle="Según los filtros activos"
-                icono="◉"
-                color="#F4D21F"
-              />
-              <TarjetaResumen
-                titulo="Disponibles"
-                valor={resumen.disponibles}
-                detalle="En condiciones de jugar"
-                icono="✓"
-                color="#4ADE80"
-              />
-              <TarjetaResumen
-                titulo="Lesionadas"
-                valor={resumen.lesionadas}
-                detalle="Estado registrado"
-                icono="＋"
-                color="#F87171"
-              />
-              <TarjetaResumen
-                titulo="No disponibles"
-                valor={resumen.noDisponibles}
-                detalle="Incluye suspendidas"
-                icono="—"
-                color="#A1A1AA"
-              />
-            </section>
 
             {/* Buscador y filtros */}
             <section className="plantel-filtros" aria-label="Listado y filtros de jugadoras">
@@ -915,16 +886,51 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
               </BarraFiltros>
             </section>
 
-            {/* Tarjetas: mismas jugadoras y valores que el listado anterior. */}
-            <section className="plantel-listado" aria-label="Jugadoras del plantel">
-              {jugadorasFiltradas.map(j => <TarjetaJugadora key={j.id} jugadora={j} estado={obtenerEstado(j)}
-                minutos={obtenerMinutos(j, estadisticas)} goles={obtenerDato(j, estadisticas, 'goles')}
-                titularidades={obtenerDato(j, estadisticas, 'titularidades')}
-                foto={<FotoJugadora jugadora={j} />} onAbrir={onSelectJugador} />)}
-              {jugadorasFiltradas.length === 0 && <EstadoContenido estado="vacio" titulo="No hay jugadoras para mostrar"
-                mensaje="Probá cambiar los filtros o la búsqueda.">
-                {hayFiltrosActivos && <button type="button" className="dp-boton" onClick={limpiarFiltros}>Limpiar filtros</button>}
-              </EstadoContenido>}
+            <PestanasAccesibles etiqueta="Vistas de Plantel" seleccionada={vistaPlantel} onSeleccionar={setVistaPlantel}
+              pestanas={[
+                { id: 'jugadoras', etiqueta: 'Jugadoras', contenido: (<div className="plantel-galeria" id="plantel-jugadoras">
+  {agruparPlantel(jugadorasFiltradas).map(grupo => <section key={grupo.id} className="plantel-grupo" aria-labelledby={'grupo-' + grupo.id}>
+    <header className="plantel-grupo-titulo"><h2 id={'grupo-' + grupo.id}>{grupo.nombre}</h2><span>({grupo.jugadoras.length})</span></header>
+    <div className="plantel-listado">{grupo.jugadoras.map(j => <TarjetaJugadora key={j.id} jugadora={j}
+      foto={<FotoJugadora jugadora={j} />} onAbrir={onSelectJugador} />)}</div>
+    {grupo.id === 'sin_equivalencia' && <p className="plantel-grupo-aviso">Estas posiciones principales no tienen una equivalencia definida. Se conservan sin asignar un puesto arbitrario.</p>}
+  </section>)}
+  {jugadorasFiltradas.length === 0 && <EstadoContenido estado="vacio" titulo="No hay jugadoras para mostrar"
+    mensaje="Probá cambiar los filtros o la búsqueda.">
+    {hayFiltrosActivos && <button type="button" className="dp-boton" onClick={limpiarFiltros}>Limpiar filtros</button>}
+  </EstadoContenido>}
+</div>) },
+                { id: 'rendimiento', etiqueta: 'Rendimiento', contenido: (<div className="plantel-rendimiento">
+            {/* Resumen del plantel */}
+            <section className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+              <TarjetaResumen
+                titulo="Jugadoras"
+                valor={resumen.total}
+                detalle="Según los filtros activos"
+                icono="◉"
+                color="#F4D21F"
+              />
+              <TarjetaResumen
+                titulo="Disponibles"
+                valor={resumen.disponibles}
+                detalle="En condiciones de jugar"
+                icono="✓"
+                color="#4ADE80"
+              />
+              <TarjetaResumen
+                titulo="Lesionadas"
+                valor={resumen.lesionadas}
+                detalle="Estado registrado"
+                icono="＋"
+                color="#F87171"
+              />
+              <TarjetaResumen
+                titulo="No disponibles"
+                valor={resumen.noDisponibles}
+                detalle="Incluye suspendidas"
+                icono="—"
+                color="#A1A1AA"
+              />
             </section>
 
             {/* Distribución por puesto debajo del listado */}
@@ -1044,6 +1050,11 @@ function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
                 </div>
               </div>
             </section>
+
+
+                  <p className="plantel-grupo-aviso">Comparativas y evolución ampliadas se incorporarán en una próxima etapa. Los indicadores y rankings mostrados corresponden a los registros actuales.</p>
+                </div>) },
+              ]} />
 
             {/* Cancha táctica al final */}
             <CanchaTactica
