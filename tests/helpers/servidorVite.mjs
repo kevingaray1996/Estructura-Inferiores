@@ -19,7 +19,19 @@ export async function crearServidorVitePrueba(opciones) {
     const servidor = await createServer({ ...opciones, cacheDir: join(temporal, 'cache') })
     const cerrar = servidor.close.bind(servidor)
     let cierre
-    servidor.close = () => cierre ??= cerrar().then(limpiar)
+    servidor.close = () => cierre ??= (async () => {
+      // Vite captura optimizationResult al entrar en close(). Si la exploración
+      // aún no terminó, ese resultado todavía no existe y puede escapar al cierre.
+      for (const entorno of Object.values(servidor.environments)) {
+        await entorno.depsOptimizer?.scanProcessing
+        await entorno.waitForRequestsIdle?.()
+        const metadata = entorno.depsOptimizer?.metadata
+        await Promise.all([...Object.values(metadata?.discovered || {}), ...Object.values(metadata?.optimized || {})]
+          .map(dependencia => dependencia.processing))
+      }
+      await cerrar()
+      await limpiar()
+    })()
     return servidor
   } catch (error) {
     await limpiar()

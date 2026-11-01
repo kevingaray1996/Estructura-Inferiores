@@ -1,11 +1,12 @@
-import { textoGestion } from '../appearance/gestion'
-import { tintePlantel } from '../appearance/plantel'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { generarCitacionPDF } from '../utils/generarCitacion'
 import { generarImagenCitacion } from '../utils/generarImagenCitacion'
 import { exportarEstadisticasPDF, exportarEstadisticasCSV } from '../utils/exportarEstadisticas'
 import { COLORES } from '../theme'
+import EncabezadoFotografico from './EncabezadoFotografico'
+import TarjetaPartidoPremium from './TarjetaPartidoPremium'
+import './partidosCalendarioPremium.css'
 
 function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido, onNuevoPartido, onGestionarEquipos, onVerEstadisticas, onEditarPartido, onVerComparativa, refrescar }) {
   const [partidos, setPartidos] = useState([])
@@ -80,8 +81,8 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
   }
 
   return (
-    <div className="p-6 md:p-10">
-      <div className="max-w-xl mx-auto">
+    <div className="pc-premium">
+      <div className="pc-contenido">
         {onVolver && (
           <button
             onClick={onVolver}
@@ -92,13 +93,7 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
           </button>
         )}
 
-        <div className="flex items-start justify-between mb-8 flex-wrap gap-3">
-          <h1
-            className="text-2xl md:text-3xl"
-            style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
-          >
-            Partidos
-          </h1>
+        <EncabezadoFotografico titulo="Partidos" imagen="/images/fotos-comunicaciones/camiseta-escudo-comunicaciones.jpeg" descripcionImagen="Camiseta amarilla con el escudo de Club Comunicaciones">
           <div className="flex items-center gap-2 flex-wrap">
             {onGestionarEquipos && (
               <button
@@ -117,7 +112,7 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
               + Nuevo partido
             </button>
           </div>
-        </div>
+        </EncabezadoFotografico>
 
         <div className="flex items-center gap-2 mb-6 flex-wrap">
           <span className="text-xs" style={{ color: COLORES.textoMuted }}>
@@ -154,123 +149,13 @@ function ListaPartidos({ categoriaId, categoriaNombre, onVolver, onElegirPartido
           <p style={{ color: COLORES.textoMuted }}>No hay partidos cargados para esta categoría todavía.</p>
         )}
 
-        <div className="space-y-2">
-          {partidos.map((p) => {
-            const resultado = calcularResultado(p)
-            const colorResultado = resultado
-              ? resultado.etiqueta === 'Victoria'
-                ? COLORES.exito
-                : resultado.etiqueta === 'Derrota'
-                ? COLORES.peligro
-                : COLORES.acento
-              : null
-
-            return (
-              <div
-                key={p.id}
-                onClick={() => onElegirPartido(p.id)}
-                className="p-4 rounded-xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
-                style={{ backgroundColor: COLORES.fondoTarjeta, border: `1px solid ${COLORES.borde}` }}
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    {p.escudo_url ? (
-                      <img
-                        src={p.escudo_url}
-                        alt={p.rival}
-                        className="w-7 h-7 rounded object-contain shrink-0"
-                        style={{ backgroundColor: COLORES.fondoSidebar }}
-                      />
-                    ) : (
-                      <span
-                        className="w-7 h-7 rounded flex items-center justify-center text-xs shrink-0"
-                        style={{ backgroundColor: COLORES.fondoSidebar, color: COLORES.textoMuted }}
-                      >
-                        🛡️
-                      </span>
-                    )}
-                    <p className="text-base font-medium break-words" style={{ color: COLORES.texto }}>
-                      vs {p.rival}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                    {p.link && (
-                      <a
-                        href={p.link}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                        style={{ backgroundColor: COLORES.fondoSidebar, color: COLORES.textoSecundario }}
-                      >
-                        ▶
-                      </a>
-                    )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        generarCitacionPDF(p.id)
-                      }}
-                      className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                      style={{ backgroundColor: COLORES.fondoSidebar, color: COLORES.textoSecundario }}
-                    >
-                      📄
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        generarImagenCitacion(p.id)
-                      }}
-                      className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                      style={{ backgroundColor: COLORES.fondoSidebar, color: COLORES.textoSecundario }}
-                    >
-                      🖼️
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onVerEstadisticas(p.id)
-                      }}
-                      className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                      style={{ backgroundColor: COLORES.fondoSidebar, color: COLORES.textoSecundario }}
-                    >
-                      📊
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onEditarPartido(p.id)
-                      }}
-                      className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                      style={{ backgroundColor: COLORES.fondoSidebar, color: COLORES.textoSecundario }}
-                    >
-                      ✏️
-                    </button>
-                    {resultado && (
-                      <span
-                        className="text-xs font-mono px-2 py-1 rounded-full whitespace-nowrap"
-                        style={{ backgroundColor: COLORES.fondoSidebar, color: textoGestion(colorResultado), border: `1px solid ${tintePlantel(colorResultado, '40')}` }}
-                      >
-                        {resultado.texto}
-                      </span>
-                    )}
-                    <button
-                      onClick={(e) => handleEliminar(e, p.id)}
-                      className="text-xs px-2 py-1 rounded-full hover:opacity-80"
-                      style={{ backgroundColor: COLORES.fondoSidebar, color: COLORES.peligro }}
-                    >
-                      🗑
-                    </button>
-                  </div>
-                </div>
-                <p className="text-xs mt-1" style={{ color: COLORES.textoMuted }}>
-                  {p.numero_fecha && `Fecha ${p.numero_fecha} · `}
-                  {p.fecha} {p.hora && `· ${p.hora}`} {p.lugar && `· ${p.lugar}`}
-                  {p.local_visitante && ` · ${p.local_visitante}`}
-                </p>
-              </div>
-            )
-          })}
+        <div className="partidos-indicadores" aria-label="Resultados registrados de la categoría">
+          {['Victoria', 'Empate', 'Derrota'].map((etiqueta, i) => <article key={etiqueta}><span>{['Victorias', 'Empates', 'Derrotas'][i]}</span><strong style={{ color: ['var(--ui-exito)', 'var(--ui-texto-acento)', 'var(--ui-peligro)'][i] }}>{cargando ? '—' : partidos.filter(p => calcularResultado(p)?.etiqueta === etiqueta).length}</strong></article>)}
+        </div>
+        <p className="partidos-contexto">{categoriaNombre || 'Categoría seleccionada'} · Resultados cargados{!cargando && ' · ' + partidos.filter(p => !calcularResultado(p)).length + ' pendientes de resultado'}</p>
+        <div className="partidos-rejilla">
+          {partidos.map(p => <TarjetaPartidoPremium key={p.id} partido={p} resultado={calcularResultado(p)} onAbrir={onElegirPartido}
+            onPDF={generarCitacionPDF} onImagen={generarImagenCitacion} onEstadisticas={onVerEstadisticas} onEditar={onEditarPartido} onEliminar={handleEliminar} />)}
         </div>
       </div>
     </div>

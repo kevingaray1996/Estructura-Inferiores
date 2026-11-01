@@ -1,0 +1,16 @@
+@media screen {
+  .club-foto-encabezado { position:relative; isolation:isolate; overflow:hidden; min-height:220px; margin-bottom:24px; border:1px solid var(--ui-borde); border-radius:16px; background:#101010; }
+  .club-foto-encabezado>img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:50% 55%; z-index:-2; }
+  /* Encuadrar el escudo de la base sin alterar la fotografía original. */
+  .club-foto-encabezado.club-foto-torre>img { object-position:50% 48%; }
+  .club-foto-encabezado::before { content:''; position:absolute; inset:0; z-index:-1; background:linear-gradient(90deg,rgba(0,0,0,.88),rgba(0,0,0,.45) 55%,rgba(0,0,0,.12)),linear-gradient(0deg,rgba(0,0,0,.4),transparent 75%); }
+  .club-foto-contenido { display:flex; flex-direction:column; justify-content:flex-end; gap:10px; min-height:220px; padding:24px; box-sizing:border-box; }
+  .club-foto-contenido>p { color:#F2C230; font-size:11px; font-weight:750; letter-spacing:.12em; }
+  .club-foto-contenido>h1 { margin:0; color:#FFFFFF; font-family:'Archivo Black',sans-serif; font-size:clamp(28px,4vw,44px); line-height:1.15; overflow-wrap:anywhere; }
+  .club-foto-acciones { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:6px; }
+  .club-foto-secundaria { display:grid; grid-template-columns:minmax(0,1fr) minmax(100px,38%); align-items:center; overflow:hidden; margin:24px 0 0; border:1px solid var(--ui-borde); border-radius:14px; background:var(--ui-superficie); color:var(--ui-texto); }
+  .club-foto-secundaria img { width:100%; height:180px; object-fit:cover; object-position:50% 68%; }
+  .club-foto-secundaria figcaption { padding:20px; font-weight:750; overflow-wrap:anywhere; }
+  .club-foto-secundaria small { display:block; margin-top:8px; color:var(--ui-texto-secundario); font-size:13px; font-weight:400; }
+  @media(max-width:600px) { .club-foto-encabezado,.club-foto-contenido { min-height:190px; } .club-foto-contenido { padding:18px; } .club-foto-secundaria figcaption { padding:14px; } .club-foto-secundaria img { height:160px; } }
+}

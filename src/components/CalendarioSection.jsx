@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { fechaArgentina, fechaValida, puedePlanificar } from '../utils/planificacion'
 import { cambiarMes, cargarEventosCalendario, matrizMes } from '../utils/calendario'
+import EncabezadoFotografico from './EncabezadoFotografico'
+import './partidosCalendarioPremium.css'
 
 const MESES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -139,18 +141,16 @@ function CalendarioSection({ perfil, onVerPlanificacion, contextoInicial, onCons
   }
 
   return (
-    <div className="p-3 sm:p-6 md:p-10">
-      <div className="max-w-3xl mx-auto">
-        <h1
-          className="text-3xl md:text-4xl mb-6"
-          style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
-        >
-          Calendario
-        </h1>
+    <div className="pc-premium">
+      <div className="pc-contenido">
+        <EncabezadoFotografico titulo="Calendario" imagen="/images/fotos-comunicaciones/cancha-torre-comunicaciones.jpeg" descripcionImagen="Cancha y torre con los colores de Club Comunicaciones" posicion="torre" />
 
+        <div className="calendario-distribucion">
+        <section className="calendario-mes" aria-label="Calendario mensual">
         <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
           <div className="flex items-center gap-3">
             <button
+              aria-label="Mes anterior"
               onClick={() => setMesActual((m) => cambiarMes(m, -1))}
               className="text-sm px-3 py-1.5 rounded-lg hover:opacity-80"
               style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.textoSecundario, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
@@ -162,6 +162,7 @@ function CalendarioSection({ perfil, onVerPlanificacion, contextoInicial, onCons
             </p>
             <button
               onClick={() => setMesActual((m) => cambiarMes(m, 1))}
+              aria-label="Mes siguiente"
               className="text-sm px-3 py-1.5 rounded-lg hover:opacity-80"
               style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.textoSecundario, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
             >
@@ -181,6 +182,7 @@ function CalendarioSection({ perfil, onVerPlanificacion, contextoInicial, onCons
             style={inputStyle}>Actualizar</button>
           {perfil.rol !== 'tecnico' && (
             <select
+              aria-label="Filtrar calendario por categoría"
               value={categoriaFiltro}
               onChange={(e) => setCategoriaFiltro(e.target.value)}
               className="p-2 rounded-xl ui-control outline-none text-sm"
@@ -204,12 +206,15 @@ function CalendarioSection({ perfil, onVerPlanificacion, contextoInicial, onCons
           <p>El calendario podría estar incompleto.</p>{errores.map(e => <p key={e}>{e}</p>)}
         </div>}
 
-        <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${COLORES.borde}` }}>
-          <div className="grid grid-cols-7" style={{ backgroundColor: COLORES.fondoTarjeta }}>
+        <div className="calendario-leyenda" aria-label="Tipos de eventos"><span>● Partido</span><span>▶ Video de entrenamiento</span><span>▦ Planificación</span></div>
+        <p className="calendario-ayuda-movil">Deslizá el calendario horizontalmente para consultar la semana. Seleccioná un día para ver su detalle completo debajo.</p>
+        <div className="calendario-desplazable" role="region" aria-label="Grilla mensual desplazable" tabIndex={0}>
+        <div className="calendario-grilla">
+          <div className="calendario-semana" style={{ backgroundColor: COLORES.fondoTarjeta }}>
             {DIAS_SEMANA.map((d) => (
               <div
                 key={d}
-                className="text-center text-[10px] uppercase tracking-wide py-2"
+                className="text-center text-xs uppercase tracking-wide py-3"
                 style={{ color: COLORES.textoMuted }}
               >
                 {d}
@@ -218,7 +223,7 @@ function CalendarioSection({ perfil, onVerPlanificacion, contextoInicial, onCons
           </div>
 
           {semanas.map((semana, i) => (
-            <div key={i} className="grid grid-cols-7" style={{ borderTop: `1px solid ${COLORES.borde}` }}>
+            <div key={i} className="calendario-semana" style={{ borderTop: `1px solid ${COLORES.borde}` }}>
               {semana.map((dia) => {
                 const eventosDia = eventosPorDia[dia.iso] || []
                 const esHoy = dia.iso === hoyISO
@@ -232,7 +237,7 @@ function CalendarioSection({ perfil, onVerPlanificacion, contextoInicial, onCons
                     onClick={() => setDiaSeleccionado(dia.iso)}
                     role="button" tabIndex={0} aria-label={formatearFechaLarga(dia.iso)} aria-pressed={esSeleccionado}
                     onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDiaSeleccionado(dia.iso) } }}
-                    className="min-h-[84px] p-1 sm:p-1.5 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-[-2px]"
+                    className="calendario-celda"
                     style={{
                       borderLeft: `1px solid ${COLORES.borde}`,
                       backgroundColor: esSeleccionado ? COLORES.fondoTarjeta : 'transparent',
@@ -262,18 +267,18 @@ function CalendarioSection({ perfil, onVerPlanificacion, contextoInicial, onCons
                         return (
                           <div
                             key={e.id}
-                            className="text-[9px] px-1 py-0.5 rounded truncate leading-tight"
-                            style={{ backgroundColor: c.bg, color: c.color }}
+                            className="calendario-evento"
+                            style={{ backgroundColor: c.bg, color: c.color, borderLeftColor: c.color }}
                             title={(e.tipo === 'video' ? 'Video de entrenamiento: ' : e.tipo === 'planificacion' ? 'Planificación: ' : 'Partido: ') + e.titulo}
                           >
-                            {e.tipo === 'partido' ? '🛡️ ' : e.tipo === 'video' ? '▶ ' : '▦ '}
+                            <span>{e.tipo === 'partido' ? 'Partido' : e.tipo === 'video' ? 'Video' : 'Planificación'}</span>
                             {e.hora && `${e.hora} `}
                             {e.titulo}
                           </div>
                         )
                       })}
                       {restantes > 0 && (
-                        <p className="text-[9px] px-1" style={{ color: COLORES.textoMuted }}>
+                        <p className="text-xs px-1" style={{ color: COLORES.textoMuted }}>
                           +{restantes} más
                         </p>
                       )}
@@ -285,6 +290,13 @@ function CalendarioSection({ perfil, onVerPlanificacion, contextoInicial, onCons
           ))}
         </div>
 
+        </div>
+        </section>
+        <aside className="calendario-detalle" aria-label="Detalle del día seleccionado">
+        <figure className="club-foto-secundaria">
+          <figcaption>Detalle del día<small>Partidos, videos y planificación</small></figcaption>
+          <img src="/images/fotos-comunicaciones/pelotas-entrenamiento-comunicaciones.jpeg" alt="Pelotas de entrenamiento sobre la cancha" loading="lazy" decoding="async" />
+        </figure>
         {diaSeleccionado && (
           <div className="mt-6">
             <p className="text-xs uppercase tracking-wide mb-2" style={{ color: COLORES.textoMuted }}>
@@ -300,7 +312,7 @@ function CalendarioSection({ perfil, onVerPlanificacion, contextoInicial, onCons
                 {eventosDelDiaSeleccionado.map((e) => (
                   <div
                     key={e.id}
-                    className="p-3 rounded-xl flex items-center gap-3 flex-wrap"
+                    className="calendario-evento-detalle flex items-center gap-3 flex-wrap"
                     style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
                   >
                     {e.tipo === 'partido' ? (
@@ -364,6 +376,8 @@ function CalendarioSection({ perfil, onVerPlanificacion, contextoInicial, onCons
             )}
           </div>
         )}
+        </aside>
+        </div>
       </div>
     </div>
   )
