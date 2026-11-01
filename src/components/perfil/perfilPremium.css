@@ -1,0 +1,61 @@
+@media screen {
+  .perfil-premium { padding:24px; min-height:100%; background:var(--plantel-fondo-perfil); color:var(--plantel-texto-perfil); }
+  .perfil-contenido { max-width:1440px; min-width:0; margin:auto; }
+  .perfil-cabecera { background:var(--plantel-cabecera); border:1px solid var(--plantel-borde-perfil); border-top:4px solid #F2C230; border-radius:20px; padding:24px; margin-bottom:22px; }
+  .perfil-navegacion { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:22px; }
+  .perfil-navegacion>span { font-size:10px; font-weight:750; letter-spacing:.12em; color:var(--ui-texto-secundario); }
+  .perfil-identidad { display:grid; grid-template-columns:200px minmax(0,1fr) 190px; align-items:center; gap:28px; }
+  .perfil-foto { width:200px; height:240px; object-fit:cover; object-position:50% 25%; border-radius:16px; border:2px solid #F2C230; background:var(--ui-superficie-alternativa); }
+  .perfil-iniciales { display:grid; place-items:center; font-size:48px; font-weight:900; color:var(--ui-texto-acento); }
+  .perfil-nombre { min-width:0; }
+  .perfil-nombre>p { color:var(--ui-texto-acento); font-size:11px; font-weight:750; letter-spacing:.12em; }
+  .perfil-nombre h1 { font:700 clamp(28px,3.5vw,48px)/1.12 'Archivo Black',sans-serif; margin:12px 0 18px; overflow-wrap:anywhere; }
+  .perfil-insignias { display:flex; flex-wrap:wrap; gap:8px; }
+  .perfil-insignias>span { padding:7px 12px; border:1px solid var(--ui-borde); border-radius:30px; font-size:12px; }
+  .perfil-datos-deportivos { display:flex; flex-wrap:wrap; gap:18px; margin-top:22px; }
+  .perfil-datos-deportivos dt { font-size:11px; color:var(--ui-texto-secundario); }
+  .perfil-datos-deportivos dd { font-size:14px; font-weight:650; margin-top:5px; }
+  .perfil-acciones { display:grid; gap:10px; align-content:center; }
+  .perfil-premium button,.perfil-premium summary,.perfil-premium select { min-height:44px; }
+  .perfil-premium button { cursor:pointer; }
+  .perfil-acciones>button,.perfil-documentos button,.perfil-resumen-accesos button,.perfil-navegacion button { display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 14px; border:1px solid var(--ui-borde); border-radius:10px; background:var(--ui-superficie); color:var(--ui-texto); font-size:13px; }
+  .perfil-premium .perfil-primario { background:#F2C230; color:#111; border-color:#F2C230; font-weight:750; }
+  .perfil-acciones-secundarias { border-top:1px solid var(--ui-borde); padding-top:8px; }
+  .perfil-acciones-secundarias summary { padding:10px 0; font-size:12px; color:var(--ui-texto-secundario); cursor:pointer; }
+  .perfil-eliminar { padding:10px; color:var(--ui-peligro); }
+  .perfil-premium button:disabled { opacity:.55; cursor:wait; }
+  .perfil-premium :is(button,summary,select,a):focus-visible { outline:3px solid var(--ui-foco); outline-offset:3px; }
+  .perfil-premium .dp-pestanas-panel { padding:24px; margin-top:16px; border:1px solid var(--ui-borde); border-radius:18px; background:var(--ui-superficie); min-width:0; }
+  .perfil-indicadores { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin:24px 0; }
+  .perfil-indicadores>button { position:relative; padding:0; text-align:left; border:1px solid var(--ui-borde); border-bottom:3px solid #F2C230; border-radius:13px; overflow:hidden; background:var(--ui-superficie); transition:border-color .2s,box-shadow .2s; }
+  .perfil-indicadores>button:hover { border-color:var(--ui-foco); box-shadow:0 3px 18px rgba(0,0,0,.1); }
+  .perfil-indicadores .dp-indicador { height:100%; border:0; background:var(--ui-superficie-alternativa); }
+  .perfil-ver-detalle { position:absolute; bottom:8px; right:10px; font-size:10px; color:var(--ui-texto-acento); }
+  .perfil-indicadores .dp-indicador-valor { padding-bottom:14px; }
+  .perfil-resumen-accesos { display:flex; flex-wrap:wrap; gap:12px; }
+  .perfil-detalle-listado { max-width:100%; margin:20px 0; }
+  .perfil-selector-periodo { display:grid; gap:8px; max-width:420px; font-size:13px; margin:20px 0; }
+  .perfil-selector-periodo select { padding:10px; border:1px solid var(--ui-control-borde); border-radius:10px; background:var(--ui-control-fondo); color:var(--ui-control-texto); min-width:0; max-width:100%; }
+  .perfil-evaluaciones { min-width:0; }
+  .perfil-evaluacion-resumen { display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:20px; align-items:center; padding:20px; border:1px solid var(--ui-borde); border-left:4px solid #F2C230; border-radius:14px; background:var(--ui-superficie-alternativa); margin:20px 0; }
+  .perfil-evaluacion-resumen h3 { font-size:24px; font-weight:800; }
+  .perfil-evaluacion-resumen p { color:var(--ui-texto-secundario); font-size:13px; margin-top:8px; }
+  .perfil-evaluaciones article { margin-top:14px; }
+  .perfil-evaluaciones article>button { padding:20px; }
+  .perfil-evaluaciones [class*="h-1.5"] { height:10px; }
+  .perfil-evaluaciones .text-2xl { font-size:32px; }
+  .perfil-premium .text-\[9px\],.perfil-premium .text-\[10px\] { font-size:12px; line-height:1.5; }
+  .perfil-datos,.perfil-seguimiento { min-width:0; }
+  .perfil-seguimiento>div,.perfil-documentos article { margin:18px 0; }
+  .perfil-documentos { display:grid; gap:14px; }
+  .perfil-documentos h2 { font:700 24px 'Archivo Black',sans-serif; }
+  .perfil-documentos h3 { font-size:18px; font-weight:750; }
+  .perfil-documentos p { color:var(--ui-texto-secundario); line-height:1.6; font-size:13px; }
+  .perfil-documentos article { padding:20px; border:1px solid var(--ui-borde); border-radius:14px; background:var(--ui-superficie-alternativa); }
+  .perfil-documentos article button { margin-top:14px; }
+  .perfil-premium [role=alert] { color:var(--ui-peligro); }
+  @media(max-width:1050px) { .perfil-identidad { grid-template-columns:160px minmax(0,1fr); gap:20px; } .perfil-foto { width:160px; height:200px; } .perfil-acciones { grid-column:1/-1; display:flex; flex-wrap:wrap; align-items:center; } .perfil-acciones-secundarias { border:0; padding:0; } .perfil-indicadores { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+  @media(max-width:600px) { .perfil-premium { padding:12px; } .perfil-cabecera { padding:18px; } .perfil-identidad { grid-template-columns:minmax(0,1fr); gap:16px; } .perfil-foto { width:160px; height:200px; } .perfil-navegacion>span { display:none; } .perfil-acciones { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); } .perfil-acciones-secundarias { grid-column:1/-1; } .perfil-premium .dp-pestanas-panel { padding:14px; } .perfil-indicadores { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; } .perfil-premium .dp-pestanas-lista { flex-wrap:nowrap; overflow-x:auto; } .perfil-premium .dp-pestanas-lista button { flex:0 0 auto; } .perfil-resumen-accesos { flex-direction:column; } }
+  @media(prefers-reduced-motion:reduce) { .perfil-premium button { transition:none; transform:none; } }
+  @media(max-width:600px) { .perfil-evaluacion-resumen { grid-template-columns:minmax(0,1fr); padding:14px; } }
+}

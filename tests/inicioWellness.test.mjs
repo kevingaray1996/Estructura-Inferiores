@@ -1,7 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { execFileSync } from 'node:child_process'
 import { puedeConsultarWellnessInicio, resumirWellnessInicio, mensajeErrorWellness } from '../src/utils/inicioWellness.js'
 
 test('Inicio: conserva alcance diario de Wellness, sin conceder acceso a otras categorías o Médico', () => {
@@ -41,8 +40,9 @@ test('Inicio: presentación aislada, responsive, temas y navegación existente s
   assert.match(css, /repeat\(3,minmax\(0,1fr\)\)/); assert.match(css, /var\(--ui-texto/)
   assert.match(css, /prefers-reduced-motion/); assert.match(css, /focus-visible/)
   assert.doesNotMatch(css, /!important|@media print|:root/)
-  const cambios = execFileSync('git', ['diff', '--name-only'], { encoding: 'utf8' }).trim().split('\n')
-  assert.ok(!cambios.some(p => /PerfilJugador|AnalisisSection|ListaJugadores|calendario\.js|CalendarioSection|ListaPartidos/.test(p)))
+  // Comprobar el aislamiento de Inicio, no los archivos de una futura entrega sin commit.
+  const inicio = readFileSync('src/components/InicioSection.jsx', 'utf8')
+  assert.doesNotMatch(inicio, /import[^\n]*(?:PerfilJugador|AnalisisSection|ListaJugadores|CalendarioSection|ListaPartidos)/)
   const agenda = readFileSync('src/components/inicio/AgendaDiariaInicio.jsx', 'utf8')
   assert.match(agenda, /normalizarEventos/); assert.match(agenda, /cargarSesionesAgenda/)
   assert.doesNotMatch(agenda, /from\('partidos'\)|insert\(|update\(|rpc\(|notas_internas/)

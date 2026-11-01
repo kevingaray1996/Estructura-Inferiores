@@ -8,6 +8,7 @@ import CargaMasiva from './CargaMasiva'
 function PlantelSection({ onVerFichaMedica, onVerVideos, onVerNutricion, onVerPsicologia, onVerBienestar, jugadorInicialId, onConsumirJugadorInicial, perfil }) {
   const [vista, setVista] = useState('lista')
   const [jugadorSeleccionado, setJugadorSeleccionado] = useState(null)
+  const [estadoGaleria, setEstadoGaleria] = useState(null)
 
   useEffect(() => {
     async function aplicarJugadorInicial() {
@@ -42,6 +43,8 @@ function PlantelSection({ onVerFichaMedica, onVerVideos, onVerNutricion, onVerPs
   if (vista === 'perfil') {
     return (
       <PerfilJugador
+        key={jugadorSeleccionado}
+        perfil={perfil}
         jugadorId={jugadorSeleccionado}
         onVolver={volver}
         onVerFichaMedica={onVerFichaMedica}
@@ -74,6 +77,8 @@ function PlantelSection({ onVerFichaMedica, onVerVideos, onVerNutricion, onVerPs
 
   return (
     <ListaJugadores
+      estadoGaleria={estadoGaleria}
+      onGuardarEstadoGaleria={setEstadoGaleria}
       onSelectJugador={irAlPerfil}
       onNuevoJugador={() => setVista('agregar')}
       onCargaMasiva={() => setVista('masiva')}

@@ -50,6 +50,7 @@ test('Pantallas y formularios con datos simulados; informes independientes del t
       transform(code, id) {
         // Solo el modulo de prueba recibe datos; no se editan archivos ni se ejecutan efectos.
         if (id.endsWith('/PerfilJugador.jsx')) return code.replace('const [jugador, setJugador] = useState(null)', `const [jugador, setJugador] = useState(${fixture})`)
+          .replace("useState({ id: null, estado: 'cargando', fuentes: {} })", "useState({ id: 'prueba', estado: 'listo', fuentes: {} })")
         if (id.endsWith('/ListaJugadores.jsx')) return code.replace('const [jugadores, setJugadores] = useState([])', `const [jugadores, setJugadores] = useState([${fixture}])`).replace('const [cargando, setCargando] = useState(true)', 'const [cargando, setCargando] = useState(false)')
         if (id.endsWith('/EvaluacionesSection.jsx')) return code.replace('const [sel, setSel] = useState(null)', `const [sel, setSel] = useState(${fixture})`).replace('const [form, setForm] = useState(null)', "const [form, setForm] = useState({puntajes: {}, fortalezas: '', a_mejorar: '', comentario: '', recomendacion: '', proyeccion: ''})") + '\nexport { PanelEvaluar, Visor, htmlInforme, htmlPlantel };'
       },
@@ -59,7 +60,7 @@ test('Pantallas y formularios con datos simulados; informes independientes del t
   try {
     for (const nombre of ['PlantelSection', 'ListaJugadores', 'AgregarJugador', 'CargaMasiva', 'PdfPerfilModal', 'PerfilJugador', 'EvaluacionesSection']) {
       const { default: Component } = await server.ssrLoadModule(`/src/components/${nombre}.jsx`)
-      const html = render(Component, { jugador: jugadora, perfil: { rol: 'coordinacion' } })
+      const html = render(Component, { jugador: jugadora, jugadorId: 'prueba', perfil: { rol: 'coordinacion' } })
       assert.match(html, /var\(--(?:plantel|ui)-/, nombre)
       assert.doesNotMatch(html, /var\([^;]+\)(?:18|55|66)/, nombre)
       if (nombre === 'ListaJugadores') { assert.match(html, /Ana/); assert.match(html, /No disponible/); assert.match(html, /#194D38/); assert.match(html, /text-white/); }

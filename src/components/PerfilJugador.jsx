@@ -1,161 +1,29 @@
 import { filtrarSeccionesVisibles } from '../config/visibilidadSecciones'
-import { PLANTEL as P, textoPlantel, tintePlantel } from '../appearance/plantel'
+import { estadoErrorPerfil, calcularEdad, formatearFecha, fechaISO, pieHabilLabel } from './perfil/presentacionPerfil'
+import CabeceraPerfil from './perfil/CabeceraPerfil'
+import IndicadoresPerfil from './perfil/IndicadoresPerfil'
+import EvaluacionesPerfil from './perfil/EvaluacionesPerfil'
+import SeguimientoPerfil from './perfil/SeguimientoPerfil'
+import DatosPerfil from './perfil/DatosPerfil'
+import DocumentosPerfil from './perfil/DocumentosPerfil'
+import ComparativaAnualPerfil from './perfil/ComparativaAnualPerfil'
+import DetalleEstadisticaPerfil from './perfil/DetalleEstadisticaPerfil'
+import FuentePerfil from './perfil/FuentePerfil'
+import PestanasAccesibles from './ui/PestanasAccesibles'
+import EncabezadoSeccion from './ui/EncabezadoSeccion'
+import EstadoContenido from './ui/EstadoContenido'
+import { puedeVerMedicos } from '../utils/mapaCorporal'
+import './perfil/perfilPremium.css'
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import PdfPerfilModal from './PdfPerfilModal'
-import { CAMPOS_FISICOS } from '../utils/camposFisicos'
 import { cargarDatosBienestar } from '../utils/bienestar'
 import { generarBienestarPDF } from '../utils/generarBienestarPDF'
 
-const COLORES = {
-  fondo: P.fondoPerfil,
-  tarjeta: P.tarjetaPerfil,
-  borde: P.bordePerfil,
-  texto: P.textoPerfil,
-  secundario: P.secundarioPerfil,
-  tenue: P.tenuePerfil,
-  amarillo: P.amarilloPerfil,
-  amarilloOscuro: P.amarilloSuave,
-}
-
-const estadoConfig = {
-  disponible: { color: '#4ADE80', label: 'Disponible' },
-  lesionado: { color: '#FBBF24', label: 'Lesionado' },
-  suspendido: { color: '#F87171', label: 'Suspendido' },
-  no_disponible: { color: COLORES.secundario, label: 'No disponible' },
-}
-
-const pieHabilLabel = {
-  derecho: 'Derecho',
-  izquierdo: 'Izquierdo',
-  ambidiestro: 'Ambidiestro',
-}
-
-const recomendacionLabel = {
-  continuidad: 'Continuidad',
-  a_evaluar: 'A evaluar',
-  no_continuidad: 'No continuidad',
-}
-
-function iniciales(nombre, apellido) {
-  return `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
-}
-
-function MiniBarras({ datos, color }) {
-  const valores = datos.map((d) => d.valor || 0)
-  const max = Math.max(...valores, 1)
-  const ancho = 26
-  const gap = 6
-  const alto = 60
-  const svgAncho = datos.length * (ancho + gap)
-
-  return (
-    <svg viewBox={`0 0 ${svgAncho} ${alto + 16}`} width={svgAncho} height={alto + 16}>
-      {datos.map((d, i) => {
-        const h = (d.valor / max) * alto
-        const x = i * (ancho + gap)
-
-        return (
-          <g key={i}>
-            <rect x={x} y={alto - h} width={ancho} height={h} rx={3} fill={color} opacity={0.9} />
-            <text x={x + ancho / 2} y={alto + 12} fontSize="8" fill={COLORES.tenue} textAnchor="middle">
-              {d.etiqueta}
-            </text>
-          </g>
-        )
-      })}
-    </svg>
-  )
-}
-
-function calcularEdad(fechaNacimiento) {
-  if (!fechaNacimiento) return null
-
-  const hoy = new Date()
-  const nacimiento = new Date(`${fechaNacimiento}T00:00:00`)
-
-  let edad = hoy.getFullYear() - nacimiento.getFullYear()
-  const mes = hoy.getMonth() - nacimiento.getMonth()
-
-  if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) edad--
-
-  return edad
-}
-
-function formatearFecha(fecha) {
-  if (!fecha) return null
-
-  const [anio, mes, dia] = String(fecha).slice(0, 10).split('-')
-  return dia && mes && anio ? `${dia}/${mes}/${anio}` : fecha
-}
-
-function fechaISO(date) {
-  const anio = date.getFullYear()
-  const mes = String(date.getMonth() + 1).padStart(2, '0')
-  const dia = String(date.getDate()).padStart(2, '0')
-
-  return `${anio}-${mes}-${dia}`
-}
-
-function nombrePeriodo(periodo, tipo) {
-  if (tipo === 'final' || String(periodo).startsWith('final-')) {
-    const anio = String(periodo).replace('final-', '')
-    return `Temporada ${anio}`
-  }
-
-  const [anio, mes] = String(periodo).split('-')
-  const numeroMes = Number(mes)
-
-  if (!anio || numeroMes < 1 || numeroMes > 12) return periodo
-
-  const fecha = new Date(Number(anio), numeroMes - 1, 1)
-
-  return fecha.toLocaleDateString('es-AR', {
-    month: 'long',
-    year: 'numeric',
-  }).replace(/^\p{L}/u, (letra) => letra.toUpperCase())
-}
-
-function valorPuntaje(valor) {
-  if (valor === 'no_evaluo') return 'No evaluó'
-  if (valor === null || valor === undefined || valor === '') return '—'
-  return valor
-}
-
-function calcularResumenEvaluacion(evaluaciones, criterios) {
-  const porCriterio = criterios.map((criterio) => {
-    const valores = evaluaciones
-      .map((evaluacion) => evaluacion.puntajes?.[criterio.id])
-      .filter((valor) => {
-        if (valor === 'no_evaluo' || valor == null || valor === '') return false
-        const numero = Number(valor)
-        return Number.isFinite(numero) && numero >= 1 && numero <= 5
-      })
-      .map(Number)
-
-    return {
-      criterio,
-      promedio: valores.length
-        ? valores.reduce((total, valor) => total + valor, 0) / valores.length
-        : null,
-      cantidad: valores.length,
-    }
-  })
-
-  const promedios = porCriterio
-    .map((item) => item.promedio)
-    .filter((valor) => valor !== null)
-
-  const general = promedios.length
-    ? promedios.reduce((total, valor) => total + valor, 0) / promedios.length
-    : null
-
-  return { porCriterio, general }
-}
-
 function PerfilJugador({
   jugadorId,
+  perfil,
   onVolver,
   onVerFichaMedica,
   onVerVideos,
@@ -187,12 +55,19 @@ function PerfilJugador({
   const [evaluacionesCargando, setEvaluacionesCargando] = useState(true)
   const [evaluacionesError, setEvaluacionesError] = useState('')
   const [periodoAbierto, setPeriodoAbierto] = useState(null)
-  const [mostrarEvaluaciones, setMostrarEvaluaciones] = useState(false)
+  const [mostrarEvaluaciones, setMostrarEvaluaciones] = useState(true)
+  const [pestana, setPestana] = useState('resumen')
+  const [lectura, setLectura] = useState({ id: null, estado: 'cargando', fuentes: {} })
+  const [generandoWellness, setGenerandoWellness] = useState(false)
+  const [errorWellnessPDF, setErrorWellnessPDF] = useState('')
 
   useEffect(() => {
     let cancelado = false
 
     async function cargarDatos() {
+      const fuentes = {}
+      let errorPrincipal = null
+      setLectura({ id: jugadorId, estado: 'cargando', fuentes: {} })
       setJugador(null)
       setEvaluacionesCargando(true)
       setEvaluacionesError('')
@@ -285,10 +160,11 @@ function PerfilJugador({
             .select('*')
             .eq('activo', true)
             .order('orden', { ascending: true }),
-        ])
+        ].map(q => Promise.resolve(q).catch(error => ({ error }))))
 
         if (cancelado) return
 
+        for (const [clave, respuesta] of Object.entries({ estadisticas: statsRes, medicas: fichasRes, videos: videosRes, historial: historialRes, asistencias: asistenciasRes, fisicos: fisicosRes, cmj: cmjRes, nutricion: nutricionRes, psicologia: psicologiaRes, evaluaciones: evaluacionesRes, criterios: criteriosRes })) fuentes[clave] = { error: respuesta.error || null }
         setEstadisticas(statsRes.data || [])
         setFichasMedicas(fichasRes.data || [])
         setVideos(videosRes.data || [])
@@ -341,7 +217,7 @@ function PerfilJugador({
           new Date(hoyRef.getFullYear(), hoyRef.getMonth(), hoyRef.getDate() - 29)
         )
 
-        const { data: bienestarMesData } = await supabase
+        const { data: bienestarMesData, error: bienestarMesError } = await supabase
           .from('bienestar')
           .select('sueno, dolor_muscular, fatiga, estres, animo_entrenar')
           .eq('jugador_id', jugadorId)
@@ -357,6 +233,7 @@ function PerfilJugador({
           { clave: 'animo_entrenar', label: 'Ánimo' },
         ]
 
+        fuentes.wellnessMes = { error: bienestarMesError || null }
         const filasBienestarMes = bienestarMesData || []
 
         const resumenMes = camposBienestar.map((campo) => {
@@ -374,13 +251,19 @@ function PerfilJugador({
 
         setResumenBienestarMensual(filasBienestarMes.length ? resumenMes : null)
 
-        const { metricas } = await cargarDatosBienestar(jugadorId, 'semana')
-
-        if (!cancelado) setResumenBienestar(metricas)
+        try {
+          const { metricas } = await cargarDatosBienestar(jugadorId, 'semana', { exigirLectura: true })
+          fuentes.wellness = { error: null }
+          if (!cancelado) setResumenBienestar(metricas)
+        } catch (error) { fuentes.wellness = { error }; if (!cancelado) setResumenBienestar(null) }
       } catch (error) {
+        errorPrincipal = error
         console.error('Error al cargar el perfil:', error)
       } finally {
-        if (!cancelado) setEvaluacionesCargando(false)
+        if (!cancelado) {
+          setEvaluacionesCargando(false)
+          setLectura({ id: jugadorId, estado: errorPrincipal ? 'error' : 'listo', fuentes, error: errorPrincipal })
+        }
       }
     }
 
@@ -410,15 +293,9 @@ function PerfilJugador({
     onVolver()
   }
 
-  if (!jugador) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: COLORES.fondo }}>
-        <p style={{ color: COLORES.tenue }}>Cargando...</p>
-      </div>
-    )
-  }
+  if (lectura.id !== jugadorId || lectura.estado === 'cargando') return <div className="perfil-premium"><EstadoContenido estado="cargando" titulo="Cargando perfil" mensaje="Consultando la jugadora y sus fuentes. No se muestran registros anteriores." /></div>
+  if (lectura.estado === 'error' || !jugador) return <div className="perfil-premium"><EstadoContenido estado={estadoErrorPerfil(lectura.error)} titulo="No se pudo abrir el perfil" mensaje="La jugadora no está disponible o la lectura falló. No se interpreta como ausencia de registros." /><button type="button" onClick={onVolver}>Volver al plantel</button></div>
 
-  const estado = estadoConfig[jugador.estado] || estadoConfig.disponible
   const edad = calcularEdad(jugador.fecha_nacimiento)
 
   const totales = estadisticas.reduce(
@@ -592,887 +469,43 @@ function PerfilJugador({
     return periodoB.localeCompare(periodoA)
   })
 
-  if (filtroStat) {
-    const config = statConfig[filtroStat]
-
-    const partidosFiltrados = estadisticas
-      .filter(config.filtro)
-      .sort((a, b) => (b.partidos?.fecha || '').localeCompare(a.partidos?.fecha || ''))
-
-    return (
-      <div className="min-h-screen p-6 md:p-10" style={{ backgroundColor: COLORES.fondo }}>
-        <div className="max-w-xl mx-auto">
-          <button
-            onClick={() => setFiltroStat(null)}
-            className="text-sm mb-6 flex items-center gap-1 hover:opacity-70 transition-opacity"
-            style={{ color: COLORES.secundario }}
-          >
-            ← Volver al perfil
-          </button>
-
-          <h1 className="text-2xl md:text-3xl mb-1" style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}>
-            {config.titulo}
-          </h1>
-
-          <p className="text-sm mb-6" style={{ color: COLORES.secundario }}>
-            {jugador.apellido}, {jugador.nombre}
-          </p>
-
-          {partidosFiltrados.length === 0 && (
-            <p style={{ color: COLORES.tenue }}>No hay partidos registrados todavía.</p>
-          )}
-
-          <div className="space-y-2">
-            {partidosFiltrados.map((e) => (
-              <div
-                key={e.id}
-                className="p-3.5 rounded-xl flex items-center justify-between"
-                style={{ backgroundColor: COLORES.tarjeta, border: `1px solid ${COLORES.borde}` }}
-              >
-                <div className="flex items-center gap-2.5">
-                  {e.partidos?.escudo_url ? (
-                    <img
-                      src={e.partidos.escudo_url}
-                      alt={e.partidos.rival}
-                      className="w-7 h-7 rounded object-contain shrink-0"
-                      style={{ backgroundColor: COLORES.fondo }}
-                    />
-                  ) : (
-                    <span
-                      className="w-7 h-7 rounded flex items-center justify-center text-xs shrink-0"
-                      style={{ backgroundColor: COLORES.fondo, color: COLORES.tenue }}
-                    >
-                      🛡️
-                    </span>
-                  )}
-
-                  <div>
-                    <p className="text-sm font-medium" style={{ color: COLORES.texto }}>
-                      {e.partidos ? `vs ${e.partidos.rival}` : 'Partido'}
-                    </p>
-                    <p className="text-xs" style={{ color: COLORES.tenue }}>
-                      {e.partidos?.fecha}
-                    </p>
-                  </div>
-                </div>
-
-                {config.valor(e) && (
-                  <span
-                    className="text-xs font-mono px-2 py-1 rounded-full shrink-0"
-                    style={{ backgroundColor: COLORES.fondo, color: textoPlantel(COLORES.amarillo) }}
-                  >
-                    {config.valor(e)}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    )
+  const fuentes = lectura.fuentes
+  const puedeConsultarCategoria = ['coordinacion', 'preparador_fisico', 'medico'].includes(perfil?.rol) ||
+    perfil?.rol === 'tecnico' && Boolean(perfil.categoria_id) && perfil.categoria_id === jugador.categoria_id
+  const puedeWellness = puedeConsultarCategoria
+  const puedeFisico = puedeConsultarCategoria && perfil?.rol !== 'medico'
+  const puedeMedico = puedeVerMedicos(perfil)
+  const areasVisibles = disciplinas.filter(d => d.nombre === 'Kinesiología / Médica' ? puedeMedico : d.nombre === 'Videoanálisis' ? ['coordinacion','tecnico','preparador_fisico'].includes(perfil?.rol) : true)
+    .map(d => {
+      const fuente = d.nombre === 'Kinesiología / Médica' ? fuentes.medicas : d.nombre === 'Videoanálisis' ? fuentes.videos : null
+      return fuente?.error ? { ...d, resumen: estadoErrorPerfil(fuente.error) === 'denegado' ? 'Acceso denegado a esta fuente' : 'No se pudo consultar esta fuente', detalle: null } : d
+    })
+  const abrirDetalle = clave => { setFiltroStat(clave); setPestana('rendimiento') }
+  const fuentesConError = Object.values(fuentes).some(f => f.error)
+  const descargarWellness = async () => {
+    if (generandoWellness) return
+    setGenerandoWellness(true); setErrorWellnessPDF('')
+    try { await generarBienestarPDF(jugador, 'semana') }
+    catch { setErrorWellnessPDF('No se pudo generar el documento. Revisá la conexión y volvé a intentar.') }
+    finally { setGenerandoWellness(false) }
   }
-
-  return (
-    <div className="min-h-screen p-4 md:p-8" style={{ backgroundColor: COLORES.fondo }}>
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between gap-3 mb-6">
-          <button
-            onClick={onVolver}
-            className="text-sm flex items-center gap-1 hover:opacity-70 transition-opacity"
-            style={{ color: COLORES.secundario }}
-          >
-            ← Volver al plantel
-          </button>
-
-          <div className="flex gap-2 shrink-0">
-            <button
-              onClick={() => onEditar(jugadorId)}
-              className="text-xs px-3 py-2 rounded-lg transition-opacity hover:opacity-80"
-              style={{
-                backgroundColor: COLORES.tarjeta,
-                color: textoPlantel(COLORES.amarillo),
-                border: `1px solid ${COLORES.borde}`,
-              }}
-            >
-              ✏️ Editar
-            </button>
-
-            <button
-              onClick={handleEliminarJugador}
-              disabled={eliminando}
-              className="text-xs px-3 py-2 rounded-lg transition-opacity hover:opacity-80 disabled:opacity-50"
-              style={{
-                backgroundColor: COLORES.tarjeta,
-                color: "var(--plantel-peligro, #F87171)",
-                border: `1px solid ${COLORES.borde}`,
-              }}
-            >
-              {eliminando ? 'Eliminando...' : '🗑 Eliminar'}
-            </button>
-          </div>
-        </div>
-
-        {/* Encabezado del perfil */}
-        <div
-          className="relative overflow-hidden rounded-2xl p-5 md:p-7 mb-5"
-          style={{
-            background: P.cabecera,
-            border: `1px solid ${COLORES.borde}`,
-          }}
-        >
-          <div className="absolute left-0 top-0 bottom-0 w-1.5" style={{ backgroundColor: COLORES.amarillo }} />
-
-          <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-            {jugador.foto_url ? (
-              <img
-                src={jugador.foto_url}
-                alt={`${jugador.apellido}, ${jugador.nombre}`}
-                className="w-32 h-32 md:w-40 md:h-40 rounded-2xl object-cover shrink-0"
-                style={{
-                  border: `2px solid ${COLORES.amarillo}`,
-                  backgroundColor: COLORES.fondo,
-                }}
-              />
-            ) : (
-              <div
-                className="flex items-center justify-center w-32 h-32 md:w-40 md:h-40 rounded-2xl shrink-0 text-3xl font-bold"
-                style={{
-                  backgroundColor: COLORES.amarilloOscuro,
-                  border: `2px solid ${COLORES.amarillo}`,
-                  color: textoPlantel(COLORES.amarillo),
-                  fontFamily: "'Archivo Black', sans-serif",
-                }}
-              >
-                {iniciales(jugador.nombre, jugador.apellido)}
-              </div>
-            )}
-
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] uppercase tracking-[0.25em] mb-2" style={{ color: textoPlantel(COLORES.amarillo) }}>
-                Perfil de jugadora
-              </p>
-
-              <h1
-                className="text-2xl md:text-4xl leading-tight break-words"
-                style={{ fontFamily: "'Archivo Black', sans-serif", color: COLORES.texto }}
-              >
-                {jugador.apellido}, {jugador.nombre}
-              </h1>
-
-              <div className="flex flex-wrap gap-2 items-center mt-4">
-                <span
-                  className="text-xs px-3 py-1.5 rounded-full"
-                  style={{
-                    backgroundColor: tintePlantel(estado.color, '18'),
-                    color: textoPlantel(estado.color),
-                    border: `1px solid ${tintePlantel(estado.color, '66')}`,
-                  }}
-                >
-                  <span className="inline-block w-1.5 h-1.5 rounded-full mr-2" style={{ backgroundColor: estado.color }} />
-                  {estado.label}
-                </span>
-
-                <span
-                  className="text-xs px-3 py-1.5 rounded-full"
-                  style={{
-                    backgroundColor: COLORES.amarilloOscuro,
-                    color: textoPlantel(COLORES.amarillo),
-                    border: `1px solid ${P.bordeAcento}`,
-                  }}
-                >
-                  {jugador.categorias?.nombre || 'Sin categoría'}
-                </span>
-              </div>
-
-              {jugador.estado_detalle && (
-                <p className="text-sm mt-3" style={{ color: COLORES.secundario }}>
-                  {jugador.estado_detalle}
-                </p>
-              )}
-
-              <div className="flex flex-wrap gap-x-4 gap-y-2 mt-4 text-xs" style={{ color: COLORES.secundario }}>
-                {jugador.posicion && <span>⚽ Principal: {jugador.posicion}</span>}
-                {jugador.posicion_secundaria && <span>↗ Alternativa: {jugador.posicion_secundaria}</span>}
-                {edad !== null && <span>◷ {edad} años</span>}
-                {pieHabilLabel[jugador.pie_habil] && <span>Pie {pieHabilLabel[jugador.pie_habil].toLowerCase()}</span>}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Datos personales desplegables */}
-        <details
-          className="mb-5 rounded-xl overflow-hidden"
-          style={{ backgroundColor: COLORES.tarjeta, border: `1px solid ${COLORES.borde}` }}
-        >
-          <summary className="p-4 cursor-pointer flex items-center justify-between gap-3">
-            <span>
-              <span className="block text-sm font-semibold" style={{ color: COLORES.texto }}>
-                Datos personales
-              </span>
-              <span className="block text-xs mt-1" style={{ color: COLORES.tenue }}>
-                Información complementaria de la jugadora
-              </span>
-            </span>
-            <span style={{ color: textoPlantel(COLORES.amarillo) }}>＋</span>
-          </summary>
-
-          <div className="px-4 pb-4 flex flex-wrap gap-2">
-            {datosPersonales.map((d) => (
-              <div
-                key={d.label}
-                className="px-3 py-2 rounded-xl"
-                style={{ backgroundColor: COLORES.fondo, border: `1px solid ${COLORES.borde}` }}
-              >
-                <p className="text-[10px] uppercase tracking-wide" style={{ color: COLORES.tenue }}>
-                  {d.label}
-                </p>
-                <p className="text-sm" style={{ color: COLORES.texto }}>
-                  {d.valor}
-                  {d.extra && <span style={{ color: COLORES.secundario }}> · {d.extra}</span>}
-                </p>
-              </div>
-            ))}
-          </div>
-        </details>
-
-        {(jugador.contacto_emergencia_nombre || jugador.telefono_emergencia) && (
-          <details
-            className="mb-5 rounded-xl overflow-hidden"
-            style={{ backgroundColor: COLORES.tarjeta, border: `1px solid ${COLORES.borde}` }}
-          >
-            <summary className="p-4 cursor-pointer flex items-center gap-3">
-              <span className="text-xl">🚨</span>
-              <span className="flex-1">
-                <span className="block text-sm font-semibold" style={{ color: COLORES.texto }}>
-                  Contacto de emergencia
-                </span>
-                <span className="block text-xs mt-1" style={{ color: COLORES.tenue }}>
-                  Datos para situaciones de urgencia
-                </span>
-              </span>
-              <span style={{ color: "var(--plantel-peligro, #F87171)" }}>＋</span>
-            </summary>
-
-            <div className="px-4 pb-4">
-              {jugador.contacto_emergencia_nombre && (
-                <p className="text-sm mb-2" style={{ color: COLORES.texto }}>
-                  {jugador.contacto_emergencia_nombre}
-                </p>
-              )}
-
-              {jugador.telefono_emergencia && (
-                <a href={`tel:${jugador.telefono_emergencia}`} className="text-sm" style={{ color: textoPlantel(COLORES.amarillo) }}>
-                  {jugador.telefono_emergencia}
-                </a>
-              )}
-            </div>
-          </details>
-        )}
-
-        {jugador.video_promocional && (
-          <a
-            href={jugador.video_promocional}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 text-sm mb-6 hover:opacity-80 transition-opacity"
-            style={{ color: textoPlantel(COLORES.amarillo) }}
-          >
-            🎬 Ver video promocional
-          </a>
-        )}
-
-        {/* Rendimiento deportivo */}
-        <p className="text-xs tracking-widest uppercase mb-3" style={{ color: textoPlantel(COLORES.amarillo) }}>
-          Rendimiento deportivo
-        </p>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-3 mb-8">
-          {[
-            { label: 'Partidos', valor: totales.partidos, key: 'partidos' },
-            { label: 'Titular', valor: totales.titularidades, key: 'titularidades' },
-            { label: 'Minutos', valor: totales.minutos, key: null },
-            { label: 'Goles', valor: totales.goles, key: 'goles' },
-            { label: 'Asist.', valor: totales.asistencias, key: 'asistencias' },
-            { label: 'Amar.', valor: totales.amarillas, key: 'amarillas' },
-            { label: 'Rojas', valor: totales.rojas, key: 'rojas' },
-          ].map((stat) => (
-            <button
-              key={stat.label}
-              type="button"
-              onClick={stat.key ? () => setFiltroStat(stat.key) : undefined}
-              className="p-3 rounded-xl text-center transition-all duration-200 hover:-translate-y-0.5"
-              style={{
-                backgroundColor: COLORES.tarjeta,
-                border: `1px solid ${COLORES.borde}`,
-                borderBottom: `2px solid ${COLORES.amarillo}`,
-                cursor: stat.key ? 'pointer' : 'default',
-              }}
-            >
-              <p className="text-xl" style={{ fontFamily: "'Archivo Black', sans-serif", color: textoPlantel(COLORES.amarillo) }}>
-                {stat.valor}
-              </p>
-              <p className="text-[10px] uppercase tracking-wide" style={{ color: COLORES.secundario }}>
-                {stat.label}
-              </p>
-            </button>
-          ))}
-        </div>
-
-        {/* Historial de evaluaciones desplegable */}
-        <section className="mb-8">
-          <div
-            className="rounded-xl overflow-hidden"
-            style={{
-              backgroundColor: COLORES.tarjeta,
-              border: `1px solid ${mostrarEvaluaciones ? COLORES.amarillo : COLORES.borde}`,
-            }}
-          >
-            <button
-              type="button"
-              aria-expanded={mostrarEvaluaciones}
-              onClick={() => setMostrarEvaluaciones((actual) => !actual)}
-              className="w-full text-left p-4 flex items-center gap-3"
-            >
-              <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0"
-                style={{ backgroundColor: COLORES.amarilloOscuro, color: textoPlantel(COLORES.amarillo) }}
-              >
-                ▤
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <p className="text-xs tracking-widest uppercase mb-1" style={{ color: textoPlantel(COLORES.amarillo) }}>
-                  Seguimiento del cuerpo técnico
-                </p>
-                <h2 className="text-lg font-bold" style={{ color: COLORES.texto }}>
-                  Evaluaciones
-                </h2>
-                <p className="text-xs mt-1" style={{ color: COLORES.secundario }}>
-                  {evaluacionesCargando
-                    ? 'Cargando historial...'
-                    : `${evaluacionesPorPeriodo.length} período${evaluacionesPorPeriodo.length !== 1 ? 's' : ''} registrado${evaluacionesPorPeriodo.length !== 1 ? 's' : ''}`}
-                </p>
-              </div>
-
-              <span className="text-xl" style={{ color: textoPlantel(COLORES.amarillo) }}>
-                {mostrarEvaluaciones ? '−' : '+'}
-              </span>
-            </button>
-
-            {mostrarEvaluaciones && (
-              <div className="p-4 space-y-3" style={{ borderTop: `1px solid ${COLORES.borde}` }}>
-                {evaluacionesCargando ? (
-                  <p className="text-sm" style={{ color: COLORES.secundario }}>
-                    Cargando historial de evaluaciones...
-                  </p>
-                ) : evaluacionesError ? (
-                  <p className="text-sm" style={{ color: "var(--plantel-aviso, #FBBF24)" }}>
-                    {evaluacionesError}
-                  </p>
-                ) : evaluacionesPorPeriodo.length === 0 ? (
-                  <div className="p-3 rounded-xl" style={{ backgroundColor: COLORES.fondo }}>
-                    <p className="text-sm font-semibold" style={{ color: COLORES.texto }}>
-                      Todavía no hay evaluaciones registradas
-                    </p>
-                    <p className="text-xs mt-1" style={{ color: COLORES.secundario }}>
-                      Cuando el cuerpo técnico guarde una evaluación mensual o final, aparecerá en este historial.
-                    </p>
-                  </div>
-                ) : (
-                  evaluacionesPorPeriodo.map((grupo) => {
-                    const abierto = periodoAbierto === grupo.periodo
-                    const resumen = calcularResumenEvaluacion(grupo.evaluaciones, criteriosEvaluacion)
-                    const esFinal = grupo.tipo === 'final' || grupo.periodo.startsWith('final-')
-
-                    return (
-                      <article
-                        key={grupo.periodo}
-                        className="rounded-xl overflow-hidden"
-                        style={{
-                          backgroundColor: COLORES.fondo,
-                          border: `1px solid ${abierto ? COLORES.amarillo : COLORES.borde}`,
-                        }}
-                      >
-                        <button
-                          type="button"
-                          aria-expanded={abierto}
-                          onClick={() => setPeriodoAbierto(abierto ? null : grupo.periodo)}
-                          className="w-full text-left p-4 flex items-center gap-3"
-                        >
-                          <div
-                            className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
-                            style={{ backgroundColor: COLORES.amarilloOscuro, color: textoPlantel(COLORES.amarillo) }}
-                          >
-                            {esFinal ? '★' : '▤'}
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-sm" style={{ color: COLORES.texto }}>
-                              {esFinal
-                                ? `Evaluación final · ${nombrePeriodo(grupo.periodo, grupo.tipo)}`
-                                : nombrePeriodo(grupo.periodo, grupo.tipo)}
-                            </p>
-                            <p className="text-xs mt-1" style={{ color: COLORES.secundario }}>
-                              {grupo.evaluaciones.length} evaluador{grupo.evaluaciones.length !== 1 ? 'es' : ''}
-                            </p>
-                          </div>
-
-                          <div className="text-right shrink-0">
-                            <p className="text-2xl font-bold" style={{ color: textoPlantel(COLORES.amarillo) }}>
-                              {resumen.general === null ? '—' : resumen.general.toFixed(1)}
-                            </p>
-                            <p className="text-[10px]" style={{ color: COLORES.tenue }}>
-                              Promedio / 5
-                            </p>
-                          </div>
-
-                          <span className="text-lg ml-1" style={{ color: COLORES.secundario }}>
-                            {abierto ? '−' : '+'}
-                          </span>
-                        </button>
-
-                        {abierto && (
-                          <div className="p-4 space-y-5" style={{ borderTop: `1px solid ${COLORES.borde}` }}>
-                            <div>
-                              <p className="text-xs tracking-widest uppercase mb-3" style={{ color: textoPlantel(COLORES.amarillo) }}>
-                                Promedio por criterio
-                              </p>
-
-                              {resumen.porCriterio.length === 0 ? (
-                                <p className="text-sm" style={{ color: COLORES.secundario }}>
-                                  No hay criterios disponibles.
-                                </p>
-                              ) : (
-                                <div className="space-y-3">
-                                  {resumen.porCriterio.map(({ criterio, promedio, cantidad }) => (
-                                    <div key={criterio.id}>
-                                      <div className="flex justify-between gap-3 mb-1">
-                                        <span className="text-sm" style={{ color: COLORES.texto }}>
-                                          {criterio.nombre}
-                                        </span>
-                                        <span className="text-sm font-semibold shrink-0" style={{ color: textoPlantel(COLORES.amarillo) }}>
-                                          {promedio === null ? '—' : promedio.toFixed(1)}
-                                        </span>
-                                      </div>
-
-                                      <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: COLORES.borde }}>
-                                        <div
-                                          className="h-full rounded-full"
-                                          style={{
-                                            width: `${promedio === null ? 0 : (promedio / 5) * 100}%`,
-                                            backgroundColor: COLORES.amarillo,
-                                          }}
-                                        />
-                                      </div>
-
-                                      <p className="text-[10px] mt-1" style={{ color: COLORES.tenue }}>
-                                        {cantidad} puntuación{cantidad !== 1 ? 'es' : ''} válida{cantidad !== 1 ? 's' : ''}
-                                      </p>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-
-                            <div>
-                              <p className="text-xs tracking-widest uppercase mb-3" style={{ color: textoPlantel(COLORES.amarillo) }}>
-                                Detalle por evaluador
-                              </p>
-
-                              <div className="space-y-3">
-                                {grupo.evaluaciones.map((evaluacion, indice) => (
-                                  <div
-                                    key={evaluacion.id || `${evaluacion.evaluador_id}-${indice}`}
-                                    className="rounded-xl p-4"
-                                    style={{ backgroundColor: COLORES.tarjeta, border: `1px solid ${COLORES.borde}` }}
-                                  >
-                                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                                      <p className="text-sm font-semibold" style={{ color: COLORES.texto }}>
-                                        {evaluacion.evaluador_nombre || 'Evaluador'}
-                                      </p>
-                                      <span
-                                        className="text-[10px] px-2 py-1 rounded-full"
-                                        style={{ backgroundColor: COLORES.fondo, color: COLORES.secundario }}
-                                      >
-                                        {esFinal ? 'Final de temporada' : 'Evaluación mensual'}
-                                      </span>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                      {criteriosEvaluacion.map((criterio) => (
-                                        <div
-                                          key={criterio.id}
-                                          className="p-3 rounded-lg"
-                                          style={{ backgroundColor: COLORES.fondo }}
-                                        >
-                                          <p className="text-xs mb-2" style={{ color: COLORES.secundario }}>
-                                            {criterio.nombre}
-                                          </p>
-
-                                          <div className="flex items-center gap-1.5 flex-wrap">
-                                            {[1, 2, 3, 4, 5].map((numero) => {
-                                              const valor = evaluacion.puntajes?.[criterio.id]
-                                              const activo = valor !== 'no_evaluo' && Number(valor) === numero
-
-                                              return (
-                                                <span
-                                                  key={numero}
-                                                  className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold"
-                                                  style={{
-                                                    backgroundColor: activo ? COLORES.amarillo : COLORES.tarjeta,
-                                                    color: activo ? '#111111' : COLORES.tenue,
-                                                    border: `1px solid ${activo ? COLORES.amarillo : COLORES.borde}`,
-                                                  }}
-                                                >
-                                                  {numero}
-                                                </span>
-                                              )
-                                            })}
-
-                                            <span className="text-xs ml-1" style={{ color: COLORES.secundario }}>
-                                              {valorPuntaje(evaluacion.puntajes?.[criterio.id])}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-
-                                    {[
-                                      ['Fortalezas', evaluacion.fortalezas],
-                                      ['A mejorar', evaluacion.a_mejorar],
-                                      ['Comentario', evaluacion.comentario],
-                                      ['Proyección próxima temporada', evaluacion.proyeccion],
-                                    ].map(([titulo, contenido]) => (
-                                      contenido ? (
-                                        <div key={titulo} className="mt-4">
-                                          <p className="text-xs font-semibold mb-1" style={{ color: textoPlantel(COLORES.amarillo) }}>
-                                            {titulo}
-                                          </p>
-                                          <p className="text-sm whitespace-pre-wrap break-words" style={{ color: COLORES.secundario }}>
-                                            {contenido}
-                                          </p>
-                                        </div>
-                                      ) : null
-                                    ))}
-
-                                    {evaluacion.recomendacion && (
-                                      <div className="mt-4 pt-3" style={{ borderTop: `1px solid ${COLORES.borde}` }}>
-                                        <p className="text-xs mb-1" style={{ color: COLORES.secundario }}>
-                                          Recomendación para la próxima temporada
-                                        </p>
-                                        <span
-                                          className="inline-block text-xs font-semibold px-3 py-1.5 rounded-full"
-                                          style={{ backgroundColor: COLORES.amarilloOscuro, color: textoPlantel(COLORES.amarillo) }}
-                                        >
-                                          {recomendacionLabel[evaluacion.recomendacion] || evaluacion.recomendacion}
-                                        </span>
-                                      </div>
-                                    )}
-
-                                    {!evaluacion.fortalezas &&
-                                      !evaluacion.a_mejorar &&
-                                      !evaluacion.comentario &&
-                                      !evaluacion.proyeccion &&
-                                      !evaluacion.recomendacion && (
-                                        <p className="text-xs mt-3" style={{ color: COLORES.tenue }}>
-                                          No se agregaron comentarios para esta evaluación.
-                                        </p>
-                                      )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </article>
-                    )
-                  })
-                )}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Comparativa por año */}
-        {estadisticasPorAnio.length >= 2 && (
-          <>
-            <p className="text-xs tracking-widest uppercase mb-3" style={{ color: textoPlantel(COLORES.amarillo) }}>
-              Comparativa por año
-            </p>
-
-            <div className="overflow-x-auto rounded-xl mb-8" style={{ border: `1px solid ${COLORES.borde}` }}>
-              <table className="min-w-full text-sm" style={{ borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ backgroundColor: COLORES.tarjeta }}>
-                    {['Año', 'Partidos', 'Minutos', 'Goles', 'Asist.'].map((titulo) => (
-                      <th key={titulo} className="text-left p-2.5 whitespace-nowrap" style={{ color: textoPlantel(COLORES.amarillo) }}>
-                        {titulo}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {estadisticasPorAnio.map((a, i) => (
-                    <tr key={a.anio} style={{ backgroundColor: i % 2 === 0 ? 'transparent' : "var(--plantel-fila, #191919)" }}>
-                      {[a.anio, a.partidos, a.minutos, a.goles, a.asistencias].map((valor, indice) => (
-                        <td
-                          key={indice}
-                          className="p-2.5 whitespace-nowrap"
-                          style={{ color: indice === 0 ? COLORES.texto : COLORES.secundario }}
-                        >
-                          {valor}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-
-        {/* Bienestar semanal: se conserva el diseño existente */}
-        {resumenBienestar && (
-          <>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs tracking-widest uppercase" style={{ color: textoPlantel(COLORES.amarillo) }}>
-                Bienestar · últimos 7 días
-              </p>
-
-              {onVerBienestar && (
-                <button
-                  onClick={() => generarBienestarPDF(jugador, 'semana')}
-                  className="text-xs px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
-                  style={{ backgroundColor: COLORES.tarjeta, color: textoPlantel(COLORES.amarillo), border: `1px solid ${COLORES.borde}` }}
-                >
-                  📄 PDF
-                </button>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-8">
-              {resumenBienestar.map((m) => {
-                const colorTendencia =
-                  m.tendencia === null
-                    ? COLORES.tenue
-                    : m.tendencia === 'estable'
-                      ? COLORES.secundario
-                      : m.clave === 'rpe'
-                        ? '#FBBF24'
-                        : m.tendencia === 'sube'
-                          ? '#F87171'
-                          : '#4ADE80'
-
-                const flecha =
-                  m.tendencia === 'sube'
-                    ? '↑'
-                    : m.tendencia === 'baja'
-                      ? '↓'
-                      : m.tendencia === 'estable'
-                        ? '→'
-                        : ''
-
-                const tieneComparacion =
-                  m.promedioActual !== null &&
-                  m.promedioActual !== undefined &&
-                  m.promedioAnterior !== null &&
-                  m.promedioAnterior !== undefined
-
-                return (
-                  <div key={m.clave} className="p-3 rounded-xl text-center" style={{ backgroundColor: COLORES.tarjeta, border: `1px solid ${COLORES.borde}` }}>
-                    <p className="text-lg font-mono" style={{ color: COLORES.texto }}>
-                      {m.promedioActual !== null && m.promedioActual !== undefined ? m.promedioActual.toFixed(1) : '—'}
-                    </p>
-                    <p className="text-[9px] uppercase tracking-wide mb-1" style={{ color: COLORES.secundario }}>
-                      {m.label}
-                    </p>
-                    {flecha && tieneComparacion && (
-                      <p className="text-xs" style={{ color: textoPlantel(colorTendencia) }}>
-                        {flecha} {Math.abs(m.promedioActual - m.promedioAnterior).toFixed(1)}
-                      </p>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </>
-        )}
-
-        {/* Áreas: se conserva el diseño existente */}
-        <p className="text-xs tracking-widest uppercase mb-3" style={{ color: textoPlantel(COLORES.amarillo) }}>
-          Áreas
-        </p>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {disciplinas.map((d) => (
-            <button
-              type="button"
-              key={d.nombre}
-              onClick={d.onClick}
-              className="p-4 rounded-xl text-left hover:-translate-y-0.5 transition-all duration-200"
-              style={{ backgroundColor: COLORES.tarjeta, border: `1px solid ${COLORES.borde}` }}
-            >
-              <p className="text-2xl mb-2">{d.icono}</p>
-              <p className="text-sm font-medium" style={{ color: COLORES.texto }}>
-                {d.nombre}
-              </p>
-              <p className="text-xs mt-1" style={{ color: d.resumen === 'Sin datos cargados' ? COLORES.tenue : textoPlantel(COLORES.amarillo) }}>
-                {d.resumen}
-              </p>
-              {d.detalle && (
-                <p className="text-xs mt-1 truncate" style={{ color: COLORES.secundario }}>
-                  {d.detalle}
-                </p>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Asistencia */}
-        {totalAsistenciaMarcada > 0 && (
-          <>
-            <p className="text-xs tracking-widest uppercase mb-3 mt-8" style={{ color: textoPlantel(COLORES.amarillo) }}>
-              Asistencia
-            </p>
-
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-              {[
-                { label: 'Presentes', valor: resumenAsistencia.presente, color: '#4ADE80' },
-                { label: 'Tardes', valor: resumenAsistencia.tarde, color: '#FBBF24' },
-                { label: 'Ausentes', valor: resumenAsistencia.ausente, color: '#F87171' },
-                { label: 'Lesionadas', valor: resumenAsistencia.lesionado, color: '#FB923C' },
-                { label: 'Enfermas', valor: resumenAsistencia.enfermo, color: '#7DD3FC' },
-              ].map((item) => (
-                <div key={item.label} className="p-3 rounded-xl" style={{ backgroundColor: COLORES.tarjeta, border: `1px solid ${COLORES.borde}` }}>
-                  <p className="text-xl font-bold" style={{ color: textoPlantel(item.color) }}>{item.valor}</p>
-                  <p className="text-xs" style={{ color: COLORES.secundario }}>{item.label}</p>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Trayectoria */}
-        {historialCategorias.length > 0 && (
-          <>
-            <p className="text-xs tracking-widest uppercase mb-3 mt-8" style={{ color: textoPlantel(COLORES.amarillo) }}>
-              Trayectoria
-            </p>
-
-            <div className="space-y-2">
-              {historialCategorias.map((h) => (
-                <div key={h.id} className="p-3 rounded-lg" style={{ backgroundColor: COLORES.tarjeta, border: `1px solid ${COLORES.borde}` }}>
-                  <p className="text-sm" style={{ color: COLORES.texto }}>
-                    <span style={{ color: COLORES.tenue }}>{formatearFecha(h.fecha)}</span>
-                    {' · '}
-                    {h.categoria_anterior?.nombre || '—'} → {h.categoria_nueva?.nombre || '—'}
-                  </p>
-                  {h.temporada && (
-                    <p className="text-xs mt-1" style={{ color: COLORES.secundario }}>
-                      Temporada {h.temporada}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Físico / GPS */}
-        {sesionesFisicas.length > 0 && (
-          <>
-            <p className="text-xs tracking-widest uppercase mb-3 mt-8" style={{ color: textoPlantel(COLORES.amarillo) }}>
-              Físico · GPS
-            </p>
-
-            <div className="p-4 rounded-xl" style={{ backgroundColor: COLORES.tarjeta, border: `1px solid ${COLORES.borde}` }}>
-              {datosDistanciaChart.length > 0 && (
-                <>
-                  <p className="text-[10px] uppercase tracking-wide mb-2" style={{ color: COLORES.secundario }}>
-                    Distancia total (m) · últimas sesiones
-                  </p>
-                  <div className="overflow-x-auto mb-4">
-                    <MiniBarras datos={datosDistanciaChart} color={textoPlantel(COLORES.amarillo)} />
-                  </div>
-                </>
-              )}
-
-              <label className="text-[10px] uppercase tracking-wide block mb-2" style={{ color: COLORES.secundario }}>
-                Ver sesión
-              </label>
-
-              <select
-                value={sesionFisicaSeleccionadaId || idSesionFisicaPorDefecto || ''}
-                onChange={(e) => setSesionFisicaSeleccionadaId(e.target.value)}
-                className="w-full p-2.5 rounded-xl ui-control outline-none text-sm mb-3"
-                style={{ backgroundColor: COLORES.fondo, border: `1px solid ${COLORES.borde}`, color: COLORES.texto }}
-              >
-                {sesionesFisicas.slice().reverse().map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {formatearFecha(s.fecha)}
-                    {s.partidos ? ` · vs ${s.partidos.rival}` : s.tipo === 'partido' ? ' · Partido' : ' · Entrenamiento'}
-                  </option>
-                ))}
-              </select>
-
-              {sesionFisicaSeleccionada && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 rounded-lg" style={{ backgroundColor: COLORES.fondo }}>
-                  {CAMPOS_FISICOS.map((campo) => (
-                    <div key={campo.clave}>
-                      <p className="text-[9px] uppercase tracking-wide" style={{ color: COLORES.secundario }}>
-                        {campo.label}
-                      </p>
-                      <p className="text-sm" style={{ color: COLORES.texto }}>
-                        {sesionFisicaSeleccionada[campo.clave] ?? '—'}
-                      </p>
-                    </div>
-                  ))}
-
-                  <div>
-                    <p className="text-[9px] uppercase tracking-wide" style={{ color: textoPlantel(COLORES.amarillo) }}>
-                      RPE (1-10)
-                    </p>
-                    <p className="text-sm" style={{ color: COLORES.texto }}>
-                      {sesionFisicaSeleccionada.rpe ?? '—'}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* PDF existente: no se modifica */}
-        <button
-          onClick={() => setMostrarPdf(true)}
-          className="w-full mt-8 p-3 rounded-xl font-medium text-sm transition-opacity hover:opacity-80"
-          style={{ backgroundColor: COLORES.amarillo, color: '#111111', border: `1px solid ${COLORES.amarillo}` }}
-        >
-          📄 Descargar PDF del perfil
-        </button>
-      </div>
-
-      {mostrarPdf && (
-        <PdfPerfilModal
-          jugador={jugador}
-          totales={totales}
-          fichasMedicas={fichasMedicas}
-          historialCategorias={historialCategorias}
-          resumenAsistencia={resumenAsistencia}
-          totalAsistenciaMarcada={totalAsistenciaMarcada}
-          sesionesFisicas={sesionesFisicas}
-          fichasNutricion={fichasNutricion}
-          fichasPsicologicas={fichasPsicologicas}
-          cmjHistorial={cmjHistorial}
-          resumenBienestarMensual={resumenBienestarMensual}
-          asistenciaReciente={asistenciaReciente}
-          onCerrar={() => setMostrarPdf(false)}
-        />
-      )}
-    </div>
-  )
+  return <div className="perfil-premium"><div className="perfil-contenido">
+    <CabeceraPerfil key={jugador.id} jugador={jugador} onVolver={onVolver} onEditar={onEditar} onPDF={() => setMostrarPdf(true)} onEliminar={handleEliminarJugador} eliminando={eliminando} />
+    <PestanasAccesibles etiqueta="Secciones del perfil individual" seleccionada={pestana} onSeleccionar={setPestana} pestanas={[
+      { id: 'resumen', etiqueta: 'Resumen', contenido: <div className="perfil-resumen"><EncabezadoSeccion titulo="Resumen deportivo" descripcion="Valores acumulados de los registros disponibles. Se conservan los cálculos actuales." nivel={2} />
+        <IndicadoresPerfil totales={totales} onDetalle={abrirDetalle} sinDato={Boolean(fuentes.estadisticas?.error)} />
+        <FuentePerfil fuente={fuentes.estadisticas} titulo="Estadísticas deportivas">{estadisticas.length === 0 && <EstadoContenido estado="vacio" titulo="Sin estadísticas registradas" mensaje="El acumulado no acredita ausencia de participación deportiva." />}</FuentePerfil>
+        <div className="perfil-resumen-accesos"><button type="button" onClick={() => setPestana('evaluaciones')}>Consultar evaluaciones →</button><button type="button" onClick={() => setPestana('seguimiento')}>Consultar seguimiento →</button></div>
+      </div> },
+      { id: 'rendimiento', etiqueta: 'Rendimiento', contenido: <div><EncabezadoSeccion titulo="Participación y estadísticas" descripcion="Registros deportivos actuales, sin sumar acciones de Videoanálisis." nivel={2} />
+        <FuentePerfil fuente={fuentes.estadisticas} titulo="Rendimiento">{filtroStat ? <DetalleEstadisticaPerfil filtroStat={filtroStat} statConfig={statConfig} estadisticas={estadisticas} jugador={jugador} setFiltroStat={setFiltroStat} /> : <><IndicadoresPerfil totales={totales} onDetalle={abrirDetalle} />{estadisticas.length === 0 && <EstadoContenido estado="vacio" titulo="Sin estadísticas registradas" />}<ComparativaAnualPerfil estadisticasPorAnio={estadisticasPorAnio} /></>}</FuentePerfil></div> },
+      { id: 'evaluaciones', etiqueta: 'Evaluaciones', contenido: <FuentePerfil permitido={puedeConsultarCategoria} fuente={fuentes.evaluaciones?.error ? fuentes.evaluaciones : fuentes.criterios} titulo="Evaluaciones"><EvaluacionesPerfil evaluacionesCargando={evaluacionesCargando} evaluacionesError={evaluacionesError} evaluacionesPorPeriodo={evaluacionesPorPeriodo} criteriosEvaluacion={criteriosEvaluacion} mostrarEvaluaciones={mostrarEvaluaciones} setMostrarEvaluaciones={setMostrarEvaluaciones} periodoAbierto={periodoAbierto} setPeriodoAbierto={setPeriodoAbierto} /></FuentePerfil> },
+      { id: 'seguimiento', etiqueta: 'Seguimiento', contenido: <SeguimientoPerfil resumenBienestar={resumenBienestar} disciplinas={areasVisibles} totalAsistenciaMarcada={totalAsistenciaMarcada} resumenAsistencia={resumenAsistencia} sesionesFisicas={sesionesFisicas} datosDistanciaChart={datosDistanciaChart} sesionFisicaSeleccionadaId={sesionFisicaSeleccionadaId} idSesionFisicaPorDefecto={idSesionFisicaPorDefecto} setSesionFisicaSeleccionadaId={setSesionFisicaSeleccionadaId} sesionFisicaSeleccionada={sesionFisicaSeleccionada} fuentes={fuentes} puedeWellness={puedeWellness} puedeFisico={puedeFisico} /> },
+      { id: 'datos', etiqueta: 'Datos', contenido: <DatosPerfil datosPersonales={datosPersonales} jugador={jugador} historialCategorias={historialCategorias} fuenteHistorial={fuentes.historial} puedeMedico={puedeMedico} /> },
+      { id: 'documentos', etiqueta: 'Documentos', contenido: <DocumentosPerfil onPDF={() => setMostrarPdf(true)} onWellnessPDF={onVerBienestar && puedeWellness && !fuentes.wellness?.error && resumenBienestar ? descargarWellness : null} generandoWellness={generandoWellness} errorWellnessPDF={errorWellnessPDF} fuentesConError={fuentesConError} /> },
+    ]} />
+    {mostrarPdf && <PdfPerfilModal jugador={jugador} totales={totales} fichasMedicas={fichasMedicas} historialCategorias={historialCategorias} resumenAsistencia={resumenAsistencia} totalAsistenciaMarcada={totalAsistenciaMarcada} sesionesFisicas={sesionesFisicas} fichasNutricion={fichasNutricion} fichasPsicologicas={fichasPsicologicas} cmjHistorial={cmjHistorial} resumenBienestarMensual={resumenBienestarMensual} asistenciaReciente={asistenciaReciente} onCerrar={() => setMostrarPdf(false)} />}
+  </div></div>
 }
 
 export default PerfilJugador

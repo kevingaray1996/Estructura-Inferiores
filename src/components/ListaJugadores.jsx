@@ -237,17 +237,22 @@ function GraficoRanking({
   )
 }
 
-function ListaJugadores({ onSelectJugador, onNuevoJugador, onCargaMasiva }) {
-  const [vistaPlantel, setVistaPlantel] = useState('jugadoras')
+function ListaJugadores({ onSelectJugador: onElegirJugador, onNuevoJugador, onCargaMasiva, estadoGaleria, onGuardarEstadoGaleria }) {
+  const [vistaPlantel, setVistaPlantel] = useState(estadoGaleria?.vistaPlantel ?? 'jugadoras')
   const [jugadores, setJugadores] = useState([])
   const [estadisticas, setEstadisticas] = useState({})
   const [formacion, setFormacion] = useState('4-4-2')
-  const [busqueda, setBusqueda] = useState('')
-  const [filtroPuesto, setFiltroPuesto] = useState('todas')
-  const [filtroEstado, setFiltroEstado] = useState('todos')
+  const [busqueda, setBusqueda] = useState(estadoGaleria?.busqueda ?? '')
+  const [filtroPuesto, setFiltroPuesto] = useState(estadoGaleria?.filtroPuesto ?? 'todas')
+  const [filtroEstado, setFiltroEstado] = useState(estadoGaleria?.filtroEstado ?? 'todos')
   const [cargando, setCargando] = useState(true)
   const [errorCarga, setErrorCarga] = useState('')
   const [errorEstadisticas, setErrorEstadisticas] = useState('')
+
+  function onSelectJugador(id) {
+    onGuardarEstadoGaleria?.({ vistaPlantel, busqueda, filtroPuesto, filtroEstado })
+    onElegirJugador(id)
+  }
 
   useEffect(() => {
     let activo = true

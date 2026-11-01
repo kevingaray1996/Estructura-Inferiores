@@ -35,8 +35,9 @@ test('Plantel Premium conserva consultas, filtros, cálculos y asignación de la
   const actual = readFileSync(new URL('../src/components/ListaJugadores.jsx', import.meta.url), 'utf8').replaceAll('\r', '')
   assert.equal(actual.slice(actual.indexOf('function coincideEstado'), actual.indexOf('function obtenerDato')),
     anterior.slice(anterior.indexOf('function coincideEstado'), anterior.indexOf('function obtenerDato')))
-  const cargaYCalculos = s => s.slice(s.indexOf('function ListaJugadores'), s.indexOf('  return (\n    <div', s.indexOf('function ListaJugadores')))
-    .replace("  const [vistaPlantel, setVistaPlantel] = useState('jugadoras')\n", '')
+  // El estado inicial y el callback de apertura ahora restauran la galería.
+  // Lecturas, filtros y cálculos posteriores al primer efecto deben ser idénticos.
+  const cargaYCalculos = s => s.slice(s.indexOf('  useEffect(() => {', s.indexOf('function ListaJugadores')), s.indexOf('  return (\n    <div', s.indexOf('function ListaJugadores')))
   assert.equal(cargaYCalculos(actual), cargaYCalculos(anterior))
   assert.match(actual, /<RendimientoPlantel[^>]*jugadoras=\{jugadores\}/, 'Rendimiento recibe todo el plantel, no solo el filtro')
   const rendimiento = readFileSync(new URL('../src/components/plantel/RendimientoPlantel.jsx', import.meta.url), 'utf8')

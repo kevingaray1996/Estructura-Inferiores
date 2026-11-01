@@ -30,6 +30,7 @@ test('Navegación real: menú por rol, Inicio, perfil, buscador y recuperación 
         .replace('const [cargando, setCargando] = useState(true)','const [cargando, setCargando] = useState(false)')
         .replace('const [alertasRegistradas, setAlertas] = useState([])',`const [alertasRegistradas, setAlertas] = useState([{id:'oculta',seccion:'nutricion',texto:'ACCESO OCULTO',color:'#F2C230'},{id:'visible',seccion:'medicos',texto:'ACCESO MEDICO VISIBLE',color:'#F2C230'}])`)
       if(id.endsWith('/PerfilJugador.jsx'))return code.replace('const [jugador, setJugador] = useState(null)',`const [jugador, setJugador] = useState(${JSON.stringify(jugadora)})`)
+        .replace("useState({ id: null, estado: 'cargando', fuentes: {} })", "useState({ id: 'prueba', estado: 'listo', fuentes: {} })")
       if(id.endsWith('/App.jsx'))return code
         .replace("const [seccionSolicitada, setSeccionSolicitada] = useState('inicio')","const [seccionSolicitada, setSeccionSolicitada] = useState(globalThis.__seccionAbiertaPrueba)")
         .replace('const [sesion, setSesion] = useState(undefined)',"const [sesion, setSesion] = useState({user:{email:'prueba@example.invalid'}})")
