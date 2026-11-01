@@ -23,7 +23,7 @@ test('Transparencias de Inicio admiten el estado sin ultimo resultado', () => {
 })
 
 test('Informes conserva las consultas disponibles por rol y renderiza tablas y errores sin backend', async () => {
-  const { createServer } = await import('vite')
+  const { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs')
   const { createServer: socketServer } = await import('node:net')
   const { createElement } = await import('react')
   const { renderToStaticMarkup } = await import('react-dom/server')

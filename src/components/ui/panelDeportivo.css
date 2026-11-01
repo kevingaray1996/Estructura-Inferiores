@@ -1,0 +1,60 @@
+/* Presentación aislada: sin :root, body, cambios de tema ni reglas de impresión.
+   Los colores heredan los tokens de apariencia.css y theme.js. */
+@media screen {
+  .dp-encabezado, .dp-indicador, .dp-filtros, .dp-estado, .dp-pestanas {
+    color: var(--ui-texto);
+    min-width: 0;
+    font-family: inherit;
+  }
+  .dp-encabezado, .dp-indicador, .dp-filtros, .dp-estado {
+    background: var(--ui-superficie);
+    border: 1px solid var(--ui-borde);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--marca-negro) 6%, transparent);
+  }
+  .dp-encabezado { border-top: 3px solid var(--ui-acento); }
+  .dp-encabezado-fila, .dp-filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+  .dp-encabezado-textos { flex: 1 1 240px; min-width: 0; }
+  .dp-titulo { margin: 0; font-size: clamp(1.4rem, 2.5vw, 2rem); font-weight: 800; line-height: 1.2; letter-spacing: -.025em; overflow-wrap: anywhere; }
+  .dp-descripcion { color: var(--ui-texto-secundario); font-size: .875rem; line-height: 1.6; margin: 6px 0 0; overflow-wrap: anywhere; }
+  .dp-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+  .dp-encabezado-extra { margin-top: 16px; min-width: 0; }
+  .dp-indicador dl, .dp-indicador dd { margin: 0; }
+  .dp-indicador-etiqueta { font-size: .8125rem; font-weight: 600; color: var(--ui-texto-secundario); overflow-wrap: anywhere; }
+  .dp-indicador-valor { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; padding-top: 6px; font-size: clamp(1.75rem, 3vw, 2.25rem); line-height: 1.2; font-weight: 800; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .dp-indicador-unidad { font-size: .875rem; font-weight: 500; color: var(--ui-texto-secundario); }
+  .dp-indicador-ausente { font-size: 1rem; font-weight: 600; color: var(--ui-texto-secundario); }
+  .dp-indicador-contexto { color: var(--ui-texto-secundario); margin: 8px 0 0; font-size: .75rem; line-height: 1.5; overflow-wrap: anywhere; }
+  .dp-filtros-controles { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; flex: 1 1 300px; min-width: 0; }
+  .dp-filtros-controles > * { min-width: 0; max-width: 100%; }
+  .dp-filtros-acciones { margin-left: auto; }
+  .dp-pestanas-lista { display: flex; gap: 4px; overflow-x: auto; max-width: 100%; padding: 6px; scroll-padding-inline: 6px; border: 1px solid var(--ui-borde); border-radius: 12px; background: var(--ui-superficie-alternativa); }
+  .dp-pestanas-lista > button { flex-shrink: 0; position: relative; min-height: 44px; padding: 10px 16px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--ui-texto-secundario); font: inherit; font-size: .875rem; font-weight: 650; cursor: pointer; transition: background-color 140ms ease, color 140ms ease; }
+  .dp-pestanas-lista > button:hover:not(:disabled) { background: var(--ui-superficie); color: var(--ui-texto); }
+  .dp-pestanas-lista > button[aria-selected='true'] { background: var(--ui-superficie); color: var(--ui-texto-acento); border-bottom-color: var(--ui-acento); }
+  .dp-pestanas-lista > button:disabled { opacity: .55; cursor: not-allowed; }
+  .dp-pestanas-panel { padding-top: 16px; min-width: 0; }
+  .dp-pestanas-panel[hidden] { display: none; }
+  .dp-pestanas-panel:focus-visible { outline-offset: 3px; }
+  .dp-estado { border-inline-start: 3px solid var(--ui-borde); }
+  .dp-estado[data-estado='error'], .dp-estado[data-estado='denegado'] { border-inline-start-color: var(--ui-peligro); }
+  .dp-estado-titulo { margin: 0; font-size: 1rem; font-weight: 700; }
+  .dp-boton { min-height: 44px; margin-top: 12px; padding: 10px 16px; border: 1px solid var(--ui-acento); border-radius: 9px; color: var(--ui-texto-sobre-acento); background: var(--ui-acento); font: inherit; font-weight: 650; cursor: pointer; transition: filter 140ms ease; }
+  .dp-boton:hover:not(:disabled) { filter: brightness(.96); }
+  .dp-boton:disabled { opacity: .65; cursor: wait; }
+  .dp-pestanas button:focus-visible, .dp-pestanas-panel:focus-visible, .dp-boton:focus-visible,
+  .dp-encabezado :is(button, a, input, select):focus-visible, .dp-filtros :is(button, a, input, select):focus-visible {
+    outline: 2px solid var(--ui-foco); outline-offset: 2px;
+  }
+  @media (max-width: 767px) {
+    .dp-encabezado, .dp-indicador, .dp-filtros, .dp-estado { padding: 16px; }
+    .dp-encabezado-fila, .dp-filtros { gap: 12px; }
+  }
+  @media (max-width: 479px) {
+    .dp-filtros-controles { flex-basis: 100%; }
+    .dp-filtros-controles > * { flex: 1 1 100%; }
+    .dp-filtros-acciones { margin-left: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { .dp-pestanas-lista > button, .dp-boton { transition: none; } }
+}

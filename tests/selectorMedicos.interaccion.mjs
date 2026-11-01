@@ -14,7 +14,7 @@ test('Selector Médicos: teclado, confirmación, tacto, límites de pantalla y t
   }
   const {act,createElement,useState}=await import('react')
   const {createRoot}=await import('react-dom/client')
-  const {createServer}=await import('vite')
+  const { crearServidorVitePrueba: createServer }=await import('./helpers/servidorVite.mjs')
   const server=await createServer({server:{middlewareMode:true,hmr:false},appType:'custom'})
   const root=createRoot(document.getElementById('root'))
   const cambios=[]

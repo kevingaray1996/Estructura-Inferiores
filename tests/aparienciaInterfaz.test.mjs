@@ -58,7 +58,7 @@ test('Inicio reutiliza el escudo decorativo y no introduce una clave de remontaj
 })
 
 test('selector usa el contexto existente, ofrece tres preferencias y variante compacta accesible', async () => {
-  const { createServer } = await import('vite')
+  const { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs')
   const { createElement } = await import('react')
   const { renderToStaticMarkup } = await import('react-dom/server')
   // Vite usa su puerto HMR por defecto cuando recibe 0; buscar uno libre evita

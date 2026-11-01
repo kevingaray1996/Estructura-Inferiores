@@ -14,7 +14,7 @@ test('Inicio: datos deportivos intactos, avisos, agenda por rol, DataFem sin rec
   poner('IS_REACT_ACT_ENVIRONMENT', true)
   const { act, createElement: h } = await import('react')
   const { createRoot } = await import('react-dom/client')
-  const { createServer } = await import('vite')
+  const { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs')
   const hoy = fechaArgentina(), manana = sumarDias(hoy, 1), ayer = sumarDias(hoy, -1)
   const jugadores = Array.from({ length: 12 }, (_, i) => ({ id: 'j' + i, nombre: 'Ana', apellido: 'Jugadora ' + i,
     categoria_id: 'cat', estado: i < 5 ? 'lesionado' : 'disponible', fecha_nacimiento: hoy, categorias: { nombre: 'Primera' } }))

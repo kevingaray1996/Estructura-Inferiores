@@ -20,7 +20,7 @@ test('Editor interactivo: colocar, arrastrar, propiedades, multiselección, hist
   dom.window.SVGElement.prototype.getScreenCTM = () => ({ inverse: () => ({}) })
   dom.window.SVGElement.prototype.setPointerCapture = () => {}
   dom.window.SVGElement.prototype.hasPointerCapture = () => false
-  const { createServer } = await import('vite'), React = await import('react'), { createRoot } = await import('react-dom/client')
+  const { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs'), React = await import('react'), { createRoot } = await import('react-dom/client')
   const server = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom' })
   const root = createRoot(document.getElementById('root'))
   const { act } = React

@@ -11,7 +11,7 @@ test('Auditoría 1 y 2: Médico consulta sin Físico/offline; categoría PF, acc
   const poner=(n,v)=>{previos.set(n,Object.getOwnPropertyDescriptor(globalThis,n));Object.defineProperty(globalThis,n,{value:v,writable:true,configurable:true})}
   for(const n of ['window','document','HTMLElement','Event','MouseEvent'])poner(n,dom.window[n])
   poner('IS_REACT_ACT_ENVIRONMENT',true)
-  const {act,createElement}=await import('react'),{createRoot}=await import('react-dom/client'),{createServer}=await import('vite')
+  const {act,createElement}=await import('react'),{createRoot}=await import('react-dom/client'),{ crearServidorVitePrueba: createServer }=await import('./helpers/servidorVite.mjs')
   const cat='10000000-0000-4000-8000-000000000001',otra='10000000-0000-4000-8000-000000000002'
   const j={id:'30000000-0000-4000-8000-000000000001',nombre:'Ana',apellido:'Prueba',categoria_id:cat,estado:'disponible'}
   let perfil={email:'prueba@example.invalid',nombre:'Prueba',rol:'medico',categoria_id:null}
