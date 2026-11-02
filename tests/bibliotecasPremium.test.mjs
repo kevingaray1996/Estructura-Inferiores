@@ -16,11 +16,15 @@ test('Bibliotecas Premium conservan escrituras, filtros, reproducción por enlac
     assert.equal(bloque(b), bloque(a), 'Handlers y payloads idénticos: ' + n)
     for (const re of [/\.from\('[^']+'\)/g, /\.select\('[^']*'\)/g, /\.rpc\('[^']+'/g]) assert.deepEqual(b.match(re), a.match(re), n)
   }
+  // La referencia espacial de Analisis cambia en la entrega de orientacion;
+  // su catalogo se conserva y su comportamiento tiene regresiones especificas.
+  const catalogo = s => s.slice(s.indexOf('const TIPOS ='), s.indexOf('const inputClass ='))
+  assert.equal(catalogo(leer('src/components/AnalisisSection.jsx')), catalogo(antes('src/components/AnalisisSection.jsx')))
   const entrenamiento = leer('src/components/EntrenamientosSection.jsx')
   const pizarras = s => s.match(/<PizarraEjercicio[^\n]+\/>/g)
   assert.deepEqual(pizarras(entrenamiento), pizarras(antes('src/components/EntrenamientosSection.jsx')))
   assert.match(leer('src/components/VideoSection.jsx'), /href=\{v.url\}/)
-  for (const p of ['src/components/AnalisisSection.jsx', 'src/components/PizarraTactica.jsx', 'src/components/EstadisticasEquipo.jsx', 'src/components/EncabezadoFotografico.jsx', 'src/components/fotografiasClub.css']) assert.equal(leer(p), antes(p), p)
+  for (const p of ['src/components/PizarraTactica.jsx', 'src/components/EstadisticasEquipo.jsx', 'src/components/EncabezadoFotografico.jsx', 'src/components/fotografiasClub.css']) assert.equal(leer(p), antes(p), p)
 })
 
 test('Fotografías Etapa 2: originales completos, rutas públicas y recurso de rival reservado', () => {

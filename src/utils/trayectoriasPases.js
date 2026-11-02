@@ -1,5 +1,6 @@
 import { cargarDetallePase, esPase, nombreDestinataria } from './destinatariasPases.js'
 import { esCuentaAdministradoraAnalisis } from './permisosAnalisis.js'
+import { referenciaVerificada } from './orientacionAnalisis.js'
 
 export function puntoExacto(x, y) {
   const valido = (v) => (typeof v === 'number' || typeof v === 'string') && String(v).trim() !== '' &&
@@ -16,6 +17,7 @@ export function trayectoriaExacta(evento, detalle) {
 
 // Solo informa la direccion existente. No determina la referencia historica de X/Y.
 export function direccionAtaquePase(partido, evento) {
+  if (referenciaVerificada(evento)) return evento.direccion_captura
   const inicial = partido?.direccion_primer_tiempo
   const periodo = Number(evento?.periodo)
   if (!['derecha', 'izquierda'].includes(inicial) || ![1, 2].includes(periodo)) return null

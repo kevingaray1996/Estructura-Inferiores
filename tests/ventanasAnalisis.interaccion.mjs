@@ -15,7 +15,7 @@ test('Análisis: dos ventanas, un reproductor, comandos confirmados y un guardad
   const { act,createElement } = await import('react'), { createRoot } = await import('react-dom/client'), { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs')
   const authUser={id:'f7562d52-a16a-48b5-95a0-efbcc70080d3',email:'simulado@test.invalid'}
   const j={id:'j',nombre:'Ana',apellido:'Prueba',categoria_id:'cat'}
-  const partidos=[{id:'p1',rival:'Rival A',fecha:'2026-10-29',categoria_id:'cat',partido_calendario_id:'c1',video_url:'https://www.youtube.com/watch?v=abc123def45'}, {id:'p2',rival:'Rival B',fecha:'2026-10-30',categoria_id:'cat',partido_calendario_id:'c2',video_url:'https://www.youtube.com/watch?v=xyz123def45'}]
+  const partidos=[{id:'p1',rival:'Rival A',fecha:'2026-10-29',categoria_id:'cat',direccion_primer_tiempo:'derecha',partido_calendario_id:'c1',video_url:'https://www.youtube.com/watch?v=abc123def45'}, {id:'p2',rival:'Rival B',fecha:'2026-10-30',categoria_id:'cat',direccion_primer_tiempo:'derecha',partido_calendario_id:'c2',video_url:'https://www.youtube.com/watch?v=xyz123def45'}]
   let emitirAuth
   let resolverInsert
   const datos={perfiles:{email:authUser.email,nombre:'Kevin Garay',rol:'coordinacion'},partidos:[],analisis_partidos:partidos,analisis_eventos:[],jugadores:[j],citaciones:[{id:'c',jugador_id:'j',dorsal:10,titular:true}]}

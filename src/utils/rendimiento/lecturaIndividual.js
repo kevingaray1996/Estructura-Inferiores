@@ -3,7 +3,7 @@ import { construirContratoIndividual } from './contratoIndividual.js'
 import { fechaValida } from '../planificacion.js'
 
 const CAMPOS_JUGADORAS='id,nombre,apellido,posicion,foto_url,categoria_id,tambien_reserva'
-const CAMPOS_EVENTOS='id,partido_id,jugador_id,tipo,resultado,segundo,periodo,coordenada_x,coordenada_y,zona'
+const CAMPOS_EVENTOS='id,partido_id,jugador_id,tipo,resultado,segundo,periodo,coordenada_x,coordenada_y,zona,sistema_coordenadas,direccion_captura,periodo_captura'
 const CAMPOS_ANALISIS='id,partido_calendario_id,categoria_id,fecha,rival,video_url'
 const CAMPOS_STATS='id,jugador_id,partido_id,minutos_jugados,titular,goles,asistencias,tarjetas_amarillas,tarjetas_rojas'
 const CAMPOS_PARTIDOS='id,categoria_id,fecha,rival'

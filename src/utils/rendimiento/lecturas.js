@@ -2,7 +2,7 @@
 const CAMPOS = {
   partidos: 'id,categoria_id,fecha,rival',
   analisis: 'id,partido_calendario_id,categoria_id,fecha,rival',
-  eventos: 'id,partido_id,jugador_id,tipo,resultado,segundo,periodo,coordenada_x,coordenada_y,zona',
+  eventos: 'id,partido_id,jugador_id,tipo,resultado,segundo,periodo,coordenada_x,coordenada_y,zona,sistema_coordenadas,direccion_captura,periodo_captura',
   estadisticas: 'id,jugador_id,partido_id,minutos_jugados,titular,goles,asistencias,tarjetas_amarillas,tarjetas_rojas',
 }
 const denegado = e => ['42501', 'PGRST301', 'PGRST302'].includes(e?.code) || [401, 403].includes(e?.status)

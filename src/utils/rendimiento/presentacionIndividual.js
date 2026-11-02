@@ -1,3 +1,4 @@
+import { zonaEvento } from '../orientacionAnalisis.js'
 import { fechaValida } from '../planificacion.js'
 import { resumirAcciones } from './metricas.js'
 
@@ -10,7 +11,7 @@ export function puntoEventoIndividual(e) {
 export function filtrarEventosIndividual(eventos, filtros) {
   return eventos.filter(e => (!filtros.partido || e.partido_id === filtros.partido || filtros.analisisPartido?.includes(e.partido_id)) && (!filtros.tipo || e.tipo === filtros.tipo) &&
     (!filtros.resultado || (filtros.resultado === '__pendiente' ? !e.resultado : e.resultado === filtros.resultado)) &&
-    (!filtros.periodo || String(e.periodo) === filtros.periodo) && (!filtros.zona || e.zona === filtros.zona) &&
+    (!filtros.periodo || String(e.periodo) === filtros.periodo) && (!filtros.zona || zonaEvento(e) === filtros.zona) &&
     ((!filtros.minutoDesde && !filtros.minutoHasta) || (typeof e.segundo === 'number' && Number.isFinite(e.segundo) && e.segundo >= 0 &&
       (!filtros.minutoDesde || e.segundo >= Number(filtros.minutoDesde) * 60) && (!filtros.minutoHasta || e.segundo < (Number(filtros.minutoHasta) + 1) * 60))))
 }

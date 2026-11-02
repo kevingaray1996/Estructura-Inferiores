@@ -46,9 +46,9 @@ test('Perfil 3.0: consultas, fórmulas, PDF, permisos y eliminación conservados
   }
   for (const ruta of ['src/components/PdfPerfilModal.jsx', 'src/utils/generarPerfilPDF.js', 'src/utils/generarBienestarPDF.js']) assert.equal(leer(ruta), base(ruta))
   // La autorización de Análisis cambió en una entrega posterior aprobada. Su
-  // catálogo y referencia espacial siguen siendo independientes del perfil.
+  // catálogo sigue intacto; la referencia espacial tiene pruebas propias de orientación.
   const analisis = leer('src/components/AnalisisSection.jsx'), analisisBase = base('src/components/AnalisisSection.jsx')
-  for (const [inicio, fin] of [['const TIPOS =', 'const inputClass ='], ['function zonaDesdeCoordenadas', 'function colorTipo']]) {
+  for (const [inicio, fin] of [['const TIPOS =', 'const inputClass =']]) {
     assert.equal(analisis.slice(analisis.indexOf(inicio), analisis.indexOf(fin)), analisisBase.slice(analisisBase.indexOf(inicio), analisisBase.indexOf(fin)))
   }
   const cabecera = leer('src/components/perfil/CabeceraPerfil.jsx')

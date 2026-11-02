@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { referenciaVerificada } from '../utils/orientacionAnalisis'
 import { supabase } from '../supabaseClient'
 import { ESTADOS_DESTINATARIA } from '../utils/destinatariasPases'
 import {
@@ -86,8 +87,8 @@ export default function DetalleDestinoPase({ evento, partido, autora, puedeEdita
     <p className="mt-2 text-sm">Destinataria: {cargando ? 'Cargando…' : error && !ficha ? 'No disponible' :
       ficha?.detalle?.destinataria_estado === 'identificada' ? ficha.destinataria :
         ESTADOS_DESTINATARIA[ficha?.detalle?.destinataria_estado || 'pendiente']}</p>
-    <p className="mt-2 text-xs analisis-secundario">Ataque registrado en este período: {direccion ? `${direccion === 'derecha' ? '→' : '←'} ${direccion}` : 'sin información válida'}.</p>
-    <p className="text-xs analisis-aviso">Referencia espacial histórica sin verificar: no se clasifica adelante, atrás ni lateral. Los puntos no se invierten.</p>
+    <p className="mt-2 text-xs analisis-secundario">Dirección de captura cuando está verificada; en históricos, configuración actual del período: {direccion ? `${direccion === 'derecha' ? '→' : '←'} ${direccion}` : 'sin información válida'}.</p>
+    <p className="text-xs analisis-aviso">{referenciaVerificada(evento) ? 'Referencia de captura conservada por acción. Las coordenadas visuales no se invierten.' : 'Referencia espacial histórica sin verificar: no se clasifica adelante, atrás ni lateral. Los puntos no se invierten.'}</p>
     {cargando && <p role="status" className="mt-3">Cargando detalle…</p>}
     {!cargando && ficha && <>
       <p className="mt-3 text-sm">{origen ? `Origen exacto: X ${origen.x}% · Y ${origen.y}% (punto blanco).` :

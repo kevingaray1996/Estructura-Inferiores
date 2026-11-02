@@ -1,3 +1,4 @@
+import { direccionDelPeriodo, referenciaNueva, referenciaVerificada, zonaTactica, zonaEvento as zonaEfectivaEvento } from '../utils/orientacionAnalisis'
 import { ANALISIS as A, textoAnalisis } from '../appearance/analisis'
 
 
@@ -241,13 +242,6 @@ function direccionOpuesta(direccion) {
   return direccion === 'derecha' ? 'izquierda' : 'derecha'
 }
 
-function zonaDesdeCoordenadas(x, y) {
-  // Cancha horizontal: X representa la progresión defensa → medio → ataque.
-  // Y representa los carriles izquierda → centro → derecha.
-  const sector = x < 33.333 ? 'Defensa' : x < 66.666 ? 'Medio' : 'Ataque'
-  const carril = y < 33.333 ? 'izquierda' : y < 66.666 ? 'centro' : 'derecha'
-  return `${sector} ${carril}`
-}
 
 function coordenadasEvento(evento) {
   const tieneX = evento?.coordenada_x !== null && evento?.coordenada_x !== undefined && evento?.coordenada_x !== ''
@@ -265,7 +259,8 @@ function coordenadasEvento(evento) {
   if (indice < 0) return null
   const sector = Math.floor(indice / 3) // Defensa, Medio, Ataque
   const carril = indice % 3 // izquierda, centro, derecha
-  return { x: [17, 50, 83][sector], y: [17, 50, 83][carril], exacta: false }
+  const invertida = referenciaVerificada(evento) && evento.direccion_captura === 'izquierda'
+  return { x: invertida ? 100 - [17, 50, 83][sector] : [17, 50, 83][sector], y: invertida ? 100 - [17, 50, 83][carril] : [17, 50, 83][carril], exacta: false }
 }
 
 function tieneCoordenadasExactas(evento) {
@@ -274,12 +269,6 @@ function tieneCoordenadasExactas(evento) {
     Number.isFinite(Number(evento.coordenada_x)) && Number.isFinite(Number(evento.coordenada_y))
 }
 
-function zonaEfectivaEvento(evento) {
-  if (tieneCoordenadasExactas(evento)) {
-    return zonaDesdeCoordenadas(Number(evento.coordenada_x), Number(evento.coordenada_y))
-  }
-  return ZONAS.includes(evento?.zona) ? evento.zona : null
-}
 
 function colorTipo(tipo) {
   if (['Gol', 'Remate', 'Centro'].includes(tipo)) return '#F2C230'
@@ -288,7 +277,7 @@ function colorTipo(tipo) {
   return '#60A5FA'
 }
 
-function CanchaInteractiva({ eventos = [], coordenadas, interactiva = false, onSelect, onEventClick, capaTrayectorias }) {
+function CanchaInteractiva({ eventos = [], coordenadas, direccion = null, interactiva = false, onSelect, onEventClick, capaTrayectorias }) {
   function manejarClick(e) {
     if (!interactiva || !onSelect) return
     const rect = e.currentTarget.getBoundingClientRect()
@@ -332,7 +321,7 @@ function CanchaInteractiva({ eventos = [], coordenadas, interactiva = false, onS
               onClick={onEventClick ? (e) => { e.stopPropagation(); onEventClick(evento) } : undefined}
               style={{ cursor: onEventClick ? 'pointer' : 'default' }}
             >
-              <title>{`${evento.tipo} · ${formatearTiempo(evento.segundo)} · ${evento.resultado || 'Pendiente'} · ${zonaEfectivaEvento(evento) || 'Sin zona'}`}</title>
+              <title>{`${evento.tipo} · ${formatearTiempo(evento.segundo)} · ${evento.resultado || 'Pendiente'} · ${zonaEfectivaEvento(evento) || 'Sin zona'}${referenciaVerificada(evento) ? '' : ' (referencia no verificada)'}`}</title>
               <circle cx={cx} cy={cy} r={punto.exacta ? 1.65 : 1.35} fill={colorTipo(evento.tipo)} stroke="#10251B" strokeWidth="0.35" opacity={punto.exacta ? 1 : 0.65} />
               {punto.exacta && <circle cx={cx} cy={cy} r="2.35" fill="none" stroke={colorTipo(evento.tipo)} strokeWidth="0.3" />}
             </g>
@@ -345,14 +334,17 @@ function CanchaInteractiva({ eventos = [], coordenadas, interactiva = false, onS
           </g>
         )}
       </svg>
+      {!direccion && <p className="px-2 text-[10px] text-white">Coordenadas originales. Las zonas históricas no están verificadas; las nuevas usan su orientación de captura.</p>}
+      {direccion && <p className="px-2 text-[10px] text-white">Ataque {direccion}. Arriba: carril {direccion === 'derecha' ? 'izquierdo' : 'derecho'} del equipo; abajo: carril {direccion === 'derecha' ? 'derecho' : 'izquierdo'}.</p>}
       <div className="flex justify-between px-2 pb-2 text-[10px] font-black tracking-wide" style={{ color: '#E5F0E7' }}>
-        <span>DEFENSA</span><span>MEDIO</span><span>ATAQUE</span>
+        <span>{direccion === 'derecha' ? 'DEFENSA' : direccion === 'izquierda' ? 'ATAQUE' : 'IZQUIERDA VISUAL'}</span><span>MEDIO</span><span>{direccion === 'derecha' ? 'ATAQUE' : direccion === 'izquierda' ? 'DEFENSA' : 'DERECHA VISUAL'}</span>
       </div>
     </div>
   )
 }
 
-function CanchaInformePDF({ eventos = [], titulo = 'Mapa de acciones', direccionReal = 'derecha' }) {
+function CanchaInformePDF({ eventos = [], titulo = 'Mapa de acciones', direccionReal = null }) {
+  const direccion = null
   const zonasVista = ZONAS
 
   const conteos = zonasVista.reduce((acc, nombre) => {
@@ -374,9 +366,9 @@ function CanchaInformePDF({ eventos = [], titulo = 'Mapa de acciones', direccion
       <div className="pdf-zonas-cancha rounded-xl border p-3" style={{ borderColor: '#D1D5DB', backgroundColor: '#F8FAFC' }}>
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="text-xs font-black uppercase tracking-wide" style={{ color: '#374151' }}>{titulo}</p>
-          <span className="text-[10px] font-semibold" style={{ color: '#6B7280' }}>Ataque real: {direccionReal === 'derecha' ? '→ derecha' : '← izquierda'}</span>
+          <span className="text-[10px] font-semibold" style={{ color: '#6B7280' }}>Configuración actual: {direccionReal || 'sin verificar'} (no reinterpreta el historial)</span>
         </div>
-        <svg viewBox="0 0 100 64" role="img" aria-label="Cancha horizontal: defensa a la izquierda, medio en el centro y ataque a la derecha" className="mx-auto block w-full" style={{ maxHeight: '350px' }}>
+        <svg viewBox="0 0 100 64" role="img" aria-label="Cancha visual fija con ubicaciones originales" className="mx-auto block w-full" style={{ maxHeight: '350px' }}>
           <rect x="1" y="1" width="98" height="62" rx="0.5" fill="#176344" stroke="#F4F7F4" strokeWidth="0.8" />
           <line x1="50" y1="1" x2="50" y2="63" stroke="#E5F0E7" strokeWidth="0.55" />
           <circle cx="50" cy="32" r="9.2" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
@@ -404,7 +396,7 @@ function CanchaInformePDF({ eventos = [], titulo = 'Mapa de acciones', direccion
           })}
         </svg>
         <div className="mt-2 flex justify-between text-[10px] font-bold" style={{ color: '#374151' }}>
-          <span>DEFENSA</span><span>MEDIO</span><span>ATAQUE</span>
+          <span>{direccion === 'derecha' ? 'DEFENSA' : direccion === 'izquierda' ? 'ATAQUE' : 'IZQUIERDA VISUAL'}</span><span>MEDIO</span><span>{direccion === 'derecha' ? 'ATAQUE' : direccion === 'izquierda' ? 'DEFENSA' : 'DERECHA VISUAL'}</span>
         </div>
         <div className="mt-3 flex flex-wrap gap-x-3 gap-y-2 text-[10px]" style={{ color: '#4B5563' }}>
           <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: '#F2C230', border: '1px solid #9CA3AF' }} />Ataque / remate / gol</span>
@@ -452,6 +444,7 @@ function CanchaInformePDF({ eventos = [], titulo = 'Mapa de acciones', direccion
             <p className="mt-1 text-lg font-black" style={{ color: '#171717' }}>{Math.max(0, eventos.length - totalConZona)}</p>
           </div>
         </div>
+        <p className="mt-2 text-[10px]">{eventos.filter(e => !referenciaVerificada(e)).length} acciones con referencia táctica histórica no verificada. Sus zonas se conservan como fueron registradas.</p>
         <p className="mt-3 text-[10px] leading-relaxed" style={{ color: '#6B7280' }}>Los porcentajes se calculan sobre las acciones que tienen una zona identificada. Las acciones antiguas se representan en el centro aproximado de su zona y no se modifican los registros guardados.</p>
       </div>
     </div>
@@ -601,8 +594,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   const [bloqueoEtiquetado] = useState(crearBloqueoEtiquetado)
 
   const partidoActual = partidos.find((p) => p.id === partidoId)
-  const direccionPrimerTiempo = partidoActual?.direccion_primer_tiempo === 'izquierda' ? 'izquierda' : 'derecha'
-  const direccionAtaqueActual = periodoActual === 1 ? direccionPrimerTiempo : direccionOpuesta(direccionPrimerTiempo)
+  const direccionPrimerTiempo = direccionDelPeriodo(partidoActual, 1)
+  const direccionAtaqueActual = direccionDelPeriodo(partidoActual, periodoActual)
 
   const partidoCalendarioActual =
     partidoActual?.partido_calendario ||
@@ -1138,7 +1131,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
           (filtroExploradorTipo === 'todos' || evento.tipo === filtroExploradorTipo) &&
           (filtroExploradorResultado === 'todos' ||
             (filtroExploradorResultado === 'Pendiente' ? !evento.resultado : evento.resultado === filtroExploradorResultado)) &&
-          (filtroExploradorZona === 'todos' || evento.zona === filtroExploradorZona) &&
+          (filtroExploradorZona === 'todos' || zonaEfectivaEvento(evento) === filtroExploradorZona) &&
           (desde === null || Number(evento.segundo) >= desde) &&
           (hasta === null || Number(evento.segundo) <= hasta) &&
           Boolean(partido)
@@ -1264,7 +1257,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   const estadisticasZonas = useMemo(
     () => ZONAS.map((nombre) => ({
       nombre,
-      total: eventosPartido.filter((e) => e.zona === nombre).length,
+      total: eventosPartido.filter((e) => zonaEfectivaEvento(e) === nombre).length,
     })),
     [eventosPartido],
   )
@@ -1458,6 +1451,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       const tiempo = tiempoActivo()
       const idRegistro = crypto.randomUUID()
 
+      const referenciaCaptura = referenciaNueva(partidoActual, periodoActual)
       enviado = true
       const { data, error: insertError } = await supabase
         .from('analisis_eventos')
@@ -1467,6 +1461,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
           jugador_id: idJugadora,
           segundo: tiempo,
           periodo: periodoActual,
+          ...referenciaCaptura,
           tipo: tipoSeleccionado,
           zona: null,
           resultado: null,
@@ -1512,6 +1507,9 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       jugador_id: evento.jugador_id || '',
       segundo: String(evento.segundo ?? 0),
       periodo: Number(evento.periodo) === 2 ? 2 : 1,
+      sistema_coordenadas: evento.sistema_coordenadas,
+      direccion_captura: evento.direccion_captura,
+      periodo_captura: evento.periodo_captura,
       zona: evento.zona || '',
       resultado: evento.resultado || '',
       observaciones: evento.observaciones || '',
@@ -1548,7 +1546,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
           jugador_id: edicionEvento.jugador_id || null,
           segundo: tiempo,
           periodo: Number(edicionEvento.periodo) === 2 ? 2 : 1,
-          zona: edicionEvento.zona || null,
+          zona: zonaEfectivaEvento(edicionEvento),
           resultado: edicionEvento.resultado || null,
           observaciones: edicionEvento.observaciones.trim() || null,
           coordenada_x: edicionEvento.coordenada_x,
@@ -1788,6 +1786,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       }
 
       const idRegistro = crypto.randomUUID()
+      const referenciaCaptura = referenciaNueva(partidoActual, periodoActual)
       enviado = true
       const { data, error: insertError } = await supabase
         .from('analisis_eventos')
@@ -1797,8 +1796,9 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
           jugador_id: jugadorId || null,
           segundo: tiempo,
           periodo: periodoActual,
+          ...referenciaCaptura,
           tipo,
-          zona: zona || null,
+          zona: coordenadasAccion ? zonaTactica(coordenadasAccion.x, coordenadasAccion.y, direccionAtaqueActual) : zona || null,
           resultado: resultado || null,
           observaciones: observaciones.trim() || null,
           coordenada_x: coordenadasAccion?.x ?? null,
@@ -2210,13 +2210,14 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                       </select>
                     </Campo>
                     <Campo label={`Dirección real del ataque en ${periodoActual === 1 ? 'el primer' : 'el segundo'} tiempo`}>
-                      <select className={inputClass} style={inputStyle} value={direccionAtaqueActual} onChange={(e) => cambiarDireccionAtaque(e.target.value)} disabled={bloqueoEscritura || guardando}>
+                      <select className={inputClass} style={inputStyle} value={direccionAtaqueActual || ''} onChange={(e) => cambiarDireccionAtaque(e.target.value)} disabled={bloqueoEscritura || guardando}>
+                        <option value="" disabled>Configurar dirección</option>
                         <option value="derecha">Atacamos hacia la derecha →</option>
                         <option value="izquierda">Atacamos hacia la izquierda ←</option>
                       </select>
                     </Campo>
                     <p className="text-xs sm:col-span-2" style={{ color: A.secundario }}>
-                      La cancha del análisis se mantiene normalizada (defensa a la izquierda y ataque a la derecha) para comparar ambos tiempos. La dirección real se guarda por partido y el otro tiempo queda automáticamente en sentido contrario.
+                      La cancha permanece fija. Las acciones nuevas conservan su dirección de captura; los registros históricos no se reinterpretan. Aplicar la migración de orientación antes de usar esta versión.
                     </p>
                   </div>
 
@@ -2677,7 +2678,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                             <select
                               className={inputClass}
                               style={inputStyle}
-                              value={zona}
+                              value={coordenadasAccion ? zonaTactica(coordenadasAccion.x, coordenadasAccion.y, direccionAtaqueActual) || zona : zona}
+                              disabled={Boolean(coordenadasAccion)}
                               onChange={(e) => setZona(e.target.value)}
                             >
                               {ZONAS.map((z) => (
@@ -2695,10 +2697,11 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                             </div>
                             <CanchaInteractiva
                               interactiva
+                              direccion={direccionAtaqueActual}
                               coordenadas={coordenadasAccion}
                               onSelect={(punto) => {
                                 setCoordenadasAccion(punto)
-                                setZona(zonaDesdeCoordenadas(punto.x, punto.y))
+                                setZona(zonaTactica(punto.x, punto.y, direccionAtaqueActual) || zona)
                               }}
                             />
                             <div className="flex justify-between gap-2">
@@ -2908,7 +2911,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                         <select
                           className={inputClass}
                           style={inputStyle}
-                          value={edicionEvento.zona}
+                          value={zonaEfectivaEvento(edicionEvento) || ''}
+                          disabled={referenciaVerificada(edicionEvento) && tieneCoordenadasExactas(edicionEvento)}
                           onChange={(e) => setEdicionEvento((a) => ({
                             ...a,
                             zona: e.target.value,
@@ -2965,6 +2969,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                       </div>
                       <CanchaInteractiva
                         interactiva
+                        direccion={referenciaVerificada(edicionEvento) ? edicionEvento.direccion_captura : null}
                         coordenadas={edicionEvento.coordenada_x != null && edicionEvento.coordenada_y != null
                           ? { x: Number(edicionEvento.coordenada_x), y: Number(edicionEvento.coordenada_y) }
                           : null}
@@ -2972,7 +2977,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                           ...a,
                           coordenada_x: punto.x,
                           coordenada_y: punto.y,
-                          zona: zonaDesdeCoordenadas(punto.x, punto.y),
+                          zona: referenciaVerificada(a) ? zonaTactica(punto.x, punto.y, a.direccion_captura) : a.zona,
                         }))}
                       />
                       {(edicionEvento.coordenada_x != null || edicionEvento.coordenada_y != null) && (
@@ -3836,7 +3841,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                   />
                   <CanchaInformePDF
                     titulo="Segundo tiempo · mapa de acciones"
-                    direccionReal={direccionOpuesta(direccionPrimerTiempo)}
+                    direccionReal={direccionDelPeriodo(partidoActual, 2)}
                     eventos={eventosPartido.filter((evento) => Number(evento.periodo || 1) === 2)}
                   />
                 </div>
