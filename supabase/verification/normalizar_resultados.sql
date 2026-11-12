@@ -39,6 +39,9 @@ where actual is distinct from nuevo
 group by 1, 2, 3 order by 1, 2;
 
 -- 4. Corrección. Reemplazar TOTAL_ESPERADO por la suma de "count" de la vista previa.
+-- Si falla con "Se iban a cambiar 0 filas", primero volvé a correr la vista previa (3):
+-- si da 0 filas, la normalización ya estaba aplicada (por ejemplo, el script se corrió dos veces)
+-- y no hay nada más que hacer. Buscá otra causa solo si la vista previa sigue mostrando filas.
 do $$
 declare cambiadas integer;
 begin
