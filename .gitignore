@@ -26,3 +26,6 @@ dist-ssr
 
 # Informe de auditoría local, no versionar
 INFORME.md
+
+# Resultados de auditoría de la base: datos sensibles, nunca a GitHub
+supabase/auditoria-seguridad/

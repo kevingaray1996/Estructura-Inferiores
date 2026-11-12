@@ -1,9 +1,9 @@
 import EntrenamientoDeHoy from './EntrenamientoDeHoy'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
 import { COLORES } from '../theme'
-import { fechaCorta, fechaLarga } from '../utils/formatoFecha'
+import { fechaLarga } from '../utils/formatoFecha'
 import EncabezadoSeccion from './ui/EncabezadoSeccion'
 import EstadoVacio from './ui/EstadoVacio'
 
@@ -61,73 +61,56 @@ function BienestarPublico({ categoriaId }) {
   const [rpeGuardando, setRpeGuardando] = useState(false)
   const [rpeEnviado, setRpeEnviado] = useState(false)
   const [rpeError, setRpeError] = useState('')
-  const [partidoHoy, setPartidoHoy] = useState(null)
+  const [errorCarga, setErrorCarga] = useState('')
+  const seleccionActual = useRef(null)
 
+  // Sin login, el formulario no lee ni escribe tablas: usa funciones de la base que validan
+  // la categoría del link y no devuelven ninguna respuesta guardada (ver supabase/migrations/*_seguridad_pasoA_*).
   useEffect(() => {
     async function cargar() {
       setCargando(true)
-      const { data: categoriaData } = await supabase
-        .from('categorias')
-        .select('nombre')
-        .eq('id', categoriaId)
-        .maybeSingle()
-      setCategoria(categoriaData)
-
-      const { data: jugadoresData } = await supabase
-        .from('jugadores_publico')
-        .select('*')
-        .eq('categoria_id', categoriaId)
-        .order('apellido')
-      setJugadores(jugadoresData || [])
-
-      const { data: partidoHoyData } = await supabase
-        .from('partidos')
-        .select('id, rival, fecha')
-        .eq('categoria_id', categoriaId)
-        .eq('fecha', fecha)
-        .maybeSingle()
-      setPartidoHoy(partidoHoyData || null)
-
+      setErrorCarga('')
+      const { data, error: errorLista } = await supabase.rpc('wellness_publico_categoria', { p_categoria_id: categoriaId })
+      setCategoria(data ? { nombre: data.nombre } : null)
+      setJugadores(data?.jugadoras || [])
+      // 22P02: el id del link no tiene formato válido; para la jugadora es lo mismo que un link inexistente.
+      if (errorLista && errorLista.code !== '22P02') setErrorCarga('No se pudo cargar la lista. Revisá la conexión y volvé a abrir el link.')
+      else if (!data) setErrorCarga('Este link de Wellness no es válido. Pedile el link actualizado al cuerpo técnico.')
       setCargando(false)
     }
     cargar()
   }, [categoriaId])
 
+  // El formulario arranca siempre vacío: solo se consulta si ya completó hoy (sí/no).
   async function elegirJugador(j) {
+    seleccionActual.current = j.id
     setJugadorSeleccionado(j)
     setVista('bienestar')
     setError('')
-    setRpeEnviado(false)
-    setRpeError('')
+    setValores({})
+    setEnviado(false)
+    reiniciarRpe()
     setFechaRpe(fecha)
-    setTipoRpe(partidoHoy ? 'partido' : 'entrenamiento')
-    const { data } = await supabase
-      .from('bienestar')
-      .select('*')
-      .eq('jugador_id', j.id)
-      .eq('fecha', fecha)
-      .maybeSingle()
-    setValores(data || {})
-    const yaCompleto = data && CAMPOS.every((c) => data[c.clave])
-    setEnviado(!!yaCompleto)
+    setTipoRpe('entrenamiento')
+    const { data: yaCompleto } = await supabase.rpc('wellness_publico_respondio', {
+      p_categoria_id: categoriaId,
+      p_jugadora_id: j.id,
+    })
+    // Si mientras tanto eligió otra jugadora, esta respuesta ya no corresponde.
+    if (seleccionActual.current === j.id) setEnviado(yaCompleto === true)
   }
 
-  useEffect(() => {
-    async function cargarRpe() {
-      if (!jugadorSeleccionado || vista !== 'rpe') return
-      setRpeEnviado(false)
-      setRpeError('')
-      const { data } = await supabase
-        .from('sesiones_fisicas')
-        .select('rpe')
-        .eq('jugador_id', jugadorSeleccionado.id)
-        .eq('fecha', fechaRpe)
-        .eq('tipo', tipoRpe)
-        .maybeSingle()
-      setValorRpe(data?.rpe ?? null)
-    }
-    cargarRpe()
-  }, [jugadorSeleccionado, vista, fechaRpe, tipoRpe])
+  function reiniciarRpe() {
+    setValorRpe(null)
+    setRpeEnviado(false)
+    setRpeError('')
+  }
+
+  function editarRespuesta() {
+    setValores({})
+    setError('')
+    setEnviado(false)
+  }
 
   function marcar(campo, valor) {
     setValores((prev) => ({
@@ -153,25 +136,24 @@ function BienestarPublico({ categoriaId }) {
   async function handleEnviar() {
     const completo = CAMPOS.every((c) => valores[c.clave])
     if (!completo) {
-      setError('Completá las 4 preguntas antes de enviar.')
+      setError('Completá todas las preguntas antes de enviar.')
       return
     }
     setGuardando(true)
     setError('')
 
-    const registro = {
-      fecha,
-      jugador_id: jugadorSeleccionado.id,
-      zona_dolor: valores.zona_dolor?.trim() || null,
-      fase_ciclo: valores.fase_ciclo || null,
-    }
-    CAMPOS.forEach((c) => {
-      registro[c.clave] = valores[c.clave]
+    // La fecha la pone la base (hoy en Argentina). Si ya había respuesta hoy, la reemplaza.
+    const { error: errorGuardar } = await supabase.rpc('wellness_publico_guardar', {
+      p_categoria_id: categoriaId,
+      p_jugadora_id: jugadorSeleccionado.id,
+      p_sueno: valores.sueno,
+      p_dolor_muscular: valores.dolor_muscular,
+      p_fatiga: valores.fatiga,
+      p_estres: valores.estres,
+      p_animo_entrenar: valores.animo_entrenar,
+      p_zona_dolor: valores.zona_dolor?.trim() || null,
+      p_fase_ciclo: valores.fase_ciclo || null,
     })
-
-    const { error: errorGuardar } = await supabase
-      .from('bienestar')
-      .upsert(registro, { onConflict: 'fecha,jugador_id' })
 
     setGuardando(false)
 
@@ -190,18 +172,14 @@ function BienestarPublico({ categoriaId }) {
     setRpeGuardando(true)
     setRpeError('')
 
-    const { error: errorGuardar } = await supabase
-      .from('sesiones_fisicas')
-      .upsert(
-        {
-          fecha: fechaRpe,
-          jugador_id: jugadorSeleccionado.id,
-          tipo: tipoRpe,
-          rpe: valorRpe,
-          partido_id: partidoHoy && fechaRpe === partidoHoy.fecha && tipoRpe === 'partido' ? partidoHoy.id : null,
-        },
-        { onConflict: 'fecha,jugador_id,tipo' }
-      )
+    // Solo guarda el RPE: la base valida el día (hoy y 3 días antes) y no toca minutos ni GPS.
+    const { error: errorGuardar } = await supabase.rpc('rpe_publico_guardar', {
+      p_categoria_id: categoriaId,
+      p_jugadora_id: jugadorSeleccionado.id,
+      p_fecha: fechaRpe,
+      p_tipo: tipoRpe,
+      p_rpe: valorRpe,
+    })
 
     setRpeGuardando(false)
 
@@ -232,7 +210,9 @@ function BienestarPublico({ categoriaId }) {
 
         {cargando && <EstadoVacio cargando mensaje="Cargando…" />}
 
-        {!cargando && !jugadorSeleccionado && (
+        {!cargando && errorCarga && <EstadoVacio mensaje={errorCarga} />}
+
+        {!cargando && !errorCarga && !jugadorSeleccionado && (
           <>
             <input
               type="text"
@@ -305,7 +285,7 @@ function BienestarPublico({ categoriaId }) {
                 🧠 Bienestar
               </button>
               <button
-                onClick={() => setVista('rpe')}
+                onClick={() => { if (vista !== 'rpe') reiniciarRpe(); setVista('rpe') }}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
                 style={{
                   backgroundColor: vista === 'rpe' ? COLORES.acento : COLORES.fondoTarjeta,
@@ -446,7 +426,7 @@ function BienestarPublico({ categoriaId }) {
                   ¡Gracias! Ya se guardó tu bienestar de hoy.
                 </p>
                 <button
-                  onClick={() => setEnviado(false)}
+                  onClick={editarRespuesta}
                   className="text-xs px-3 py-1.5 rounded-lg hover:opacity-80"
                   style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.textoSecundario, border: `1px solid ${COLORES.borde}` }}
                 >
@@ -457,38 +437,32 @@ function BienestarPublico({ categoriaId }) {
 
             {vista === 'rpe' && !rpeEnviado && (
               <>
-                {partidoHoy ? (
-                  <p className="text-sm mb-5" style={{ color: COLORES.texto }}>
-                    🏆 RPE del partido vs <b>{partidoHoy.rival}</b> — {fechaCorta(partidoHoy.fecha)}
-                  </p>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3 mb-5">
-                    <div>
-                      <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Día</label>
-                      <input
-                        type="date"
-                        value={fechaRpe}
-                        min={fechaMinima}
-                        max={fecha}
-                        onChange={(e) => setFechaRpe(e.target.value)}
-                        className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
-                        style={inputStyle}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Actividad</label>
-                      <select
-                        value={tipoRpe}
-                        onChange={(e) => setTipoRpe(e.target.value)}
-                        className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
-                        style={inputStyle}
-                      >
-                        <option value="entrenamiento">Entrenamiento</option>
-                        <option value="partido">Partido</option>
-                      </select>
-                    </div>
+                <div className="grid grid-cols-2 gap-3 mb-5">
+                  <div>
+                    <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Día</label>
+                    <input
+                      type="date"
+                      value={fechaRpe}
+                      min={fechaMinima}
+                      max={fecha}
+                      onChange={(e) => { reiniciarRpe(); setFechaRpe(e.target.value) }}
+                      className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
+                      style={inputStyle}
+                    />
                   </div>
-                )}
+                  <div>
+                    <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Actividad</label>
+                    <select
+                      value={tipoRpe}
+                      onChange={(e) => { reiniciarRpe(); setTipoRpe(e.target.value) }}
+                      className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
+                      style={inputStyle}
+                    >
+                      <option value="entrenamiento">Entrenamiento</option>
+                      <option value="partido">Partido</option>
+                    </select>
+                  </div>
+                </div>
 
                 <p className="text-sm mb-2" style={{ color: COLORES.texto }}>
                   ¿Qué tan duro sentiste el esfuerzo?
