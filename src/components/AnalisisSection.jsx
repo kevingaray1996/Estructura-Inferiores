@@ -23,32 +23,13 @@ import { Boton, Campo, Panel } from './analisis/PiezasAnalisis'
 import { AMARILLO, CLASE_CAMPO, ESTILO_CAMPO } from '../utils/analisis/estilos'
 import { datosEncuentro, fechaLegible, formatearTiempo, nombreJugadora, videoCalendario, youtubeEmbed } from '../utils/analisis/formato'
 import { resultadoImplicito, resultadoParaGuardar } from '../utils/analisis/completitud'
-import { CATALOGO_POR_DEFECTO, cargarCatalogo, opcionesResultado as opcionesResultadoCatalogo } from '../utils/analisis/catalogoAcciones'
+import { CATALOGO_POR_DEFECTO, cargarCatalogo, etiquetaBotonDe, etiquetaDe, opcionesResultado as opcionesResultadoCatalogo } from '../utils/analisis/catalogoAcciones'
 import {
   cargarResumenDestinatarias, esPase,
   nombreDestinataria,
 } from '../utils/destinatariasPases'
 
 const CATEGORIA_ID = '438874e7-e59f-460b-bec4-3c0ef5b44016'
-
-const TIPOS = [
-  'Pase correcto',
-  'Pase incorrecto',
-  'Pérdida',
-  'Recuperación',
-  'Remate',
-  'Centro',
-  'Duelo ofensivo',
-  'Duelo defensivo',
-  'Duelo aéreo',
-  'Atajada',
-  'Salida de arquera',
-  'Gol',
-  'Falta cometida',
-  'Falta recibida',
-  'Intercepción',
-  'Despeje',
-]
 
 const TIPOS_RAPIDOS = [
   { nombre: 'Pase correcto', corto: 'Pase +', icono: '↗', color: '#4ADE80' },
@@ -82,15 +63,6 @@ const RESULTADOS = [
 const RESULTADOS_DESPEJE = ['Exitoso', 'Fallido', 'Neutro']
 const CRITERIO_DESPEJE = 'Exitoso: elimina o reduce el peligro defensivo, aunque la pelota termine en posesión rival. Fallido: no resuelve la situación y genera o mantiene peligro inmediato. Neutro: no genera una ventaja ni un perjuicio defensivo claro.'
 
-function resultadosParaTipo(tipo) {
-  return tipo === 'Despeje' ? RESULTADOS_DESPEJE : RESULTADOS
-}
-
-function resultadoAlCambiarTipo(tipo, resultado) {
-  const opciones = resultadosParaTipo(tipo)
-  return opciones.includes(resultado) ? resultado : opciones[0]
-}
-
 function validarResultadoAccion(tipo, resultado) {
   if (tipo === 'Despeje' && !RESULTADOS_DESPEJE.includes(resultado)) {
     throw new Error('Seleccioná Exitoso, Fallido o Neutro para completar el despeje.')
@@ -101,14 +73,13 @@ const inputClass = CLASE_CAMPO
 
 const inputStyle = ESTILO_CAMPO
 
-const catalogoExplorador = { tipos: TIPOS, tiposRapidos: TIPOS_RAPIDOS, resultados: RESULTADOS, zonas: ZONAS }
+const catalogoExplorador = { tiposRapidos: TIPOS_RAPIDOS, resultados: RESULTADOS, zonas: ZONAS }
 
 // Al cambiar de tipo se conserva el resultado si sigue siendo válido para el
 // tipo nuevo según el catálogo; si no, se preselecciona su primera opción.
 function resultadoAlCambiarSegunCatalogo(catalogo, tipo, actual) {
   const opciones = opcionesResultadoCatalogo(catalogo, tipo)
-  const preferido = resultadoAlCambiarTipo(tipo, actual)
-  return opciones.includes(preferido) ? preferido : (opciones[0] ?? '')
+  return opciones.includes(actual) ? actual : (opciones[0] ?? '')
 }
 
 // Preferencia de cada dispositivo. Sin almacenamiento disponible, arranca apagado.
@@ -181,7 +152,7 @@ function colorTipo(tipo) {
   return '#60A5FA'
 }
 
-function CanchaInteractiva({ eventos = [], coordenadas, direccion = null, interactiva = false, onSelect, onEventClick, capaTrayectorias }) {
+function CanchaInteractiva({ eventos = [], coordenadas, direccion = null, interactiva = false, onSelect, onEventClick, capaTrayectorias, etiquetaTipo = (codigo) => codigo }) {
   function manejarClick(e) {
     if (!interactiva || !onSelect) return
     const rect = e.currentTarget.getBoundingClientRect()
@@ -225,7 +196,7 @@ function CanchaInteractiva({ eventos = [], coordenadas, direccion = null, intera
               onClick={onEventClick ? (e) => { e.stopPropagation(); onEventClick(evento) } : undefined}
               style={{ cursor: onEventClick ? 'pointer' : 'default' }}
             >
-              <title>{`${evento.tipo} · ${formatearTiempo(evento.segundo)} · ${evento.resultado || 'Pendiente'} · ${zonaEfectivaEvento(evento) || 'Sin zona'}${referenciaVerificada(evento) ? '' : ' (referencia no verificada)'}`}</title>
+              <title>{`${etiquetaTipo(evento.tipo)} · ${formatearTiempo(evento.segundo)} · ${evento.resultado || 'Pendiente'} · ${zonaEfectivaEvento(evento) || 'Sin zona'}${referenciaVerificada(evento) ? '' : ' (referencia no verificada)'}`}</title>
               <circle cx={cx} cy={cy} r={punto.exacta ? 1.65 : 1.35} fill={colorTipo(evento.tipo)} stroke="#10251B" strokeWidth="0.35" opacity={punto.exacta ? 1 : 0.65} />
               {punto.exacta && <circle cx={cx} cy={cy} r="2.35" fill="none" stroke={colorTipo(evento.tipo)} strokeWidth="0.3" />}
             </g>
@@ -467,6 +438,14 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   const [unToque, setUnToque] = useState(leerUnToque)
   const [catalogoAcciones, setCatalogoAcciones] = useState({ catalogo: CATALOGO_POR_DEFECTO, origen: 'base', aviso: '' })
   const catalogo = catalogoAcciones.catalogo
+  const etiquetaTipo = (codigo) => etiquetaDe(catalogo, codigo)
+  // Formularios: los tipos visibles, más el actual aunque esté oculto.
+  const opcionesTipo = (actual) => {
+    const visibles = catalogo.tipos.filter((t) => t.visible)
+    return !actual || visibles.some((t) => t.codigo === actual)
+      ? visibles
+      : [...visibles, { codigo: actual, etiqueta: etiquetaDe(catalogo, actual) }]
+  }
   const [ultimaAccion, setUltimaAccion] = useState(null)
   const [busquedaJugadora, setBusquedaJugadora] = useState('')
   const [mostrarEdicionEvento, setMostrarEdicionEvento] = useState(false)
@@ -1295,10 +1274,10 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
       // Conservamos la acción elegida para etiquetar varias jugadoras seguidas.
       setMensaje(idJugadora
-        ? `${tipoSeleccionado} registrada para ${nombreJugadora(
+        ? `${etiquetaTipo(tipoSeleccionado)} registrada para ${nombreJugadora(
           jugadoras.find((j) => j.id === idJugadora),
         )}.${resultadoImplicito(tipoSeleccionado, catalogo) ? '' : ' Resultado pendiente.'}`
-        : `${tipoSeleccionado} registrada sin jugadora (${formatearTiempo(tiempo)}). Completala en la revisión.`,
+        : `${etiquetaTipo(tipoSeleccionado)} registrada sin jugadora (${formatearTiempo(tiempo)}). Completala en la revisión.`,
       )
     } catch (e) {
       if (enviado && registroInciertoTrasError(e)) setRegistroIncierto(true)
@@ -1318,7 +1297,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
     setEditandoEventoId(evento.id)
     setEdicionEvento({
-      tipo: evento.tipo || TIPOS[0],
+      tipo: evento.tipo || catalogo.tipos[0]?.codigo || '',
       jugador_id: evento.jugador_id || '',
       segundo: String(evento.segundo ?? 0),
       periodo: Number(evento.periodo) === 2 ? 2 : 1,
@@ -1427,7 +1406,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
       setEventos((actuales) => actuales.filter((e) => e.id !== evento.id))
       setUltimaAccion(null)
-      setMensaje(`Se deshizo ${evento.tipo} · ${formatearTiempo(evento.segundo)}.`)
+      setMensaje(`Se deshizo ${etiquetaTipo(evento.tipo)} · ${formatearTiempo(evento.segundo)}.`)
     } catch (e) {
       console.error('Error al deshacer acción:', e)
       setError(e.message || 'No se pudo deshacer la acción.')
@@ -2347,6 +2326,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                               key={accion.nombre}
                               type="button"
                               data-tipo-rapido={accion.nombre}
+                              title={etiquetaTipo(accion.nombre)}
                               disabled={unToque ? capturaBloqueada : guardando}
                               onClick={() => {
                                 if (unToque) {
@@ -2375,8 +2355,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                               >
                                 {accion.icono}
                               </span>
-                              <span className="mt-2 block text-xs font-bold">
-                                {accion.corto}
+                              <span className="mt-2 block truncate text-xs font-bold">
+                                {etiquetaBotonDe(catalogo, accion.nombre)}
                               </span>
                             </button>
                           )
@@ -2391,7 +2371,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                           className="mt-3 min-h-11 w-full rounded-lg border px-3 py-2 text-sm font-bold disabled:opacity-40"
                           style={{ backgroundColor: A.fondo, borderColor: A.borde, color: A.texto }}
                         >
-                          ↶ Deshacer {accionDeshacible.tipo} · {formatearTiempo(accionDeshacible.segundo)}
+                          ↶ Deshacer {etiquetaTipo(accionDeshacible.tipo)} · {formatearTiempo(accionDeshacible.segundo)}
                         </button>
                       )}
 
@@ -2404,7 +2384,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                           }}
                         >
                           <p className="text-sm font-bold">
-                            Acción seleccionada: {tipoRapido}
+                            Acción seleccionada: {etiquetaTipo(tipoRapido)}
                           </p>
                           <p className="mt-1 text-xs" style={{ color: A.secundario }}>
                             Tiempo: <TiempoVideo reloj={relojVideo} /> · Elegí una
@@ -2494,8 +2474,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                                 setResultado((actual) => resultadoAlCambiarSegunCatalogo(catalogo, e.target.value, actual))
                               }}
                             >
-                              {TIPOS.map((t) => (
-                                <option key={t} value={t}>{t}</option>
+                              {opcionesTipo(tipo).map((t) => (
+                                <option key={t.codigo} value={t.codigo}>{t.etiqueta}</option>
                               ))}
                             </select>
                           </Campo>
@@ -2591,6 +2571,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                               </span>
                             </div>
                             <CanchaInteractiva
+                              etiquetaTipo={etiquetaTipo}
                               interactiva
                               direccion={direccionAtaqueActual}
                               coordenadas={coordenadasAccion}
@@ -2704,8 +2685,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                       onChange={(e) => setFiltroTipo(e.target.value)}
                     >
                       <option value="todos">Todas las acciones</option>
-                      {TIPOS.map((t) => (
-                        <option key={t} value={t}>{t}</option>
+                      {catalogo.tipos.map((t) => (
+                        <option key={t.codigo} value={t.codigo}>{t.etiqueta}</option>
                       ))}
                     </select>
 
@@ -2754,8 +2735,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                             resultado: resultadoAlCambiarSegunCatalogo(catalogo, e.target.value, a.resultado),
                           }))}
                         >
-                          {TIPOS.map((t) => (
-                            <option key={t} value={t}>{t}</option>
+                          {opcionesTipo(edicionEvento.tipo).map((t) => (
+                            <option key={t.codigo} value={t.codigo}>{t.etiqueta}</option>
                           ))}
                         </select>
                       </Campo>
@@ -2867,6 +2848,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                         </span>
                       </div>
                       <CanchaInteractiva
+                        etiquetaTipo={etiquetaTipo}
                         interactiva
                         direccion={referenciaVerificada(edicionEvento) ? edicionEvento.direccion_captura : null}
                         coordenadas={edicionEvento.coordenada_x != null && edicionEvento.coordenada_y != null
@@ -2953,7 +2935,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                           </div>
 
                           <div className="min-w-[120px] flex-1">
-                            <p className="font-bold">{ev.tipo}</p>
+                            <p className="break-words font-bold">{etiquetaTipo(ev.tipo)}</p>
                             <p className="mt-1 text-xs" style={{ color: A.secundario }}>
                               {jugadora ? nombreJugadora(jugadora) : 'Sin jugadora'}
                               {ev.zona ? ` · ${ev.zona}` : ''}
@@ -3005,7 +2987,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
           {seccion === 'explorador' && (
             <ExploradorAnalisis eventos={eventos} partidos={partidos} jugadoras={jugadoras}
-              catalogo={catalogoExplorador} filtros={filtrosExplorador} cambiarFiltro={cambiarFiltroExplorador}
+              catalogo={catalogoExplorador} catalogoAcciones={catalogo} filtros={filtrosExplorador} cambiarFiltro={cambiarFiltroExplorador}
               resumenDestinatarias={resumenDestinatarias} onReintentarDestinatarias={() => setRecargaDestinatarias((n) => n + 1)}
               puedeEditarDestinatarias={puedeEditarDestinatarias} escrituraAutorizada={escrituraAutorizada}
               paseDestinataria={paseDestinataria} onEditarDestinataria={setPaseDestinataria} onCerrarDestinataria={() => setPaseDestinataria(null)}
@@ -3023,7 +3005,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
           )}
 
           {seccion === 'estadisticas' && (
-            <EstadisticasAnalisis alcance={alcanceEstadisticas} cambiarAlcance={setAlcanceEstadisticas}
+            <EstadisticasAnalisis alcance={alcanceEstadisticas} cambiarAlcance={setAlcanceEstadisticas} catalogoAcciones={catalogo}
               partidoActual={partidoActual} partidos={partidos} eventos={eventos} eventosPartido={eventosPartido} jugadoras={jugadoras} />
           )}
 
@@ -3102,7 +3084,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                 <Campo label="Tipo de acción">
                   <select className={inputClass} style={inputStyle} value={filtroMapaTipo} onChange={(e) => setFiltroMapaTipo(e.target.value)}>
                     <option value="todos">Todos los tipos</option>
-                    {TIPOS.map((accion) => <option key={accion} value={accion}>{accion}</option>)}
+                    {catalogo.tipos.map((t) => <option key={t.codigo} value={t.codigo}>{t.etiqueta}</option>)}
                   </select>
                 </Campo>
                 <Campo label="Resultado">
@@ -3143,12 +3125,14 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
               <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
                 <div className="space-y-3">
                   <CanchaInteractiva
+                    etiquetaTipo={etiquetaTipo}
                     eventos={eventosMapa}
                     onEventClick={(evento) => esPase(evento) ? setPaseDestinoId(evento.id) : abrirEventoEnVideo(evento)}
                     capaTrayectorias={!resumenDestinatarias.cargando && !resumenDestinatarias.error && <FlechasPases
                       eventos={eventosMapa}
                       detalles={resumenDestinatarias.detalles}
                       onSelect={(evento) => setPaseDestinoId(evento.id)}
+                      etiquetaTipo={etiquetaTipo}
                     />}
                   />
                   {resumenDestinatarias.cargando && <p role="status" className="text-xs" style={{ color: A.secundario }}>Cargando trayectorias…</p>}
@@ -3160,10 +3144,11 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                   {paseDestinoActual && <DetalleDestinoPase
                     key={paseDestinoActual.id}
                     evento={paseDestinoActual}
+                    etiquetaTipo={etiquetaTipo(paseDestinoActual.tipo)}
                     partido={partidos.find((p) => p.id === paseDestinoActual.partido_id)}
                     autora={nombreJugadora(jugadoras.find((j) => j.id === paseDestinoActual.jugador_id))}
                     puedeEditar={puedeEditarDestinatarias && escrituraAutorizada}
-                    renderCancha={(props) => <CanchaInteractiva {...props} />}
+                    renderCancha={(props) => <CanchaInteractiva {...props} etiquetaTipo={etiquetaTipo} />}
                     onClose={() => setPaseDestinoId(null)}
                     onVideo={abrirEventoEnVideo}
                     onSaved={(detalle) => {
@@ -3240,7 +3225,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
-                                <p className="truncate text-sm font-bold">{evento.tipo}</p>
+                                <p className="truncate text-sm font-bold" title={etiquetaTipo(evento.tipo)}>{etiquetaTipo(evento.tipo)}</p>
                                 <p className="mt-1 truncate text-xs" style={{ color: A.secundario }}>
                                   {nombreJugadora(jugadora)} · {partido?.rival || 'Rival sin nombre'}
                                 </p>
@@ -3317,7 +3302,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div className="border-l-4 pl-3" style={{ borderColor: AMARILLO }}>
                     <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#6B7280' }}>Acción más registrada</p>
-                    <p className="mt-1 text-sm font-black" style={{ color: '#171717' }}>{estadisticasInforme[0]?.[0] || 'Sin acciones registradas'}</p>
+                    <p className="mt-1 text-sm font-black" style={{ color: '#171717' }}>{estadisticasInforme[0] ? etiquetaTipo(estadisticasInforme[0][0]) : 'Sin acciones registradas'}</p>
                     {estadisticasInforme[0] && <p className="text-xs" style={{ color: '#4B5563' }}>{estadisticasInforme[0][1].total} registro(s)</p>}
                   </div>
                   <div className="border-l-4 pl-3" style={{ borderColor: AMARILLO }}>
@@ -3365,7 +3350,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                       {accionesGraficoInforme.length ? accionesGraficoInforme.map(([nombre, datos]) => {
                         const maximo = Math.max(...accionesGraficoInforme.map(([, d]) => d.total), 1)
                         return <div key={nombre}>
-                          <div className="mb-1 flex items-center justify-between gap-2 text-xs"><span className="min-w-0 truncate font-semibold">{nombre}</span><strong>{datos.total}</strong></div>
+                          <div className="mb-1 flex items-center justify-between gap-2 text-xs"><span className="min-w-0 truncate font-semibold">{etiquetaTipo(nombre)}</span><strong>{datos.total}</strong></div>
                           <div className="pdf-barra-fondo h-2.5 overflow-hidden rounded-full" style={{ backgroundColor: '#E5E7EB' }}><div className="pdf-barra-amarilla" style={{ width: `${(datos.total / maximo) * 100}%`, height: '100%', backgroundColor: '#F2C230', borderRadius: '999px' }} /></div>
                         </div>
                       }) : <p className="text-xs" style={{ color: '#6B7280' }}>Sin acciones registradas.</p>}
@@ -3398,7 +3383,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                       </tr></thead>
                       <tbody>{estadisticasInforme.map(([nombre, datos]) => (
                         <tr key={nombre} className="border-t" style={{ borderColor: A.borde }}>
-                          <td className="p-2 font-semibold">{nombre}</td><td className="p-2 text-right">{datos.total}</td><td className="p-2 text-right">{datos.efectivas}</td><td className="p-2 text-right">{datos.noEfectivas}</td><td className="p-2 text-right">{datos.neutros}</td><td className="p-2 text-right">{datos.pendientes}</td>
+                          <td className="p-2 font-semibold">{etiquetaTipo(nombre)}</td><td className="p-2 text-right">{datos.total}</td><td className="p-2 text-right">{datos.efectivas}</td><td className="p-2 text-right">{datos.noEfectivas}</td><td className="p-2 text-right">{datos.neutros}</td><td className="p-2 text-right">{datos.pendientes}</td>
                           <td className="p-2 text-right">{datos.efectivas + datos.noEfectivas ? `${Math.round(datos.efectivas / (datos.efectivas + datos.noEfectivas) * 100)}%` : '—'}</td>
                         </tr>
                       ))}</tbody>
@@ -3459,7 +3444,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                       </tr></thead>
                       <tbody>{[...eventosPartido].sort((a, b) => Number(a.segundo) - Number(b.segundo)).map((ev) => (
                         <tr key={ev.id} className="border-t" style={{ borderColor: A.borde }}>
-                          <td className="p-2 font-mono">{formatearTiempo(ev.segundo)}</td><td className="p-2">{ev.tipo}</td><td className="p-2">{nombreJugadora(jugadoras.find((j) => j.id === ev.jugador_id))}</td><td className="p-2">{ev.zona || '—'}</td><td className="p-2">{ev.resultado || 'Pendiente'}</td><td className="p-2">{ev.observaciones || '—'}</td>
+                          <td className="p-2 font-mono">{formatearTiempo(ev.segundo)}</td><td className="p-2">{etiquetaTipo(ev.tipo)}</td><td className="p-2">{nombreJugadora(jugadoras.find((j) => j.id === ev.jugador_id))}</td><td className="p-2">{ev.zona || '—'}</td><td className="p-2">{ev.resultado || 'Pendiente'}</td><td className="p-2">{ev.observaciones || '—'}</td>
                         </tr>
                       ))}</tbody>
                     </table>

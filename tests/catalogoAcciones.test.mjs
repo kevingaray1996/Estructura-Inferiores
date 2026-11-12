@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  CATALOGO_BASE, CATALOGO_POR_DEFECTO, cargarCatalogo, colorDe, crearCatalogo, opcionesResultado, reglasDe,
+  CATALOGO_BASE, CATALOGO_POR_DEFECTO, cargarCatalogo, colorDe, crearCatalogo, etiquetaBotonDe, etiquetaDe, opcionesResultado, reglasDe,
 } from '../src/utils/analisis/catalogoAcciones.js'
 
 const controlArquera = {
@@ -91,4 +91,19 @@ test('El catálogo base coincide con las filas que inserta la migración', async
   const enCodigo = CATALOGO_BASE.map(({ visible, atajo, ...resto }) => (assert.equal(visible, true), assert.equal(atajo, null), resto))
   assert.deepEqual(filas, enCodigo)
   assert.match(sql, /atajo ~ '\^\[a-y\]\$'/)
+})
+
+test('Nombres: largo para listas, corto para botones, el código si no hay fila', () => {
+  const catalogo = crearCatalogo([
+    { ...CATALOGO_BASE[0], etiqueta: 'Pase bien', etiqueta_boton: 'P+' },
+    { ...controlArquera, etiqueta_boton: '' },
+  ])
+  assert.equal(etiquetaDe(catalogo, 'Pase correcto'), 'Pase bien')
+  assert.equal(etiquetaBotonDe(catalogo, 'Pase correcto'), 'P+')
+  // Sin nombre corto, el botón usa el largo.
+  assert.equal(etiquetaBotonDe(catalogo, 'control_de_arquera'), 'Control de arquera')
+  assert.equal(etiquetaDe(catalogo, 'Algo viejo'), 'Algo viejo')
+  assert.equal(etiquetaBotonDe(catalogo, 'Algo viejo'), 'Algo viejo')
+  assert.equal(etiquetaDe(CATALOGO_POR_DEFECTO, 'Pase incorrecto'), 'Pase incorrecto')
+  assert.equal(etiquetaBotonDe(CATALOGO_POR_DEFECTO, 'Pase incorrecto'), 'Pase −')
 })

@@ -2,10 +2,11 @@ import { useMemo } from 'react'
 import { ANALISIS as A, textoAnalisis } from '../../appearance/analisis'
 import { AMARILLO } from '../../utils/analisis/estilos'
 import { datosEncuentro, nombreJugadora } from '../../utils/analisis/formato'
+import { etiquetaDe } from '../../utils/analisis/catalogoAcciones'
 import { Panel } from './PiezasAnalisis'
 
 // El alcance vive en AnalisisSection para que se conserve al cambiar de pestaña.
-export default function EstadisticasAnalisis({ alcance, cambiarAlcance, partidoActual, partidos, eventos, eventosPartido, jugadoras }) {
+export default function EstadisticasAnalisis({ alcance, cambiarAlcance, catalogoAcciones, partidoActual, partidos, eventos, eventosPartido, jugadoras }) {
   const eventosEstadisticos = useMemo(
     () => alcance === 'acumulado' ? eventos : eventosPartido,
     [alcance, eventos, eventosPartido],
@@ -172,7 +173,7 @@ export default function EstadisticasAnalisis({ alcance, cambiarAlcance, partidoA
               return (
                 <div key={nombre}>
                   <div className="mb-1 flex justify-between gap-3 text-sm">
-                    <span>{nombre}</span>
+                    <span className="min-w-0 break-words">{etiquetaDe(catalogoAcciones, nombre)}</span>
                     <span className="font-bold">{datos.total}</span>
                   </div>
                   <div
@@ -243,7 +244,7 @@ export default function EstadisticasAnalisis({ alcance, cambiarAlcance, partidoA
                     })()}</td>
                     <td className="p-2">
                       {Object.entries(j.tipos)
-                        .map(([t, n]) => `${t}: ${n}`)
+                        .map(([t, n]) => `${etiquetaDe(catalogoAcciones, t)}: ${n}`)
                         .join(' · ')}
                     </td>
                   </tr>

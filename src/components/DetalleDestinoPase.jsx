@@ -7,7 +7,7 @@ import {
 } from '../utils/trayectoriasPases'
 import FlechasPases from './FlechasPases'
 
-export default function DetalleDestinoPase({ evento, partido, autora, puedeEditar, renderCancha, onSaved, onClose, onVideo }) {
+export default function DetalleDestinoPase({ evento, partido, autora, puedeEditar, renderCancha, onSaved, onClose, onVideo, etiquetaTipo = evento.tipo }) {
   const [ficha, setFicha] = useState(null)
   const [destino, setDestino] = useState(null)
   const [cargando, setCargando] = useState(true)
@@ -82,7 +82,7 @@ export default function DetalleDestinoPase({ evento, partido, autora, puedeEdita
       <h3 id="titulo-destino-pase" className="font-bold">Trayectoria del pase</h3>
       <button type="button" disabled={guardando} onClick={onClose} className="text-sm disabled:opacity-40">Cerrar</button>
     </div>
-    <p className="mt-2 text-sm">{autora} · {evento.tipo}</p>
+    <p className="mt-2 text-sm">{autora} · {etiquetaTipo}</p>
     <p className="text-sm">{partido?.rival || 'Partido'} · Período {evento.periodo ?? 'sin registrar'} · {Math.floor(evento.segundo / 60)}:{String(evento.segundo % 60).padStart(2, '0')}</p>
     <p className="mt-2 text-sm">Destinataria: {cargando ? 'Cargando…' : error && !ficha ? 'No disponible' :
       ficha?.detalle?.destinataria_estado === 'identificada' ? ficha.destinataria :

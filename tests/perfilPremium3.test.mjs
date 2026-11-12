@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { soloLogica } from './helpers/soloLogica.mjs'
+import { compararCatalogoAnalisis } from './helpers/catalogoReferencia.mjs'
 const leer = ruta => readFileSync(ruta, 'utf8').replaceAll('\r', '')
 
 test('Perfil 3.0: temporadas reales, un solo año, sin fechas y evaluación sin valores inventados', async () => {
@@ -48,10 +49,7 @@ test('Perfil 3.0: consultas, fórmulas, PDF, permisos y eliminación conservados
   for (const ruta of ['src/components/PdfPerfilModal.jsx', 'src/utils/generarPerfilPDF.js', 'src/utils/generarBienestarPDF.js']) assert.equal(soloLogica(leer(ruta)), soloLogica(base(ruta)))
   // La autorización de Análisis cambió en una entrega posterior aprobada. Su
   // catálogo sigue intacto; la referencia espacial tiene pruebas propias de orientación.
-  const analisis = leer('src/components/AnalisisSection.jsx'), analisisBase = base('src/components/AnalisisSection.jsx')
-  for (const [inicio, fin] of [['const TIPOS =', 'const inputClass =']]) {
-    assert.equal(analisis.slice(analisis.indexOf(inicio), analisis.indexOf(fin)), analisisBase.slice(analisisBase.indexOf(inicio), analisisBase.indexOf(fin)))
-  }
+  compararCatalogoAnalisis(leer('src/components/AnalisisSection.jsx'), base('src/components/AnalisisSection.jsx'))
   const cabecera = leer('src/components/perfil/CabeceraPerfil.jsx')
   assert.match(cabecera, /inicio-equipo-cuerpo-tecnico-original.jpeg/); assert.match(cabecera, /Escudo de Comunicaciones/)
   assert.doesNotMatch(cabecera, /estado_detalle|bienestar|nro_documento|dorsal|altura/)

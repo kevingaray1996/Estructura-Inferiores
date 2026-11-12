@@ -7,7 +7,7 @@ import {
 
 const control = 'w-full rounded-lg border analisis-control ui-control p-3 text-sm'
 
-export default function DetalleDestinatariaPase({ evento, partido, autora, onClose, onSaved, onVideo, puedeEditar = true }) {
+export default function DetalleDestinatariaPase({ evento, partido, autora, onClose, onSaved, onVideo, puedeEditar = true, etiquetaTipo = evento.tipo }) {
   const [datos, setDatos] = useState(null)
   const [estado, setEstado] = useState('pendiente')
   const [destinatariaId, setDestinatariaId] = useState('')
@@ -93,7 +93,7 @@ export default function DetalleDestinatariaPase({ evento, partido, autora, onClo
           }
         }}>
         <h3 id="titulo-destinataria" className="text-lg font-bold">Editar destinataria</h3>
-        <p className="mt-2 text-sm analisis-secundario">{autora} · {evento.tipo}</p>
+        <p className="mt-2 text-sm analisis-secundario">{autora} · {etiquetaTipo}</p>
         <p className="text-sm analisis-secundario">{partido?.rival || 'Partido'} · {Math.floor(evento.segundo / 60)}:{String(evento.segundo % 60).padStart(2, '0')}</p>
         <form onSubmit={guardar} className="mt-4 space-y-4" aria-busy={cargando || guardando}>
           {cargando && <p role="status">Cargando detalle y convocadas…</p>}

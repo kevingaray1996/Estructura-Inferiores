@@ -72,6 +72,15 @@ export function reglasDe(catalogo, codigo) {
   return catalogo.porCodigo[codigo] || normalizar({ codigo, ubicacion: 'obligatoria', resultados: [] })
 }
 
+// En pantalla se muestra el nombre; en la base y en los cálculos, siempre el código.
+export function etiquetaDe(catalogo, codigo) {
+  return reglasDe(catalogo, codigo).etiqueta
+}
+
+export function etiquetaBotonDe(catalogo, codigo) {
+  return reglasDe(catalogo, codigo).etiqueta_boton
+}
+
 export function opcionesResultado(catalogo, codigo) {
   const reglas = reglasDe(catalogo, codigo)
   return reglas.resultado_implicito ? [reglas.resultado_implicito] : reglas.resultados

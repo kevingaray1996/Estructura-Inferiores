@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { ANALISIS as A, textoAnalisis } from '../../appearance/analisis'
 import { zonaEvento as zonaEfectivaEvento } from '../../utils/orientacionAnalisis'
 import { esPase, ESTADOS_DESTINATARIA } from '../../utils/destinatariasPases'
+import { etiquetaDe } from '../../utils/analisis/catalogoAcciones'
 import { AMARILLO, CLASE_CAMPO, ESTILO_CAMPO } from '../../utils/analisis/estilos'
 import { fechaLegible, formatearTiempo, nombreJugadora, videoCalendario, youtubeEmbed } from '../../utils/analisis/formato'
 import DetalleDestinatariaPase from '../DetalleDestinatariaPase'
@@ -9,7 +10,7 @@ import { Boton, Campo, Panel } from './PiezasAnalisis'
 
 // Los filtros viven en AnalisisSection para que se conserven al cambiar de pestaña.
 export default function ExploradorAnalisis({
-  eventos, partidos, jugadoras, catalogo, filtros, cambiarFiltro,
+  eventos, partidos, jugadoras, catalogo, catalogoAcciones, filtros, cambiarFiltro,
   resumenDestinatarias, onReintentarDestinatarias, puedeEditarDestinatarias, escrituraAutorizada,
   paseDestinataria, onEditarDestinataria, onCerrarDestinataria, onDestinatariaGuardada, onVideo,
 }) {
@@ -80,7 +81,7 @@ export default function ExploradorAnalisis({
         <Campo label="Tipo de acción">
           <select className={CLASE_CAMPO} style={ESTILO_CAMPO} value={filtros.tipo} onChange={(e) => cambiarFiltro.tipo(e.target.value)}>
             <option value="todos">Todos los tipos</option>
-            {catalogo.tipos.map((t) => <option key={t} value={t}>{t}</option>)}
+            {catalogoAcciones.tipos.map((t) => <option key={t.codigo} value={t.codigo}>{t.etiqueta}</option>)}
           </select>
         </Campo>
         <Campo label="Resultado">
@@ -154,7 +155,7 @@ export default function ExploradorAnalisis({
                     <span className="text-xs" style={{ color: A.secundario }}>{fechaLegible(partido?.fecha)}</span>
                   </td>
                   <td className="p-3">{jugadora ? nombreJugadora(jugadora) : 'Sin jugadora'}</td>
-                  <td className="p-3 font-bold" style={{ color: textoAnalisis(accion?.color || A.texto) }}>{ev.tipo}</td>
+                  <td className="p-3 font-bold" style={{ color: textoAnalisis(accion?.color || A.texto) }}>{etiquetaDe(catalogoAcciones, ev.tipo)}</td>
                   <td className="p-3">{ev.zona || '—'}</td>
                   <td className="p-3">
                     <span className="rounded-md px-2 py-1 text-xs font-bold" style={{ backgroundColor: ev.resultado ? A.control : A.seleccion, color: textoAnalisis(ev.resultado ? A.texto : AMARILLO) }}>
@@ -192,6 +193,7 @@ export default function ExploradorAnalisis({
       {paseDestinataria && puedeEditarDestinatarias && <DetalleDestinatariaPase puedeEditar={escrituraAutorizada}
         key={paseDestinataria.id}
         evento={paseDestinataria}
+        etiquetaTipo={etiquetaDe(catalogoAcciones, paseDestinataria.tipo)}
         partido={partidos.find((p) => p.id === paseDestinataria.partido_id)}
         autora={nombreJugadora(jugadoras.find((j) => j.id === paseDestinataria.jugador_id))}
         onClose={onCerrarDestinataria}

@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { soloLogica } from './helpers/soloLogica.mjs'
+import { compararCatalogoAnalisis } from './helpers/catalogoReferencia.mjs'
 const base = '62a21ea33cde9059931e2f91d78bf8bd841832bb'
 const leer = p => readFileSync(p, 'utf8').replaceAll('\r', '')
 const antes = p => execFileSync('git', ['show', `${base}:${p}`], { encoding: 'utf8' }).replaceAll('\r', '')
@@ -18,9 +19,8 @@ test('Bibliotecas Premium conservan escrituras, filtros, reproducción por enlac
     for (const re of [/\.from\('[^']+'\)/g, /\.select\('[^']*'\)/g, /\.rpc\('[^']+'/g]) assert.deepEqual(b.match(re), a.match(re), n)
   }
   // La referencia espacial de Analisis cambia en la entrega de orientacion;
-  // su catalogo se conserva y su comportamiento tiene regresiones especificas.
-  const catalogo = s => s.slice(s.indexOf('const TIPOS ='), s.indexOf('const inputClass ='))
-  assert.equal(catalogo(leer('src/components/AnalisisSection.jsx')), catalogo(antes('src/components/AnalisisSection.jsx')))
+  // su catalogo se conserva (ahora en catalogoAcciones.js) y su comportamiento tiene regresiones especificas.
+  compararCatalogoAnalisis(leer('src/components/AnalisisSection.jsx'), antes('src/components/AnalisisSection.jsx'))
   const entrenamiento = leer('src/components/EntrenamientosSection.jsx')
   const pizarras = s => s.match(/<PizarraEjercicio[^\n]+\/>/g)
   assert.deepEqual(pizarras(entrenamiento), pizarras(antes('src/components/EntrenamientosSection.jsx')))
