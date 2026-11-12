@@ -94,9 +94,10 @@ async function leerPlantel(jugadorasP, perfil) {
   }
 }
 
-async function leerProximoPartido(hoy) {
+async function leerProximoPartido(hoy, categoriaId) {
+  if (!categoriaId) return { estado: 'ok', partido: null }
   const { data, error } = await supabase.from('partidos').select('*, categorias(nombre)')
-    .gte('fecha', hoy).order('fecha', { ascending: true }).limit(30)
+    .eq('categoria_id', categoriaId).gte('fecha', hoy).order('fecha', { ascending: true }).limit(30)
   if (error) throw error
   return { estado: 'ok', partido: agruparProximoPartido(data) }
 }
@@ -123,8 +124,6 @@ export async function cargarTableroHoy(perfil, publicar) {
     publicar({ [bloque]: { estado: 'error', error: mensaje } })
   }
 
-  const partidoP = leerProximoPartido(hoy).then(partido => publicar({ partido }), fallo('partido'))
-
   let categorias, primera
   try {
     const [respuesta, primeraLeida] = await Promise.all([
@@ -135,8 +134,7 @@ export async function cargarTableroHoy(perfil, publicar) {
     categorias = respuesta.data || []
     primera = primeraLeida
   } catch (error) {
-    for (const bloque of ['plantel', 'wellness', 'semaforo']) fallo(bloque)(error)
-    await partidoP
+    for (const bloque of ['plantel', 'partido', 'wellness', 'semaforo']) fallo(bloque)(error)
     return
   }
 
@@ -144,6 +142,8 @@ export async function cargarTableroHoy(perfil, publicar) {
   const categoriaId = perfil.categoria_id || primera?.id || null
   const categoria = categorias.find(c => c.id === categoriaId) || null
   publicar({ categoria: categoria ? { id: categoria.id, nombre: categoria.nombre } : null })
+
+  const partidoP = leerProximoPartido(hoy, categoriaId).then(partido => publicar({ partido }), fallo('partido'))
 
   // Promise.resolve: la consulta de Supabase se dispara una sola vez aunque la usen dos bloques.
   const plantelJugadorasP = Promise.resolve(categoriaId

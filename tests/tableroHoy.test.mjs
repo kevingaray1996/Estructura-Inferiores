@@ -51,7 +51,10 @@ const tablas = () => ({
   ],
   bienestar: [{ jugador_id: 'a', sueno: 2, dolor_muscular: 2, fatiga: 2, estres: 2, animo_entrenar: 2 }],
   fichas_medicas: [{ jugador_id: 'b', fecha_estimada_alta: '2026-12-01', recuperado: false }],
-  partidos: [{ id: 'p', fecha: enDias(2), hora: '15:30:00', rival: 'Rival FC', lugar: 'Cancha 1', local_visitante: 'local', categorias: { nombre: 'Primera División' } }],
+  partidos: [
+    { id: 'q', categoria_id: 'sub16', fecha: enDias(1), hora: '10:00:00', rival: 'Juveniles FC', lugar: 'Cancha 3', local_visitante: 'visitante', categorias: { nombre: 'Sub 16' } },
+    { id: 'p', categoria_id: 'primera', fecha: enDias(2), hora: '15:30:00', rival: 'Rival FC', lugar: 'Cancha 1', local_visitante: 'local', categorias: { nombre: 'Primera División' } },
+  ],
 })
 
 async function cargar(modulo, perfil) {
@@ -77,6 +80,7 @@ test('Hoy: coordinación ve todo de Primera, con alta estimada y la lista de Wel
     assert.equal(b.plantel.noDisponibles[1].jugadoras[0].motivo, 'Suspendida')
     assert.deepEqual(b.plantel.cumpleanos.map(c => [c.jugadora.id, c.diasFaltan]), [['a', 0], ['b', 3]])
     assert.equal(b.partido.partido.rival, 'Rival FC')
+    assert.deepEqual(b.partido.partido.categoriasNombres, ['Primera División'], 'solo partidos de su categoría')
     // La consulta del plantel de Primera se hace una sola vez aunque la usen dos bloques.
     assert.equal(db.lecturas.filter(l => l.tabla === 'jugadores').length, 1)
     // Wellness del día en una sola consulta para todo el plantel.
@@ -97,6 +101,7 @@ test('Hoy: técnico de otra categoría ve su plantel, sin Wellness, semáforo ni
     const b = await cargar(modulo, { id: 't', rol: 'tecnico', categoria_id: 'sub16' })
     assert.equal(b.categoria.nombre, 'Sub 16')
     assert.equal(b.wellness.estado, 'restringido'); assert.equal(b.semaforo.estado, 'restringido')
+    assert.equal(b.partido.partido.rival, 'Juveniles FC')
     assert.deepEqual(b.plantel.noDisponibles.map(g => g.jugadoras.map(x => x.jugadora.id)), [['s']])
     assert.equal(b.plantel.noDisponibles[0].jugadoras[0].motivo, 'Lesión')
     assert.deepEqual(b.plantel.cumpleanos.map(c => c.jugadora.id), ['s'])
