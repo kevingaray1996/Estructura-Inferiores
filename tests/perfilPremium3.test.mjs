@@ -46,7 +46,10 @@ test('Perfil 3.0: consultas, fórmulas, PDF, permisos y eliminación conservados
   for (const [inicio, fin] of [['  useEffect(() => {', '  const abrirDetalle'], ['  const descargarWellness', '  return <div className="perfil-premium">']]) {
     assert.equal(soloLogica(ahora.slice(ahora.indexOf(inicio), ahora.indexOf(fin, ahora.indexOf(inicio)))), soloLogica(antes.slice(antes.indexOf(inicio), antes.indexOf(fin, antes.indexOf(inicio)))))
   }
-  for (const ruta of ['src/components/PdfPerfilModal.jsx', 'src/utils/generarPerfilPDF.js', 'src/utils/generarBienestarPDF.js']) assert.equal(soloLogica(leer(ruta)), soloLogica(base(ruta)))
+  // generarPerfilPDF.js se rediseñó a propósito (página 1): sus tests están en portadaPerfil.test.mjs.
+  // El modal solo suma el dorsal.
+  assert.equal(soloLogica(leer('src/components/PdfPerfilModal.jsx').replace(/^\s*dorsal,\n/gm, '')), soloLogica(base('src/components/PdfPerfilModal.jsx')))
+  assert.equal(soloLogica(leer('src/utils/generarBienestarPDF.js')), soloLogica(base('src/utils/generarBienestarPDF.js')))
   // La autorización de Análisis cambió en una entrega posterior aprobada. Su
   // catálogo sigue intacto; la referencia espacial tiene pruebas propias de orientación.
   compararCatalogoAnalisis(leer('src/components/AnalisisSection.jsx'), base('src/components/AnalisisSection.jsx'))

@@ -31,10 +31,15 @@ test('Perfil Premium: mismos select y tablas, sin integración de acciones ni nu
 })
 
 test('Perfil Premium: generadores, diez opciones y datos PDF intactos', () => {
-  for (const p of ['src/components/PdfPerfilModal.jsx', 'src/utils/generarPerfilPDF.js', 'src/utils/generarBienestarPDF.js']) assert.equal(soloLogica(leer(p)), soloLogica(anterior(p)), p)
+  // generarPerfilPDF.js se rediseñó a propósito (página 1): sus tests están en portadaPerfil.test.mjs.
+  // El modal solo suma el dorsal; fuera de eso, su lógica sigue igual.
+  const sinDorsal = s => s.replace(/^\s*dorsal,\n/gm, '')
+  assert.equal(soloLogica(sinDorsal(leer('src/components/PdfPerfilModal.jsx'))), soloLogica(anterior('src/components/PdfPerfilModal.jsx')), 'PdfPerfilModal')
+  assert.equal(soloLogica(leer('src/utils/generarBienestarPDF.js')), soloLogica(anterior('src/utils/generarBienestarPDF.js')), 'generarBienestarPDF')
   const anteriorPerfil = anterior('src/components/PerfilJugador.jsx'), ahora = leer('src/components/PerfilJugador.jsx')
   const props = s => [...s.slice(s.indexOf('<PdfPerfilModal')).matchAll(/(\w+)=\{([\w]+)\}/g)].map(m => [m[1], m[2]])
-  assert.deepEqual(props(ahora), props(anteriorPerfil))
+  assert.deepEqual(props(ahora).filter(([clave]) => clave !== 'dorsal'), props(anteriorPerfil))
+  assert.ok(props(ahora).some(([clave, valor]) => clave === 'dorsal' && valor === 'dorsal'), 'El modal recibe el dorsal')
 })
 
 test('Perfil Premium: helpers de evaluación conservan escala, datos ausentes y períodos', async () => {

@@ -552,7 +552,7 @@ function PerfilJugador({
       { id: 'datos', etiqueta: 'Datos', contenido: <DatosPerfil datosPersonales={datosPersonales} jugador={jugador} historialCategorias={historialCategorias} fuenteHistorial={fuentes.historial} puedeMedico={puedeMedico} /> },
       { id: 'documentos', etiqueta: 'Documentos', contenido: <DocumentosPerfil onPDF={() => setMostrarPdf(true)} onWellnessPDF={onVerBienestar && puedeWellness && !fuentes.wellness?.error && resumenBienestar ? descargarWellness : null} generandoWellness={generandoWellness} errorWellnessPDF={errorWellnessPDF} fuentesConError={fuentesConError} /> },
     ]} />
-    {mostrarPdf && <PdfPerfilModal jugador={jugador} totales={totales} fichasMedicas={fichasMedicas} historialCategorias={historialCategorias} resumenAsistencia={resumenAsistencia} totalAsistenciaMarcada={totalAsistenciaMarcada} sesionesFisicas={sesionesFisicas} fichasNutricion={fichasNutricion} fichasPsicologicas={fichasPsicologicas} cmjHistorial={cmjHistorial} resumenBienestarMensual={resumenBienestarMensual} asistenciaReciente={asistenciaReciente} onCerrar={() => setMostrarPdf(false)} />}
+    {mostrarPdf && <PdfPerfilModal jugador={jugador} dorsal={dorsal} totales={totales} fichasMedicas={fichasMedicas} historialCategorias={historialCategorias} resumenAsistencia={resumenAsistencia} totalAsistenciaMarcada={totalAsistenciaMarcada} sesionesFisicas={sesionesFisicas} fichasNutricion={fichasNutricion} fichasPsicologicas={fichasPsicologicas} cmjHistorial={cmjHistorial} resumenBienestarMensual={resumenBienestarMensual} asistenciaReciente={asistenciaReciente} onCerrar={() => setMostrarPdf(false)} />}
   </div></div>
 }
 

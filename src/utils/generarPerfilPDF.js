@@ -1,51 +1,17 @@
 import { jsPDF } from 'jspdf'
 import { ESCUDO_URL } from '../config/club'
+import { AMARILLO, BLANCO, GRIS, NEGRO, TEXTO_OSCURO } from './pdf/paleta'
+import { cargarImagenCuadradaDataURL, cargarImagenDataURL } from './pdf/imagenes'
+import { armarPortadaPerfil, calcularEdad, dibujarPortadaPerfil } from './pdf/portadaPerfil'
 
-const NEGRO = [23, 23, 23]
-const AMARILLO = [251, 191, 36]
-const BLANCO = [255, 255, 255]
-const GRIS = [90, 100, 115]
 const AMARILLO_CLARO = [255, 251, 235]
-const TEXTO_OSCURO = [30, 30, 30]
 const ROJO = [226, 75, 74]
 const ROJO_CLARO = [252, 228, 227]
-
-async function cargarImagenDataURL(url) {
-  if (!url) return null
-  try {
-    const res = await fetch(url)
-    if (!res.ok) return null
-    const blob = await res.blob()
-    return await new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onloadend = () => resolve(reader.result)
-      reader.onerror = reject
-      reader.readAsDataURL(blob)
-    })
-  } catch {
-    return null
-  }
-}
-
-function formatoDeDataUrl(dataUrl) {
-  const match = /^data:image\/(\w+);/.exec(dataUrl || '')
-  return match ? match[1].toUpperCase() : 'PNG'
-}
 
 function formatearFecha(fechaStr) {
   if (!fechaStr) return ''
   const [anio, mes, dia] = fechaStr.split('-')
   return `${dia}/${mes}/${anio}`
-}
-
-function calcularEdad(fechaNacimiento) {
-  if (!fechaNacimiento) return null
-  const hoy = new Date()
-  const nacimiento = new Date(fechaNacimiento)
-  let edad = hoy.getFullYear() - nacimiento.getFullYear()
-  const mes = hoy.getMonth() - nacimiento.getMonth()
-  if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) edad--
-  return edad
 }
 
 function dibujarGraficoCMJ(doc, x, y, width, height, historial) {
@@ -114,6 +80,7 @@ function dibujarGraficoCMJ(doc, x, y, width, height, historial) {
 export async function generarPerfilPDF(datos, secciones) {
   const {
     jugador,
+    dorsal,
     totales,
     fichasMedicas,
     fichasNutricion,
@@ -127,7 +94,7 @@ export async function generarPerfilPDF(datos, secciones) {
     asistenciaReciente,
   } = datos
 
-  const fotoDataUrl = jugador.foto_url ? await cargarImagenDataURL(jugador.foto_url) : null
+  const fotoDataUrl = jugador.foto_url ? await cargarImagenCuadradaDataURL(jugador.foto_url) : null
   const escudoDataUrl = await cargarImagenDataURL(ESCUDO_URL)
 
   const doc = new jsPDF({ unit: 'pt', format: 'a4' })
@@ -135,63 +102,17 @@ export async function generarPerfilPDF(datos, secciones) {
   const pageHeight = doc.internal.pageSize.getHeight()
   const margin = 40
 
-  // ===== Encabezado =====
-  doc.setFillColor(...NEGRO)
-  doc.rect(0, 0, pageWidth, 100, 'F')
-  doc.setFillColor(...AMARILLO)
-  doc.rect(0, 100, pageWidth, 4, 'F')
-
-  if (escudoDataUrl) {
-    try {
-      const formato = formatoDeDataUrl(escudoDataUrl)
-      doc.addImage(escudoDataUrl, formato, pageWidth - margin - 44, 28, 44, 44)
-    } catch {
-      // sin escudo si falla
-    }
-  }
-
-  if (fotoDataUrl) {
-    try {
-      const formato = formatoDeDataUrl(fotoDataUrl)
-      doc.setDrawColor(...AMARILLO)
-      doc.setLineWidth(1.2)
-      doc.rect(margin - 1, 29, 52, 52, 'S')
-      doc.addImage(fotoDataUrl, formato, margin, 30, 50, 50)
-    } catch {
-      // si falla la foto, seguimos sin ella
-    }
-  }
-
-  const textoX = fotoDataUrl ? margin + 65 : margin
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(18)
-  doc.setTextColor(...BLANCO)
-  doc.text(`${jugador.apellido}, ${jugador.nombre}`, textoX, 45)
-
-  const edad = calcularEdad(jugador.fecha_nacimiento)
-  const subtitulo = [
-    jugador.categorias?.nombre,
-    jugador.posicion,
-    edad !== null ? `${edad} años` : null,
-  ]
-    .filter(Boolean)
-    .join('  ·  ')
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10)
-  doc.setTextColor(...AMARILLO)
-  doc.text(subtitulo, textoX, 62)
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
-  doc.setTextColor(200, 200, 200)
-  const hoy = new Date()
-  doc.text(
-    `Club Comunicaciones — generado el ${String(hoy.getDate()).padStart(2, '0')}/${String(hoy.getMonth() + 1).padStart(2, '0')}/${hoy.getFullYear()}`,
-    textoX,
-    82
+  // ===== Página 1: la jugadora y sus números principales =====
+  dibujarPortadaPerfil(
+    doc,
+    armarPortadaPerfil({ jugador, dorsal, totales, resumenAsistencia, totalAsistenciaMarcada, cmjHistorial }),
+    { foto: fotoDataUrl, escudo: escudoDataUrl },
   )
+  const edad = calcularEdad(jugador.fecha_nacimiento)
 
-  let y = 134
+  // ===== Desde la página 2: las secciones elegidas en el modal =====
+  doc.addPage()
+  let y = 56
 
   function chequearSalto(alturaNecesaria) {
     if (y + alturaNecesaria > pageHeight - 40) {

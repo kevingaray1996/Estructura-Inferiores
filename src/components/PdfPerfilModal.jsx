@@ -17,6 +17,7 @@ const OPCIONES = [
 
 function PdfPerfilModal({
   jugador,
+  dorsal,
   totales,
   fichasMedicas,
   fichasNutricion,
@@ -45,6 +46,7 @@ function PdfPerfilModal({
       await generarPerfilPDF(
         {
           jugador,
+          dorsal,
           totales,
           fichasMedicas,
           fichasNutricion,
