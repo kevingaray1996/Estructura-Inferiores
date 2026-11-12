@@ -26,6 +26,7 @@ function seccionesParaRol(rol) {
   if (rol === 'coordinacion') {
     return [
       { id: 'inicio', label: 'Inicio' },
+      { id: 'hoy', label: 'Hoy' },
       { id: 'plantel', label: 'Plantel' },
       { id: 'medicos', label: 'Médicos' },
       { id: 'nutricion', label: 'Nutrición' },
@@ -64,6 +65,7 @@ function seccionesParaRol(rol) {
   if (rol === 'preparador_fisico') {
     return [
       { id: 'inicio', label: 'Inicio' },
+      { id: 'hoy', label: 'Hoy' },
       { id: 'plantel', label: 'Plantel' },
       { id: 'medicos', label: 'Médicos' },
       { id: 'nutricion', label: 'Nutrición' },
@@ -79,6 +81,7 @@ function seccionesParaRol(rol) {
   // Cuerpo técnico
   return [
     { id: 'inicio', label: 'Inicio' },
+    { id: 'hoy', label: 'Hoy' },
     { id: 'plantel', label: 'Plantel' },
     { id: 'video', label: 'Videoanálisis' },
     { id: 'analisis', label: 'Análisis' },
@@ -101,7 +104,7 @@ function seccionesParaRol(rol) {
 // Agrupación del menú "Secciones": solo ordena lo que seccionesParaRol ya permite.
 // Una sección sin grupo propio (hoy ninguna visible) cae en Gestión para no perder accesos.
 const GRUPOS = [
-  { id: 'equipo', label: 'Equipo', secciones: ['inicio', 'plantel', 'asistencia', 'evaluaciones'] },
+  { id: 'equipo', label: 'Equipo', secciones: ['inicio', 'hoy', 'plantel', 'asistencia', 'evaluaciones'] },
   { id: 'partidos', label: 'Partidos', secciones: ['partidos', 'video', 'analisis'] },
   { id: 'rendimiento', label: 'Rendimiento', secciones: ['fisico', 'medicos', 'bienestar', 'nutricion', 'psicologia'] },
   { id: 'planificacion', label: 'Planificación', secciones: ['calendario', 'entrenamientos', 'planificacion'] },

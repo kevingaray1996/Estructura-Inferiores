@@ -8,6 +8,8 @@ import { supabase } from './supabaseClient'
 import Layout from './components/Layout'
 import Login from './components/Login'
 import InicioSection from './components/InicioSection'
+import HoySection from './components/hoy/HoySection'
+import { puedeVerHoy } from './utils/hoyDatos'
 import CalendarioSection from './components/CalendarioSection'
 import PlantelSection from './components/PlantelSection'
 import MedicosSection from './components/MedicosSection'
@@ -230,6 +232,10 @@ function App() {
             setSeccion('calendario')
           }} />
       )}
+
+      {seccion === 'hoy' && (puedeVerHoy(perfil)
+        ? <HoySection perfil={perfil} onAbrirJugadora={irAJugadorDesdeBusqueda} onCambiarSeccion={setSeccion} />
+        : <div className="p-6" role="alert">Hoy está disponible para el cuerpo técnico y coordinación.<button type="button" onClick={() => setSeccion('inicio')}>Volver a Inicio</button></div>)}
 
       {seccion === 'buscar' && (
         <BuscadorGlobal

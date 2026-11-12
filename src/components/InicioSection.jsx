@@ -10,7 +10,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
-import { calcularSemaforoJugador, SEMAFORO_INFO } from '../utils/semaforoRiesgo'
+import { calcularSemaforoGrupo, SEMAFORO_INFO } from '../utils/semaforoRiesgo'
+import { agruparProximoPartido, diasHastaProximoCumple, iniciales } from '../utils/inicioDatos'
 import TablaDataFem from './TablaDataFem'
 import { PALETA_INICIO as C } from '../appearance/paletaInicio'
 import FranjaNumeros from './ui/FranjaNumeros'
@@ -24,51 +25,6 @@ function fechaISO(date) {
   const mes = String(date.getMonth() + 1).padStart(2, '0')
   const dia = String(date.getDate()).padStart(2, '0')
   return `${anio}-${mes}-${dia}`
-}
-
-function diasHastaProximoCumple(fechaNacimiento) {
-  if (!fechaNacimiento) return null
-  const hoy = new Date()
-  hoy.setHours(0, 0, 0, 0)
-  const nacimiento = new Date(`${fechaNacimiento}T00:00:00`)
-  if (Number.isNaN(nacimiento.getTime())) return null
-
-  let proximo = new Date(
-    hoy.getFullYear(),
-    nacimiento.getMonth(),
-    nacimiento.getDate()
-  )
-
-  if (proximo < hoy) {
-    proximo = new Date(
-      hoy.getFullYear() + 1,
-      nacimiento.getMonth(),
-      nacimiento.getDate()
-    )
-  }
-
-  return Math.round((proximo - hoy) / (1000 * 60 * 60 * 24))
-}
-
-function agruparProximoPartido(partidos) {
-  if (!partidos || partidos.length === 0) return null
-
-  const primeraFecha = partidos[0].fecha
-  const delMismoDia = partidos.filter((p) => p.fecha === primeraFecha)
-  const rivalPrincipal = delMismoDia[0].rival
-
-  const delMismoPartido = delMismoDia.filter(
-    (p) =>
-      (p.rival || '').toLowerCase().trim() ===
-      (rivalPrincipal || '').toLowerCase().trim()
-  )
-
-  return {
-    ...delMismoPartido[0],
-    categoriasNombres: delMismoPartido
-      .map((p) => p.categorias?.nombre)
-      .filter(Boolean),
-  }
 }
 
 function calcularResultado(p) {
@@ -99,9 +55,6 @@ function calcularResultado(p) {
   }
 }
 
-function iniciales(nombre, apellido) {
-  return `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
-}
 
 const LETRA_RESULTADO = { Victoria: 'V', Empate: 'E', Derrota: 'D' }
 const NIVEL_RESULTADO = { Victoria: 'victoria', Empate: 'empate', Derrota: 'derrota' }
@@ -390,13 +343,12 @@ function InicioSection({ perfil, onCambiarSeccion, onAbrirCalendario, onVerBiene
             categoriasData
           )
 
-          const resultadosSemaforo = await Promise.all(
-            (jugadoresPrimera || []).map((j) => calcularSemaforoJugador(j.id, categoriaPrimera.id))
-          )
+          // Mismo cálculo que por jugadora, con pocas consultas para todo el plantel.
+          const resultadosSemaforo = await calcularSemaforoGrupo(jugadoresPrimera || [], categoriaPrimera.id)
           if (!activo) return
           const alertasSemaforo = []
-          ;(jugadoresPrimera || []).forEach((j, i) => {
-            const resultado = resultadosSemaforo[i]
+          ;(jugadoresPrimera || []).forEach((j) => {
+            const resultado = resultadosSemaforo[j.id]
             if (resultado.semaforo === 'rojo' || resultado.semaforo === 'amarillo') {
               const info = SEMAFORO_INFO[resultado.semaforo]
               alertasSemaforo.push({

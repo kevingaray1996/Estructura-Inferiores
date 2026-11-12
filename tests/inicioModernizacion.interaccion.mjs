@@ -32,7 +32,7 @@ test('Inicio: datos deportivos intactos, avisos, agenda por rol, DataFem sin rec
   poner('__inicioDB', { storage: { from() { return { getPublicUrl() { return { data: { publicUrl: '/logo.png' } } } } } }, from(tabla) {
     const filtros = []; let singular = false
     const q = { select(campos) { consultas.push({ tabla, campos, filtros }); return q }, order() { return q }, limit() { return q },
-      not() { return q }, in() { return q }, ilike() { return q },
+      not() { return q }, in() { return q }, ilike() { return q }, range() { return q },
       eq(k, v) { filtros.push(['eq', k, v]); return q }, gte(k, v) { filtros.push(['gte', k, v]); return q },
       lte(k, v) { filtros.push(['lte', k, v]); return q }, lt(k, v) { filtros.push(['lt', k, v]); return q },
       maybeSingle() { singular = true; return q }, single() { singular = true; return q },

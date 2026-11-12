@@ -1,0 +1,182 @@
+/* Tablero "Hoy": primero el celular. Los colores llegan como variables --hoy-* desde theme.js. */
+.hoy {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 16px 16px 40px;
+  color: var(--hoy-texto);
+}
+
+.hoy-cabecera {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.hoy-cabecera .dp-titulo { margin: 2px 0 0; }
+
+.hoy-grilla {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.hoy-tarjeta {
+  background: var(--hoy-superficie);
+  border: 1px solid var(--hoy-borde);
+  border-radius: 18px;
+  padding: 16px;
+  min-width: 0;
+}
+.hoy-tarjeta[data-destacada] { border-color: color-mix(in srgb, var(--hoy-acento) 45%, var(--hoy-borde)); }
+
+.hoy-tarjeta-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.hoy-tarjeta-cabecera h2 {
+  margin: 2px 0 0;
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.hoy-subtitulo {
+  margin: 16px 0 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--hoy-texto-2);
+}
+
+.hoy-boton {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--hoy-acento);
+  color: var(--hoy-sobre-acento);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.hoy-boton:disabled { opacity: 0.6; cursor: default; }
+
+.hoy-vacio { margin: 4px 0; color: var(--hoy-texto-2); }
+.hoy-error { margin: 4px 0; color: var(--hoy-rojo); font-weight: 600; }
+.hoy-copiado {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--hoy-verde) 16%, transparent);
+  color: var(--hoy-texto);
+  font-weight: 600;
+}
+
+/* Contador grande de Wellness */
+.hoy-contador p { margin: 0 0 8px; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.hoy-contador strong { font-size: 2.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.hoy-contador span { color: var(--hoy-texto-2); font-size: 1rem; }
+.hoy-progreso {
+  display: block;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--hoy-superficie-2);
+  overflow: hidden;
+}
+.hoy-progreso i { display: block; height: 100%; background: var(--hoy-amarillo); border-radius: inherit; }
+.hoy-contador[data-completo] .hoy-progreso i { background: var(--hoy-verde); }
+
+/* Filas tocables */
+.hoy-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.hoy-fila {
+  width: 100%;
+  min-height: 60px;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 8px 8px;
+  border-radius: 14px;
+  border: 1px solid var(--hoy-borde);
+  border-left: 5px solid var(--hoy-borde);
+  background: var(--hoy-superficie-2);
+  color: var(--hoy-texto);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.hoy-fila[data-nivel="rojo"] { border-left-color: var(--hoy-rojo); }
+.hoy-fila[data-nivel="amarillo"] { border-left-color: var(--hoy-amarillo); }
+.hoy-fila[data-nivel="neutro"] { border-left-color: var(--hoy-neutro); }
+.hoy-fila[data-nivel="pendiente"] { border-left-color: var(--hoy-amarillo); border-style: dashed solid dashed solid; }
+.hoy-fila[data-nivel="festejo"] { border-left-color: var(--hoy-acento); background: color-mix(in srgb, var(--hoy-acento) 12%, var(--hoy-superficie-2)); }
+.hoy-fila-texto { display: grid; gap: 2px; min-width: 0; }
+.hoy-fila-texto strong { font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hoy-fila-texto small { color: var(--hoy-texto-2); font-size: 0.85rem; line-height: 1.3; }
+.hoy-fila-extra { font-size: 0.9rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hoy-fila[data-nivel="rojo"] .hoy-fila-extra { color: var(--hoy-rojo); }
+.hoy-fila[data-nivel="amarillo"] .hoy-fila-extra { color: var(--hoy-amarillo); }
+.hoy-fila-flecha { font-size: 1.5rem; line-height: 1; color: var(--hoy-texto-3); }
+
+.hoy-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: grid;
+  place-items: center;
+  background: var(--hoy-superficie);
+  color: var(--hoy-texto-2);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+/* Próximo partido */
+.hoy-partido {
+  width: 100%;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--hoy-borde);
+  background: var(--hoy-superficie-2);
+  color: var(--hoy-texto);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.hoy-partido-rival { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.hoy-partido-rival img { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; }
+.hoy-partido-rival strong { font-size: 1.35rem; line-height: 1.2; overflow-wrap: anywhere; }
+.hoy-partido-dato { display: grid; gap: 2px; }
+.hoy-partido-dato small, .hoy-partido-categorias { color: var(--hoy-texto-2); font-size: 0.8rem; }
+.hoy-partido-dato b { font-size: 1.05rem; }
+
+.hoy-grupo + .hoy-grupo { margin-top: 4px; }
+
+.hoy-fila:focus-visible, .hoy-partido:focus-visible, .hoy-boton:focus-visible {
+  outline: 3px solid var(--hoy-acento);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .hoy-fila:hover, .hoy-partido:hover { border-color: color-mix(in srgb, var(--hoy-acento) 50%, var(--hoy-borde)); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hoy-fila, .hoy-partido { transition: border-color 0.15s ease, transform 0.1s ease; }
+  .hoy-fila:active, .hoy-partido:active { transform: scale(0.99); }
+}
+
+/* Compu y tablet: dos columnas. Wellness ocupa la columna izquierda completa. */
+@media (min-width: 900px) {
+  .hoy { padding: 24px 24px 48px; }
+  .hoy-grilla { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hoy-grilla > .hoy-tarjeta:first-child { grid-row: span 3; }
+}

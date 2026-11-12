@@ -1,6 +1,7 @@
 // Iconos locales de navegación: sin fuentes, emojis ni dependencias externas.
 const TRAZOS = {
   inicio: 'M3 10 12 3l9 7M5 9v12h5v-7h4v7h5V9',
+  hoy: 'M12 3v2M12 19v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M3 12h2M19 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z',
   plantel: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M17 4a4 4 0 0 1 0 7M22 21v-2a4 4 0 0 0-3-3.9',
   medicos: 'M9 3h6v6h6v6h-6v6H9v-6H3V9h6Z',
   video: 'M3 4h18v16H3ZM10 8l6 4-6 4Z',
