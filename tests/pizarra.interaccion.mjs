@@ -77,7 +77,9 @@ test('Editor interactivo: colocar, arrastrar, propiedades, multiselección, hist
     assert.match(document.querySelector('.pizarra-contexto').textContent, /Cono/)
     assert.equal(boton('Mover').getAttribute('aria-pressed'), 'true')
     await click('↻ Girar')
-    assert.match(document.querySelector('svg.pizarra-cancha').querySelectorAll('[data-elemento]')[2].getAttribute('transform'), /rotate\(15\)/)
+    // Se dibuja por capas (materiales debajo de las jugadoras): se busca la ficha seleccionada, no la última.
+    const seleccionada = () => [...document.querySelector('svg.pizarra-cancha').querySelectorAll('[data-elemento]')].find(g => g.querySelector('[data-seleccion]'))
+    assert.match(seleccionada().getAttribute('transform'), /rotate\(15\)/)
     await drag(document.querySelector('svg.pizarra-cancha'), 'drop', { getData: () => '<script>', types: [] })
     assert.equal(document.querySelector('svg.pizarra-cancha').querySelectorAll('[data-elemento]').length, 3)
     const main = document.querySelector('svg.pizarra-cancha')
@@ -90,7 +92,7 @@ test('Editor interactivo: colocar, arrastrar, propiedades, multiselección, hist
     await evento(main, 'pointerup', { pointerType: 'touch', pointerId: 5, clientX: 50, clientY: 10 })
     await evento(main, 'pointerup', { pointerType: 'touch', pointerId: 4, clientX: 10, clientY: 10 })
     await click('Ajustar vista')
-    const cono = main.querySelectorAll('[data-elemento]')[2]
+    const cono = [...main.querySelectorAll('[data-elemento]')].find(g => g.getAttribute('transform').startsWith('translate(52.5 34)'))
     await evento(cono, 'pointerdown', { pointerType: 'touch', pointerId: 6, clientX: 52.5, clientY: 34 })
     await evento(main, 'pointermove', { pointerType: 'touch', pointerId: 6, clientX: 63, clientY: 40.8 })
     await evento(main, 'pointerup', { pointerType: 'touch', pointerId: 6, clientX: 63, clientY: 40.8 })
@@ -200,7 +202,7 @@ test('Etapa 1: colocación encadenada, flechas con el dedo, extremos, temblor, a
     await evento(barra('Cono'), 'pointerup', { pointerId: 9, clientX: 52.5, clientY: 34 })
     assert.equal(document.querySelector('.pizarra-fantasma'), null)
     assert.equal(elementos().length, 6)
-    assert.match(elementos().at(-1).getAttribute('transform'), /^translate\(52.5 34\)/)
+    assert.match(elementos().find(g => g.querySelector('[data-seleccion]')).getAttribute('transform'), /^translate\(52.5 34\)/)
     assert.equal(barra('Mover').getAttribute('aria-pressed'), 'true')
     // Con el dedo la barra se activa al levantarlo, sin depender del click.
     await evento(barra('Pelota'), 'pointerdown', { pointerId: 11, clientX: 5, clientY: 300 })

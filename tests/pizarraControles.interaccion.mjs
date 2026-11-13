@@ -77,7 +77,7 @@ test('Etapa B: imán de la pelota, pase arrastrando, flechas automáticas, + Pas
     await arrastrar('pelota', { x: 63, y: 34 }, () => { imanDurante = cancha().querySelectorAll('[data-iman]').length })
     assert.equal(imanDurante, 1, 'anillo de imán sobre la receptora')
     const b = posicion('b'), p = posicion('pelota')
-    assert.ok(Math.hypot((p.x - b.x) * 1.05, (p.y - b.y) * .68) < 4, 'la pelota quedó a los pies de la jugadora 2')
+    assert.ok(Math.hypot((p.x - b.x) * 1.05, (p.y - b.y) * .68) < 5, 'la pelota quedó a los pies de la jugadora 2')
     assert.equal(cancha().querySelectorAll('[data-iman]').length, 0)
 
     // Flechas automáticas del paso 1 al 2 (pase) y el paso anterior como fantasma.
@@ -96,7 +96,7 @@ test('Etapa B: imán de la pelota, pase arrastrando, flechas automáticas, + Pas
     await evento(cancha().querySelector('[data-elemento="a"]'), 'pointerdown', enPantalla(30, 50))
     await evento(cancha(), 'pointerup', enPantalla(30, 50))
     await click('Pegar pelota')
-    assert.ok(Math.hypot((posicion('pelota').x - 30) * 1.05, (posicion('pelota').y - 50) * .68) < 4)
+    assert.ok(Math.hypot((posicion('pelota').x - 30) * 1.05, (posicion('pelota').y - 50) * .68) < 5)
     assert.equal(cancha().querySelectorAll('[data-pegada]').length, 1)
 
     // Sin movimiento entre pasos no hay flechas; un desmarque de la jugadora 2 genera una sin pelota.

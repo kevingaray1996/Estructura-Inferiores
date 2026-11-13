@@ -1,6 +1,8 @@
 import { forwardRef, memo, useId } from 'react'
 import { LINEAS, SUPERFICIES } from '../utils/pizarra'
 import PizarraObjeto from './PizarraObjeto'
+import { ContextoCancha } from './pizarraContexto'
+import { escena } from '../utils/pizarraEscena'
 
 // Colores de cancha desde el tema (apariencia.css). El PNG los resuelve al exportar.
 const CESPED = { fill: 'var(--pizarra-cesped)' }, CESPED_LIBRE = { fill: 'var(--pizarra-cesped-libre)' }
@@ -12,6 +14,10 @@ const MANIJA = { fill: 'var(--pizarra-seleccion)', stroke: 'var(--pizarra-selecc
 const ERGUIDOS = ['jugadora', 'pelota', 'texto', 'cono', 'tortuga', 'pica']
 
 const POSESION = { stroke: 'var(--pizarra-posesion)' }
+// Rediseño: franjas de corte, viñeta del borde y brillo/relieve compartido por las fichas con volumen.
+const FRANJA = { fill: 'var(--pizarra-cesped-franja)' }, BORDE_CESPED = { stopColor: 'var(--pizarra-cesped-borde)' }
+const BRILLO = { stopColor: 'var(--pizarra-brillo)' }, RELIEVE = { stopColor: 'var(--pizarra-relieve)' }
+const TEXTO_CANCHA = { fill: 'var(--pizarra-linea)', fontFamily: 'var(--pizarra-fuente)' }
 
 // Recorridos de la animación debajo de las fichas. 'estela': se desvanece hacia la cola; 'completo': línea pareja.
 function Estelas({ estelas, modo, w, h }) {
@@ -45,14 +51,22 @@ const PizarraCancha = memo(forwardRef(function PizarraCancha({ doc, poses, selec
   const contragiro = vertical ? -giro : 0
   const flechaAtaque = vertical ? ((giro === 90) === (doc.ataque === 'derecha') ? '↓' : '↑') : doc.ataque === 'derecha' ? '→' : '←'
   // Las líneas van debajo de las fichas: una flecha que sale de una jugadora no le tapa el agarre.
-  const ordenados = [...doc.elementos.filter(e => LINEAS.includes(e.tipo)), ...doc.elementos.filter(e => !LINEAS.includes(e.tipo))]
+  // El modelo de escena ordena por capas (líneas, materiales, jugadoras, pelota, textos) y da posiciones en metros.
+  const objetos = escena(doc, poses).objetos
+  const brillo = `${recorte}-brillo`, vineta = `${recorte}-vineta`
+  // Franjas de corte a lo largo de la cancha, de unos 7-9 m.
+  const franjas = doc.superficie === 'libre' ? 0 : Math.max(4, Math.round(w / 8.75))
   return <svg ref={ref} xmlns="http://www.w3.org/2000/svg" viewBox={`-3 -3 ${ancho + 6} ${alto + 6}`} role="img" aria-label={miniatura ? 'Vista previa de cancha' : 'Cancha táctica editable'} className={miniatura ? 'pizarra-vista-miniatura' : 'pizarra-cancha'} style={miniatura ? undefined : { aspectRatio: `${ancho + 6} / ${alto + 6}` }}
     onPointerDown={onFondo} onPointerDownCapture={onPointerDownCapture} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel} onDragOver={onDragOver} onDrop={onDrop}>
-    <title>Pizarra táctica de Comunicaciones</title><defs><clipPath id={recorte}><rect width={w} height={h} /></clipPath></defs><rect x="-3" y="-3" width={ancho + 6} height={alto + 6} style={cesped} />
-    <g data-viewport="true" transform={`translate(${pan.x} ${pan.y}) scale(${zoom})`}>
+    <title>Pizarra táctica de Comunicaciones</title><defs><clipPath id={recorte}><rect width={w} height={h} /></clipPath>
+      <radialGradient id={brillo} cx=".34" cy=".28" r=".78"><stop offset="0" style={BRILLO} stopOpacity=".55" /><stop offset=".42" style={BRILLO} stopOpacity=".06" /><stop offset="1" style={RELIEVE} stopOpacity=".32" /></radialGradient>
+      <radialGradient id={vineta} cx=".5" cy=".5" r=".72"><stop offset=".62" style={BORDE_CESPED} stopOpacity="0" /><stop offset="1" style={BORDE_CESPED} stopOpacity=".55" /></radialGradient></defs><rect x="-3" y="-3" width={ancho + 6} height={alto + 6} style={cesped} />
+    <ContextoCancha.Provider value={brillo}><g data-viewport="true" transform={`translate(${pan.x} ${pan.y}) scale(${zoom})`}>
       <g data-campo="true" transform={vertical ? (giro === 90 ? `translate(${h} 0) rotate(90)` : `translate(0 ${w}) rotate(-90)`) : undefined}>
         <rect width={w} height={h} style={cesped} />
-        {doc.superficie !== 'libre' && <g fill="none" style={LINEA} strokeWidth=".18" opacity=".9" clipPath={`url(#${recorte})`}>
+        {franjas > 0 && <g data-franjas="true" pointerEvents="none">{Array.from({ length: franjas }, (_, i) => i % 2 === 1 && <rect key={i} x={i * w / franjas} width={w / franjas} height={h} style={FRANJA} />)}</g>}
+        <rect width={w} height={h} fill={`url(#${vineta})`} pointerEvents="none" />
+        {doc.superficie !== 'libre' && <g fill="none" style={LINEA} strokeWidth=".14" opacity=".85" clipPath={`url(#${recorte})`}>
           <rect width={w} height={h} />
           {doc.superficie === 'completa' && <><path d={`M${w / 2} 0 V${h}`} /><circle cx={w / 2} cy={h / 2} r="9.15" /><circle cx={w / 2} cy={h / 2} r=".3" style={PUNTO} /></>}
           {['completa', 'media', 'cuarto', 'area'].includes(doc.superficie) ? <>
@@ -63,7 +77,7 @@ const PizarraCancha = memo(forwardRef(function PizarraCancha({ doc, poses, selec
             {doc.superficie === 'completa' && <g transform={`translate(${w} ${h}) rotate(180)`}><path d={`M0 ${h / 2 - 20.16} H16.5 V${h / 2 + 20.16} H0 M0 ${h / 2 - 9.16} H5.5 V${h / 2 + 9.16} H0 M0 ${h / 2 - 3.66} H-1.5 V${h / 2 + 3.66} H0`} /><circle cx="11" cy={h / 2} r=".3" style={PUNTO} /></g>}
           </> : <><path d={`M${w / 2} 0 V${h}`} /><circle cx={w / 2} cy={h / 2} r={h / 6} /></>}
         </g>}
-        <text transform={`translate(${w / 2} ${h - 1.5}) rotate(${contragiro})`} textAnchor={!vertical ? 'middle' : giro === 90 ? 'start' : 'end'} style={PUNTO} opacity=".8" fontSize="1.5">Ataque {flechaAtaque}</text>
+        <text transform={`translate(${w / 2} ${h - 1.5}) rotate(${contragiro})`} textAnchor={!vertical ? 'middle' : giro === 90 ? 'start' : 'end'} style={TEXTO_CANCHA} opacity=".75" fontSize="1.6" fontWeight="700" letterSpacing=".12">Ataque {flechaAtaque}</text>
         {estelas?.length > 0 && <Estelas estelas={estelas} modo={modoEstela} w={w} h={h} />}
         {fantasmas && <g data-fantasmas="true" pointerEvents="none">{doc.elementos.map(e => {
           const antes = fantasmas[e.id], ahora = poses[e.id]
@@ -79,10 +93,9 @@ const PizarraCancha = memo(forwardRef(function PizarraCancha({ doc, poses, selec
           <g key={f.id} data-automatica={f.tipo} transform={`translate(${f.x * w / 100} ${f.y * h / 100})`}>
             <PizarraObjeto e={{ id: f.id, tipo: f.tipo, color: f.color, tinta: f.color, tamano: 3, grosor: .35, dx: f.dx, dy: f.dy, curva: 0, texto: '', numero: '' }} ancho={w} alto={h} />
           </g>)}</g>}
-        {ordenados.map(e => {
-          const p = poses[e.id]; if (!p) return null
+        {objetos.map(({ elemento: e, x, y, rotacion }) => {
           const linea = LINEAS.includes(e.tipo), px = e.dx * w / 100, py = e.dy * h / 100, elegido = seleccion.includes(e.id)
-          return <g key={e.id} data-elemento={e.id} className={arrastrando === e.id ? 'pizarra-elevado' : undefined} transform={`translate(${p.x * w / 100} ${p.y * h / 100}) rotate(${p.rotacion})`}
+          return <g key={e.id} data-elemento={e.id} className={arrastrando === e.id ? 'pizarra-elevado' : undefined} transform={`translate(${x} ${y}) rotate(${rotacion})`}
             onPointerDown={event => { if (onElemento) { event.stopPropagation(); onElemento(event, e.id) } }} style={{ cursor: onElemento ? 'grab' : 'default' }}>
             {contragiro && ERGUIDOS.includes(e.tipo) ? <g transform={`rotate(${contragiro})`}><PizarraObjeto e={e} ancho={w} alto={h} /></g> : <PizarraObjeto e={e} ancho={w} alto={h} />}
             {pegadas?.includes(e.id) && <circle data-seleccion="true" data-pegada="true" pointerEvents="none" r={e.tamano * .7 + .55} fill="none" style={POSESION} strokeWidth=".35" />}
@@ -101,7 +114,7 @@ const PizarraCancha = memo(forwardRef(function PizarraCancha({ doc, poses, selec
         })}
         {caja && <rect x={Math.min(caja.x, caja.x2) * w / 100} y={Math.min(caja.y, caja.y2) * h / 100} width={Math.abs(caja.x2 - caja.x) * w / 100} height={Math.abs(caja.y2 - caja.y) * h / 100} style={{ fill: 'var(--pizarra-linea)', stroke: 'var(--pizarra-linea)' }} fillOpacity=".15" strokeWidth=".3" />}
       </g>
-    </g>
+    </g></ContextoCancha.Provider>
   </svg>
 }))
 export default PizarraCancha

@@ -396,12 +396,24 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
       {!soloLectura && <PizarraPaleta herramienta={herramienta} elegir={elegirDesdeHoja} superficie={doc.superficie} cambiarSuperficie={cambiarSuperficie}
         deshabilitada={bloqueado} alArrastrar={setArrastrandoMaterial} alTerminar={terminarMaterial} abierta={hoja} onCerrar={cerrarHoja} />}
       {hoja && <div className="pizarra-velo" aria-hidden="true" onPointerDown={cerrarHoja} />}
-      <div className={`pizarra-lienzo ${arrastrandoMaterial ? 'pizarra-soltar' : ''} ${plantillaActiva ? 'pizarra-colocando' : ''}`}>
-        <PizarraCancha ref={svg} doc={vista} poses={poses} estelas={estelas} modoEstela={modoEstela} automaticas={automaticas} fantasmas={fantasmas} pegadas={pegadas} iman={iman} seleccion={soloLectura ? [] : seleccion} zoom={zoom} pan={pan} caja={caja} toque={toque} arrastrando={arrastrando} giro={forzarVertical ? -90 : 90}
-          onElemento={soloLectura ? undefined : iniciar} onExtremo={soloLectura ? undefined : iniciarExtremo} onFondo={fondo} onPointerDownCapture={registrarPuntero}
-          onDragOver={e => { if (!bloqueado && Array.from(e.dataTransfer.types || []).includes('application/x-comunicaciones-herramienta')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' } }} onDrop={soltarMaterial} onPointerMove={mover} onPointerUp={e => terminar(e)} onPointerCancel={e => terminar(e, true)} />
-        {zoom !== 1 && <button type="button" className="pizarra-flotante pizarra-ajustar" onClick={ajustarVista}>Ajustar vista</button>}
-        {aviso && <div className="pizarra-flotante pizarra-aviso" role="status"><span>{aviso}</span><button type="button" onClick={() => historialAccion('deshacer')}>Deshacer</button></div>}
+      {/* Cancha y reproducción juntas: en la compu forman la columna central; en el celular se ordenan por CSS. */}
+      <div className="pizarra-centro">
+        <div className={`pizarra-lienzo ${arrastrandoMaterial ? 'pizarra-soltar' : ''} ${plantillaActiva ? 'pizarra-colocando' : ''}`}>
+          <PizarraCancha ref={svg} doc={vista} poses={poses} estelas={estelas} modoEstela={modoEstela} automaticas={automaticas} fantasmas={fantasmas} pegadas={pegadas} iman={iman} seleccion={soloLectura ? [] : seleccion} zoom={zoom} pan={pan} caja={caja} toque={toque} arrastrando={arrastrando} giro={forzarVertical ? -90 : 90}
+            onElemento={soloLectura ? undefined : iniciar} onExtremo={soloLectura ? undefined : iniciarExtremo} onFondo={fondo} onPointerDownCapture={registrarPuntero}
+            onDragOver={e => { if (!bloqueado && Array.from(e.dataTransfer.types || []).includes('application/x-comunicaciones-herramienta')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' } }} onDrop={soltarMaterial} onPointerMove={mover} onPointerUp={e => terminar(e)} onPointerCancel={e => terminar(e, true)} />
+          {zoom !== 1 && <button type="button" className="pizarra-flotante pizarra-ajustar" onClick={ajustarVista}>Ajustar vista</button>}
+          {aviso && <div className="pizarra-flotante pizarra-aviso" role="status"><span>{aviso}</span><button type="button" onClick={() => historialAccion('deshacer')}>Deshacer</button></div>}
+        </div>
+        <PizarraLineaTiempo doc={doc} indice={indice} indiceVisible={indiceVisible} animando={animando} tiempo={tiempo} total={total} tiempos={tiempos}
+          reproduciendo={reproduciendo} velocidad={velocidad} bucle={bucle} soloLectura={soloLectura} bloqueado={bloqueado} miniaturas={!movil}
+          onReproducir={alternarReproduccion} onPaso={elegirPaso} onAnterior={pasoAnterior} onSiguiente={pasoSiguiente} onBuscar={buscar}
+          onVelocidad={v => { setVelocidad(v); ajustar({ ...doc, velocidad: v }) }} onBucle={b => { setBucle(b); ajustar({ ...doc, bucle: b }) }} onAgregar={pasoNuevo}
+          vista={preferencias} onVista={cambiarVista}
+          onNombre={nombre => cambiar({ ...doc, pasos: doc.pasos.map((p, i) => i === indice ? { ...p, nombre } : p) }, `nombre:${doc.pasos[indice].id}`)}
+          onDuracion={v => { if (v >= .1 && v <= 60) cambiar({ ...doc, pasos: doc.pasos.map((p, i) => i === indice ? { ...p, duracion: v } : p) }, `duracion:${doc.pasos[indice].id}`) }}
+          onOrdenar={ordenarPaso}
+          onEliminar={() => { if (window.confirm('¿Eliminar este paso?')) { cambiar({ ...doc, pasos: doc.pasos.filter((_, i) => i !== indice) }); setPaso(Math.max(0, indice - 1)) } }} />
       </div>
       {!soloLectura && <details className="pizarra-panel"><summary>Más propiedades del objeto</summary><fieldset className="pizarra-propiedades" disabled={bloqueado}>
         <strong>Propiedades · {seleccion.length} seleccionado(s)</strong>
@@ -421,15 +433,6 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
         </> : <p>Tocá una ficha para editarla. Arrastrá el fondo para seleccionar varias; Shift suma a la selección.</p>}
       </fieldset></details>}
     </div>
-    <PizarraLineaTiempo doc={doc} indice={indice} indiceVisible={indiceVisible} animando={animando} tiempo={tiempo} total={total} tiempos={tiempos}
-      reproduciendo={reproduciendo} velocidad={velocidad} bucle={bucle} soloLectura={soloLectura} bloqueado={bloqueado} miniaturas={!movil}
-      onReproducir={alternarReproduccion} onPaso={elegirPaso} onAnterior={pasoAnterior} onSiguiente={pasoSiguiente} onBuscar={buscar}
-      onVelocidad={v => { setVelocidad(v); ajustar({ ...doc, velocidad: v }) }} onBucle={b => { setBucle(b); ajustar({ ...doc, bucle: b }) }} onAgregar={pasoNuevo}
-      vista={preferencias} onVista={cambiarVista}
-      onNombre={nombre => cambiar({ ...doc, pasos: doc.pasos.map((p, i) => i === indice ? { ...p, nombre } : p) }, `nombre:${doc.pasos[indice].id}`)}
-      onDuracion={v => { if (v >= .1 && v <= 60) cambiar({ ...doc, pasos: doc.pasos.map((p, i) => i === indice ? { ...p, duracion: v } : p) }, `duracion:${doc.pasos[indice].id}`) }}
-      onOrdenar={ordenarPaso}
-      onEliminar={() => { if (window.confirm('¿Eliminar este paso?')) { cambiar({ ...doc, pasos: doc.pasos.filter((_, i) => i !== indice) }); setPaso(Math.max(0, indice - 1)) } }} />
     {!soloLectura && <fieldset disabled={bloqueado} className="pizarra-contexto" aria-label="Acciones del objeto seleccionado">
       {elegido ? <>
         <span className="pizarra-contexto-nombre">{elegido.tipo === 'jugadora' && elegido.color.toLowerCase() === PALETA.rival.toLowerCase() ? 'Rival' : plantillaHerramienta(elegido.tipo).nombre}{seleccion.length > 1 ? ` · ${seleccion.length}` : ''}</span>

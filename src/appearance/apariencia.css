@@ -232,6 +232,14 @@
   --pizarra-seleccion-borde: var(--marca-negro);
   --pizarra-sombra: color-mix(in srgb, var(--marca-negro) 45%, transparent);
   --pizarra-posesion: var(--ui-acento);
+  /* Rediseño (etapa H): franjas de corte del césped, viñeta, volumen y sombra de las fichas, tipografía del club.
+     Valores directos (sin color-mix) para que el PNG exportado los resuelva igual que la pantalla. */
+  --pizarra-cesped-franja: #2b7f48;
+  --pizarra-cesped-borde: #1c5a31;
+  --pizarra-brillo: #ffffff;
+  --pizarra-relieve: #000000;
+  --pizarra-ficha-sombra: #000000;
+  --pizarra-fuente: var(--fuente-titulo);
 }
 
 /* Equivalentes claros de los mismos tokens. El tema de pantalla nunca cambia

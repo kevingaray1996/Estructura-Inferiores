@@ -202,7 +202,8 @@ export function alPie(doc, jugadora, pelota, poseJugadora, desde) {
   const pj = metros(doc, poseJugadora), pd = desde ? metros(doc, desde) : pj
   let vx = pd[0] - pj[0], vy = pd[1] - pj[1], largo = Math.hypot(vx, vy)
   if (largo < .3) { vx = doc.ataque === 'izquierda' ? -1 : 1; vy = 0; largo = 1 }
-  const d = jugadora.tamano * .8 + pelota.tamano * .45
+  // Apenas encimada al borde de la ficha: la pelota se dibuja encima y no tiene que tapar el número.
+  const d = jugadora.tamano + pelota.tamano * .7 - .6
   const p = porcentaje(doc, [pj[0] + vx / largo * d, pj[1] + vy / largo * d])
   return { x: redondear2(p.x), y: redondear2(p.y) }
 }

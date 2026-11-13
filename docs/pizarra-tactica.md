@@ -43,6 +43,16 @@ Debajo de las barras: **Pasos (n)** se despliega (en el celular arranca plegado)
 
 Las tareas libres de Planificación pueden tener una pizarra propia, sin obligación de registrarse en biblioteca. Los ejercicios de biblioteca se copian completos: los cambios posteriores no afectan la sesión. Duplicar ejercicio crea una copia independiente.
 
+### Estilo (etapa H)
+
+- **Césped** con franjas de corte de unos 7-9 m (`--pizarra-cesped-franja`) y una viñeta suave hacia los bordes (`--pizarra-cesped-borde`); líneas más finas. La superficie libre no lleva franjas.
+- **Fichas con volumen:** jugadoras (propias y rivales) y pelota tienen sombra apoyada en el piso (`--pizarra-ficha-sombra`), brillo arriba a la izquierda y relieve abajo (`--pizarra-brillo`, `--pizarra-relieve`) sobre su color, y borde fino. El degradé es uno por cancha (`pizarraContexto.js`); los íconos de la paleta quedan planos.
+- **Tipografía del club** (`--pizarra-fuente` = `--fuente-titulo`) en números, nombres, "Ataque" y el título de la pizarra. En el PNG, el navegador no puede cargar fuentes web dentro de la imagen y usa la alternativa en negrita.
+- **Orden de dibujo por capas:** líneas, materiales, jugadoras, pelota y textos. La pelota a los pies queda encima de la jugadora y a su borde, sin tapar el número.
+- En la compu, la cancha y la barra de reproducción forman la columna central.
+- **Modelo de escena** (`src/utils/pizarraEscena.js`): traduce documento y poses a objetos en metros (x, y, z = altura, rotación, capa, equipo). Hoy lo dibuja el SVG; el video y una futura vista 3D usan el mismo modelo, sin tocar el documento.
+- Los tokens nuevos son valores directos (sin `color-mix`), y el PNG resuelve también `stop-color` y la fuente, para que la imagen salga igual que la pantalla.
+
 ### Colores
 
 La interfaz usa solo tokens del tema. Los de la cancha están en `src/appearance/apariencia.css` (`--pizarra-cesped`, `--pizarra-linea`, `--pizarra-seleccion`, etc.). Los colores de las fichas se guardan como hex en el documento, porque el validador de Supabase lo exige y Wellness los dibuja tal cual; su única fuente es `PALETA` en `src/utils/pizarra.js`. Al exportar, `pizarraExportar.js` convierte los tokens en sus valores calculados.

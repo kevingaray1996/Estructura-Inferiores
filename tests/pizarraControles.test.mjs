@@ -21,7 +21,7 @@ test('Imán: soltada cerca de una jugadora (propia o rival) se acomoda a sus pie
   assert.deepEqual(duenasEnPaso(pegada, 0), { [pelota]: propia })
   // Queda del lado desde donde llegó, a los pies (más cerca que el alcance de posesión).
   const pb = pegada.pasos[0].poses[pelota], pj = pegada.pasos[0].poses[propia]
-  assert.ok(pb.x > pj.x && Math.abs(distancia(pb, pj) - 3.75) < .05, `a ${distancia(pb, pj)} m`)
+  assert.ok(pb.x > pj.x && Math.abs(distancia(pb, pj) - 4.5) < .05, `a ${distancia(pb, pj)} m`)
   // Cerca de la rival también se pega.
   const conRival = imanPelotas({ ...d, pasos: [{ ...d.pasos[0], poses: { ...d.pasos[0].poses, [pelota]: { x: 66, y: 50, rotacion: 0 } } }] }, 0, [pelota])
   assert.equal(duenasEnPaso(conRival, 0)[pelota], rival)

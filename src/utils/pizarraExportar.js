@@ -8,6 +8,9 @@ function fijarColores(original, copia) {
     const calculado = getComputedStyle(nodo)
     destino[i].style.fill = calculado.fill
     destino[i].style.stroke = calculado.stroke
+    // Degradés (volumen de las fichas) y tipografía del club: también vienen del tema.
+    if (nodo.tagName.toLowerCase() === 'stop') destino[i].style.stopColor = calculado.stopColor
+    if (nodo.tagName.toLowerCase() === 'text') destino[i].style.fontFamily = calculado.fontFamily
   })
 }
 export async function miniaturaPizarra(svg) {
