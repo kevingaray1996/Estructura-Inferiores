@@ -152,9 +152,9 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
     if (!archivo) return
     setSubiendoImagenBiblioteca(true)
     const archivoComprimido = await comprimirImagen(archivo, { maxAncho: 1000, maxAlto: 1000 })
-    const nombreArchivo = `${Date.now()}-${sanitizarNombreArchivo(archivoComprimido.name)}`
+    const nombreArchivo = `videos/${Date.now()}-${sanitizarNombreArchivo(archivoComprimido.name)}`
     const { error } = await supabase.storage.from('Biblioteca').upload(nombreArchivo, archivoComprimido, {
-      upsert: true,
+      upsert: false,
     })
     if (error) {
       alert('Error al subir la imagen: ' + error.message)

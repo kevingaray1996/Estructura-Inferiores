@@ -149,7 +149,7 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
     const archivoComprimido = await comprimirImagen(archivo, { maxAncho: 500, maxAlto: 500 })
     const nombreArchivo = `jugadores/${Date.now()}-${sanitizarNombreArchivo(archivoComprimido.name)}`
     const { error } = await supabase.storage.from('Biblioteca').upload(nombreArchivo, archivoComprimido, {
-      upsert: true,
+      upsert: false,
     })
     if (error) {
       alert('Error al subir la foto: ' + error.message)

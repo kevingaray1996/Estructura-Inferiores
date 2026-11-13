@@ -111,9 +111,9 @@ function EntrenamientosSection({ onPlanificar }) {
     if (!archivo) return
     setSubiendoImagen(true)
     const archivoComprimido = await comprimirImagen(archivo, { maxAncho: 1000, maxAlto: 1000 })
-    const nombreArchivo = `${Date.now()}-${sanitizarNombreArchivo(archivoComprimido.name)}`
+    const nombreArchivo = `entrenamientos/${Date.now()}-${sanitizarNombreArchivo(archivoComprimido.name)}`
     const { error } = await supabase.storage.from('Biblioteca').upload(nombreArchivo, archivoComprimido, {
-      upsert: true,
+      upsert: false,
     })
     if (error) {
       alert('Error al subir la imagen: ' + error.message)

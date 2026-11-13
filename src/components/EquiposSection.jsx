@@ -68,7 +68,7 @@ function EquiposSection({ onVolver }) {
     const archivoComprimido = await comprimirImagen(archivo, { maxAncho: 300, maxAlto: 300 })
     const nombreArchivo = `escudos/${Date.now()}-${sanitizarNombreArchivo(archivoComprimido.name)}`
     const { error } = await supabase.storage.from('Biblioteca').upload(nombreArchivo, archivoComprimido, {
-      upsert: true,
+      upsert: false,
     })
     if (error) {
       alert('Error al subir el escudo: ' + error.message)

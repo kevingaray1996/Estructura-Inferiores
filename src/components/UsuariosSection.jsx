@@ -7,6 +7,7 @@ import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { exportarBackupCompleto } from '../utils/exportarBackup'
+import { comprimirImagen } from '../utils/comprimirImagen'
 
 const rolLabel = {
   coordinacion: 'Coordinación',
@@ -23,9 +24,10 @@ function iniciales(nombre, email) {
 }
 
 async function subirFotoPerfil(file, email) {
-  const ext = file.name.split('.').pop()
+  const archivo = await comprimirImagen(file, { maxAncho: 600, maxAlto: 600 })
+  const ext = archivo.name.split('.').pop()
   const nombreArchivo = `staff/${email.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.${ext}`
-  const { error } = await supabase.storage.from('Biblioteca').upload(nombreArchivo, file, { upsert: true })
+  const { error } = await supabase.storage.from('Biblioteca').upload(nombreArchivo, archivo, { upsert: false })
   if (error) throw error
   const { data } = supabase.storage.from('Biblioteca').getPublicUrl(nombreArchivo)
   return data.publicUrl
