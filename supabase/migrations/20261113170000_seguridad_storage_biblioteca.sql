@@ -168,7 +168,12 @@ BEGIN
       RAISE EXCEPTION 'DESHACER_PRUEBA';
     EXCEPTION
       WHEN insufficient_privilege THEN
-        IF t.espera <> 'rechazo' THEN
+        IF t.espera = 'rechazo' THEN
+          NULL;
+        ELSIF t.espera = 'cero' AND t.sentencia LIKE 'DELETE%'
+              AND SQLERRM LIKE 'Direct deletion from storage tables is not allowed%' THEN
+          NULL; -- El trigger de Storage bloquea borrar por SQL (código 42501): cuenta como "no borró".
+        ELSE
           RAISE EXCEPTION 'PRUEBA_FALLIDA: % no pudo hacer: % (%)', t.quien, t.sentencia, SQLERRM;
         END IF;
       WHEN OTHERS THEN
@@ -176,8 +181,9 @@ BEGIN
           NULL;
         ELSIF SQLERRM LIKE 'PRUEBA_FALLIDA%' THEN
           RAISE;
-        ELSIF t.espera = 'cero' AND t.sentencia LIKE 'DELETE%' THEN
-          NULL; -- Storage bloquea borrar por SQL con su propio trigger: también cuenta como "no borró".
+        ELSIF t.espera = 'cero' AND t.sentencia LIKE 'DELETE%'
+              AND SQLERRM LIKE 'Direct deletion from storage tables is not allowed%' THEN
+          NULL; -- Por si otra versión de Storage usa otro código para el mismo bloqueo.
         ELSE
           RAISE EXCEPTION 'Prueba de % con "%": error inesperado: %', t.quien, t.sentencia, SQLERRM;
         END IF;

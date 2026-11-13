@@ -16,7 +16,10 @@ const reversion = leer('rollback/20261113170000_seguridad_storage_biblioteca.sql
 const ESCUDO = 'escudos/Escudo simplificado.png'
 
 // Estado auditado el 2026-11-13: bucket público sin límites y 4 políticas "authenticated puede todo".
-async function crearBase({ conTecnico = true } = {}) {
+const BLOQUEO_BORRADO = 'Direct deletion from storage tables is not allowed. Use the Storage API instead.'
+
+// codigoBorrado y mensajeBorrado imitan el trigger de Storage que bloquea borrar por SQL (en Supabase: 42501).
+async function crearBase({ conTecnico = true, codigoBorrado = '42501', mensajeBorrado = BLOQUEO_BORRADO } = {}) {
   const db = new PGlite()
   await db.exec(`
     create role anon; create role authenticated; create role service_role;
@@ -40,7 +43,7 @@ async function crearBase({ conTecnico = true } = {}) {
     grant all on storage.buckets, storage.objects to anon, authenticated, service_role;
     -- Como Supabase: borrar por SQL está bloqueado.
     create function storage.protect_delete() returns trigger language plpgsql as
-      $$ begin raise exception 'Direct deletion from storage tables is not allowed. Use the Storage API instead.'; end $$;
+      $$ begin raise exception '${mensajeBorrado}' using errcode = '${codigoBorrado}'; end $$;
     create trigger protect_objects_delete before delete on storage.objects for each statement execute function storage.protect_delete();
 
     insert into storage.buckets values ('Biblioteca', 'Biblioteca', true, null, null);
@@ -131,6 +134,45 @@ test('Storage: sin técnicos se saltean sus pruebas y se aplica igual; si una pr
     assert.equal((await db2.query(FOTO)).rows[0].foto, antes)
     assert.equal((await db2.query(`select to_regclass('seguridad_privado.respaldo_storage') is null as v`)).rows[0].v, true)
   } finally { await db2.close() }
+})
+
+test('Storage: el bloqueo de borrado de Storage cuenta como "no borró"; cualquier otro permission denied frena todo', async () => {
+  const sinAplicar = async db => {
+    assert.equal((await db.query(`select count(*)::int as n from pg_policies where schemaname = 'storage'`)).rows[0].n, 4)
+    assert.equal((await db.query(`select to_regclass('seguridad_privado.respaldo_storage') is null as v`)).rows[0].v, true)
+  }
+
+  // El mismo bloqueo con otro código (versión distinta de Storage) también se acepta.
+  for (const codigoBorrado of ['42501', 'P0001']) {
+    const db = await crearBase({ codigoBorrado })
+    try {
+      await db.exec(cambio)
+      assert.equal((await db.query(`select count(*)::int as n from pg_policies where schemaname = 'storage'`)).rows[0].n, 1, codigoBorrado)
+    } finally { await db.close() }
+  }
+
+  // Un 42501 en un DELETE con otro mensaje no se toma como el bloqueo de Storage.
+  let db = await crearBase({ mensajeBorrado: 'permiso denegado por otra cosa' })
+  try {
+    await assert.rejects(db.exec(cambio), /PRUEBA_FALLIDA: coordinación no pudo hacer: DELETE/)
+    await sinAplicar(db)
+  } finally { await db.close() }
+
+  // Un 42501 donde se espera poder subir sigue fallando.
+  db = await crearBase()
+  try {
+    await db.exec('revoke insert on storage.objects from authenticated')
+    await assert.rejects(db.exec(cambio), /PRUEBA_FALLIDA: coordinación no pudo hacer: INSERT .*jugadores/)
+    await sinAplicar(db)
+  } finally { await db.close() }
+
+  // Un 42501 en una lectura que tendría que dar cero filas sigue fallando.
+  db = await crearBase()
+  try {
+    await db.exec('revoke select on storage.objects from authenticated')
+    await assert.rejects(db.exec(cambio), /PRUEBA_FALLIDA: coordinación no pudo hacer: SELECT/)
+    await sinAplicar(db)
+  } finally { await db.close() }
 })
 
 test('Storage: cambio y reversión en un solo bloque DO, sin BEGIN/COMMIT ni tablas temporales', () => {
