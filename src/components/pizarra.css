@@ -42,7 +42,7 @@
 /* Cancha. */
 .pizarra-layout { display: grid; grid-template-columns: 190px minmax(0, 1fr) 210px; gap: .75rem; align-items: start; }
 .pizarra-lienzo { min-width: 0; background: var(--pizarra-cesped); border-radius: .5rem; overflow: hidden; position: relative; }
-.pizarra-cancha { width: 100%; height: auto; max-height: min(72vh, 680px); margin: 0 auto; display: block; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.pizarra-cancha { width: 100%; height: auto; max-height: max(300px, min(calc(100dvh - 400px), 680px)); margin: 0 auto; display: block; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .pizarra-visor .pizarra-cancha { max-height: min(65vh, 550px); }
 .pizarra-colocando .pizarra-cancha { cursor: crosshair; }
 .pizarra-soltar { outline: 3px solid var(--ui-acento); outline-offset: -3px; }
@@ -91,18 +91,45 @@
 .pizarra-superficie svg { height: 50px; }
 .pizarra-biblioteca .pizarra-ayuda { padding: .5rem; }
 
-/* Pasos y animación. */
-.pizarra-secuencia { margin-top: .4rem; }
-.pizarra-secuencia-cabecera { margin-bottom: .2rem; }
-.pizarra-tiempo { font-size: .8rem; color: var(--ui-texto-secundario); font-variant-numeric: tabular-nums; }
-.pizarra-pasos { display: flex; overflow-x: auto; gap: .5rem; padding: .5rem 0; }
-.pizarra-pasos button { min-width: 95px; white-space: nowrap; }
-.pizarra .pizarra-paso { flex: 0 0 115px; padding: .25rem; display: flex; flex-direction: column; gap: .3rem; }
-.pizarra-vista-miniatura { width: 100%; height: 65px; display: block; border-radius: .35rem; }
-.pizarra-paso svg { pointer-events: none; }
-.pizarra-paso span { display: block; width: 105px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .7rem; }
-.pizarra-paso .pizarra-paso-resumen { height: 65px; display: grid; place-items: center; color: var(--ui-texto-secundario); }
-.pizarra .pizarra-agregar-paso { border-style: dashed; border-color: var(--ui-texto-acento); }
+/* Reproducción y pasos: siempre visible debajo de la cancha. */
+.pizarra-linea { margin-top: .5rem; padding: .35rem .45rem .45rem; border: 1px solid var(--ui-borde); border-radius: .7rem; background: var(--ui-superficie); }
+.pizarra-transporte { display: flex; align-items: center; gap: .25rem; }
+.pizarra-transporte .pizarra-icono { display: grid; place-items: center; padding: .3rem; }
+.pizarra .pizarra-reproducir { min-width: 52px; min-height: 48px; border-radius: 999px; display: grid; place-items: center; background: var(--ui-acento); color: var(--ui-texto-sobre-acento); border-color: var(--ui-acento); }
+.pizarra .pizarra-reproducir svg { width: 24px; height: 24px; }
+.pizarra-tiempo { font-size: .78rem; color: var(--ui-texto-secundario); font-variant-numeric: tabular-nums; white-space: nowrap; margin: 0 .2rem 0 .35rem; }
+.pizarra-velocidad { margin-left: auto; }
+.pizarra-velocidad select { padding: .3rem .35rem; font-variant-numeric: tabular-nums; }
+.pizarra-solo-lector { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.pizarra-ver { position: relative; }
+.pizarra-ver > summary { list-style: none; display: grid; place-items: center; min-width: 44px; padding: 0 .55rem; font-size: .8rem; font-weight: 700; border: 1px solid var(--ui-borde); border-radius: .4rem; background: var(--ui-superficie); cursor: pointer; }
+.pizarra-ver > summary::-webkit-details-marker { display: none; }
+.pizarra-ver[open] > summary { border-color: var(--ui-acento); }
+.pizarra-ver-panel { position: absolute; right: 0; bottom: calc(100% + .35rem); z-index: 9; width: min(280px, calc(100vw - 1rem)); display: flex; flex-direction: column; gap: .55rem; padding: .7rem; background: var(--ui-superficie); border: 1px solid var(--ui-borde); border-radius: .7rem; box-shadow: 0 10px 30px var(--pizarra-sombra); font-size: .82rem; }
+.pizarra-ver-panel fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: .2rem .7rem; }
+.pizarra-ver-panel legend { font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ui-texto-secundario); margin-bottom: .2rem; }
+.pizarra-ver-panel label { display: flex; align-items: center; gap: .35rem; min-height: 36px; }
+.pizarra-ver-panel input { min-height: auto; width: 18px; height: 18px; accent-color: var(--ui-acento); }
+.pizarra-ver-panel small { flex-basis: 100%; color: var(--ui-texto-secundario); font-size: .72rem; }
+.pizarra-regla { position: relative; margin: .2rem .3rem 0; }
+.pizarra .pizarra-regla input { width: 100%; min-height: 32px; padding: 0; border: 0; background: transparent; accent-color: var(--ui-acento); }
+.pizarra-marcas { position: absolute; left: 8px; right: 8px; bottom: 2px; height: 6px; pointer-events: none; }
+.pizarra-marcas span { position: absolute; top: 0; width: 2px; height: 6px; margin-left: -1px; border-radius: 1px; background: var(--ui-texto-secundario); }
+.pizarra-marcas .pizarra-marca-activa { background: var(--ui-acento); width: 4px; margin-left: -2px; }
+.pizarra-chips { display: flex; gap: .35rem; overflow-x: auto; scrollbar-width: none; padding: .3rem 0 .1rem; }
+.pizarra-chips::-webkit-scrollbar { display: none; }
+.pizarra .pizarra-chip { flex: 0 0 auto; max-width: 140px; display: flex; flex-direction: column; align-items: stretch; gap: .25rem; padding: .25rem .5rem; font-size: .75rem; }
+.pizarra-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pizarra-chip svg { pointer-events: none; }
+.pizarra .pizarra-chip[aria-current=step] { border-color: var(--ui-acento); box-shadow: 0 0 0 1px var(--ui-acento) inset; }
+.pizarra-vista-miniatura { width: 100%; height: 56px; display: block; border-radius: .35rem; }
+.pizarra .pizarra-agregar-paso { border-style: dashed; border-color: var(--ui-texto-acento); color: var(--ui-texto-acento); font-weight: 700; justify-content: center; min-width: 76px; }
+.pizarra-editar-paso { margin-top: .3rem; }
+.pizarra-editar-paso > summary { cursor: pointer; font-size: .8rem; font-weight: 700; display: flex; align-items: center; }
+.pizarra-editar-paso fieldset { border: 0; padding: .3rem 0 0; margin: 0; }
+.pizarra-editar-paso label { display: flex; flex-direction: column; gap: .2rem; font-size: .78rem; }
+.pizarra .pizarra-pegar { display: inline-flex; align-items: center; gap: .3rem; }
+.pizarra .pizarra-pegar svg { width: 22px; height: 18px; }
 .pizarra:fullscreen { overflow: auto; }
 
 @media (max-width: 1100px) {
@@ -130,12 +157,20 @@
   .pizarra-editor .pizarra-barra { order: 0; }
   .pizarra-editor .pizarra-error { order: 1; }
   .pizarra-lienzo { order: 2; width: 100%; border-radius: .4rem; }
-  .pizarra-editor .pizarra-contexto { order: 3; }
-  .pizarra-editor .pizarra-herramientas { order: 4; }
-  .pizarra-editor .pizarra-secuencia { order: 5; }
+  .pizarra-editor .pizarra-linea { order: 3; }
+  .pizarra-editor .pizarra-contexto { order: 4; }
+  .pizarra-editor .pizarra-herramientas { order: 5; }
   .pizarra-panel { order: 6; width: 100%; margin-top: .4rem; }
-  /* Alto: pantalla menos barra superior, contexto, barra de herramientas y cabecera de pasos. */
-  .pizarra-editor .pizarra-cancha { height: calc(100dvh - 236px); min-height: 280px; }
+  /* Alto: pantalla menos barra superior, reproducción, contexto y barra de herramientas. */
+  .pizarra-editor .pizarra-cancha { height: calc(100dvh - 372px); min-height: 260px; max-height: none; }
+  /* Mientras se reproduce, la cancha gana el lugar de las barras de edición. */
+  .pizarra-reproduciendo .pizarra-contexto, .pizarra-reproduciendo .pizarra-herramientas, .pizarra-reproduciendo .pizarra-editar-paso, .pizarra-reproduciendo .pizarra-panel { display: none; }
+  .pizarra-editor.pizarra-reproduciendo .pizarra-cancha { height: calc(100dvh - 210px); }
+  .pizarra-linea { margin-top: .3rem; padding: .25rem .3rem .3rem; }
+  .pizarra-transporte { gap: .15rem; }
+  .pizarra-transporte .pizarra-icono { min-width: 40px; }
+  .pizarra-transporte .pizarra-icono[aria-label="Ir al primer paso"], .pizarra-transporte .pizarra-icono[aria-label="Ir al último paso"] { display: none; }
+  .pizarra-tiempo { font-size: .72rem; margin: 0 .1rem; }
   .pizarra-visor .pizarra-cancha { height: 62dvh; min-height: 260px; }
   .pizarra-contexto { margin-top: .3rem; min-height: 52px; }
   .pizarra-herramientas { position: sticky; bottom: 0; z-index: 5; margin: .3rem 0; padding-bottom: max(.35rem, env(safe-area-inset-bottom)); box-shadow: 0 -6px 16px var(--pizarra-sombra); }

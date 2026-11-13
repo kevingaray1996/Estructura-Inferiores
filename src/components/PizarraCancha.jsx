@@ -11,9 +11,8 @@ const MANIJA = { fill: 'var(--pizarra-seleccion)', stroke: 'var(--pizarra-selecc
 // Objetos que se leen "de pie": en vista vertical se contragiran para que números y textos no queden acostados.
 const ERGUIDOS = ['jugadora', 'pelota', 'texto', 'cono', 'tortuga', 'pica']
 
-// `giro`: sentido de la vista vertical. 90 = orientación guardada (ataque derecha hacia abajo);
-// -90 = vista automática del celular (ataque derecha hacia arriba). No cambia el documento.
-// `toque` es el radio mínimo de agarre en unidades de cancha (≈22 px en pantalla, calculado por el editor).
+const POSESION = { stroke: 'var(--pizarra-posesion)' }
+
 // Recorridos de la animación debajo de las fichas. 'estela': se desvanece hacia la cola; 'completo': línea pareja.
 function Estelas({ estelas, modo, w, h }) {
   const TRAMOS = 6
@@ -30,7 +29,13 @@ function Estelas({ estelas, modo, w, h }) {
   </g>
 }
 
-const PizarraCancha = memo(forwardRef(function PizarraCancha({ doc, poses, seleccion = [], onElemento, onExtremo, onFondo, onPointerDownCapture, onPointerMove, onPointerUp, onPointerCancel, onDragOver, onDrop, zoom = 1, pan = { x: 0, y: 0 }, caja, toque = 3, arrastrando = null, giro = 90, miniatura = false, estelas = null, modoEstela = 'estela' }, ref) {
+// `giro`: sentido de la vista vertical. 90 = orientación guardada (ataque derecha hacia abajo);
+// -90 = vista automática del celular (ataque derecha hacia arriba). No cambia el documento.
+// `toque` es el radio mínimo de agarre en unidades de cancha (≈22 px en pantalla, calculado por el editor).
+// Capas calculadas, que nunca se guardan: `estelas` (recorridos), `automaticas` (flechas entre pasos),
+// `fantasmas` (poses del paso anterior), `pegadas` (pelotas con dueña) e `iman` (jugadora que atraería la pelota).
+// Los anillos de posesión e imán llevan data-seleccion: el PNG los quita como a la selección.
+const PizarraCancha = memo(forwardRef(function PizarraCancha({ doc, poses, seleccion = [], onElemento, onExtremo, onFondo, onPointerDownCapture, onPointerMove, onPointerUp, onPointerCancel, onDragOver, onDrop, zoom = 1, pan = { x: 0, y: 0 }, caja, toque = 3, arrastrando = null, giro = 90, miniatura = false, estelas = null, modoEstela = 'estela', automaticas = null, fantasmas = null, pegadas = null, iman = null }, ref) {
   const [w, h] = SUPERFICIES[doc.superficie], vertical = doc.orientacion === 'vertical'
   const recorte = useId().replaceAll(':', '')
   const centroArco = doc.superficie === 'cuarto' ? h : h / 2
@@ -60,12 +65,28 @@ const PizarraCancha = memo(forwardRef(function PizarraCancha({ doc, poses, selec
         </g>}
         <text transform={`translate(${w / 2} ${h - 1.5}) rotate(${contragiro})`} textAnchor={!vertical ? 'middle' : giro === 90 ? 'start' : 'end'} style={PUNTO} opacity=".8" fontSize="1.5">Ataque {flechaAtaque}</text>
         {estelas?.length > 0 && <Estelas estelas={estelas} modo={modoEstela} w={w} h={h} />}
+        {fantasmas && <g data-fantasmas="true" pointerEvents="none">{doc.elementos.map(e => {
+          const antes = fantasmas[e.id], ahora = poses[e.id]
+          if (!antes || !ahora || LINEAS.includes(e.tipo) || Math.hypot((antes.x - ahora.x) * w / 100, (antes.y - ahora.y) * h / 100) < .5) return null
+          return <g key={e.id} opacity=".32">
+            {!automaticas && <path d={`M${antes.x * w / 100} ${antes.y * h / 100} L${ahora.x * w / 100} ${ahora.y * h / 100}`} style={LINEA} strokeWidth=".2" strokeDasharray=".6 .6" fill="none" />}
+            <g transform={`translate(${antes.x * w / 100} ${antes.y * h / 100}) rotate(${antes.rotacion})`}>
+              {contragiro && ERGUIDOS.includes(e.tipo) ? <g transform={`rotate(${contragiro})`}><PizarraObjeto e={e} ancho={w} alto={h} /></g> : <PizarraObjeto e={e} ancho={w} alto={h} />}
+            </g>
+          </g>
+        })}</g>}
+        {automaticas?.length > 0 && <g data-automaticas="true" pointerEvents="none" opacity=".9">{automaticas.map(f =>
+          <g key={f.id} data-automatica={f.tipo} transform={`translate(${f.x * w / 100} ${f.y * h / 100})`}>
+            <PizarraObjeto e={{ id: f.id, tipo: f.tipo, color: f.color, tinta: f.color, tamano: 3, grosor: .35, dx: f.dx, dy: f.dy, curva: 0, texto: '', numero: '' }} ancho={w} alto={h} />
+          </g>)}</g>}
         {ordenados.map(e => {
           const p = poses[e.id]; if (!p) return null
           const linea = LINEAS.includes(e.tipo), px = e.dx * w / 100, py = e.dy * h / 100, elegido = seleccion.includes(e.id)
           return <g key={e.id} data-elemento={e.id} className={arrastrando === e.id ? 'pizarra-elevado' : undefined} transform={`translate(${p.x * w / 100} ${p.y * h / 100}) rotate(${p.rotacion})`}
             onPointerDown={event => { if (onElemento) { event.stopPropagation(); onElemento(event, e.id) } }} style={{ cursor: onElemento ? 'grab' : 'default' }}>
             {contragiro && ERGUIDOS.includes(e.tipo) ? <g transform={`rotate(${contragiro})`}><PizarraObjeto e={e} ancho={w} alto={h} /></g> : <PizarraObjeto e={e} ancho={w} alto={h} />}
+            {pegadas?.includes(e.id) && <circle data-seleccion="true" data-pegada="true" pointerEvents="none" r={e.tamano * .7 + .55} fill="none" style={POSESION} strokeWidth=".35" />}
+            {iman === e.id && <circle data-seleccion="true" data-iman="true" pointerEvents="none" r={e.tamano + 1.3} fill="none" style={POSESION} strokeWidth=".45" strokeDasharray="1 .6" />}
             {onElemento && (linea
               ? <path d={`M0 0 L${px} ${py}`} stroke="transparent" strokeWidth={toque * 1.4} strokeLinecap="round" fill="none" />
               : <circle r={Math.max(e.tamano, toque)} fill="transparent" stroke="none" />)}

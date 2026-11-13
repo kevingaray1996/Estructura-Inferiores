@@ -53,18 +53,18 @@ test('Editor interactivo: colocar, arrastrar, propiedades, multiselección, hist
     await key('z',true); assert.equal(document.querySelector('svg.pizarra-cancha').querySelectorAll('[data-elemento]').length,1)
     await click('Rehacer'); assert.equal(document.querySelector('svg.pizarra-cancha').querySelectorAll('[data-elemento]').length,2)
     await key('a',true); assert.match(document.querySelector('.pizarra-propiedades').textContent,/2 seleccionado/)
-    await click('+ Agregar paso')
+    await click('Agregar paso')
     await evento(document.querySelector('svg.pizarra-cancha').querySelector('[data-elemento]'),'pointerdown',{clientX:21,clientY:20.4})
     await evento(document.querySelector('svg.pizarra-cancha'),'pointermove',{clientX:70,clientY:40})
     await evento(document.querySelector('svg.pizarra-cancha'),'pointerup',{clientX:70,clientY:40})
-    await click('Reiniciar'); await click('▶ Reproducir')
+    await click('Ir al primer paso'); await click('Reproducir')
     for (const t of [100,200,300,400]) { const pendientes=[...callbacks.values()]; callbacks.clear(); await act(() => pendientes.forEach(fn => fn(t))) }
     const transform = document.querySelector('svg.pizarra-cancha').querySelector('[data-elemento]').getAttribute('transform')
     const x = Number(transform.match(/translate\(([^ ]+)/)[1]); assert.ok(x>21 && x<70,transform)
     await click('Pausar'); assert.equal(callbacks.size,0)
-    await click('Reiniciar'); assert.match(document.querySelector('svg.pizarra-cancha').querySelector('[data-elemento]').getAttribute('transform'),/translate\(21 /)
+    await click('Ir al primer paso'); assert.match(document.querySelector('svg.pizarra-cancha').querySelector('[data-elemento]').getAttribute('transform'),/translate\(21 /)
     // Las miniaturas son visuales; no crean un segundo editor ni interfieren con la cancha.
-    assert.equal(document.querySelectorAll('.pizarra-paso svg').length, 2)
+    assert.equal(document.querySelectorAll('.pizarra-chip svg').length, 2)
     await click('Materiales')
     assert.equal(document.querySelectorAll('.pizarra-objeto svg').length, 9)
     const transferencia = { datos: {}, setData(tipo, valor) { this.datos[tipo] = valor }, getData(tipo) { return this.datos[tipo] || '' }, types: ['application/x-comunicaciones-herramienta'] }

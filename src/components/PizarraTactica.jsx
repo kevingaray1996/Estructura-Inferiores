@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import PizarraCancha from './PizarraCancha'
 import PizarraPaleta, { IconoHerramienta } from './PizarraPaleta'
-import { animar, estelas as calcularEstelas } from '../utils/pizarraAnimacion'
+import PizarraLineaTiempo from './PizarraLineaTiempo'
+import { animar, duenasEnPaso, estelas as calcularEstelas, flechasAutomaticas, imanPelotas, jugadoraCercana, pegarPelota, pelotasDe, tiemposDePasos } from '../utils/pizarraAnimacion'
 import { agregarElemento, colocarFlecha, duplicarElementos, duracionTotal, historial, historialInicial, limitar, LINEAS, moverExtremo, nuevaPizarra, PALETA, plantillaHerramienta, quitarElementos, SUPERFICIES, validarPizarra } from '../utils/pizarra'
 import { descargarArchivo, miniaturaPizarra } from '../utils/pizarraExportar'
 import './pizarra.css'
@@ -17,6 +18,21 @@ function consulta(q) { return typeof window !== 'undefined' && typeof window.mat
 function suscribir(q) { return cb => { const m = consulta(q); m?.addEventListener?.('change', cb); return () => m?.removeEventListener?.('change', cb) } }
 const suscribirRetrato = suscribir(RETRATO)
 const esRetrato = () => !!consulta(RETRATO)?.matches
+const suscribirMovil = suscribir(MOVIL)
+const esMovil = () => !!consulta(MOVIL)?.matches
+
+// Preferencias de vista de cada dispositivo (no son del ejercicio). El modo de movimiento no se guarda todavía:
+// llega al documento con el formato v2 (etapa C).
+const CLAVE_VISTA = 'pizarra-vista'
+const VISTA_INICIAL = { estela: 'estela', flechas: true, fantasmas: true, recorrido: 'suave' }
+function leerVista() {
+  try {
+    const guardada = JSON.parse(window.localStorage.getItem(CLAVE_VISTA) || '{}')
+    return { ...VISTA_INICIAL, estela: ['estela', 'completo', 'oculto'].includes(guardada.estela) ? guardada.estela : VISTA_INICIAL.estela,
+      flechas: typeof guardada.flechas === 'boolean' ? guardada.flechas : true, fantasmas: typeof guardada.fantasmas === 'boolean' ? guardada.fantasmas : true }
+  } catch { return VISTA_INICIAL }
+}
+function guardarVista({ estela, flechas, fantasmas }) { try { window.localStorage.setItem(CLAVE_VISTA, JSON.stringify({ estela, flechas, fantasmas })) } catch { /* sin almacenamiento: queda en memoria */ } }
 
 export default function PizarraTactica({ inicial, soloLectura = false, onGuardar, onCerrar, titulo = 'Pizarra táctica' }) {
   const [h, setH] = useState(() => historialInicial(inicial || nuevaPizarra()))
@@ -26,19 +42,30 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
   const [reproduciendo, setReproduciendo] = useState(false), [tiempo, setTiempo] = useState(0), [velocidad, setVelocidad] = useState(doc.velocidad), [bucle, setBucle] = useState(doc.bucle)
   const [error, setError] = useState(''), [guardando, setGuardando] = useState(false), [guardado, setGuardado] = useState(() => JSON.stringify(doc))
   const [arrastrandoMaterial, setArrastrandoMaterial] = useState(null), [arrastrando, setArrastrando] = useState(null)
-  const [hoja, setHoja] = useState(false), [verPasos, setVerPasos] = useState(() => soloLectura || !consulta(MOVIL)?.matches)
+  const [hoja, setHoja] = useState(false), [preferencias, setPreferencias] = useState(leerVista)
   const [aviso, setAviso] = useState(null), [fantasma, setFantasma] = useState(null), [medida, setMedida] = useState(null)
   // Vista vertical automática en celular vertical: sólo cambia cómo se ve, no la orientación guardada.
   const retrato = useSyncExternalStore(suscribirRetrato, esRetrato, () => false)
+  const movil = useSyncExternalStore(suscribirMovil, esMovil, () => false)
   const svg = useRef(null), svgExportar = useRef(null), raiz = useRef(null), arrastre = useRef(null), reloj = useRef(0), ultimo = useRef(0)
   const punteros = useRef(new Map()), gesto = useRef(null), cuadro = useRef(0), pendiente = useRef(null), barra = useRef(null), temporizador = useRef(0)
   const indice = Math.min(paso, doc.pasos.length - 1), sucio = JSON.stringify(doc) !== guardado
   const activo = borrador || doc, total = duracionTotal(doc)
-  // Etapa A: recorrido suave por defecto y estela mientras se reproduce. El modo por ejercicio llega en la etapa B.
-  const recorrido = 'suave', modoEstela = 'estela'
+  const { recorrido, estela: modoEstela } = preferencias
+  const tiempos = useMemo(() => tiemposDePasos(doc), [doc])
   const animando = reproduciendo || tiempo > 0
-  const poses = animando ? animar(doc, tiempo, recorrido).poses : activo.pasos[indice].poses
-  const estelas = useMemo(() => animando ? calcularEstelas(doc, tiempo, modoEstela, recorrido) : null, [animando, doc, tiempo])
+  const cuadroAnimado = animando ? animar(doc, tiempo, recorrido) : null
+  const poses = cuadroAnimado ? cuadroAnimado.poses : activo.pasos[indice].poses
+  // Paso que se ve: el del tramo que se está reproduciendo, o el que se edita.
+  const indiceVisible = cuadroAnimado ? (tiempo >= total ? doc.pasos.length - 1 : cuadroAnimado.indice) : indice
+  const estelas = useMemo(() => animando ? calcularEstelas(doc, tiempo, modoEstela, recorrido) : null, [animando, doc, tiempo, modoEstela, recorrido])
+  // Flechas automáticas: al editar, las que llegan al paso actual; al reproducir, las del tramo en curso.
+  const pasoFlechas = animando ? Math.min(indiceVisible + (tiempo >= total ? 0 : 1), doc.pasos.length - 1) : indice
+  const automaticas = useMemo(() => preferencias.flechas ? flechasAutomaticas(animando ? doc : activo, pasoFlechas) : null, [preferencias.flechas, animando, doc, activo, pasoFlechas])
+  const fantasmas = !soloLectura && !animando && preferencias.fantasmas && indice > 0 ? activo.pasos[indice - 1].poses : null
+  const pegadas = useMemo(() => animando || soloLectura ? null : Object.entries(duenasEnPaso(activo, indice)).filter(([, j]) => j).map(([id]) => id), [animando, soloLectura, activo, indice])
+  const pelotaArrastrada = arrastrando && activo.elementos.find(e => e.id === arrastrando)?.tipo === 'pelota' ? arrastrando : null
+  const iman = pelotaArrastrada ? jugadoraCercana(activo, indice, pelotaArrastrada, activo.pasos[indice].poses[pelotaArrastrada])?.id || null : null
   const elegido = doc.elementos.find(e => e.id === seleccion[0])
   const bloqueado = soloLectura || guardando || reproduciendo || tiempo > 0
   // Sólo conviene girar superficies apaisadas (completa, cuarto, reducida); media cancha y área ya son "de pie".
@@ -73,7 +100,8 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
       reloj.current += delta * velocidad
       if (reloj.current >= total) {
         if (bucle && total > 0) reloj.current %= total
-        else { reloj.current = total; setTiempo(total); setReproduciendo(false); return }
+        // Al terminar queda en el último paso, listo para editar; Reproducir vuelve a empezar.
+        else { reloj.current = 0; setTiempo(0); setPaso(Number.MAX_SAFE_INTEGER); setReproduciendo(false); return }
       }
       setTiempo(reloj.current)
       raf = requestAnimationFrame(avanzar)
@@ -84,6 +112,8 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
 
   // `clave` agrupa cambios continuos (deslizadores, textos) en un solo paso de deshacer.
   function cambiar(siguiente, clave = null) { if (soloLectura) return; setH(actual => historial(actual, 'editar', siguiente, clave)); setTiempo(0); reloj.current = 0; setError('') }
+  // Velocidad y bucle se guardan en el documento sin cortar la reproducción en curso.
+  function ajustar(siguiente) { if (!soloLectura) setH(actual => historial(actual, 'editar', siguiente)) }
   function historialAccion(accion) {
     const siguiente = historial(h, accion)
     setH(siguiente); setSeleccion(s => s.filter(id => siguiente.actual.elementos.some(e => e.id === id))); setTiempo(0); setReproduciendo(false); setAviso(null)
@@ -94,7 +124,21 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
   const cerrarHoja = useCallback(() => setHoja(false), [])
   function mostrarAviso(texto) { window.clearTimeout(temporizador.current); setAviso(texto); temporizador.current = window.setTimeout(() => setAviso(null), 5000) }
   function elegirPaso(i) { setReproduciendo(false); setTiempo(0); reloj.current = 0; setPaso(limitar(i, 0, doc.pasos.length - 1)) }
-  function alternarReproduccion() { if (!reproduciendo && reloj.current >= total) { reloj.current = 0; setTiempo(0) } setReproduciendo(!reproduciendo) }
+  // Reproducir sigue desde la pausa; si se está editando un paso, arranca desde ese paso (o del principio si es el último).
+  function alternarReproduccion() {
+    if (reproduciendo) { setReproduciendo(false); return }
+    if (!(tiempo > 0 && tiempo < total)) { reloj.current = indice < doc.pasos.length - 1 ? tiempos[indice] : 0; setTiempo(reloj.current) }
+    setReproduciendo(true)
+  }
+  // Mover la línea de tiempo pausa y muestra ese instante; al principio de todo vuelve a editar el primer paso.
+  function buscar(t) {
+    setReproduciendo(false)
+    if (t <= 0) { elegirPaso(0); return }
+    reloj.current = Math.min(t, total); setTiempo(reloj.current)
+  }
+  function pasoAnterior() { elegirPaso(animando && tiempo > tiempos[indiceVisible] + .001 ? indiceVisible : (animando ? indiceVisible : indice) - 1) }
+  function pasoSiguiente() { elegirPaso((animando ? indiceVisible : indice) + 1) }
+  function cambiarVista(cambios) { setPreferencias(actual => { const nueva = { ...actual, ...cambios }; guardarVista(nueva); return nueva }) }
   function punto(e) {
     const g = svg.current.querySelector('[data-campo]'), matrix = g.getScreenCTM()
     const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(matrix.inverse())
@@ -103,8 +147,10 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
   }
   function colocar(id, p, destino = null) {
     const plantilla = plantillaHerramienta(id); if (!plantilla) return
-    const siguiente = destino && LINEAS.includes(plantilla.tipo) ? colocarFlecha(doc, plantilla.tipo, p, destino, plantilla.extra) : agregarElemento(doc, plantilla.tipo, limitar(p.x, 0, 100), limitar(p.y, 0, 100), plantilla.extra)
+    let siguiente = destino && LINEAS.includes(plantilla.tipo) ? colocarFlecha(doc, plantilla.tipo, p, destino, plantilla.extra) : agregarElemento(doc, plantilla.tipo, limitar(p.x, 0, 100), limitar(p.y, 0, 100), plantilla.extra)
     if (siguiente === doc) { setError('La pizarra admite hasta 200 elementos.'); return }
+    // Una pelota colocada cerca de una jugadora queda a sus pies.
+    if (plantilla.tipo === 'pelota') siguiente = imanPelotas(siguiente, indice, [siguiente.elementos.at(-1).id])
     cambiar(siguiente); setSeleccion([siguiente.elementos.at(-1).id])
   }
   // Dibuja en el próximo cuadro de pantalla: un render por frame aunque el dedo envíe más eventos.
@@ -137,7 +183,9 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
     if (herramienta !== 'seleccionar') { fondo(e); return }
     const ids = e.shiftKey ? (seleccion.includes(id) ? seleccion.filter(x => x !== id) : [...seleccion, id]) : seleccion.includes(id) ? seleccion : [id]
     setSeleccion(ids)
-    capturar(e, { tipo: 'mover', inicio: punto(e), ids })
+    // La pelota que tiene una jugadora arrastrada la acompaña (salvo que también esté seleccionada).
+    const acompanan = pelotasDe(doc, indice, ids).filter(b => !ids.includes(b))
+    capturar(e, { tipo: 'mover', inicio: punto(e), ids, acompanan })
   }
   function iniciarExtremo(e, id, extremo) {
     if (bloqueado || e.button !== 0 || gesto.current) return
@@ -176,7 +224,8 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
       // Una sola traslación limitada mantiene las distancias de la selección.
       const dx = limitar(p.x - a.inicio.x, -Math.min(...a.ids.map(id => origen[id].x)), 100 - Math.max(...a.ids.map(id => origen[id].x)))
       const dy = limitar(p.y - a.inicio.y, -Math.min(...a.ids.map(id => origen[id].y)), 100 - Math.max(...a.ids.map(id => origen[id].y)))
-      const actualizado = { ...origen, ...Object.fromEntries(a.ids.map(id => [id, { ...origen[id], x: origen[id].x + dx, y: origen[id].y + dy }])) }
+      const actualizado = { ...origen, ...Object.fromEntries(a.ids.map(id => [id, { ...origen[id], x: origen[id].x + dx, y: origen[id].y + dy }])),
+        ...Object.fromEntries((a.acompanan || []).map(id => [id, { ...origen[id], x: limitar(origen[id].x + dx, 0, 100), y: limitar(origen[id].y + dy, 0, 100) }])) }
       const next = { ...a.doc, pasos: a.doc.pasos.map((f, i) => i === indice ? { ...f, poses: actualizado } : f) }
       a.final = next; programar(() => setBorrador(next))
     } else if (a.tipo === 'extremo') {
@@ -207,7 +256,10 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
         // Toque sin arrastre: flecha corta por defecto en ese punto.
         const fin = a.activo ? punto(e) : null
         colocar(a.herramienta, a.inicio, fin && Math.hypot(fin.x - a.inicio.x, fin.y - a.inicio.y) > 2 ? fin : null)
-      } else if (a.activo && a.final) cambiar(a.final)
+      } else if (a.activo && a.final) {
+        // Pelota soltada: se pega a la jugadora más cercana dentro del imán (pase) o queda suelta.
+        cambiar(a.tipo === 'mover' ? imanPelotas(a.final, indice, a.ids) : a.final)
+      }
       if (a.tipo === 'caja' && a.activo && a.fin) setSeleccion(doc.elementos.filter(el => { const p = doc.pasos[indice].poses[el.id]; return p.x >= Math.min(a.inicio.x, a.fin.x) && p.x <= Math.max(a.inicio.x, a.fin.x) && p.y >= Math.min(a.inicio.y, a.fin.y) && p.y <= Math.max(a.inicio.y, a.fin.y) }).map(el => el.id))
     }
     arrastre.current = null; setBorrador(null); setCaja(null); setArrastrando(null)
@@ -259,6 +311,17 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
     const pasos = [...doc.pasos]; pasos.splice(indice + 1, 0, { ...structuredClone(pasos[indice]), id: crypto.randomUUID(), nombre: `Paso ${pasos.length + 1}` })
     cambiar({ ...doc, pasos }); setPaso(indice + 1)
   }
+  // Pone a los pies de la jugadora la pelota más cercana (o crea una si no hay ninguna).
+  function pegarPelotaAElegida() {
+    if (!elegido || elegido.tipo !== 'jugadora') return
+    let base = doc
+    if (!doc.elementos.some(e => e.tipo === 'pelota')) {
+      const pj = doc.pasos[indice].poses[elegido.id]
+      base = agregarElemento(doc, 'pelota', pj.x, pj.y)
+      if (base === doc) { setError('La pizarra admite hasta 200 elementos.'); return }
+    }
+    cambiar(pegarPelota(base, indice, elegido.id))
+  }
   function ordenarPaso(delta) { const pasos = [...doc.pasos], hasta = indice + delta; if (hasta < 0 || hasta >= pasos.length) return; [pasos[indice], pasos[hasta]] = [pasos[hasta], pasos[indice]]; cambiar({ ...doc, pasos }); setPaso(hasta) }
   function cerrar() { if (!soloLectura && sucio && !window.confirm('¿Salir sin aplicar los cambios de la pizarra?')) return; onCerrar?.() }
   function pantallaCompleta() { if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {}); else if (raiz.current.requestFullscreen) raiz.current.requestFullscreen().catch(() => setError('Pantalla completa no disponible.')); else setError('Pantalla completa no disponible en este navegador.') }
@@ -278,7 +341,12 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
     try { if (file.size > 900000) throw Error('Archivo demasiado grande.'); const nuevo = validarPizarra(JSON.parse(await file.text())); if (!window.confirm('¿Reemplazar el diseño actual por el archivo? Podés deshacer.')) return; cambiar(nuevo); setPaso(0); setSeleccion([]) } catch (e) { setError(e.message || 'Archivo inválido.') }
   }
   function teclado(e) {
-    if (soloLectura || guardando || ['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(e.target.tagName) || reproduciendo) return
+    if (guardando || ['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON', 'SUMMARY'].includes(e.target.tagName)) return
+    // Reproducción: espacio reproduce o pausa; las flechas cambian de paso (también en el visor).
+    if (e.key === ' ' && doc.pasos.length > 1) { e.preventDefault(); alternarReproduccion(); return }
+    if (e.key === 'ArrowLeft' && !e.altKey) { e.preventDefault(); pasoAnterior(); return }
+    if (e.key === 'ArrowRight' && !e.altKey) { e.preventDefault(); pasoSiguiente(); return }
+    if (soloLectura || reproduciendo) return
     const mod = e.ctrlKey || e.metaKey
     if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); historialAccion(e.shiftKey ? 'rehacer' : 'deshacer') }
     if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); historialAccion('rehacer') }
@@ -291,7 +359,7 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
   const zoomControl = <label className="pizarra-zoom">Zoom <input aria-label="Zoom de cancha" type="range" min=".5" max="3" step=".1" value={zoom} onChange={e => setZoom(Number(e.target.value))} /></label>
   const plantillaActiva = plantillaHerramienta(herramienta)
 
-  return <div ref={raiz} className={`pizarra ${soloLectura ? 'pizarra-visor' : 'pizarra-editor'}`} tabIndex={0} onKeyDown={teclado}>
+  return <div ref={raiz} className={`pizarra ${soloLectura ? 'pizarra-visor' : 'pizarra-editor'}${reproduciendo ? ' pizarra-reproduciendo' : ''}`} tabIndex={0} onKeyDown={teclado}>
     <header className="pizarra-barra">
       <h2 className="pizarra-titulo"><strong>{titulo}</strong><small>PIZARRA DE COMUNICACIONES</small></h2>
       {onCerrar && <button type="button" className="pizarra-icono" aria-label="Cerrar" title="Cerrar" disabled={guardando} onClick={cerrar}>✕</button>}
@@ -329,7 +397,7 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
         deshabilitada={bloqueado} alArrastrar={setArrastrandoMaterial} alTerminar={terminarMaterial} abierta={hoja} onCerrar={cerrarHoja} />}
       {hoja && <div className="pizarra-velo" aria-hidden="true" onPointerDown={cerrarHoja} />}
       <div className={`pizarra-lienzo ${arrastrandoMaterial ? 'pizarra-soltar' : ''} ${plantillaActiva ? 'pizarra-colocando' : ''}`}>
-        <PizarraCancha ref={svg} doc={vista} poses={poses} estelas={estelas} modoEstela={modoEstela} seleccion={soloLectura ? [] : seleccion} zoom={zoom} pan={pan} caja={caja} toque={toque} arrastrando={arrastrando} giro={forzarVertical ? -90 : 90}
+        <PizarraCancha ref={svg} doc={vista} poses={poses} estelas={estelas} modoEstela={modoEstela} automaticas={automaticas} fantasmas={fantasmas} pegadas={pegadas} iman={iman} seleccion={soloLectura ? [] : seleccion} zoom={zoom} pan={pan} caja={caja} toque={toque} arrastrando={arrastrando} giro={forzarVertical ? -90 : 90}
           onElemento={soloLectura ? undefined : iniciar} onExtremo={soloLectura ? undefined : iniciarExtremo} onFondo={fondo} onPointerDownCapture={registrarPuntero}
           onDragOver={e => { if (!bloqueado && Array.from(e.dataTransfer.types || []).includes('application/x-comunicaciones-herramienta')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' } }} onDrop={soltarMaterial} onPointerMove={mover} onPointerUp={e => terminar(e)} onPointerCancel={e => terminar(e, true)} />
         {zoom !== 1 && <button type="button" className="pizarra-flotante pizarra-ajustar" onClick={ajustarVista}>Ajustar vista</button>}
@@ -353,10 +421,20 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
         </> : <p>Tocá una ficha para editarla. Arrastrá el fondo para seleccionar varias; Shift suma a la selección.</p>}
       </fieldset></details>}
     </div>
+    <PizarraLineaTiempo doc={doc} indice={indice} indiceVisible={indiceVisible} animando={animando} tiempo={tiempo} total={total} tiempos={tiempos}
+      reproduciendo={reproduciendo} velocidad={velocidad} bucle={bucle} soloLectura={soloLectura} bloqueado={bloqueado} miniaturas={!movil}
+      onReproducir={alternarReproduccion} onPaso={elegirPaso} onAnterior={pasoAnterior} onSiguiente={pasoSiguiente} onBuscar={buscar}
+      onVelocidad={v => { setVelocidad(v); ajustar({ ...doc, velocidad: v }) }} onBucle={b => { setBucle(b); ajustar({ ...doc, bucle: b }) }} onAgregar={pasoNuevo}
+      vista={preferencias} onVista={cambiarVista}
+      onNombre={nombre => cambiar({ ...doc, pasos: doc.pasos.map((p, i) => i === indice ? { ...p, nombre } : p) }, `nombre:${doc.pasos[indice].id}`)}
+      onDuracion={v => { if (v >= .1 && v <= 60) cambiar({ ...doc, pasos: doc.pasos.map((p, i) => i === indice ? { ...p, duracion: v } : p) }, `duracion:${doc.pasos[indice].id}`) }}
+      onOrdenar={ordenarPaso}
+      onEliminar={() => { if (window.confirm('¿Eliminar este paso?')) { cambiar({ ...doc, pasos: doc.pasos.filter((_, i) => i !== indice) }); setPaso(Math.max(0, indice - 1)) } }} />
     {!soloLectura && <fieldset disabled={bloqueado} className="pizarra-contexto" aria-label="Acciones del objeto seleccionado">
       {elegido ? <>
         <span className="pizarra-contexto-nombre">{elegido.tipo === 'jugadora' && elegido.color.toLowerCase() === PALETA.rival.toLowerCase() ? 'Rival' : plantillaHerramienta(elegido.tipo).nombre}{seleccion.length > 1 ? ` · ${seleccion.length}` : ''}</span>
         <button type="button" title="Duplicar selección" onClick={duplicar}>⧉ Duplicar</button>
+        {elegido.tipo === 'jugadora' && seleccion.length === 1 && <button type="button" className="pizarra-pegar" title="Poner la pelota a sus pies en este paso" onClick={pegarPelotaAElegida}><IconoHerramienta id="pelota" /> Pegar pelota</button>}
         <button type="button" title="Rotar 15 grados" onClick={() => rotar(((doc.pasos[indice].poses[elegido.id].rotacion + 195) % 360) - 180)}>↻ Girar</button>
         <span className="pizarra-colores" role="group" aria-label="Colores rápidos">{PALETA.rapidos.map(c => <button key={c} type="button" className="pizarra-muestra" aria-label={`Color ${c}`} aria-pressed={elegido.color.toLowerCase() === c.toLowerCase()} style={{ '--muestra': c }} onClick={() => propiedad('color', c, false)} />)}</span>
         <button type="button" aria-label="Reducir tamaño" onClick={() => propiedad('tamano', limitar(elegido.tamano - .5, 1, 12), false)}>−</button>
@@ -377,31 +455,6 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
       })}
     </nav>}
     {fantasma && <div className="pizarra-fantasma" aria-hidden="true" style={{ transform: `translate(${fantasma.x}px, ${fantasma.y}px)` }}><IconoHerramienta id={fantasma.id} /></div>}
-    <section className="pizarra-secuencia" aria-label="Pasos y animación">
-      <div className="pizarra-fila pizarra-secuencia-cabecera">
-        {!soloLectura && <button type="button" aria-expanded={verPasos} onClick={() => setVerPasos(v => !v)}>Pasos ({doc.pasos.length}) {verPasos ? '▴' : '▾'}</button>}
-        <button type="button" disabled={doc.pasos.length < 2} onClick={alternarReproduccion}>{reproduciendo ? 'Pausar' : '▶ Reproducir'}</button>
-        <span className="pizarra-tiempo">{tiempo.toFixed(1)} / {total.toFixed(1)} s</span>
-      </div>
-      {verPasos && <>
-        <div className="pizarra-pasos" aria-label="Pasos de la animación">{doc.pasos.map((p, i) => <button type="button" key={p.id} className="pizarra-paso" aria-label={`Paso ${i + 1}: ${p.nombre}`} aria-pressed={!reproduciendo && indice === i} onClick={() => elegirPaso(i)}>
-          {doc.pasos.length <= 12 || Math.abs(indice - i) <= 2 ? <PizarraCancha miniatura doc={doc} poses={p.poses} /> : <span className="pizarra-paso-resumen">{doc.elementos.length} elementos</span>}<span>{i + 1}. {p.nombre}</span></button>)}
-          {!soloLectura && <button type="button" className="pizarra-agregar-paso" disabled={doc.pasos.length >= 60 || bloqueado} onClick={pasoNuevo}>+ Agregar paso</button>}
-        </div>
-        <div className="pizarra-fila">
-          <button type="button" onClick={() => elegirPaso(0)}>Reiniciar</button><button type="button" onClick={() => elegirPaso(indice - 1)}>Paso anterior</button><button type="button" onClick={() => elegirPaso(indice + 1)}>Paso siguiente</button>
-          <label>Velocidad<select value={velocidad} onChange={e => { const v = Number(e.target.value); setVelocidad(v); if (!soloLectura) cambiar({ ...doc, velocidad: v }) }}>{[.25, .5, 1, 1.5, 2, 3].map(v => <option key={v} value={v}>{v}×</option>)}</select></label>
-          <label><input type="checkbox" checked={bucle} onChange={e => { setBucle(e.target.checked); if (!soloLectura) cambiar({ ...doc, bucle: e.target.checked }) }} /> Bucle</label>
-        </div>
-        {!soloLectura && <fieldset disabled={bloqueado}>
-          <div className="pizarra-fila"><label>Nombre del paso<input maxLength={80} value={doc.pasos[indice].nombre} onChange={e => cambiar({ ...doc, pasos: doc.pasos.map((p, i) => i === indice ? { ...p, nombre: e.target.value } : p) }, `nombre:${doc.pasos[indice].id}`)} /></label>
-            <label>Transición hacia este paso (s)<input type="number" min=".1" max="60" step=".1" value={doc.pasos[indice].duracion} onChange={e => { const v = Number(e.target.value); if (v >= .1 && v <= 60) cambiar({ ...doc, pasos: doc.pasos.map((p, i) => i === indice ? { ...p, duracion: v } : p) }, `duracion:${doc.pasos[indice].id}`) }} /></label>
-            <button type="button" disabled={!indice} onClick={() => ordenarPaso(-1)}>Mover paso antes</button><button type="button" disabled={indice === doc.pasos.length - 1} onClick={() => ordenarPaso(1)}>Mover paso después</button>
-            <button type="button" disabled={doc.pasos.length === 1} onClick={() => { if (window.confirm('¿Eliminar este paso?')) { cambiar({ ...doc, pasos: doc.pasos.filter((_, i) => i !== indice) }); setPaso(Math.max(0, indice - 1)) } }}>Eliminar paso</button>
-          </div>
-        </fieldset>}
-      </>}
-    </section>
     {!soloLectura && <p className="pizarra-ayuda">Las posiciones se editan en el paso seleccionado; número, color y forma de las flechas son del elemento en todos los pasos. Ctrl/Cmd+Z deshacer · Ctrl/Cmd+Shift+Z rehacer · Ctrl/Cmd+A seleccionar todo · Ctrl/Cmd+D duplicar · Supr eliminar · Esc soltar herramienta.</p>}
     {/* Copia para exportar con la orientación guardada aunque la vista esté de pie. */}
     {!soloLectura && <div hidden><PizarraCancha ref={svgExportar} miniatura doc={doc} poses={doc.pasos[indice].poses} /></div>}

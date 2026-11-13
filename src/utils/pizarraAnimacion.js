@@ -8,7 +8,7 @@
 // - 'recto': línea recta con aceleración y frenado en cada paso (el comportamiento anterior).
 // Pelota: si en un paso está pegada a una jugadora (la más cercana dentro del alcance), se infiere la posesión.
 //   Misma jugadora en dos pasos seguidos = conducción (la acompaña); jugadoras distintas = pase (viaja de una a otra).
-import { limitar, SUPERFICIES } from './pizarra.js'
+import { limitar, LINEAS, PALETA, SUPERFICIES } from './pizarra.js'
 
 const CURVAS = ['jugadora', 'pelota']
 const EPS = 1e-6
@@ -177,3 +177,121 @@ export function estelas(doc, tiempo, modo = 'estela', recorrido = 'suave') {
   })
 }
 
+
+// ---------------------------------------------------------------------------------------------------------------
+// Etapa B: imán de la pelota y flechas automáticas. Todo se calcula con las poses: nada se guarda en el documento.
+
+const UMBRAL_MOVIMIENTO = 2 // metros: movimientos más chicos no generan flecha automática.
+const TOLERANCIA_DIBUJADA = 5 // metros: una flecha dibujada a mano que empieza y termina cerca reemplaza a la automática.
+
+const metros = (doc, p) => { const [w, h] = SUPERFICIES[doc.superficie]; return [p.x * w / 100, p.y * h / 100] }
+const porcentaje = (doc, [x, y]) => { const [w, h] = SUPERFICIES[doc.superficie]; return { x: limitar(x * 100 / w, 0, 100), y: limitar(y * 100 / h, 0, 100) } }
+const redondear2 = v => Math.round(v * 100) / 100
+
+// Radio dentro del cual, al soltar la pelota, se acomoda a los pies de una jugadora.
+export function alcanceIman(jugadora, pelota) { return alcancePosesion(jugadora, pelota) + 2 }
+
+// Dueña de cada pelota en un paso (id de jugadora o null).
+export function duenasEnPaso(doc, indice) {
+  const todas = posesiones(doc)
+  return Object.fromEntries(Object.entries(todas).map(([id, lista]) => [id, lista[indice] ?? null]))
+}
+
+// Lugar "a los pies" de una jugadora, del lado desde donde llega la pelota (o hacia el ataque si cae encima).
+export function alPie(doc, jugadora, pelota, poseJugadora, desde) {
+  const pj = metros(doc, poseJugadora), pd = desde ? metros(doc, desde) : pj
+  let vx = pd[0] - pj[0], vy = pd[1] - pj[1], largo = Math.hypot(vx, vy)
+  if (largo < .3) { vx = doc.ataque === 'izquierda' ? -1 : 1; vy = 0; largo = 1 }
+  const d = jugadora.tamano * .8 + pelota.tamano * .45
+  const p = porcentaje(doc, [pj[0] + vx / largo * d, pj[1] + vy / largo * d])
+  return { x: redondear2(p.x), y: redondear2(p.y) }
+}
+
+// Jugadora (propia o rival) que atraería a la pelota si se suelta en `pose`, o null.
+export function jugadoraCercana(doc, indice, pelotaId, pose) {
+  const pelota = doc.elementos.find(e => e.id === pelotaId), paso = doc.pasos[indice]
+  if (!pelota || pelota.tipo !== 'pelota' || !paso) return null
+  const pb = metros(doc, pose)
+  let mejor = null, distancia = Infinity
+  for (const j of doc.elementos) {
+    if (j.tipo !== 'jugadora') continue
+    const pj = metros(doc, paso.poses[j.id]), d = Math.hypot(pj[0] - pb[0], pj[1] - pb[1])
+    if (d <= alcanceIman(j, pelota) && d < distancia) { mejor = j; distancia = d }
+  }
+  return mejor
+}
+
+// Al soltar pelotas: cada una se pega a la jugadora más cercana dentro del imán; si no hay ninguna, queda suelta.
+export function imanPelotas(doc, indice, ids) {
+  const paso = doc.pasos[indice]
+  if (!paso) return doc
+  let poses = paso.poses, cambio = false
+  for (const id of ids) {
+    const pelota = doc.elementos.find(e => e.id === id)
+    if (pelota?.tipo !== 'pelota') continue
+    const j = jugadoraCercana(doc, indice, id, poses[id])
+    if (!j) continue
+    const lugar = alPie(doc, j, pelota, poses[j.id], poses[id])
+    poses = { ...poses, [id]: { ...poses[id], ...lugar } }; cambio = true
+  }
+  return cambio ? { ...doc, pasos: doc.pasos.map((p, i) => i === indice ? { ...p, poses } : p) } : doc
+}
+
+// Pelotas que tienen en este paso las jugadoras indicadas (para que acompañen el arrastre).
+export function pelotasDe(doc, indice, jugadoraIds) {
+  const duenas = duenasEnPaso(doc, indice)
+  return Object.entries(duenas).filter(([, j]) => j && jugadoraIds.includes(j)).map(([id]) => id)
+}
+
+// "Pegar pelota": la pelota más cercana (o la que ya tiene) va a los pies de la jugadora en este paso.
+export function pegarPelota(doc, indice, jugadoraId) {
+  const jugadora = doc.elementos.find(e => e.id === jugadoraId), paso = doc.pasos[indice]
+  const pelotas = doc.elementos.filter(e => e.tipo === 'pelota')
+  if (jugadora?.tipo !== 'jugadora' || !paso || !pelotas.length) return doc
+  const pj = metros(doc, paso.poses[jugadoraId])
+  const pelota = pelotas.reduce((mejor, b) => {
+    const pb = metros(doc, paso.poses[b.id]), d = Math.hypot(pb[0] - pj[0], pb[1] - pj[1])
+    return !mejor || d < mejor.d ? { b, d } : mejor
+  }, null).b
+  const lugar = alPie(doc, jugadora, pelota, paso.poses[jugadoraId], paso.poses[pelota.id])
+  return { ...doc, pasos: doc.pasos.map((p, i) => i !== indice ? p : { ...p, poses: { ...p.poses, [pelota.id]: { ...p.poses[pelota.id], ...lugar } } }) }
+}
+
+// Extremos (en metros) de una flecha dibujada en un paso, respetando su rotación.
+function extremosDibujada(doc, e, pose) {
+  const [w, h] = SUPERFICIES[doc.superficie], r = pose.rotacion * Math.PI / 180
+  const lx = e.dx * w / 100, ly = e.dy * h / 100, s = metros(doc, pose)
+  return [s, [s[0] + lx * Math.cos(r) - ly * Math.sin(r), s[1] + lx * Math.sin(r) + ly * Math.cos(r)]]
+}
+
+// Flechas automáticas de la transición del paso `j - 1` al paso `j`:
+// pase (pelota que cambia de dueña o sale suelta), conducción (jugadora que se mueve con la pelota)
+// y desplazamiento sin pelota. Se omiten movimientos chicos y las que ya están dibujadas a mano.
+export function flechasAutomaticas(doc, j) {
+  if (j < 1 || j >= doc.pasos.length) return []
+  const antes = doc.pasos[j - 1].poses, ahora = doc.pasos[j].poses
+  const duenasAntes = duenasEnPaso(doc, j - 1), duenasAhora = duenasEnPaso(doc, j)
+  const dibujadas = doc.elementos.filter(e => LINEAS.includes(e.tipo)).flatMap(e => [j - 1, j].map(s => extremosDibujada(doc, e, doc.pasos[s].poses[e.id])))
+  const yaDibujada = (a, b) => dibujadas.some(([s, f]) => Math.hypot(s[0] - a[0], s[1] - a[1]) <= TOLERANCIA_DIBUJADA && Math.hypot(f[0] - b[0], f[1] - b[1]) <= TOLERANCIA_DIBUJADA)
+  const flecha = (id, tipo, color, origen, destino, r0, r1) => {
+    const a = metros(doc, origen), b = metros(doc, destino), largo = Math.hypot(b[0] - a[0], b[1] - a[1])
+    if (largo < UMBRAL_MOVIMIENTO || yaDibujada(a, b) || largo - r0 - r1 < 1.5) return []
+    const ux = (b[0] - a[0]) / largo, uy = (b[1] - a[1]) / largo
+    const inicio = porcentaje(doc, [a[0] + ux * r0, a[1] + uy * r0]), fin = porcentaje(doc, [b[0] - ux * r1, b[1] - uy * r1])
+    return [{ id: `auto-${tipo}-${id}`, tipo, color, x: inicio.x, y: inicio.y, dx: fin.x - inicio.x, dy: fin.y - inicio.y }]
+  }
+  const conduce = id => Object.keys(duenasAntes).some(b => duenasAntes[b] === id && duenasAhora[b] === id)
+  return doc.elementos.flatMap(e => {
+    if (e.tipo === 'jugadora') return flecha(e.id, conduce(e.id) ? 'conduccion' : 'movimiento', PALETA.trazo, antes[e.id], ahora[e.id], e.tamano, e.tamano)
+    if (e.tipo === 'pelota') {
+      const A = duenasAntes[e.id], B = duenasAhora[e.id]
+      if (A && A === B) return [] // conducción: la dibuja la jugadora.
+      // Con receptora, la punta termina en su borde (la pelota a sus pies quedaría tapada por la ficha).
+      const receptora = B && doc.elementos.find(x => x.id === B)
+      return receptora
+        ? flecha(e.id, 'pase', PALETA.trazo, antes[e.id], ahora[B], e.tamano * .7, receptora.tamano + .4)
+        : flecha(e.id, 'pase', PALETA.trazo, antes[e.id], ahora[e.id], e.tamano * .7, e.tamano * .7)
+    }
+    return []
+  })
+}
