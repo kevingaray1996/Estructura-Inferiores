@@ -26,7 +26,9 @@ test('Bibliotecas Premium conservan escrituras, filtros, reproducción por enlac
   assert.deepEqual(pizarras(entrenamiento), pizarras(antes('src/components/EntrenamientosSection.jsx')))
   assert.match(leer('src/components/VideoSection.jsx'), /href=\{v.url\}/)
   // Los estilos de fotografiasClub.css cambian con el rediseño; los componentes conservan su lógica.
-  for (const p of ['src/components/PizarraTactica.jsx', 'src/components/EstadisticasEquipo.jsx', 'src/components/EncabezadoFotografico.jsx']) assert.equal(soloLogica(leer(p)), soloLogica(antes(p)), p)
+  // PizarraTactica.jsx se rediseñó a propósito (etapa 1 de la pizarra); su comportamiento lo cubren
+  // tests/pizarra.test.mjs y tests/pizarra.interaccion.mjs.
+  for (const p of ['src/components/EstadisticasEquipo.jsx', 'src/components/EncabezadoFotografico.jsx']) assert.equal(soloLogica(leer(p)), soloLogica(antes(p)), p)
 })
 
 test('Fotografías Etapa 2: originales completos, rutas públicas y recurso de rival reservado', () => {

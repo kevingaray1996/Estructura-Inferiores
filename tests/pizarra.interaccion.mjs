@@ -36,7 +36,7 @@ test('Editor interactivo: colocar, arrastrar, propiedades, multiselección, hist
     await click('Jugadora')
     await evento(document.querySelector('svg.pizarra-cancha'), 'pointerdown', { clientX: 10.5, clientY: 13.6 })
     assert.equal(document.querySelector('svg.pizarra-cancha').querySelectorAll('[data-elemento]').length,1)
-    await click('↖ Seleccionar')
+    await click('Mover')
     const elemento = document.querySelector('svg.pizarra-cancha').querySelector('[data-elemento]')
     await evento(elemento,'pointerdown',{clientX:10.5,clientY:13.6})
     await evento(document.querySelector('svg.pizarra-cancha'),'pointermove',{clientX:21,clientY:20.4})
@@ -51,7 +51,7 @@ test('Editor interactivo: colocar, arrastrar, propiedades, multiselección, hist
     assert.match(document.querySelector('svg.pizarra-cancha').querySelector('[data-elemento]').getAttribute('transform'), /rotate\(90\)/)
     await click('Duplicar selección'); assert.equal(document.querySelector('svg.pizarra-cancha').querySelectorAll('[data-elemento]').length,2)
     await key('z',true); assert.equal(document.querySelector('svg.pizarra-cancha').querySelectorAll('[data-elemento]').length,1)
-    await click('↷ Rehacer'); assert.equal(document.querySelector('svg.pizarra-cancha').querySelectorAll('[data-elemento]').length,2)
+    await click('Rehacer'); assert.equal(document.querySelector('svg.pizarra-cancha').querySelectorAll('[data-elemento]').length,2)
     await key('a',true); assert.match(document.querySelector('.pizarra-propiedades').textContent,/2 seleccionado/)
     await click('+ Agregar paso')
     await evento(document.querySelector('svg.pizarra-cancha').querySelector('[data-elemento]'),'pointerdown',{clientX:21,clientY:20.4})
@@ -75,7 +75,7 @@ test('Editor interactivo: colocar, arrastrar, propiedades, multiselección, hist
     await drag(document.querySelector('svg.pizarra-cancha'), 'drop')
     assert.equal(document.querySelector('svg.pizarra-cancha').querySelectorAll('[data-elemento]').length, 3)
     assert.match(document.querySelector('.pizarra-contexto').textContent, /Cono/)
-    assert.equal(boton('↖ Seleccionar').getAttribute('aria-pressed'), 'true')
+    assert.equal(boton('Mover').getAttribute('aria-pressed'), 'true')
     await click('↻ Girar')
     assert.match(document.querySelector('svg.pizarra-cancha').querySelectorAll('[data-elemento]')[2].getAttribute('transform'), /rotate\(15\)/)
     await drag(document.querySelector('svg.pizarra-cancha'), 'drop', { getData: () => '<script>', types: [] })
@@ -115,5 +115,108 @@ test('Editor interactivo: colocar, arrastrar, propiedades, multiselección, hist
   } finally {
     await act(() => root.unmount()); await server.close(); dom.window.close()
     for (const [n,p] of previos) { if(p)Object.defineProperty(globalThis,n,p); else delete globalThis[n] }
+  }
+})
+
+test('Etapa 1: colocación encadenada, flechas con el dedo, extremos, temblor, aviso de borrado y arrastre desde la barra', async () => {
+  const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', { url: 'http://localhost' })
+  const previos = new Map()
+  function global(nombre, valor) { previos.set(nombre, Object.getOwnPropertyDescriptor(globalThis, nombre)); Object.defineProperty(globalThis, nombre, { value: valor, configurable: true, writable: true }) }
+  for (const nombre of ['window', 'document', 'HTMLElement', 'SVGElement', 'Event', 'MouseEvent', 'KeyboardEvent']) global(nombre, dom.window[nombre])
+  global('IS_REACT_ACT_ENVIRONMENT', true)
+  global('DOMPoint', class { constructor(x, y) { this.x = x; this.y = y } matrixTransform() { return this } })
+  global('requestAnimationFrame', () => 1); global('cancelAnimationFrame', () => {})
+  dom.window.SVGElement.prototype.getScreenCTM = () => ({ inverse: () => ({}) })
+  dom.window.SVGElement.prototype.setPointerCapture = () => {}
+  dom.window.SVGElement.prototype.hasPointerCapture = () => false
+  dom.window.SVGElement.prototype.getBoundingClientRect = () => ({ left: 0, top: 0, right: 111, bottom: 74, width: 111, height: 74 })
+  const { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs'), React = await import('react'), { createRoot } = await import('react-dom/client')
+  const server = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom' })
+  const root = createRoot(document.getElementById('root'))
+  const { act } = React
+  const barra = nombre => document.querySelector(`.pizarra-herramientas button[aria-label="${nombre}"]`)
+  const boton = texto => [...document.querySelectorAll('button')].find(b => b.textContent === texto || b.getAttribute('aria-label') === texto)
+  const evento = async (nodo, tipo, props = {}) => { await act(() => { const e = new dom.window.MouseEvent(tipo, { bubbles: true, cancelable: true, button: 0, ...props }); Object.defineProperty(e, 'pointerId', { value: props.pointerId || 1 }); Object.defineProperty(e, 'pointerType', { value: props.pointerType || 'touch' }); nodo.dispatchEvent(e) }) }
+  const cancha = () => document.querySelector('svg.pizarra-cancha')
+  const elementos = () => [...cancha().querySelectorAll('[data-elemento]')]
+  const posicion = nodo => nodo.getAttribute('transform').match(/translate\(([^ ]+) ([^)]+)\)/).slice(1).map(n => Math.round(Number(n)))
+  const toque = async (x, y) => { await evento(cancha(), 'pointerdown', { clientX: x, clientY: y }); await evento(cancha(), 'pointerup', { clientX: x, clientY: y }) }
+  try {
+    const { default: Editor } = await server.ssrLoadModule('/src/components/PizarraTactica.jsx')
+    await act(() => root.render(React.createElement(Editor, { onGuardar() {} })))
+    assert.equal(barra('Mover').getAttribute('aria-pressed'), 'true')
+    // La herramienta queda activa: tres toques, tres jugadoras numeradas.
+    await act(() => barra('Jugadora').click())
+    for (const x of [10, 20, 30]) await toque(x, 10)
+    assert.deepEqual(elementos().map(e => e.querySelector('text').textContent), ['1', '2', '3'])
+    await act(() => barra('Rival').click())
+    await toque(60, 40)
+    assert.equal(elementos().at(-1).querySelector('text').textContent, '1')
+    assert.match(document.querySelector('.pizarra-contexto').textContent, /Rival/)
+    // Tocar de nuevo la herramienta activa vuelve a Mover.
+    await act(() => barra('Rival').click())
+    assert.equal(barra('Mover').getAttribute('aria-pressed'), 'true')
+    // Pase: arrastrar de la salida al destino.
+    await act(() => barra('Pase').click())
+    await evento(cancha(), 'pointerdown', { clientX: 10, clientY: 50 })
+    await evento(cancha(), 'pointermove', { clientX: 40, clientY: 60 })
+    await evento(cancha(), 'pointerup', { clientX: 40, clientY: 60 })
+    const pase = elementos().find(e => e.querySelector('[data-extremo]'))
+    assert.deepEqual(posicion(pase), [10, 50])
+    assert.equal(elementos().length, 5)
+    const golpe = () => pase.querySelector('path[stroke="transparent"]').getAttribute('d').match(/L([^ ]+) ([^ ]+)/).slice(1).map(Number)
+    assert.deepEqual(golpe().map(Math.round), [30, 10])
+    // La punta se mueve con su manija.
+    await act(() => barra('Mover').click())
+    const punta = pase.querySelector('[data-extremo="punta"]')
+    assert.ok(punta)
+    await evento(punta, 'pointerdown', { clientX: 40, clientY: 60 })
+    await evento(cancha(), 'pointermove', { clientX: 70, clientY: 20 })
+    await evento(cancha(), 'pointerup', { clientX: 70, clientY: 20 })
+    assert.deepEqual(golpe().map(Math.round), [60, -30])
+    assert.deepEqual(posicion(pase), [10, 50])
+    // Un toque con temblor (menos de 4 px) no mueve ni agrega historial.
+    const jugadora = elementos()[0], antes = jugadora.getAttribute('transform')
+    await act(() => boton('Deshacer').click())
+    assert.deepEqual(golpe().map(Math.round), [30, 10])
+    await act(() => boton('Rehacer').click())
+    await evento(jugadora, 'pointerdown', { clientX: 10, clientY: 10 })
+    await evento(cancha(), 'pointermove', { clientX: 11, clientY: 11 })
+    await evento(cancha(), 'pointerup', { clientX: 11, clientY: 11 })
+    assert.equal(jugadora.getAttribute('transform'), antes)
+    assert.equal(boton('Rehacer').disabled, true)
+    // Borrar no pregunta: avisa y permite deshacer.
+    await act(() => boton('Eliminar selección').click())
+    assert.equal(elementos().length, 4)
+    assert.match(document.querySelector('.pizarra-aviso').textContent, /eliminado/)
+    await act(() => document.querySelector('.pizarra-aviso button').click())
+    assert.equal(elementos().length, 5)
+    assert.equal(document.querySelector('.pizarra-aviso'), null)
+    // Arrastrar un cono desde la barra hasta la cancha con el dedo.
+    await evento(barra('Cono'), 'pointerdown', { pointerId: 9, clientX: 50, clientY: 300 })
+    await evento(barra('Cono'), 'pointermove', { pointerId: 9, clientX: 52, clientY: 200 })
+    assert.ok(document.querySelector('.pizarra-fantasma'))
+    await evento(barra('Cono'), 'pointermove', { pointerId: 9, clientX: 52.5, clientY: 34 })
+    await evento(barra('Cono'), 'pointerup', { pointerId: 9, clientX: 52.5, clientY: 34 })
+    assert.equal(document.querySelector('.pizarra-fantasma'), null)
+    assert.equal(elementos().length, 6)
+    assert.match(elementos().at(-1).getAttribute('transform'), /^translate\(52.5 34\)/)
+    assert.equal(barra('Mover').getAttribute('aria-pressed'), 'true')
+    // Con el dedo la barra se activa al levantarlo, sin depender del click.
+    await evento(barra('Pelota'), 'pointerdown', { pointerId: 11, clientX: 5, clientY: 300 })
+    await evento(barra('Pelota'), 'pointerup', { pointerId: 11, clientX: 5, clientY: 300 })
+    assert.equal(barra('Pelota').getAttribute('aria-pressed'), 'true')
+    await act(() => barra('Mover').click())
+    // Media cancha desde la barra superior.
+    await act(() => boton('Media cancha').click())
+    assert.match(cancha().getAttribute('viewBox'), /58.5 74/)
+    // Más abre la paleta completa.
+    await act(() => barra('Más objetos').click())
+    assert.ok(document.querySelector('.pizarra-hoja-abierta'))
+    await act(() => boton('Cerrar objetos').click())
+    assert.equal(document.querySelector('.pizarra-hoja-abierta'), null)
+  } finally {
+    await act(() => root.unmount()); await server.close(); dom.window.close()
+    for (const [n, p] of previos) { if (p) Object.defineProperty(globalThis, n, p); else delete globalThis[n] }
   }
 })

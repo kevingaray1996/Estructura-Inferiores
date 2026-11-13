@@ -1,6 +1,7 @@
 /* Fuente única de color, tipografía y movimiento. theme.js y las paletas de
    cada módulo solo leen estas variables. Sin estilos de body, controles nativos,
-   canvas, colores deportivos ni reglas de impresión. */
+   canvas ni reglas de impresión; los únicos colores deportivos son los
+   tokens --pizarra-* de la cancha táctica. */
 :root {
   /* Paleta base (modo oscuro) */
   --ui-fondo-pagina: #0b0b0a;
@@ -220,6 +221,16 @@
   --analisis-editor-link: var(--ui-texto-acento);
   --analisis-editor-primario: var(--ui-acento);
   --analisis-editor-sobre-primario: var(--ui-texto-sobre-acento);
+
+  /* Pizarra táctica: el césped y las líneas son iguales en ambos temas para que
+     la cancha, el visor de Wellness y el PNG exportado se vean idénticos. */
+  --pizarra-cesped: #24733f;
+  --pizarra-cesped-libre: #285c49;
+  --pizarra-cesped-icono: #244837;
+  --pizarra-linea: #ffffff;
+  --pizarra-seleccion: var(--ui-acento);
+  --pizarra-seleccion-borde: var(--marca-negro);
+  --pizarra-sombra: color-mix(in srgb, var(--marca-negro) 45%, transparent);
 }
 
 /* Equivalentes claros de los mismos tokens. El tema de pantalla nunca cambia

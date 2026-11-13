@@ -2,17 +2,42 @@
 
 ## Uso
 
-En **Entrenamientos**, crear o editar un ejercicio y pulsar **Abrir pizarra táctica**. Se conservan imágenes, cantidad de jugadoras y video. Elegir herramienta y tocar la cancha para colocarla; volver a Seleccionar para moverla. Shift o el rectángulo de selección permiten seleccionar varias. Propiedades cambia colores, números, texto, tamaño, grosor, rotación y extremos de flechas. El selector de superficies conserva posiciones relativas; el sentido de ataque es propio del ejercicio, independiente de Análisis.
+En **Entrenamientos**, crear o editar un ejercicio y pulsar **Abrir pizarra táctica**. Se conservan imágenes, cantidad de jugadoras y video.
 
-La paleta visual se organiza en Jugadoras, Materiales, Movimientos, Dibujo y Canchas; los dibujos SVG se comparten con los objetos de la cancha. En escritorio se puede arrastrar un material desde la paleta o elegirlo y hacer clic. En móvil/tablet se toca el objeto y después su ubicación. Al colocarlo queda seleccionado y listo para mover, con accesos rápidos de duplicación, giro, tamaño, color y eliminación. Las propiedades completas y la biblioteca son plegables; en pantallas pequeñas quedan debajo de la cancha, sin taparla.
+### Pantalla (etapa 1: base táctil)
 
-Dos dedos permiten ampliar y desplazar la vista, también en el visor de Wellness. Este gesto no altera los datos ni añade acciones al historial. Los pasos tienen miniaturas; en secuencias de más de doce pasos se dibujan las cercanas a la selección y las demás muestran su resumen, para mantener la fluidez. **Agregar paso** duplica las posiciones actuales y permite moverlas en el siguiente fotograma. Estos cambios visuales conservan el formato v1 y no requieren SQL adicional.
+- **Barra superior, en una fila:** Cerrar · Deshacer · Rehacer · Completa/Media · ⋯ · Aplicar. En ⋯ quedan zoom, Ajustar vista, pantalla completa, orientación guardada, sentido de ataque, PNG, respaldo JSON, recuperar JSON y Borrar todo. En pantallas de 380 px o menos, Aplicar se muestra como ✓.
+- **Barra de herramientas, fija abajo:** Mover · Propia · Rival · Pelota · Cono · Pase · Conducción · Sin pelota · Más. **Más** abre la paleta completa: en el celular, como panel desde abajo; en escritorio, a la izquierda de la cancha.
+- **Barra del objeto**, con alto fijo debajo de la cancha: duplicar, girar, 6 colores rápidos, tamaño y eliminar. Sin selección, muestra una ayuda corta. El resto de las propiedades está en **Más propiedades del objeto**, que en el celular queda al final.
 
-Para animar, construir el Inicio, **Duplicar paso y continuar**, mover jugadoras/pelota y ajustar la duración de transición. Cada paso contiene las poses de los mismos elementos; color/número/tamaño son compartidos entre pasos. Materiales permanecen quietos hasta que se mueven explícitamente en otro paso. Se puede reordenar, eliminar pasos, pausar, reiniciar y controlar velocidad/bucle. La primera duración no se reproduce: cada transición usa la duración del paso destino.
+### Gestos
 
-**Aplicar pizarra al ejercicio** actualiza el formulario; después hay que **Guardar entrenamiento** o **Guardar borrador/cambios** en Planificación. PNG descarga la vista actual. Respaldo editable descarga JSON v1, que se puede recuperar en el editor. No se implementa exportación de video/GIF en esta entrega.
+- **Colocar:** se toca una herramienta y después la cancha. La herramienta queda activa para colocar varias seguidas; Mover, Esc o volver a tocar la herramienta la desactivan. También se puede arrastrar una ficha desde la barra hasta la cancha con el dedo, o desde la paleta con el mouse.
+- **Numeración:** propias y rivales se numeran por separado. Rival es una jugadora v1 con color `PALETA.rival`, no un tipo nuevo.
+- **Flechas:** Pase, Conducción, Sin pelota y el resto de las líneas se dibujan arrastrando de la salida al destino. Un toque sin arrastre coloca una flecha corta. Con la flecha seleccionada aparecen dos manijas para mover la salida y la punta. La forma (`dx/dy`) es del elemento y vale en todos los pasos; la salida es la pose del paso actual. El formato v1 limita el vector a ±80 % de la cancha.
+- **Convención de trazos:** pase con línea continua y punta llena, conducción ondulada (una onda cada ~3 m), sin pelota con guiones y flecha punteada con puntos. Las flechas guardadas antes cambian de aspecto según esta convención.
+- **Mover fichas:** zona táctil mínima de ~44 px en pantalla con cualquier zoom. Hay un umbral de 4 px, así que un toque con temblor no mueve nada ni agrega una entrada al historial. Se dibuja un cuadro por frame y se guarda un solo cambio al soltar. Las líneas se dibujan debajo de las fichas.
+- **Fondo:** sin zoom, arrastrar el fondo selecciona varias fichas con un rectángulo; con zoom, desplaza la vista. Dos dedos amplían y desplazan, también en el visor de Wellness, sin tocar los datos.
+- **Deshacer/Rehacer:** hasta 100 pasos. Cada gesto es uno solo: un arrastre, un deslizador o un texto mientras se escribe. Deshacer conserva la selección. Eliminar no pide confirmación: aparece un aviso con **Deshacer**.
+- **Celular vertical:** las superficies apaisadas (completa, cuarto, reducida, libre) se muestran de pie, con el ataque hacia arriba. Es solo la vista: la orientación guardada, Wellness, la miniatura y el PNG no cambian. Media cancha y área ya son verticales y no se giran. En vista vertical, números, pelota, conos y textos se mantienen derechos.
 
-Las tareas libres de Planificación pueden tener una pizarra propia, sin obligación de registrarse en biblioteca. Los ejercicios seleccionados de biblioteca se copian completos: modificaciones posteriores no cambian la sesión ni otra planificación. Duplicar ejercicio crea un nuevo registro con copia independiente.
+### Pasos y animación
+
+Debajo de las barras: **Pasos (n)** se despliega (en el celular arranca plegado), **▶ Reproducir** y el tiempo. **Agregar paso** duplica las posiciones actuales. Cada paso contiene las poses de los mismos elementos; color, número y tamaño se comparten entre pasos. Se puede reordenar, eliminar pasos y controlar velocidad y bucle. La primera duración no se reproduce: cada transición usa la duración del paso destino. En secuencias de más de doce pasos solo se dibujan las miniaturas cercanas a la selección.
+
+**Aplicar** actualiza el formulario; después hay que **Guardar entrenamiento** o **Guardar borrador/cambios** en Planificación. PNG descarga la cancha con la orientación guardada. Respaldo editable descarga JSON v1.
+
+Las tareas libres de Planificación pueden tener una pizarra propia, sin obligación de registrarse en biblioteca. Los ejercicios de biblioteca se copian completos: los cambios posteriores no afectan la sesión. Duplicar ejercicio crea una copia independiente.
+
+### Colores
+
+La interfaz usa solo tokens del tema. Los de la cancha están en `src/appearance/apariencia.css` (`--pizarra-cesped`, `--pizarra-linea`, `--pizarra-seleccion`, etc.). Los colores de las fichas se guardan como hex en el documento, porque el validador de Supabase lo exige y Wellness los dibuja tal cual; su única fuente es `PALETA` en `src/utils/pizarra.js`. Al exportar, `pizarraExportar.js` convierte los tokens en sus valores calculados.
+
+### Etapas siguientes (pendientes, no implementadas)
+
+1. **Biblioteca de jugadas:** formaciones prearmadas (4-4-2, 4-3-3, 3-5-2…), jugadas y ejercicios guardados y reutilizables, búsqueda por categoría o etiqueta. Probablemente necesite una tabla nueva y RLS; el SQL se entregará aparte.
+2. **Animación:** línea de tiempo más clara, recorridos visibles entre pasos, pelota que acompaña a la jugadora, flechas que aparecen por paso y curvas en pase/conducción (requiere decidir cómo tratar `curva` en los documentos existentes).
+3. **Exportar:** PNG en alta resolución y con la orientación elegida, video o GIF de la animación, PDF de la sesión con sus pizarras y compartir directo (WhatsApp).
 
 ## Publicación y privacidad
 
@@ -32,9 +57,9 @@ Límites: 200 elementos, 60 pasos, transiciones de 0,1 a 60 segundos. Las sesion
 
 ## Verificación
 
-- Suite habitual: `node --test --test-concurrency=1 tests/*.test.mjs`.
-- `node --test tests/pizarra.interaccion.mjs`: DOM en memoria, desde paquete jsdom temporal externo (ruta opcional `PIZARRA_DOM_PATH`). Comprueba colocación, arrastre, color, rotación, selección múltiple, historial e interpolación RAF.
-- `node --test tests/pizarra.postgres.mjs`: PostgreSQL PGlite en memoria, sin credenciales (`PLANIFICACION_PG_PATH` opcional). Comprueba migración, registros antiguos, RLS, RPC, conflictos, independencia de copias y privacidad pública.
-- `npm run build` y compilación completa en memoria sin configurar credenciales locales.
-
-No se efectuaron escrituras de prueba en Supabase. Queda pendiente comprobar en navegador/tablet real la experiencia táctil, pantalla completa, exportación PNG e integración visual con Planificación y Wellness: el acceso automatizado a Chrome no fue aprobado. La simulación DOM no sustituye esa comprobación visual. Los tres SQL anteriores sin seguimiento permanecen intactos.
+- Suite habitual: `node --test --test-concurrency=1 tests/*.test.mjs`. `tests/pizarra.test.mjs` cubre flechas, extremos con rotación, numeración por equipo, historial agrupado y su límite, trazos, colores del tema y vista vertical.
+- `node --test tests/pizarra.interaccion.mjs`: DOM en memoria con jsdom en `$TMPDIR/comunicaciones-pizarra-dom` (ruta opcional `PIZARRA_DOM_PATH`). Cubre colocación, arrastre, propiedades, multiselección, historial, RAF, colocación encadenada, flechas con el dedo, manijas, umbral de temblor, aviso de borrado, arrastre desde la barra, media cancha y panel de objetos.
+- `node --test tests/pizarra.postgres.mjs`: PGlite en memoria (`$TMPDIR/comunicaciones-planificacion-pg`, `PLANIFICACION_PG_PATH` opcional). Además de la migración, RLS y RPC, confirma que el validador SQL acepta sin pérdidas un documento de etapa 1 (rival, flechas dibujadas, extremos movidos, media cancha).
+- `tests/bibliotecasPremium.test.mjs` ya no congela la lógica de `PizarraTactica.jsx`, rediseñada a propósito; la cubren los tests anteriores.
+- `npm run build` y `npm run lint` (los errores que quedan son de otras secciones y ya existían).
+- Etapa 1 probada en Chromium (Playwright) con toques reales en Pixel 7, iPhone SE, iPhone 14 Pro Max, Galaxy S9+, iPad Mini, Pixel 7 horizontal y escritorio 1366×820: sin desborde horizontal, barra de herramientas visible, flechas, arrastre, deshacer, panel de objetos, menú, Aplicar y PNG. Falta probar en teléfonos y tablets reales desde la preview de Vercel.

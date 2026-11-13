@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { nuevaPizarra, agregarElemento } from '../src/utils/pizarra.js'
+import { nuevaPizarra, agregarElemento, colocarFlecha, moverExtremo, plantillaHerramienta } from '../src/utils/pizarra.js'
 import { nuevaSesion, nuevoBloque, nuevoEjercicio, prepararSesion } from '../src/utils/planificacion.js'
 const { PGlite } = await import(pathToFileURL(process.env.PLANIFICACION_PG_PATH || join(tmpdir(), 'comunicaciones-planificacion-pg/node_modules/@electric-sql/pglite/dist/index.js')).href)
 
@@ -41,6 +41,12 @@ test('PostgreSQL aislado: pizarra, RPC invoker, RLS, revisión, snapshot y proye
     assert.doesNotMatch(JSON.stringify(ejercicio.pizarra), /NO_PUBLICAR/)
     ejercicio = await rpc({ ...datos, descripcion: 'Corregida' }, ejercicio.id, 1)
     assert.equal(ejercicio.pizarra_revision, 2)
+    // Etapa 1: rival, flechas dibujadas y extremos movidos siguen siendo v1 válido para la base, sin pérdidas.
+    const rival = plantillaHerramienta('rival')
+    let etapa1 = colocarFlecha(agregarElemento(nuevaPizarra(), rival.tipo, 70, 40, rival.extra), 'pase', { x: 10, y: 20 }, { x: 95, y: -30 })
+    etapa1 = moverExtremo(colocarFlecha({ ...etapa1, superficie: 'media' }, 'conduccion', { x: 30, y: 30 }, { x: 50, y: 60 }), 0, etapa1.elementos[1].id, 'punta', { x: 40, y: 70 })
+    const validado = (await db.query('select pizarra_privado.validar($1::jsonb) d', [JSON.stringify(etapa1)])).rows[0].d
+    assert.deepEqual(validado, JSON.parse(JSON.stringify(etapa1)))
     await assert.rejects(rpc(datos, ejercicio.id, 1), e => e.code === '40001')
     await assert.rejects(rpc({ ...datos, pizarra: { ...pizarra, version: 3 } }), e => e.code === '22023')
     await assert.rejects(rpc({ ...datos, pizarra_miniatura: '<svg onload=alert(1)>' }), e => e.code === '22023')

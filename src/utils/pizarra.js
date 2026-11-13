@@ -28,10 +28,38 @@ export function validarPizarra(doc) {
   })
   return { version: 1, superficie: doc.superficie, orientacion: doc.orientacion, ataque: doc.ataque, bucle: doc.bucle, velocidad: doc.velocidad, elementos, pasos }
 }
-export function agregarElemento(doc, tipo, x = 50, y = 50) {
+// Colores guardados en el documento: el validador (cliente y Supabase) exige hex,
+// y el visor de Wellness y el PNG los dibujan tal cual. Única fuente de estos valores.
+export const PALETA = { local: '#F2C230', rival: '#2563EB', pelota: '#FFFFFF', material: '#FF7B24', trazo: '#FFFFFF', tinta: '#111111', tintaClara: '#FFFFFF', rapidos: ['#F2C230', '#2563EB', '#EF4444', '#FFFFFF', '#111111', '#FF7B24'] }
+export const LINEAS = ['flecha', 'curva', 'punteada', 'conduccion', 'pase', 'movimiento', 'remate']
+// Atajos de interfaz que crean tipos v1 existentes con otro estilo (sin tipos nuevos en la base).
+export const ATAJOS = { rival: { tipo: 'jugadora', nombre: 'Rival', extra: { color: PALETA.rival, tinta: PALETA.tintaClara } } }
+export const plantillaHerramienta = id => ATAJOS[id] || (Object.hasOwn(HERRAMIENTAS, id) ? { tipo: id, nombre: HERRAMIENTAS[id], extra: {} } : null)
+const redondear = v => Math.round(v * 100) / 100
+export function agregarElemento(doc, tipo, x = 50, y = 50, extra = {}) {
   if (!Object.hasOwn(HERRAMIENTAS, tipo) || doc.elementos.length >= 200) return doc
-  const e = { id: crypto.randomUUID(), tipo, numero: tipo === 'jugadora' ? String(doc.elementos.filter(e => e.tipo === tipo).length + 1) : '', texto: tipo === 'texto' ? 'Texto' : '', color: tipo === 'jugadora' ? '#F2C230' : tipo === 'pelota' ? '#FFFFFF' : '#FF7B24', tinta: '#111111', tamano: 3, grosor: .4, dx: 15, dy: 0, curva: 12 }
+  const color = extra.color || (tipo === 'jugadora' ? PALETA.local : tipo === 'pelota' ? PALETA.pelota : LINEAS.includes(tipo) ? PALETA.trazo : PALETA.material)
+  // Cada equipo (color) numera sus jugadoras por separado.
+  const numero = tipo === 'jugadora' ? String(doc.elementos.filter(e => e.tipo === tipo && e.color.toLowerCase() === color.toLowerCase()).length + 1) : ''
+  const e = { id: crypto.randomUUID(), tipo, numero, texto: tipo === 'texto' ? 'Texto' : '', tinta: PALETA.tinta, tamano: 3, grosor: .4, dx: 15, dy: 0, curva: tipo === 'curva' ? 12 : 0, ...extra, color }
   return { ...doc, elementos: [...doc.elementos, e], pasos: doc.pasos.map(p => ({ ...p, poses: { ...p.poses, [e.id]: { x, y, rotacion: 0 } } })) }
+}
+// Flecha dibujada de origen a destino (coordenadas 0-100). El formato v1 limita el vector a ±80.
+export function colocarFlecha(doc, tipo, origen, destino, extra = {}) {
+  return agregarElemento(doc, tipo, redondear(limitar(origen.x, 0, 100)), redondear(limitar(origen.y, 0, 100)), { ...extra, dx: redondear(limitar(destino.x - origen.x, -80, 80)), dy: redondear(limitar(destino.y - origen.y, -80, 80)) })
+}
+// Mueve la salida o la punta de una flecha en el paso indicado, respetando su rotación.
+// La forma (dx/dy) es del elemento y vale para todos los pasos; la salida es la pose del paso.
+export function moverExtremo(doc, indice, id, extremo, p) {
+  const [w, h] = SUPERFICIES[doc.superficie], e = doc.elementos.find(x => x.id === id), pose = doc.pasos[indice]?.poses[id]
+  if (!e || !pose || !LINEAS.includes(e.tipo)) return doc
+  const r = pose.rotacion * Math.PI / 180, cos = Math.cos(r), sin = Math.sin(r)
+  const lx = e.dx * w / 100, ly = e.dy * h / 100
+  const salida = extremo === 'origen' ? { x: limitar(p.x, 0, 100) * w / 100, y: limitar(p.y, 0, 100) * h / 100 } : { x: pose.x * w / 100, y: pose.y * h / 100 }
+  const punta = extremo === 'punta' ? { x: p.x * w / 100, y: p.y * h / 100 } : { x: pose.x * w / 100 + lx * cos - ly * sin, y: pose.y * h / 100 + lx * sin + ly * cos }
+  const vx = punta.x - salida.x, vy = punta.y - salida.y
+  const dx = redondear(limitar((vx * cos + vy * sin) * 100 / w, -80, 80)), dy = redondear(limitar((-vx * sin + vy * cos) * 100 / h, -80, 80))
+  return { ...doc, elementos: doc.elementos.map(x => x.id === id ? { ...x, dx, dy } : x), pasos: doc.pasos.map((f, i) => i !== indice ? f : { ...f, poses: { ...f.poses, [id]: { ...pose, x: redondear(salida.x * 100 / w), y: redondear(salida.y * 100 / h) } } }) }
 }
 export function quitarElementos(doc, ids) { return { ...doc, elementos: doc.elementos.filter(e => !ids.includes(e.id)), pasos: doc.pasos.map(p => ({ ...p, poses: Object.fromEntries(Object.entries(p.poses).filter(([id]) => !ids.includes(id))) })) } }
 export function duplicarElementos(doc, ids) {
@@ -56,10 +84,14 @@ export function interpolar(doc, tiempo) {
   return { indice: doc.pasos.length - 1, poses: doc.pasos.at(-1).poses }
 }
 export const duracionTotal = doc => doc.pasos.slice(1).reduce((n, p) => n + p.duracion, 0)
-export function historialInicial(doc) { return { actual: validarPizarra(doc), antes: [], despues: [] } }
-export function historial(h, accion, doc) {
-  if (accion === 'deshacer') return h.antes.length ? { actual: h.antes.at(-1), antes: h.antes.slice(0, -1), despues: [h.actual, ...h.despues] } : h
-  if (accion === 'rehacer') return h.despues.length ? { actual: h.despues[0], antes: [...h.antes, h.actual], despues: h.despues.slice(1) } : h
+export const LIMITE_HISTORIAL = 100
+export function historialInicial(doc) { return { actual: validarPizarra(doc), antes: [], despues: [], clave: null } }
+// `clave` agrupa ediciones continuas (un deslizador, un texto) en un único paso de deshacer.
+export function historial(h, accion, doc, clave = null) {
+  if (accion === 'deshacer') return h.antes.length ? { actual: h.antes.at(-1), antes: h.antes.slice(0, -1), despues: [h.actual, ...h.despues], clave: null } : h
+  if (accion === 'rehacer') return h.despues.length ? { actual: h.despues[0], antes: [...h.antes, h.actual], despues: h.despues.slice(1), clave: null } : h
   const limpio = validarPizarra(doc)
-  return JSON.stringify(limpio) === JSON.stringify(h.actual) ? h : { actual: limpio, antes: [...h.antes.slice(-39), h.actual], despues: [] }
+  if (JSON.stringify(limpio) === JSON.stringify(h.actual)) return h
+  if (clave && h.clave === clave && h.antes.length) return { actual: limpio, antes: h.antes, despues: [], clave }
+  return { actual: limpio, antes: [...h.antes.slice(-(LIMITE_HISTORIAL - 1)), h.actual], despues: [], clave }
 }

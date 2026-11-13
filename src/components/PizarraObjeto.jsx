@@ -1,5 +1,8 @@
 import { memo } from 'react'
-const LINEAS = ['flecha', 'curva', 'punteada', 'conduccion', 'pase', 'movimiento', 'remate']
+import { LINEAS } from '../utils/pizarra'
+// Convención de trazos: pase = continua con punta llena, conducción = ondulada,
+// desplazamiento sin pelota = guiones, flecha punteada = puntos.
+const TRAZOS = { punteada: '.5 1', movimiento: '2.2 1.3' }
 export default memo(function PizarraObjeto({ e, ancho, alto }) {
   const s = e.tamano, stroke = { stroke: e.color, strokeWidth: e.grosor, fill: 'none' }
   if (LINEAS.includes(e.tipo)) {
@@ -9,11 +12,14 @@ export default memo(function PizarraObjeto({ e, ancho, alto }) {
     let d = `M0 0 Q${cx} ${cy} ${dx} ${dy}`
     if (e.tipo === 'conduccion') {
       d = 'M0 0'
-      for (let i = 1; i <= 24; i++) { const t = i / 24, ond = Math.sin(t * Math.PI * 12) * .8; d += ` L${dx * t - uy * ond} ${dy * t + ux * ond}` }
+      // Una onda cada ~3 m; se aplana al final para que la punta quede limpia.
+      const ondas = Math.max(2, Math.round(largo / 3)), pasos = ondas * 8
+      for (let i = 1; i <= pasos; i++) { const t = i / pasos, ond = Math.sin(t * Math.PI * 2 * ondas) * .7 * Math.min(1, (1 - t) * 6); d += ` L${dx * t - uy * ond} ${dy * t + ux * ond}` }
     }
-    return <g><path d={d} {...stroke} strokeDasharray={['punteada', 'pase', 'movimiento'].includes(e.tipo) ? '1.5 1' : undefined} />
+    const punta = `M${dx - a * 2 - b} ${dy - b * 2 + a} L${dx} ${dy} L${dx - a * 2 + b} ${dy - b * 2 - a}`
+    return <g><path d={d} {...stroke} strokeLinecap="round" strokeDasharray={TRAZOS[e.tipo]} />
       {e.tipo === 'remate' && <path d={`M${-uy * .7} ${ux * .7} L${dx - uy * .7} ${dy + ux * .7}`} {...stroke} />}
-      <path d={`M${dx - a * 2 - b} ${dy - b * 2 + a} L${dx} ${dy} L${dx - a * 2 + b} ${dy - b * 2 - a}`} {...stroke} />
+      {e.tipo === 'pase' ? <path d={`${punta} Z`} fill={e.color} stroke={e.color} strokeWidth={e.grosor} strokeLinejoin="round" /> : <path d={punta} {...stroke} strokeLinecap="round" strokeLinejoin="round" />}
     </g>
   }
   if (e.tipo === 'jugadora') return <g><circle r={s} fill={e.color} stroke={e.tinta} strokeWidth=".25" /><text y=".2" dominantBaseline="middle" textAnchor="middle" fontSize={s * 1.15} fill={e.tinta}>{e.numero}</text>{e.texto && <text y={s + 2} textAnchor="middle" fontSize="1.8" fill={e.tinta} stroke="#FFFFFF" strokeWidth=".08" paintOrder="stroke">{e.texto}</text>}</g>

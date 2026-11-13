@@ -1,14 +1,27 @@
 // Sólo SVG generado por React; sin HTML arbitrario, recursos externos ni scripts.
+// Los colores de la cancha llegan como tokens del tema (var(--pizarra-*)); un SVG
+// convertido en imagen no ve las hojas de estilo, así que se fijan los valores calculados.
+function fijarColores(original, copia) {
+  const origen = [original, ...original.querySelectorAll('*')], destino = [copia, ...copia.querySelectorAll('*')]
+  origen.forEach((nodo, i) => {
+    if (!nodo.getAttribute('style')?.includes('var(')) return
+    const calculado = getComputedStyle(nodo)
+    destino[i].style.fill = calculado.fill
+    destino[i].style.stroke = calculado.stroke
+  })
+}
 export async function miniaturaPizarra(svg) {
   const copia = svg.cloneNode(true)
+  fijarColores(svg, copia)
   copia.setAttribute('width', '1200'); copia.setAttribute('height', '800')
   copia.querySelectorAll('[data-seleccion]').forEach(n => n.remove())
+  const cesped = getComputedStyle(svg).getPropertyValue('--pizarra-cesped').trim()
   const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(copia)], { type: 'image/svg+xml;charset=utf-8' }))
   try {
     const img = new Image()
     await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = () => reject(Error('No se pudo exportar la cancha.')); img.src = url })
     const canvas = document.createElement('canvas'); canvas.width = 900; canvas.height = 600
-    const ctx = canvas.getContext('2d'); ctx.fillStyle = '#24733F'; ctx.fillRect(0, 0, 900, 600); ctx.drawImage(img, 0, 0, 900, 600)
+    const ctx = canvas.getContext('2d'); ctx.fillStyle = cesped; ctx.fillRect(0, 0, 900, 600); ctx.drawImage(img, 0, 0, 900, 600)
     return canvas.toDataURL('image/png')
   } finally { URL.revokeObjectURL(url) }
 }
