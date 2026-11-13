@@ -1,3 +1,9 @@
+-- =====================================================================================================
+-- HISTÓRICO: este archivo NO refleja la base actual. No usarlo para crear ni modificar la base.
+-- La referencia de la estructura real es supabase/esquema/esquema_real.sql (ver supabase/esquema/README.md).
+-- Los cambios se hacen con supabase/migrations (y su reversión en supabase/rollback).
+-- =====================================================================================================
+
 -- =========================================================
 -- ESTRUCTURA INFERIORES — SCRIPT MAESTRO DE BASE DE DATOS
 -- =========================================================
