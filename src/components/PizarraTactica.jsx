@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import PizarraCancha from './PizarraCancha'
 import PizarraPaleta, { IconoHerramienta } from './PizarraPaleta'
-import { agregarElemento, colocarFlecha, duplicarElementos, duracionTotal, historial, historialInicial, interpolar, limitar, LINEAS, moverExtremo, nuevaPizarra, PALETA, plantillaHerramienta, quitarElementos, SUPERFICIES, validarPizarra } from '../utils/pizarra'
+import { animar, estelas as calcularEstelas } from '../utils/pizarraAnimacion'
+import { agregarElemento, colocarFlecha, duplicarElementos, duracionTotal, historial, historialInicial, limitar, LINEAS, moverExtremo, nuevaPizarra, PALETA, plantillaHerramienta, quitarElementos, SUPERFICIES, validarPizarra } from '../utils/pizarra'
 import { descargarArchivo, miniaturaPizarra } from '../utils/pizarraExportar'
 import './pizarra.css'
 
@@ -33,7 +34,11 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
   const punteros = useRef(new Map()), gesto = useRef(null), cuadro = useRef(0), pendiente = useRef(null), barra = useRef(null), temporizador = useRef(0)
   const indice = Math.min(paso, doc.pasos.length - 1), sucio = JSON.stringify(doc) !== guardado
   const activo = borrador || doc, total = duracionTotal(doc)
-  const poses = reproduciendo || tiempo > 0 ? interpolar(doc, tiempo).poses : activo.pasos[indice].poses
+  // Etapa A: recorrido suave por defecto y estela mientras se reproduce. El modo por ejercicio llega en la etapa B.
+  const recorrido = 'suave', modoEstela = 'estela'
+  const animando = reproduciendo || tiempo > 0
+  const poses = animando ? animar(doc, tiempo, recorrido).poses : activo.pasos[indice].poses
+  const estelas = useMemo(() => animando ? calcularEstelas(doc, tiempo, modoEstela, recorrido) : null, [animando, doc, tiempo])
   const elegido = doc.elementos.find(e => e.id === seleccion[0])
   const bloqueado = soloLectura || guardando || reproduciendo || tiempo > 0
   // Sólo conviene girar superficies apaisadas (completa, cuarto, reducida); media cancha y área ya son "de pie".
@@ -324,7 +329,7 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
         deshabilitada={bloqueado} alArrastrar={setArrastrandoMaterial} alTerminar={terminarMaterial} abierta={hoja} onCerrar={cerrarHoja} />}
       {hoja && <div className="pizarra-velo" aria-hidden="true" onPointerDown={cerrarHoja} />}
       <div className={`pizarra-lienzo ${arrastrandoMaterial ? 'pizarra-soltar' : ''} ${plantillaActiva ? 'pizarra-colocando' : ''}`}>
-        <PizarraCancha ref={svg} doc={vista} poses={poses} seleccion={soloLectura ? [] : seleccion} zoom={zoom} pan={pan} caja={caja} toque={toque} arrastrando={arrastrando} giro={forzarVertical ? -90 : 90}
+        <PizarraCancha ref={svg} doc={vista} poses={poses} estelas={estelas} modoEstela={modoEstela} seleccion={soloLectura ? [] : seleccion} zoom={zoom} pan={pan} caja={caja} toque={toque} arrastrando={arrastrando} giro={forzarVertical ? -90 : 90}
           onElemento={soloLectura ? undefined : iniciar} onExtremo={soloLectura ? undefined : iniciarExtremo} onFondo={fondo} onPointerDownCapture={registrarPuntero}
           onDragOver={e => { if (!bloqueado && Array.from(e.dataTransfer.types || []).includes('application/x-comunicaciones-herramienta')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' } }} onDrop={soltarMaterial} onPointerMove={mover} onPointerUp={e => terminar(e)} onPointerCancel={e => terminar(e, true)} />
         {zoom !== 1 && <button type="button" className="pizarra-flotante pizarra-ajustar" onClick={ajustarVista}>Ajustar vista</button>}

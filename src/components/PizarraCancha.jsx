@@ -14,7 +14,23 @@ const ERGUIDOS = ['jugadora', 'pelota', 'texto', 'cono', 'tortuga', 'pica']
 // `giro`: sentido de la vista vertical. 90 = orientación guardada (ataque derecha hacia abajo);
 // -90 = vista automática del celular (ataque derecha hacia arriba). No cambia el documento.
 // `toque` es el radio mínimo de agarre en unidades de cancha (≈22 px en pantalla, calculado por el editor).
-const PizarraCancha = memo(forwardRef(function PizarraCancha({ doc, poses, seleccion = [], onElemento, onExtremo, onFondo, onPointerDownCapture, onPointerMove, onPointerUp, onPointerCancel, onDragOver, onDrop, zoom = 1, pan = { x: 0, y: 0 }, caja, toque = 3, arrastrando = null, giro = 90, miniatura = false }, ref) {
+// Recorridos de la animación debajo de las fichas. 'estela': se desvanece hacia la cola; 'completo': línea pareja.
+function Estelas({ estelas, modo, w, h }) {
+  const TRAMOS = 6
+  return <g data-estelas="true" pointerEvents="none" fill="none" strokeLinecap="round" strokeLinejoin="round">
+    {estelas.map(({ id, tipo, color, puntos }) => {
+      const ancho = tipo === 'pelota' ? .35 : .6, aMetros = ([x, y]) => `${x * w / 100} ${y * h / 100}`
+      if (modo === 'completo') return <polyline key={id} points={puntos.map(aMetros).join(' ')} stroke={color} strokeWidth={ancho} opacity=".55" strokeDasharray={tipo === 'pelota' ? '.6 .5' : undefined} />
+      const largo = Math.ceil((puntos.length - 1) / TRAMOS)
+      return <g key={id}>{Array.from({ length: TRAMOS }, (_, i) => {
+        const parte = puntos.slice(i * largo, (i + 1) * largo + 1)
+        return parte.length > 1 && <polyline key={i} points={parte.map(aMetros).join(' ')} stroke={color} strokeWidth={ancho * (.55 + .45 * (i + 1) / TRAMOS)} opacity={.12 + .58 * (i + 1) / TRAMOS} />
+      })}</g>
+    })}
+  </g>
+}
+
+const PizarraCancha = memo(forwardRef(function PizarraCancha({ doc, poses, seleccion = [], onElemento, onExtremo, onFondo, onPointerDownCapture, onPointerMove, onPointerUp, onPointerCancel, onDragOver, onDrop, zoom = 1, pan = { x: 0, y: 0 }, caja, toque = 3, arrastrando = null, giro = 90, miniatura = false, estelas = null, modoEstela = 'estela' }, ref) {
   const [w, h] = SUPERFICIES[doc.superficie], vertical = doc.orientacion === 'vertical'
   const recorte = useId().replaceAll(':', '')
   const centroArco = doc.superficie === 'cuarto' ? h : h / 2
@@ -43,6 +59,7 @@ const PizarraCancha = memo(forwardRef(function PizarraCancha({ doc, poses, selec
           </> : <><path d={`M${w / 2} 0 V${h}`} /><circle cx={w / 2} cy={h / 2} r={h / 6} /></>}
         </g>}
         <text transform={`translate(${w / 2} ${h - 1.5}) rotate(${contragiro})`} textAnchor={!vertical ? 'middle' : giro === 90 ? 'start' : 'end'} style={PUNTO} opacity=".8" fontSize="1.5">Ataque {flechaAtaque}</text>
+        {estelas?.length > 0 && <Estelas estelas={estelas} modo={modoEstela} w={w} h={h} />}
         {ordenados.map(e => {
           const p = poses[e.id]; if (!p) return null
           const linea = LINEAS.includes(e.tipo), px = e.dx * w / 100, py = e.dy * h / 100, elegido = seleccion.includes(e.id)

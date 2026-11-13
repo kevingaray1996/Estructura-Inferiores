@@ -25,6 +25,12 @@ En **Entrenamientos**, crear o editar un ejercicio y pulsar **Abrir pizarra tác
 
 Debajo de las barras: **Pasos (n)** se despliega (en el celular arranca plegado), **▶ Reproducir** y el tiempo. **Agregar paso** duplica las posiciones actuales. Cada paso contiene las poses de los mismos elementos; color, número y tamaño se comparten entre pasos. Se puede reordenar, eliminar pasos y controlar velocidad y bucle. La primera duración no se reproduce: cada transición usa la duración del paso destino. En secuencias de más de doce pasos solo se dibujan las miniaturas cercanas a la selección.
 
+**Animación (etapa A, `src/utils/pizarraAnimacion.js`).** No agrega campos al documento: todo se deduce de las poses.
+
+- **Recorrido suave** (por defecto): jugadoras y pelota suelta pasan por todos los pasos sin frenar en cada uno; sólo arrancan y frenan al principio, al final o donde se quedan quietas o giran más de 90°. Cada tramo es una cúbica de Hermite con tangentes acotadas (nunca más largas que el tramo ni hacia atrás): no hay rulos, no se pasa del destino y el desvío lateral es como máximo un cuarto del tramo. **Recto**: el movimiento anterior (línea recta, frena en cada paso). Conos, flechas y demás materiales siempre van rectos.
+- **Pelota:** en cada paso se considera "pegada" a la jugadora más cercana si está a menos de `tamaño de la jugadora + 0,7 × tamaño de la pelota + 1 m`. Misma jugadora en dos pasos seguidos = **conducción** (la pelota la acompaña por su curva); jugadoras distintas = **pase** (viaja recto, rápido al salir y frenando al llegar, y llega justo cuando llega la receptora). Sin nadie cerca, se mueve sola.
+- **Estelas:** al reproducir, cada jugadora y la pelota dejan una estela que se desvanece (≈1,2 s de animación). También existen los modos *completo* (todo el recorrido) y *oculto*; se eligen desde la interfaz en la etapa B.
+
 **Aplicar** actualiza el formulario; después hay que **Guardar entrenamiento** o **Guardar borrador/cambios** en Planificación. PNG descarga la cancha con la orientación guardada. Respaldo editable descarga JSON v1.
 
 Las tareas libres de Planificación pueden tener una pizarra propia, sin obligación de registrarse en biblioteca. Los ejercicios de biblioteca se copian completos: los cambios posteriores no afectan la sesión. Duplicar ejercicio crea una copia independiente.
