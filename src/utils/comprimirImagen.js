@@ -13,10 +13,23 @@ export function comprimirImagen(archivo, { maxAncho = 1000, maxAlto = 1000, cali
       return
     }
 
+    // Sin FileReader, Image o canvas (navegador viejo o entorno de prueba) se sube el original.
+    if (typeof FileReader === 'undefined' || typeof Image === 'undefined') {
+      resolve(archivo)
+      return
+    }
+
     const lector = new FileReader()
     lector.onload = (e) => {
       const img = new Image()
       img.onload = () => {
+        try {
+          redimensionar()
+        } catch {
+          resolve(archivo)
+        }
+      }
+      function redimensionar() {
         let { width, height } = img
         if (width > maxAncho || height > maxAlto) {
           const ratio = Math.min(maxAncho / width, maxAlto / height)

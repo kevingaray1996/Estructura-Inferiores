@@ -15,7 +15,7 @@
   .dp-gestion button:disabled { cursor: default; opacity: .6; }
   .dp-gestion :is(button, input, select, textarea, a):focus-visible { outline: 3px solid var(--ui-foco); outline-offset: 3px; }
   .dp-gestion .dp-panel, .dp-gestion .dp-registro { background: var(--ui-superficie); border: 1px solid var(--ui-borde); border-radius: 16px; padding: 24px; min-width: 0; }
-  .dp-gestion .dp-editor { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; scroll-margin-top: 24px; }
+  .dp-gestion .dp-editor { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; scroll-margin-top: calc(80px + env(safe-area-inset-top, 0px)); }
   .dp-gestion .dp-panel-cabecera { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 16px; align-items: start; }
   .dp-gestion h2 { font-size: 1.2rem; font-weight: 750; margin: 0; }
   .dp-gestion .dp-panel p { color: var(--ui-texto-secundario); line-height: 1.6; font-size: .875rem; margin: 6px 0 0; }
@@ -49,6 +49,7 @@
   .dp-gestion .dp-usuario { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(0, 1fr); align-items: center; gap: 20px; }
   .dp-gestion .dp-rol-acciones { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: end; min-width: 0; }
   .dp-gestion .dp-insignia { font: inherit; font-size: .8rem; font-weight: 600; padding: 7px 10px; border-radius: 8px; background: var(--ui-superficie-alternativa); color: var(--ui-texto-secundario); overflow-wrap: anywhere; }
+  .dp-gestion .dp-panel-cabecera > .dp-insignia { flex-shrink: 0; white-space: nowrap; overflow-wrap: normal; }
   .dp-gestion .dp-nombre-registro { font-size: 1rem; font-weight: 700; overflow-wrap: anywhere; white-space: normal; }
   .dp-gestion .dp-datos-usuario { font-size: .85rem; line-height: 1.6; color: var(--ui-texto-secundario); overflow-wrap: anywhere; }
   .dp-gestion .dp-nota-registro { margin-top: 16px; font-size: .85rem; line-height: 1.7; overflow-wrap: anywhere; white-space: pre-wrap; }

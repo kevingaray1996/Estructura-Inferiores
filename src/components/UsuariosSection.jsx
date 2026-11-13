@@ -4,7 +4,7 @@ import FranjaNumeros from './ui/FranjaNumeros'
 import Boton from './ui/Boton'
 import { textoGestion } from '../appearance/gestion'
 import { COLORES } from '../theme'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { exportarBackupCompleto } from '../utils/exportarBackup'
 import { comprimirImagen } from '../utils/comprimirImagen'
@@ -54,6 +54,9 @@ function UsuariosSection() {
   const [guardando, setGuardando] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [exportando, setExportando] = useState(false)
+  // Cada apertura del editor (nuevo o editar) lo trae a la vista: en celular la tarjeta suele estar lejos del formulario.
+  const [aperturaEditor, setAperturaEditor] = useState(0)
+  const editorRef = useRef(null)
 
   const inputStyle = {
     backgroundColor: COLORES.fondoTarjeta,
@@ -64,6 +67,14 @@ function UsuariosSection() {
   useEffect(() => {
     cargarDatos()
   }, [])
+
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!aperturaEditor || !editor) return
+    const reducirMovimiento = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    editor.scrollIntoView?.({ block: 'start', behavior: reducirMovimiento ? 'auto' : 'smooth' })
+    editor.querySelector('#usuarios-editor-titulo')?.focus({ preventScroll: true })
+  }, [aperturaEditor])
 
   async function cargarDatos() {
     setCargando(true)
@@ -102,6 +113,7 @@ function UsuariosSection() {
     setFotoPreview('')
     setErrorMsg('')
     setMostrarForm(true)
+    setAperturaEditor(n => n + 1)
   }
 
   function abrirEditar(u) {
@@ -118,6 +130,7 @@ function UsuariosSection() {
     setFotoPreview('')
     setErrorMsg('')
     setMostrarForm(true)
+    setAperturaEditor(n => n + 1)
   }
 
   function cancelarForm() {
@@ -200,11 +213,11 @@ function UsuariosSection() {
         </p>
 
         {mostrarForm && (
-          <div id="usuarios-editor" role="region" aria-labelledby="usuarios-editor-titulo"
+          <div id="usuarios-editor" ref={editorRef} role="region" aria-labelledby="usuarios-editor-titulo"
             className="dp-panel dp-editor"
             style={{ backgroundColor: COLORES.fondoTarjeta, borderTop: `3px solid ${COLORES.acento}`, borderLeft: `1px solid ${COLORES.borde}`, borderRight: `1px solid ${COLORES.borde}`, borderBottom: `1px solid ${COLORES.borde}` }}
           >
-            <div className="dp-panel-cabecera"><div><p className="dp-antetitulo">Perfil del equipo</p><h2 id="usuarios-editor-titulo">{usuarioEditando ? 'Editar usuario' : 'Nuevo usuario'}</h2><p>Identidad, rol, categoría y presentación en citaciones.</p></div><span className="dp-insignia">{usuarioEditando ? 'Edición' : 'Alta'}</span></div>
+            <div className="dp-panel-cabecera"><div><p className="dp-antetitulo">Perfil del equipo</p><h2 id="usuarios-editor-titulo" tabIndex={-1}>{usuarioEditando ? 'Editar usuario' : 'Nuevo usuario'}</h2><p>Identidad, rol, categoría y presentación en citaciones.</p></div><span className="dp-insignia">{usuarioEditando ? 'Edición' : 'Alta'}</span></div>
             {usuarioEditando && (
               <p className="text-xs" style={{ color: COLORES.textoSecundario }}>
                 Editando {usuarioEditando.email}
