@@ -13,7 +13,7 @@ export default function PizarraEjercicio({ valor, miniatura, onChange, soloLectu
   // El modal va directo al body: dentro de la app hay secciones con transform/filter (animaciones, tarjetas) que
   // convierten "position: fixed" en relativo a ellas y lo dejaban angosto. Así ocupa siempre toda la ventana.
   const modal = abierta && <div role="dialog" aria-modal="true" aria-label={nombre || 'Pizarra táctica'} className={`pizarra-modal${soloLectura ? ' pizarra-modal-visor' : ''}`}>
-    {soloLectura && <div style={{ color: 'var(--ui-texto)' }}><h2>{nombre}</h2>{objetivo && <p>{objetivo}</p>}{indicaciones && <p className="whitespace-pre-wrap">{indicaciones}</p>}</div>}
+    {soloLectura && (objetivo || indicaciones) && <div className="pizarra-visor-info">{objetivo && <p><strong>Objetivo:</strong> {objetivo}</p>}{indicaciones && <p>{indicaciones}</p>}</div>}
     <Suspense fallback={<p>Cargando pizarra…</p>}><Editor inicial={doc} titulo={nombre || 'Pizarra táctica'} soloLectura={soloLectura} onCerrar={() => setAbierta(false)} datosClub={!soloLectura} categoriaId={categoriaId} plantel={plantel}
       onGuardar={soloLectura ? undefined : (pizarra, vista) => { onChange(pizarra, vista); setAbierta(false) }} /></Suspense>
   </div>

@@ -1,6 +1,10 @@
 /* Pizarra táctica. Todos los colores salen del tema (apariencia.css): --ui-* y --pizarra-*. */
 .pizarra { color: var(--ui-texto); background: var(--ui-fondo-pagina); padding: .8rem; border: 1px solid var(--ui-borde); border-radius: .8rem; }
 .pizarra-modal { position: fixed; inset: 0; z-index: 120; overflow: auto; overscroll-behavior: contain; background: var(--ui-fondo-pagina); padding: .5rem; }
+/* Visor de Wellness: objetivo y consignas arriba de la cancha (el nombre ya está en la barra). */
+.pizarra-visor-info { max-width: 60rem; margin: 0 auto; padding: .4rem .75rem .5rem; font-size: .85rem; line-height: 1.35; color: var(--ui-texto); white-space: pre-wrap; overflow-wrap: anywhere; }
+.pizarra-visor-info p { margin: 0 0 .2rem; }
+.pizarra-visor-info strong { color: var(--ui-texto-secundario); font-weight: 600; }
 .pizarra button, .pizarra select, .pizarra input, .pizarra textarea { background: var(--ui-superficie); color: var(--ui-texto); border: 1px solid var(--ui-borde); border-radius: .4rem; padding: .35rem .5rem; max-width: 100%; }
 .pizarra button:disabled { opacity: .45; cursor: default; }
 .pizarra button[aria-pressed=true], .pizarra .pizarra-guardar { background: var(--ui-acento); color: var(--ui-texto-sobre-acento); border-color: var(--ui-acento); }
@@ -218,7 +222,7 @@
   .pizarra-editor.pizarra-reproduciendo .pizarra-lienzo { height: max(300px, calc(100dvh - 180px)); }
   .pizarra-visor .pizarra-lienzo { height: 62dvh; min-height: 260px; }
   .pizarra-linea { padding: .2rem .3rem .25rem; }
-  .pizarra-transporte { gap: .15rem; }
+  .pizarra-transporte { gap: .15rem; flex-wrap: wrap; row-gap: .25rem; }
   .pizarra-transporte .pizarra-icono { min-width: 40px; }
   .pizarra-transporte .pizarra-icono[aria-label="Ir al primer paso"], .pizarra-transporte .pizarra-icono[aria-label="Ir al último paso"] { display: none; }
   .pizarra-tiempo { font-size: .72rem; margin: 0 .1rem; }

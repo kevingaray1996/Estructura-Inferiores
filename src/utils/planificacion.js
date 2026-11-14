@@ -220,3 +220,22 @@ export function datosBibliotecaDesde(e, ambito, fila = null) {
     demo_credito: gimnasio && e.demostracion ? texto(e.demostracion.credito) : '',
   }
 }
+
+// Etapa F: Wellness muestra la sesión con sus bloques de Gimnasio y Cancha. Solo presentación: lo público lo decide la RPC.
+export const ambitoBloque = (b) => (Object.hasOwn(AMBITOS_BLOQUE, b?.ambito) ? b.ambito : null)
+// "4 × 8 · 20 kg": la receta del día de un ejercicio de gimnasio (lo que esté cargado).
+export function recetaGimnasio(e) {
+  const series = texto(e?.series).trim(), reps = texto(e?.repeticiones).trim(), carga = texto(e?.carga).trim()
+  const volumen = series && reps ? `${series} × ${reps}` : series ? `${series} series` : reps ? `${reps} repeticiones` : ''
+  return [volumen, carga].filter(Boolean).join(' · ')
+}
+export const lineasTecnica = (t) => texto(t).split('\n').map((l) => l.replace(/^\s*[-•·*]\s*/, '').trim()).filter(Boolean)
+// Resumen de la sesión para la cabecera: "Gimnasio · 3 ejercicios", "Cancha · 2 tareas".
+export function resumenBloques(bloques) {
+  return (Array.isArray(bloques) ? bloques : []).map((b, i) => {
+    const ambito = ambitoBloque(b), n = Array.isArray(b.ejercicios) ? b.ejercicios.length : 0
+    const nombre = AMBITOS_BLOQUE[ambito] || texto(b.nombre).trim() || `Bloque ${i + 1}`
+    const cuenta = n ? ` · ${n} ${ambito === 'gimnasio' ? (n === 1 ? 'ejercicio' : 'ejercicios') : (n === 1 ? 'tarea' : 'tareas')}` : ''
+    return { ambito, texto: nombre + cuenta }
+  })
+}
