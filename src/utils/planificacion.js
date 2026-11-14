@@ -49,7 +49,7 @@ export function nuevoEjercicio(biblioteca, ambito = null) {
     id: crypto.randomUUID(), biblioteca_id: biblioteca?.id || null,
     nombre: biblioteca ? biblioteca.contenido || 'Ejercicio de biblioteca' : '',
     objetivo: biblioteca?.objetivo || '', duracion: biblioteca?.duracion_minutos ?? null, series: '', repeticiones: '', materiales: '',
-    indicaciones: biblioteca?.descripcion || '', notas_internas: '', visible: false,
+    indicaciones: biblioteca?.descripcion || '', notas_internas: '', visible: Boolean(biblioteca), // de la biblioteca: visible por defecto
     imagen_url: biblioteca?.imagen_url || '', link_video: biblioteca?.link_video || '',
     pizarra: biblioteca?.pizarra ? validarPizarra(structuredClone(biblioteca.pizarra)) : null,
     pizarra_miniatura: biblioteca?.pizarra_miniatura || '',
@@ -174,10 +174,19 @@ export async function copiarSemana(cliente, categoriaId, origen, destino) {
 }
 
 // Defensa adicional de presentación. La separación de datos privados se realiza en la RPC.
+// Aviso del editor: un bloque que se comparte con las jugadoras pero que en Wellness no mostraría ejercicios.
+export function avisoBloque(b) {
+  if (b?.visible !== true) return ''
+  const ejercicios = Array.isArray(b.ejercicios) ? b.ejercicios : []
+  if (ejercicios.length && !ejercicios.some((e) => e.visible === true)) return 'Este bloque se comparte, pero ningún ejercicio está visible: las jugadoras no van a ver ninguno. En cada uno, abrí "Editar" y marcá "Compartir este ejercicio al publicar".'
+  if (!ejercicios.length && !texto(b.objetivo).trim() && !texto(b.indicaciones).trim()) return 'Este bloque se comparte, pero no tiene ejercicios ni indicaciones: en Wellness no se va a mostrar.'
+  return ''
+}
+// Un bloque sin ejercicios ni texto para leer (solo nombre o duración) no se muestra en Wellness.
+export const bloqueConContenido = (b) => Boolean(texto(b?.objetivo).trim() || texto(b?.indicaciones).trim() || (Array.isArray(b?.ejercicios) && b.ejercicios.length))
 export function contenidoVisible(sesiones, categoriaId, fecha) {
   return (Array.isArray(sesiones) ? sesiones : []).filter((s) => s.categoria_id === categoriaId && s.fecha === fecha)
-    .map((s) => ({ ...s, bloques: (Array.isArray(s.bloques) ? s.bloques : []).filter((b) =>
-      texto(b.nombre).trim() || texto(b.objetivo).trim() || b.duracion || texto(b.indicaciones).trim() || b.ejercicios?.length) }))
+    .map((s) => ({ ...s, bloques: (Array.isArray(s.bloques) ? s.bloques : []).filter(bloqueConContenido) }))
     .filter((s) => s.bloques.length > 0)
 }
 

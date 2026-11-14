@@ -1,7 +1,7 @@
 // Etapa E: entrenamientos por bloques (gimnasio y cancha) armados desde la biblioteca.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { cambiaLaBiblioteca, camposDe, datosBibliotecaDesde, nuevoBloque, nuevoEjercicio, nuevoEntrenamiento, prepararSesion } from '../src/utils/planificacion.js'
+import { avisoBloque, bloqueConContenido, cambiaLaBiblioteca, contenidoVisible, camposDe, datosBibliotecaDesde, nuevoBloque, nuevoEjercicio, nuevoEntrenamiento, prepararSesion } from '../src/utils/planificacion.js'
 import { SET_INICIAL } from '../src/utils/bibliotecaInicial.js'
 
 const id = n => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
@@ -59,4 +59,18 @@ test('Datos para la biblioteca: conserva lo que la sesión no tiene; una tarea l
   assert.equal(c.descripcion, 'Nueva consigna'); assert.deepEqual(c.pizarra, cancha.pizarra); assert.equal(c.cantidad_jugadores, 8); assert.deepEqual(c.musculos, [])
   const libre = datosBibliotecaDesde({ ...nuevoEjercicio(null, 'cancha'), nombre: 'Rondo', pizarra: SET_INICIAL[1].pizarra }, 'cancha')
   assert.equal(libre.ambito, 'cancha'); assert.equal(libre.carpeta_id, null); assert.equal(libre.contenido, 'Rondo')
+})
+
+test('Ajustes K: de la biblioteca entra visible; aviso de bloque compartido sin ejercicios visibles; Wellness sin bloques vacíos', () => {
+  assert.equal(nuevoEjercicio(gimnasio).visible, true); assert.equal(nuevoEjercicio(cancha).visible, true); assert.equal(nuevoEjercicio(null, 'cancha').visible, false)
+  const bloque = { ...nuevoBloque('cancha'), visible: true, ejercicios: [{ ...nuevoEjercicio(cancha), visible: false }] }
+  assert.match(avisoBloque(bloque), /ningún ejercicio está visible/)
+  assert.equal(avisoBloque({ ...bloque, ejercicios: [{ ...bloque.ejercicios[0], visible: true }] }), '')
+  assert.equal(avisoBloque({ ...bloque, visible: false }), '', 'un bloque que no se comparte no avisa')
+  assert.match(avisoBloque({ ...bloque, ejercicios: [] }), /no se va a mostrar/)
+  assert.equal(avisoBloque({ ...bloque, ejercicios: [], indicaciones: 'Elongación' }), '')
+  assert.equal(bloqueConContenido({ nombre: 'Cancha', duracion: 30, ejercicios: [] }), false)
+  assert.equal(bloqueConContenido({ nombre: 'Vuelta a la calma', indicaciones: 'Elongación' }), true)
+  const [s] = contenidoVisible([{ categoria_id: id(500), fecha: '2026-11-16', bloques: [{ nombre: 'Cancha', ejercicios: [] }, { nombre: 'Gimnasio', ejercicios: [{ nombre: 'Sentadilla' }] }] }], id(500), '2026-11-16')
+  assert.deepEqual(s.bloques.map(b => b.nombre), ['Gimnasio'])
 })

@@ -33,7 +33,8 @@ test('Borrador parcial, bloques libres y tareas de biblioteca conservan notas se
   const bloque=nuevoBloque()
   const tarea=nuevoEjercicio({id,contenido:'Gimnasio',descripcion:'Trabajo existente',imagen_url:'https://example.com/i.png'})
   assert.equal(bloque.visible,false)
-  assert.equal(tarea.visible,false)
+  assert.equal(tarea.visible,true,'lo que viene de la biblioteca queda visible por defecto')
+  assert.equal(nuevoEjercicio().visible,false,'una tarea libre arranca oculta')
   assert.equal(tarea.biblioteca_id,id)
   assert.equal(tarea.indicaciones,'Trabajo existente')
   bloque.ejercicios=[{...tarea,notas_internas:'Privado',campos_publicos:['indicaciones','notas_internas']}]

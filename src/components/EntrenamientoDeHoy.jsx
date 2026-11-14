@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
-import { AMBITOS_BLOQUE, ambitoBloque, cargarEntrenamientoHoy, enlaceSeguro, fechaArgentina, lineasTecnica, recetaGimnasio, resumenBloques } from '../utils/planificacion'
+import { AMBITOS_BLOQUE, ambitoBloque, bloqueConContenido, cargarEntrenamientoHoy, enlaceSeguro, fechaArgentina, lineasTecnica, recetaGimnasio, resumenBloques } from '../utils/planificacion'
 import { demoValida, embedYoutube, idYoutube, miniaturaYoutube } from '../utils/biblioteca'
 import BibliotecaVista from './BibliotecaVista'
 import PizarraEjercicio from './PizarraEjercicio'
@@ -54,11 +54,13 @@ function EjercicioCancha({ e, j, plantel }) {
 
 // `plantel`: jugadoras de la categoría con foto (Wellness público); la pizarra las muestra en sus fichas.
 export function ContenidoEntrenamientoHoy({ sesiones, plantel = null }) {
-  if (!sesiones?.length) return null
+  if (!sesiones?.some((s) => Array.isArray(s.bloques) && s.bloques.some(bloqueConContenido))) return null
   return <section aria-label="Tu entrenamiento de hoy" className="eh">
     <h2 className="eh-titulo">Tu entrenamiento de hoy</h2>
     {sesiones.map((s) => {
-      const resumen = resumenBloques(s.bloques)
+      const bloques = (Array.isArray(s.bloques) ? s.bloques : []).filter(bloqueConContenido)
+      if (!bloques.length) return null
+      const resumen = resumenBloques(bloques)
       return <div key={s.id} className="eh-sesion">
         <p className="eh-cuando">
           {new Intl.DateTimeFormat('es-AR', { weekday: 'long', timeZone: 'UTC' }).format(new Date(`${s.fecha}T12:00:00Z`))}
@@ -68,7 +70,7 @@ export function ContenidoEntrenamientoHoy({ sesiones, plantel = null }) {
         {resumen.length > 1 && <ul className="eh-resumen" aria-label="Bloques de hoy">
           {resumen.map((r, i) => <li key={i} className={r.ambito ? `eh-chip eh-${r.ambito}` : 'eh-chip'}>{ICONO[r.ambito] ? `${ICONO[r.ambito]} ` : ''}{r.texto}</li>)}
         </ul>}
-        {s.bloques.map((b, i) => {
+        {bloques.map((b, i) => {
           const ambito = ambitoBloque(b), etiqueta = AMBITOS_BLOQUE[ambito]
           const titulo = b.nombre && b.nombre !== etiqueta ? b.nombre : etiqueta || b.nombre
           return <article key={i} className={`eh-bloque${ambito ? ` eh-${ambito}` : ''}`}>

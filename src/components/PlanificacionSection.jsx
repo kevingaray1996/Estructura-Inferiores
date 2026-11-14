@@ -1,7 +1,7 @@
 import EncabezadoSeccion from './ui/EncabezadoSeccion'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
-import { AMBITOS_BLOQUE, CAMPOS_BLOQUE, cargarSemana, copiarSemana, copiarSesion, datosBibliotecaDesde, eliminarSesion,
+import { AMBITOS_BLOQUE, avisoBloque, CAMPOS_BLOQUE, cargarSemana, copiarSemana, copiarSesion, datosBibliotecaDesde, eliminarSesion,
   fechaArgentina, guardarSesion, inicioSemana, mensajePlanificacion, moverElemento,
   nuevoBloque, nuevoEjercicio, nuevoEntrenamiento, puedePlanificar, sumarDias } from '../utils/planificacion'
 import { puedeEditar } from '../utils/biblioteca'
@@ -61,6 +61,7 @@ function BloqueEditor({ bloque, indice, total, cambiar, mover, quitar, bibliotec
       <Campo titulo="Notas internas del bloque (privadas)" valor={bloque.notas_internas} cambiar={(notas_internas) => cambiar({ ...bloque, notas_internas })} />
       <Visibilidad item={bloque} campos={CAMPOS_BLOQUE} cambiar={cambiar} />
     </details>
+    {avisoBloque(bloque) && <p className="plan-aviso" role="status">⚠ {avisoBloque(bloque)}</p>}
     <ol className="plan-tareas">{bloque.ejercicios.map((e, j) => <li className="plan-tarea" key={e.id}>
       <button type="button" className="plan-tarea-vista" aria-label={`Editar ${e.nombre || `tarea ${j + 1}`}`} onClick={() => setEditando(j)}><BibliotecaVista e={e} /></button>
       <div className="plan-tarea-info">

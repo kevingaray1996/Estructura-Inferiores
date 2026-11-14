@@ -277,3 +277,36 @@
   .pizarra-editor .pizarra-lienzo { height: calc(100dvh - 70px); }
   .pizarra-barra { position: static; }
 }
+
+/* Etapa K: exportar video y PNG (ventana sobre el editor). */
+.pizarra-exportar-fondo { position: fixed; inset: 0; z-index: 140; display: grid; place-items: center; padding: 1rem; background: var(--pizarra-subtitulo-fondo); overscroll-behavior: contain; }
+.pizarra-exportar { width: min(100%, 34rem); max-height: calc(100dvh - 2rem); overflow: auto; display: flex; flex-direction: column; gap: .8rem; padding: 1rem; border: 1px solid var(--ui-borde); border-radius: .9rem; background: var(--ui-fondo-tarjeta); color: var(--ui-texto); box-shadow: 0 18px 48px var(--pizarra-sombra); }
+.pizarra-exportar button, .pizarra-exportar input[type="text"], .pizarra-exportar input:not([type]) { min-height: 44px; padding: .4rem .7rem; border: 1px solid var(--ui-borde); border-radius: .5rem; background: var(--ui-superficie); color: var(--ui-texto); font: inherit; }
+.pizarra-exportar button { cursor: pointer; font-weight: 600; }
+.pizarra-exportar button:disabled { opacity: .45; cursor: default; }
+.pizarra-exportar button[aria-pressed="true"], .pizarra-exportar .pizarra-primario { background: var(--ui-acento); border-color: var(--ui-acento); color: var(--ui-texto-sobre-acento); }
+.pizarra-exportar button:focus-visible, .pizarra-exportar input:focus-visible { outline: 2px solid var(--ui-foco); outline-offset: 2px; }
+.pizarra-exportar-cabeza { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.pizarra-exportar-cabeza h3 { margin: 0; font-family: var(--pizarra-fuente); font-size: 1.4rem; text-transform: uppercase; }
+.pizarra-exportar-cabeza .pizarra-icono { width: 44px; padding: 0; }
+.pizarra-exportar-grupo { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.pizarra-exportar-grupo button { display: flex; align-items: center; justify-content: center; gap: .55rem; min-height: 56px; }
+.pizarra-exportar-forma { display: inline-block; border: 2px solid currentColor; border-radius: 3px; }
+.pizarra-exportar-horizontal { width: 28px; height: 16px; }
+.pizarra-exportar-vertical { width: 16px; height: 28px; }
+.pizarra-exportar-placa { margin: 0; padding: .7rem; display: flex; flex-direction: column; gap: .5rem; border: 1px solid var(--ui-borde); border-radius: .7rem; }
+.pizarra-exportar-placa legend { padding: 0 .3rem; font-weight: 700; }
+.pizarra-exportar-placa label:not(.pizarra-exportar-check) { display: flex; flex-direction: column; gap: .25rem; font-size: .85rem; color: var(--ui-texto-secundario); }
+.pizarra-exportar-check { display: flex; align-items: center; gap: .55rem; min-height: 44px; font-size: .9rem; cursor: pointer; }
+.pizarra-exportar-check input { width: 20px; height: 20px; accent-color: var(--ui-acento); }
+.pizarra-exportar-acciones { display: flex; flex-wrap: wrap; gap: .5rem; }
+.pizarra-exportar-acciones button { flex: 1 1 12rem; }
+.pizarra-exportar-progreso { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .8rem; }
+.pizarra-exportar-progreso progress { flex: 1 1 10rem; height: 10px; accent-color: var(--ui-acento); }
+.pizarra-exportar-resultado { display: flex; flex-direction: column; gap: .6rem; }
+.pizarra-exportar-vista { width: 100%; max-height: 50dvh; object-fit: contain; border-radius: .6rem; background: var(--ui-fondo-pagina); }
+.pizarra-exportar .pizarra-ayuda { margin: 0; font-size: .78rem; color: var(--ui-texto-secundario); }
+@media (max-width: 600px) {
+  .pizarra-exportar-fondo { padding: 0; align-items: end; }
+  .pizarra-exportar { width: 100%; max-height: 92dvh; border-radius: 1rem 1rem 0 0; padding: .9rem; }
+}

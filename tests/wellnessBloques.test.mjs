@@ -60,6 +60,10 @@ test('Wellness: bloques de Gimnasio y Cancha, receta del día, técnica y demost
     // Una sesión vieja (sin ámbitos) se sigue viendo como antes, sin resumen ni etiquetas de ámbito.
     const vieja = renderToStaticMarkup(createElement(ContenidoEntrenamientoHoy, { sesiones: [{ id, fecha: '2026-11-16', bloques: [{ nombre: 'Entrada en calor', ejercicios: [{ nombre: 'Trote', series: '2' }] }] }] }))
     assert.match(vieja, /Bloque 1<\/span><h3>Entrada en calor<\/h3>/); assert.match(vieja, /Series: 2/); assert.doesNotMatch(vieja, /Bloques de hoy|eh-gimnasio|eh-cancha/)
+    // Bloques vacíos (solo nombre o duración) no se muestran; si no queda nada, no hay sección.
+    const conVacio = renderToStaticMarkup(createElement(ContenidoEntrenamientoHoy, { sesiones: [{ ...sesion, bloques: [{ nombre: 'Bloque vacío', ambito: 'cancha', duracion: 20, ejercicios: [] }, ...sesion.bloques] }] }))
+    assert.doesNotMatch(conVacio, /Bloque vacío/); assert.match(conVacio, /Bloque 1<\/span><h3>Gimnasio<\/h3>/)
+    assert.equal(renderToStaticMarkup(createElement(ContenidoEntrenamientoHoy, { sesiones: [{ id, fecha: '2026-11-16', bloques: [{ nombre: 'Cancha', ejercicios: [] }] }] })), '')
     const css = readFileSync(new URL('../src/components/entrenamientoHoy.css', import.meta.url), 'utf8')
     assert.doesNotMatch(css, /!important|#[0-9a-f]{3,8}\b|rgb\(|hsl\(/i, 'colores solo del tema')
   } finally { await server.close() }

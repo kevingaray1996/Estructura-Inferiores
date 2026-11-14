@@ -4,6 +4,7 @@ import PizarraMenuAgregar, { IconoHerramienta } from './PizarraPaleta'
 import PizarraLineaTiempo from './PizarraLineaTiempo'
 import PizarraPasos from './PizarraPasos'
 import PizarraPropiedades from './PizarraPropiedades'
+import PizarraExportar from './PizarraExportar'
 import { alturas as calcularAlturas, animar, duenasEnPaso, enMovimiento, estelas as calcularEstelas, flechasAutomaticas, imanPelotas, jugadoraCercana, pegarPelota, pelotasDe, tiemposDePasos } from '../utils/pizarraAnimacion'
 import { agregarElemento, alternarFoco, alternarOcultos, aplicarFormacion, colocarFlecha, copiarPaso, duplicarElementos, duplicarPaso, duracionTotal, eliminarPaso, esRival, fijarAnotaciones, historial, historialInicial, limitar, LINEAS, moverExtremo, moverPaso, moverVertice, nuevaPizarra, plantillaHerramienta, quitarElementos, SUPERFICIES, validarPizarra } from '../utils/pizarra'
 import { focoYCamara, opacidades as calcularOpacidades, subtitulo as calcularSubtitulo } from '../utils/pizarraExplicar'
@@ -46,7 +47,7 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
   const [reproduciendo, setReproduciendo] = useState(false), [tiempo, setTiempo] = useState(0), [velocidad, setVelocidad] = useState(doc.velocidad), [bucle, setBucle] = useState(doc.bucle)
   const [error, setError] = useState(''), [guardando, setGuardando] = useState(false), [guardado, setGuardado] = useState(() => JSON.stringify(doc))
   const [arrastrando, setArrastrando] = useState(null)
-  const [menu, setMenu] = useState(false), [preferencias, setPreferencias] = useState(leerVista)
+  const [menu, setMenu] = useState(false), [preferencias, setPreferencias] = useState(leerVista), [exportar, setExportar] = useState(false)
   const conDatos = datosClub && !soloLectura
   const [datos, setDatos] = useState(() => conDatos ? { jugadores: [], partidos: [], equipos: [], cargando: true, error: '' } : null)
   const [rivalElegido, setRivalElegido] = useState(null)
@@ -479,7 +480,6 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
       setGuardado(JSON.stringify(limpia))
     } catch (e) { setError(e.message || 'No se pudo guardar la pizarra.'); } finally { setGuardando(false) }
   }
-  async function png() { try { const data = await miniaturaPizarra(svgExportar.current || svg.current); const a = document.createElement('a'); a.href = data; a.download = 'pizarra-comunicaciones.png'; a.click() } catch (e) { setError(e.message) } }
   async function importar(e) {
     const file = e.target.files?.[0]; e.target.value = ''; if (!file) return
     try { if (file.size > 900000) throw Error('Archivo demasiado grande.'); const nuevo = validarPizarra(JSON.parse(await file.text())); if (!window.confirm('¿Reemplazar el diseño actual por el archivo? Podés deshacer.')) return; cambiar(nuevo); setPaso(0); setSeleccion([]) } catch (e) { setError(e.message || 'Archivo inválido.') }
@@ -541,7 +541,7 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
             </fieldset>
             {retrato && <p className="pizarra-ayuda">En el celular vertical la cancha se muestra de pie; lo guardado y Wellness conservan la orientación elegida.</p>}
             <strong>Archivo</strong>
-            <div className="pizarra-fila"><button type="button" onClick={png}>Descargar PNG</button><button type="button" onClick={() => descargarArchivo(JSON.stringify(doc), 'pizarra.json', 'application/json')}>Respaldo editable</button><label className="pizarra-archivo">Recuperar JSON <input type="file" accept="application/json,.json" onChange={importar} /></label></div>
+            <div className="pizarra-fila"><button type="button" onClick={e => { e.currentTarget.closest('details')?.removeAttribute('open'); setExportar(true) }}>Exportar video o PNG…</button><button type="button" onClick={() => descargarArchivo(JSON.stringify(doc), 'pizarra.json', 'application/json')}>Respaldo editable</button><label className="pizarra-archivo">Recuperar JSON <input type="file" accept="application/json,.json" onChange={importar} /></label></div>
             <button type="button" className="pizarra-peligro" disabled={bloqueado} onClick={() => { if (window.confirm('¿Borrar todos los elementos y pasos? Podés deshacer.')) { cambiar(nuevaPizarra()); setPaso(0); setSeleccion([]) } }}>Borrar todo</button>
             <p className="pizarra-ayuda">Ctrl/Cmd+Z deshacer · Ctrl/Cmd+Shift+Z rehacer · Ctrl/Cmd+A seleccionar todo · Ctrl/Cmd+D duplicar · Supr eliminar · Esc soltar · Alt+flechas mueve el paso elegido.</p>
           </div>
@@ -586,6 +586,8 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
     </div>
     {fantasma && <div className="pizarra-fantasma" aria-hidden="true" style={{ transform: `translate(${fantasma.x}px, ${fantasma.y}px)` }}><IconoHerramienta id={fantasma.id} /></div>}
     {/* Copia para exportar con la orientación guardada aunque la vista esté de pie. */}
+    {!soloLectura && exportar && <PizarraExportar doc={doc} titulo={titulo === 'Pizarra táctica' ? '' : titulo} indice={indice} fotos={fotos} preferencias={preferencias} raiz={raiz.current}
+      onPlaca={placa => ajustar({ ...doc, placa })} onCerrar={() => setExportar(false)} />}
     {!soloLectura && <div hidden><PizarraCancha ref={svgExportar} miniatura doc={doc} poses={doc.pasos[indice].poses} opacidades={calcularOpacidades(doc, null, indice)} /></div>}
   </div>
 }
