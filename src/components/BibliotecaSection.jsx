@@ -3,14 +3,13 @@ import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
 import { sanitizarNombreArchivo } from '../utils/archivos'
 import { comprimirImagen } from '../utils/comprimirImagen'
-import { validarPizarra } from '../utils/pizarra'
 import { AMBITOS, carpetasDe, datosParaGuardar, DURACIONES, embedYoutube, erroresEjercicio, filtrarEjercicios, GRUPOS_MUSCULARES, idYoutube, MATERIALES, miniaturaYoutube,
   nombreCarpetaValido, puedeEditar, reordenar, sinCarpeta, TIPOS, valoresDistintos } from '../utils/biblioteca'
 import { cargarSetInicial, faltantesSetInicial } from '../utils/bibliotecaInicial'
 import EncabezadoFotografico from './EncabezadoFotografico'
 import EstadoContenido from './ui/EstadoContenido'
 import PizarraEjercicio from './PizarraEjercicio'
-import PizarraCancha from './PizarraCancha'
+import Vista from './BibliotecaVista'
 import './audiovisualPremium.css'
 import './biblioteca.css'
 
@@ -24,19 +23,6 @@ const nuevoForm = (ambito, carpeta_id = '') => ({ ambito, tipo: 'ejercicio', car
   imagen_url: '', link_video: '', pizarra: null, pizarra_miniatura: '', musculos: [], material: [], tecnica: '', demo_tipo: 'youtube', demo_url: '', demo_credito: '' })
 const formDe = e => ({ ...nuevoForm(e.ambito), ...e, carpeta_id: e.carpeta_id || '', cantidad_jugadores: e.cantidad_jugadores ?? '', duracion_minutos: e.duracion_minutos ?? '',
   musculos: e.musculos || [], material: e.material || [], demo_tipo: e.demo_tipo || 'youtube', demo_url: e.demo_url || '', demo_credito: e.demo_credito || '' })
-
-function Vista({ e }) {
-  if (e.ambito === 'gimnasio') {
-    const yt = e.demo_tipo === 'youtube' && idYoutube(e.demo_url)
-    const src = e.demo_tipo === 'imagen' ? e.demo_url : yt ? miniaturaYoutube(yt) : null
-    return src ? <img src={src} alt="" loading="lazy" /> : <span className="bib-vista-vacia" aria-hidden="true">🏋️</span>
-  }
-  let doc = null
-  try { if (e.pizarra) doc = validarPizarra(e.pizarra) } catch { doc = null }
-  if (doc) return <PizarraCancha miniatura doc={doc} poses={doc.pasos[0].poses} />
-  if (e.imagen_url) return <img src={e.imagen_url} alt="" loading="lazy" />
-  return <span className="bib-vista-vacia" aria-hidden="true">🏟️</span>
-}
 
 // Etiquetas libres (músculos, material) con sugerencias.
 function Etiquetas({ titulo, valores, sugerencias, cambiar }) {
@@ -80,11 +66,11 @@ function Editor({ inicial, carpetas, rol, onGuardado, onCancelar }) {
   return <section className="av-editor bib-editor" aria-labelledby="bib-editor-titulo">
     <header className="av-titulo-panel"><p>{AMBITOS[form.ambito].toUpperCase()}</p><h2 id="bib-editor-titulo">{form.id ? 'Editar ejercicio' : 'Nuevo ejercicio'}</h2></header>
     <div className="bib-form">
-      <label className="bib-campo bib-ancho"><span>Nombre</span><input value={form.contenido} maxLength={120} onChange={e => cambiar({ contenido: e.target.value })} placeholder={gimnasio ? 'Ej.: Sentadilla búlgara' : 'Ej.: Rondo 4 vs 2'} /></label>
+      <label className="bib-campo bib-ancho"><span>Nombre</span><input className="ui-control outline-none" value={form.contenido} maxLength={120} onChange={e => cambiar({ contenido: e.target.value })} placeholder={gimnasio ? 'Ej.: Sentadilla búlgara' : 'Ej.: Rondo 4 vs 2'} /></label>
       {!gimnasio && <label className="bib-campo"><span>Tipo</span><select value={form.tipo} onChange={e => cambiar({ tipo: e.target.value })}>{Object.entries(TIPOS).map(([v, n]) => <option key={v} value={v}>{n}</option>)}</select></label>}
       <label className="bib-campo"><span>Carpeta</span><select value={form.carpeta_id} onChange={e => cambiar({ carpeta_id: e.target.value })}>
         {!carpetas.some(c => c.sistema) && <option value="">Sin carpeta</option>}
-        {carpetas.map(c => <option key={c.id} value={c.sistema ? '' : c.id}>{c.nombre}</option>)}</select></label>
+        {carpetas.map(c => <option value={c.sistema ? '' : c.id} key={c.id}>{c.nombre}</option>)}</select></label>
       {!gimnasio && <label className="bib-campo"><span>Jugadoras</span><input type="number" min="1" max="40" value={form.cantidad_jugadores} onChange={e => cambiar({ cantidad_jugadores: e.target.value })} /></label>}
       <label className="bib-campo"><span>Duración (min)</span><input type="number" min="1" max="600" value={form.duracion_minutos} onChange={e => cambiar({ duracion_minutos: e.target.value })} /></label>
       <label className="bib-campo bib-ancho"><span>Objetivo</span><input value={form.objetivo} maxLength={500} onChange={e => cambiar({ objetivo: e.target.value })} placeholder={gimnasio ? 'Ej.: Fuerza unilateral' : 'Ej.: Superar la primera línea'} /></label>
@@ -281,7 +267,7 @@ export default function BibliotecaSection({ perfil, onPlanificar }) {
 
         <main className="bib-principal">
           <div className="bib-filtros" role="search" aria-label="Filtros">
-            <label className="bib-campo bib-buscar"><span>Buscar</span><input type="search" value={filtros.texto} onChange={e => filtrar({ texto: e.target.value })} placeholder={ambito === 'gimnasio' ? 'Nombre, músculo, material…' : 'Nombre, objetivo, consigna…'} /></label>
+            <label className="bib-campo bib-buscar"><span>Buscar</span><input type="search" className="ui-control outline-none" value={filtros.texto} onChange={e => filtrar({ texto: e.target.value })} placeholder={ambito === 'gimnasio' ? 'Nombre, músculo, material…' : 'Nombre, objetivo, consigna…'} /></label>
             {ambito === 'cancha' ? <>
               <label className="bib-campo"><span>Tipo</span><select value={filtros.tipo} onChange={e => filtrar({ tipo: e.target.value })}><option value="">Todos</option>{Object.entries(TIPOS).map(([v, n]) => <option key={v} value={v}>{n}s</option>)}</select></label>
               <label className="bib-campo"><span>Jugadoras</span><select value={filtros.jugadoras} onChange={e => filtrar({ jugadoras: e.target.value })}><option value="">Todas</option>{opcionesJugadoras.map(v => <option key={v} value={v}>{v}</option>)}</select></label>

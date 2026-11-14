@@ -189,3 +189,35 @@ test('Biblioteca (D + G): la base acepta el set inicial y un ejercicio de gimnas
     assert.equal((await db.query('select count(*)::int n from public.biblioteca_favoritos')).rows[0].n, 0, 'como() deshace: la prueba no deja datos')
   } finally { await db.close() }
 })
+
+test('Entrenamientos por bloques (E): la base guarda un bloque de gimnasio y Wellness muestra carga, técnica y demostración solo si se marcan', async () => {
+  const { nuevoBloque, nuevoEjercicio, nuevoEntrenamiento, prepararSesion } = await import('../src/utils/planificacion.js')
+  const db = await crearBase()
+  try {
+    await db.exec(cambio)
+    const hoy = (await db.query(`select (now() at time zone 'America/Argentina/Buenos_Aires')::date::text f`)).rows[0].f
+    const fila = { id: '00000000-0000-4000-8000-000000000777', ambito: 'gimnasio', contenido: 'Sentadilla', descripcion: 'Bajar controlado', musculos: ['Cuádriceps'], material: ['Barra'],
+      tecnica: 'Rodilla alineada', demo_tipo: 'youtube', demo_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', demo_credito: 'Canal' }
+    await db.query(`insert into public.biblioteca (id, fecha, descripcion, contenido, ambito, musculos, material, tecnica, demo_tipo, demo_url, demo_credito)
+      values ($1, current_date, $2, $3, 'gimnasio', $4, $5, $6, $7, $8, $9)`, [fila.id, fila.descripcion, fila.contenido, fila.musculos, fila.material, fila.tecnica, fila.demo_tipo, fila.demo_url, fila.demo_credito])
+    const ejercicio = { ...nuevoEjercicio(fila), visible: true, series: '4', repeticiones: '6', carga: '70% 1RM', notas_internas: 'PRIVADO' }
+    const sesion = nuevoEntrenamiento(hoy, CAT)
+    sesion.estado = 'publicado'
+    sesion.bloques[0] = { ...sesion.bloques[0], visible: true, ejercicios: [ejercicio, { ...ejercicio, id: 'oculta', nombre: 'Oculta', campos_publicos: ['series'] }] }
+    sesion.bloques.push({ ...nuevoBloque(), visible: true, nombre: 'Vuelta a la calma', ejercicios: [] })
+    const guardada = (await como(db, U.tec, 'tec@club.test', `select public.guardar_planificacion_sesion('${JSON.stringify(prepararSesion(sesion)).replace(/'/g, "''")}'::jsonb, null) d`)).rows[0].d
+    assert.ok(guardada.id); assert.equal(guardada.bloques[0].ambito, 'gimnasio'); assert.equal(guardada.bloques[0].ejercicios[0].carga, '70% 1RM')
+    // como() deshace: se guarda como postgres para leerla en Wellness.
+    await db.query(`insert into public.planificacion_sesiones (categoria_id, fecha, estado, bloques) values ($1, $2, 'publicado', $3)`, [CAT, hoy, JSON.stringify(prepararSesion(sesion).bloques)])
+    const pub = (await como(db, null, null, `select public.planificacion_publica_hoy('${CAT}','${J.a}') d`)).rows[0].d
+    const [gim] = pub[0].bloques
+    assert.equal(gim.ambito, 'gimnasio')
+    assert.deepEqual(gim.ejercicios[0], { nombre: 'Sentadilla', series: '4', repeticiones: '6', carga: '70% 1RM', tecnica: 'Rodilla alineada', indicaciones: 'Bajar controlado',
+      demostracion: { tipo: 'youtube', url: fila.demo_url, credito: 'Canal' } })
+    assert.deepEqual(gim.ejercicios[1], { nombre: 'Oculta', series: '4' })
+    assert.doesNotMatch(JSON.stringify(pub), /PRIVADO/)
+    // Un bloque con nombre y marcado para compartir se muestra aunque no tenga ejercicios (como antes); el de Cancha
+    // que viene por defecto no se comparte hasta marcarlo.
+    assert.deepEqual(pub[0].bloques.map(b => b.nombre), ['Gimnasio', 'Vuelta a la calma'])
+  } finally { await db.close() }
+})

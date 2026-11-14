@@ -2,7 +2,8 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
-const nombres = ['Calendario', 'Entrenamientos', 'Asistencia', 'Medicos', 'Nutricion', 'Psicologia', 'Captacion', 'Usuarios', 'Representantes', 'Pensiones', 'Contratos', 'PaseCategoria', 'ConvocatoriasSeleccion']
+// Entrenamientos (la pantalla vieja de la biblioteca) se reemplazó por Biblioteca (etapas D + G).
+const nombres = ['Calendario', 'Biblioteca', 'Asistencia', 'Medicos', 'Nutricion', 'Psicologia', 'Captacion', 'Usuarios', 'Representantes', 'Pensiones', 'Contratos', 'PaseCategoria', 'ConvocatoriasSeleccion']
 const css = readFileSync(new URL('../src/appearance/apariencia.css', import.meta.url), 'utf8')
 const variables = (s) => Object.fromEntries([...s.matchAll(/(--[\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]))
 const oscuro = variables(css.slice(0, css.indexOf('@media screen')))

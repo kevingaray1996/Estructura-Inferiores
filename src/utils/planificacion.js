@@ -1,6 +1,13 @@
 import { validarPizarra } from './pizarra.js'
+import { demoValida } from './biblioteca.js'
 export const CAMPOS_BLOQUE = ['objetivo', 'duracion', 'indicaciones']
+// Campos que se pueden compartir en Wellness. Cancha: los de siempre. Gimnasio (etapa E): series, repeticiones, carga,
+// técnica y demostración. La base (planificacion_privado.item_valido) acepta los mismos.
 export const CAMPOS_EJERCICIO = ['objetivo', 'duracion', 'series', 'repeticiones', 'materiales', 'indicaciones', 'imagen_url', 'link_video', 'pizarra']
+export const CAMPOS_EJERCICIO_GIMNASIO = ['objetivo', 'duracion', 'series', 'repeticiones', 'carga', 'tecnica', 'demostracion', 'indicaciones']
+export const CAMPOS_PUBLICABLES = [...new Set([...CAMPOS_EJERCICIO, ...CAMPOS_EJERCICIO_GIMNASIO])]
+export const AMBITOS_BLOQUE = { gimnasio: 'Gimnasio', cancha: 'Cancha' }
+export const camposDe = ambito => ambito === 'gimnasio' ? CAMPOS_EJERCICIO_GIMNASIO : CAMPOS_EJERCICIO
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const texto = (valor) => typeof valor === 'string' ? valor : ''
 
@@ -34,27 +41,41 @@ export function puedePlanificar(perfil, categoriaId = perfil?.categoria_id) {
     (['tecnico', 'preparador_fisico'].includes(perfil?.rol) && Boolean(perfil.categoria_id) && perfil.categoria_id === categoriaId)
 }
 
-export function nuevoEjercicio(biblioteca) {
-  return {
+// Copia de un ejercicio de la biblioteca (o tarea libre si no hay). La sesión guarda su propia copia: cambiar la
+// biblioteca después no la modifica. Los de gimnasio traen técnica, músculos, material y demostración.
+export function nuevoEjercicio(biblioteca, ambito = null) {
+  const gimnasio = (biblioteca?.ambito || ambito) === 'gimnasio'
+  const base = {
     id: crypto.randomUUID(), biblioteca_id: biblioteca?.id || null,
     nombre: biblioteca ? biblioteca.contenido || 'Ejercicio de biblioteca' : '',
-    objetivo: '', duracion: null, series: '', repeticiones: '', materiales: '',
+    objetivo: biblioteca?.objetivo || '', duracion: biblioteca?.duracion_minutos ?? null, series: '', repeticiones: '', materiales: '',
     indicaciones: biblioteca?.descripcion || '', notas_internas: '', visible: false,
     imagen_url: biblioteca?.imagen_url || '', link_video: biblioteca?.link_video || '',
     pizarra: biblioteca?.pizarra ? validarPizarra(structuredClone(biblioteca.pizarra)) : null,
     pizarra_miniatura: biblioteca?.pizarra_miniatura || '',
     campos_publicos: CAMPOS_EJERCICIO.filter(c => c !== 'pizarra'),
   }
+  if (!gimnasio) return base
+  const demostracion = biblioteca?.demo_url && demoValida(biblioteca.demo_tipo, biblioteca.demo_url)
+    ? { tipo: biblioteca.demo_tipo, url: biblioteca.demo_url, credito: biblioteca.demo_credito || '' } : null
+  return { ...base, pizarra: null, pizarra_miniatura: '', imagen_url: '', link_video: '', carga: '', tecnica: biblioteca?.tecnica || '',
+    musculos: [...(biblioteca?.musculos || [])], material: [...(biblioteca?.material || [])], materiales: (biblioteca?.material || []).join(', '),
+    demostracion, campos_publicos: ['series', 'repeticiones', 'carga', 'tecnica', 'indicaciones', ...(demostracion ? ['demostracion'] : [])] }
 }
 
-export function nuevoBloque() {
-  return { id: crypto.randomUUID(), nombre: '', objetivo: '', duracion: null, indicaciones: '',
-    notas_internas: '', visible: false, campos_publicos: [...CAMPOS_BLOQUE], ejercicios: [] }
+// Bloque con ámbito (gimnasio o cancha) o libre (sin ámbito).
+export function nuevoBloque(ambito = null) {
+  return { id: crypto.randomUUID(), nombre: AMBITOS_BLOQUE[ambito] || '', objetivo: '', duracion: null, indicaciones: '',
+    notas_internas: '', visible: false, campos_publicos: [...CAMPOS_BLOQUE], ejercicios: [], ...(AMBITOS_BLOQUE[ambito] ? { ambito } : {}) }
 }
 
 export function nuevaSesion(fecha, categoriaId) {
   return { categoria_id: categoriaId, fecha, hora: '', lugar: '', objetivo: '', tipo: 'entrenamiento',
     responsable: '', observaciones_internas: '', estado: 'borrador', entrenamiento_real_id: null, bloques: [] }
+}
+// Entrenamiento nuevo (etapa E): Bloque 1 Gimnasio y Bloque 2 Cancha; se pueden sumar bloques libres.
+export function nuevoEntrenamiento(fecha, categoriaId) {
+  return { ...nuevaSesion(fecha, categoriaId), bloques: [nuevoBloque('gimnasio'), nuevoBloque('cancha')] }
 }
 
 export function moverElemento(elementos, desde, hasta) {
@@ -77,19 +98,27 @@ function duracion(valor) {
   return n
 }
 
+const lista = v => (Array.isArray(v) ? v : []).map(x => texto(x).trim().slice(0, 60)).filter(Boolean).slice(0, 20)
 function prepararItem(item, esBloque) {
-  const campos = esBloque ? CAMPOS_BLOQUE : CAMPOS_EJERCICIO
+  const campos = esBloque ? CAMPOS_BLOQUE : CAMPOS_PUBLICABLES
   const base = {
     id: texto(item.id), nombre: texto(item.nombre), objetivo: texto(item.objetivo), duracion: duracion(item.duracion),
     indicaciones: texto(item.indicaciones), notas_internas: texto(item.notas_internas), visible: item.visible === true,
     campos_publicos: campos.filter((c) => item.campos_publicos?.includes(c)),
   }
-  if (esBloque) return { ...base, ejercicios: (item.ejercicios || []).map((e) => prepararItem(e, false)) }
+  if (esBloque) return { ...base, ...(AMBITOS_BLOQUE[item.ambito] ? { ambito: item.ambito } : {}), ejercicios: (item.ejercicios || []).map((e) => prepararItem(e, false)) }
   if (item.biblioteca_id && !UUID.test(item.biblioteca_id)) throw new Error('Referencia de biblioteca inválida.')
   return { ...base, biblioteca_id: item.biblioteca_id || null, series: texto(item.series), repeticiones: texto(item.repeticiones),
     materiales: texto(item.materiales), imagen_url: texto(item.imagen_url), link_video: texto(item.link_video),
     pizarra: item.pizarra ? validarPizarra(item.pizarra) : null,
-    pizarra_miniatura: item.pizarra_miniatura || '' }
+    pizarra_miniatura: item.pizarra_miniatura || '',
+    // Gimnasio (etapa E): solo si vienen, para no cambiar las sesiones viejas.
+    ...(item.carga != null ? { carga: texto(item.carga).slice(0, 80) } : {}),
+    ...(item.tecnica != null ? { tecnica: texto(item.tecnica).slice(0, 2000) } : {}),
+    ...(item.musculos != null ? { musculos: lista(item.musculos) } : {}),
+    ...(item.material != null ? { material: lista(item.material) } : {}),
+    ...(item.demostracion !== undefined ? { demostracion: item.demostracion && demoValida(item.demostracion.tipo, item.demostracion.url)
+      ? { tipo: item.demostracion.tipo, url: item.demostracion.url, credito: texto(item.demostracion.credito).slice(0, 200) } : null } : {}) }
 }
 
 export function prepararSesion(sesion) {
@@ -168,4 +197,26 @@ export function mensajePlanificacion(error) {
 
 export function enlaceSeguro(url) {
   try { const u = new URL(url); return ['https:', 'http:'].includes(u.protocol) ? u.href : null } catch { return null }
+}
+
+// Etapa E: cambios de un ejercicio de la sesión que también pueden ir a la biblioteca. Series, repeticiones, carga,
+// notas y lo que ven las jugadoras son siempre de ese día.
+const CAMPOS_COMPARTIDOS = ['nombre', 'objetivo', 'duracion', 'indicaciones', 'imagen_url', 'link_video', 'pizarra', 'tecnica', 'musculos', 'material', 'demostracion']
+export function cambiaLaBiblioteca(antes, despues) {
+  return CAMPOS_COMPARTIDOS.some(c => JSON.stringify(antes?.[c] ?? null) !== JSON.stringify(despues?.[c] ?? null))
+}
+// Datos para guardar_ejercicio_pizarra a partir del ejercicio de la sesión. Con `fila` (la de la biblioteca) conserva
+// lo que la sesión no tiene (fecha, carpeta, tipo, cantidad de jugadoras).
+export function datosBibliotecaDesde(e, ambito, fila = null) {
+  const gimnasio = (fila?.ambito || ambito) === 'gimnasio'
+  const duracion = Number(e.duracion) >= 1 ? Math.min(600, Math.round(Number(e.duracion))) : null
+  return {
+    ...(fila ? { fecha: fila.fecha, tipo: fila.tipo, carpeta_id: fila.carpeta_id, cantidad_jugadores: fila.cantidad_jugadores } : { ambito: gimnasio ? 'gimnasio' : 'cancha', tipo: 'ejercicio', carpeta_id: null }),
+    contenido: texto(e.nombre).trim() || 'Ejercicio', descripcion: texto(e.indicaciones), objetivo: texto(e.objetivo).slice(0, 500), duracion_minutos: duracion,
+    imagen_url: gimnasio ? null : e.imagen_url || null, link_video: gimnasio ? null : e.link_video || null,
+    pizarra: gimnasio ? null : e.pizarra || null, pizarra_miniatura: gimnasio ? '' : e.pizarra_miniatura || '',
+    musculos: gimnasio ? lista(e.musculos) : [], material: gimnasio ? lista(e.material) : [], tecnica: gimnasio ? texto(e.tecnica) : '',
+    demo_tipo: gimnasio && e.demostracion ? e.demostracion.tipo : null, demo_url: gimnasio && e.demostracion ? e.demostracion.url : null,
+    demo_credito: gimnasio && e.demostracion ? texto(e.demostracion.credito) : '',
+  }
 }

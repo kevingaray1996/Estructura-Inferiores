@@ -1,11 +1,13 @@
 import EncabezadoSeccion from './ui/EncabezadoSeccion'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
-import { CAMPOS_BLOQUE, CAMPOS_EJERCICIO, cargarSemana, copiarSemana, copiarSesion, eliminarSesion,
-  fechaArgentina, guardarSesion, inicioSemana, mensajePlanificacion, moverElemento, nuevaSesion,
-  nuevoBloque, nuevoEjercicio, puedePlanificar, sumarDias } from '../utils/planificacion'
+import { AMBITOS_BLOQUE, CAMPOS_BLOQUE, cargarSemana, copiarSemana, copiarSesion, datosBibliotecaDesde, eliminarSesion,
+  fechaArgentina, guardarSesion, inicioSemana, mensajePlanificacion, moverElemento,
+  nuevoBloque, nuevoEjercicio, nuevoEntrenamiento, puedePlanificar, sumarDias } from '../utils/planificacion'
+import { puedeEditar } from '../utils/biblioteca'
 import './planificacion.css'
-import PizarraEjercicio from './PizarraEjercicio'
+import BibliotecaVista from './BibliotecaVista'
+import { EditorTarea, SelectorBiblioteca } from './PlanificacionEjercicios'
 
 const fechaTexto = (f) => new Intl.DateTimeFormat('es-AR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${f}T12:00:00Z`))
 const etiquetas = { objetivo: 'Objetivo', duracion: 'Duración (min)', indicaciones: 'Indicaciones', series: 'Series', repeticiones: 'Repeticiones', materiales: 'Materiales', imagen_url: 'Imagen', link_video: 'Video', pizarra: 'Pizarra animada (publicación explícita)' }
@@ -34,42 +36,58 @@ function Orden({ indice, cantidad, mover, eliminar, nombre }) {
   </div>
 }
 
-function BloqueEditor({ bloque, indice, total, cambiar, mover, quitar, biblioteca, categoriaId }) {
+// Etapa E: cada bloque tiene ámbito (Gimnasio, Cancha o libre). Los ejercicios se agregan desde la biblioteca de su
+// ámbito y se editan en su ficha (ahí está la pizarra). En gimnasio, series, repeticiones y carga se cargan a mano.
+function BloqueEditor({ bloque, indice, total, cambiar, mover, quitar, biblioteca, carpetas, favoritos, categoriaId, rol, sincronizar, guardarEnBiblioteca }) {
+  const [selector, setSelector] = useState(false), [editando, setEditando] = useState(null)
+  const ambito = bloque.ambito || null
   function tarea(index, valor) { cambiar({ ...bloque, ejercicios: bloque.ejercicios.map((e, i) => i === index ? valor : e) }) }
-  return <section className="planificacion-tarjeta planificacion-bloque">
-    <div className="planificacion-fila planificacion-entre"><h3>Bloque {indice + 1}</h3>
+  const esGimnasio = e => ambito === 'gimnasio' || e.tecnica != null
+  const ambitoDe = e => esGimnasio(e) ? 'gimnasio' : 'cancha'
+  return <section className={`planificacion-tarjeta planificacion-bloque plan-bloque-${ambito || 'libre'}`}>
+    <div className="planificacion-fila planificacion-entre"><h3>Bloque {indice + 1}{ambito ? ` · ${AMBITOS_BLOQUE[ambito]}` : ''}</h3>
       <Orden indice={indice} cantidad={total} nombre="bloque" mover={mover} eliminar={quitar} /></div>
     <div className="planificacion-rejilla">
-      <Campo titulo="Nombre del bloque" valor={bloque.nombre} cambiar={(nombre) => cambiar({ ...bloque, nombre })} placeholder="Gimnasio, fútbol formal… o el nombre que necesites" />
+      <label className="planificacion-campo"><span>Tipo de bloque</span><select value={ambito || ''} onChange={(e) => {
+        const nuevo = e.target.value || null
+        cambiar({ ...bloque, ambito: nuevo || undefined, nombre: !bloque.nombre || Object.values(AMBITOS_BLOQUE).includes(bloque.nombre) ? (AMBITOS_BLOQUE[nuevo] || '') : bloque.nombre })
+      }}><option value="gimnasio">Gimnasio</option><option value="cancha">Cancha</option><option value="">Libre</option></select></label>
+      <Campo titulo="Nombre del bloque" valor={bloque.nombre} cambiar={(nombre) => cambiar({ ...bloque, nombre })} placeholder="Gimnasio, cancha… o el nombre que necesites" />
       <Campo titulo="Objetivo" valor={bloque.objetivo} cambiar={(objetivo) => cambiar({ ...bloque, objetivo })} />
       <Campo titulo="Duración estimada (opcional, min)" tipo="number" min="0.1" max="1440" step="any" valor={bloque.duracion} cambiar={(duracion) => cambiar({ ...bloque, duracion })} />
     </div>
-    <Campo titulo="Indicaciones para compartir" valor={bloque.indicaciones} cambiar={(indicaciones) => cambiar({ ...bloque, indicaciones })} />
-    <Campo titulo="Notas internas del bloque (privadas)" valor={bloque.notas_internas} cambiar={(notas_internas) => cambiar({ ...bloque, notas_internas })} />
-    <Visibilidad item={bloque} campos={CAMPOS_BLOQUE} cambiar={cambiar} />
-    {bloque.ejercicios.map((e, j) => <div className="planificacion-ejercicio" key={e.id}>
-      <div className="planificacion-fila planificacion-entre"><strong>Tarea {j + 1}{e.biblioteca_id ? ' · Biblioteca' : ' · Libre'}</strong>
-        {e.biblioteca_id && <button type="button" onClick={() => tarea(j, { ...e, biblioteca_id: null })}>Conservar como tarea libre</button>}
+    <details><summary>Indicaciones, notas y qué ven las jugadoras del bloque</summary>
+      <Campo titulo="Indicaciones para compartir" valor={bloque.indicaciones} cambiar={(indicaciones) => cambiar({ ...bloque, indicaciones })} />
+      <Campo titulo="Notas internas del bloque (privadas)" valor={bloque.notas_internas} cambiar={(notas_internas) => cambiar({ ...bloque, notas_internas })} />
+      <Visibilidad item={bloque} campos={CAMPOS_BLOQUE} cambiar={cambiar} />
+    </details>
+    <ol className="plan-tareas">{bloque.ejercicios.map((e, j) => <li className="plan-tarea" key={e.id}>
+      <button type="button" className="plan-tarea-vista" aria-label={`Editar ${e.nombre || `tarea ${j + 1}`}`} onClick={() => setEditando(j)}><BibliotecaVista e={e} /></button>
+      <div className="plan-tarea-info">
+        <strong>{j + 1}. {e.nombre || 'Tarea sin nombre'}</strong>
+        <small>{e.biblioteca_id ? 'De la biblioteca' : 'Tarea libre'}{e.visible ? ' · Se comparte' : ''}{!esGimnasio(e) && e.duracion ? ` · ${e.duracion} min` : ''}</small>
+        {esGimnasio(e) && <div className="plan-tarea-carga">
+          <label><span>Series</span><input aria-label={`Series de ${e.nombre}`} value={e.series || ''} maxLength={40} onChange={(ev) => tarea(j, { ...e, series: ev.target.value })} /></label>
+          <label><span>Reps</span><input aria-label={`Repeticiones de ${e.nombre}`} value={e.repeticiones || ''} maxLength={40} onChange={(ev) => tarea(j, { ...e, repeticiones: ev.target.value })} /></label>
+          <label><span>Carga</span><input aria-label={`Carga de ${e.nombre}`} value={e.carga || ''} maxLength={80} onChange={(ev) => tarea(j, { ...e, carga: ev.target.value })} placeholder="kg, %…" /></label>
+        </div>}
+      </div>
+      <div className="plan-tarea-acciones">
+        <button type="button" onClick={() => setEditando(j)}>Editar</button>
+        {!e.biblioteca_id && (e.pizarra || esGimnasio(e)) && puedeEditar(rol, ambitoDe(e)) && <button type="button" onClick={() => guardarEnBiblioteca(e, ambitoDe(e), valor => tarea(j, valor))}>Guardar en biblioteca</button>}
         <Orden indice={j} cantidad={bloque.ejercicios.length} nombre="tarea" mover={(hasta) => cambiar({ ...bloque, ejercicios: moverElemento(bloque.ejercicios, j, hasta) })}
-          eliminar={() => cambiar({ ...bloque, ejercicios: bloque.ejercicios.filter((_, i) => i !== j) })} /></div>
-      <Campo titulo="Nombre" valor={e.nombre} cambiar={(nombre) => tarea(j, { ...e, nombre })} />
-      <details><summary>Detalles de la tarea (opcionales)</summary><div className="planificacion-rejilla">
-        {CAMPOS_EJERCICIO.filter(c => c !== 'pizarra').map((campo) => <Campo key={campo} titulo={etiquetas[campo]} tipo={campo === 'duracion' ? 'number' : 'text'}
-          valor={e[campo]} cambiar={(valor) => tarea(j, { ...e, [campo]: valor })} {...(campo === 'duracion' ? { min: '0.1', max: '1440', step: 'any' } : {})} />)}
-      </div><Campo titulo="Notas internas de la tarea (privadas)" valor={e.notas_internas} cambiar={(notas_internas) => tarea(j, { ...e, notas_internas })} /></details>
-      <PizarraEjercicio valor={e.pizarra} miniatura={e.pizarra_miniatura} nombre={e.nombre} categoriaId={categoriaId} onChange={(pizarra, pizarra_miniatura) => tarea(j, { ...e, pizarra, pizarra_miniatura })} />
-      {e.pizarra && <button type="button" onClick={() => { if (window.confirm('¿Quitar la pizarra de esta tarea? La biblioteca no cambia.')) tarea(j, { ...e, pizarra: null, pizarra_miniatura: '' }) }}>Quitar pizarra de la tarea</button>}
-      <Visibilidad item={e} campos={CAMPOS_EJERCICIO} cambiar={(valor) => tarea(j, valor)} />
-    </div>)}
+          eliminar={() => cambiar({ ...bloque, ejercicios: bloque.ejercicios.filter((_, i) => i !== j) })} />
+      </div>
+    </li>)}</ol>
     <div className="planificacion-fila">
-      <button type="button" onClick={() => cambiar({ ...bloque, ejercicios: [...bloque.ejercicios, nuevoEjercicio()] })}>+ Tarea libre</button>
-      <label className="planificacion-campo"><span>Reutilizar ejercicio existente</span>
-        <select value="" onChange={(event) => {
-          const elegido = biblioteca.find((e) => e.id === event.target.value)
-          if (elegido) cambiar({ ...bloque, ejercicios: [...bloque.ejercicios, nuevoEjercicio(elegido)] })
-        }}><option value="">Elegir de la biblioteca…</option>{biblioteca.map((e) => <option key={e.id} value={e.id}>{e.contenido || 'Ejercicio'} · {e.descripcion.slice(0, 90)}</option>)}</select>
-      </label>
+      <button type="button" className="planificacion-primario" onClick={() => setSelector(true)}>Agregar desde biblioteca</button>
+      <button type="button" onClick={() => cambiar({ ...bloque, ejercicios: [...bloque.ejercicios, nuevoEjercicio(null, ambito)] })}>+ Tarea libre</button>
     </div>
+    {selector && <SelectorBiblioteca ambito={ambito} biblioteca={biblioteca} carpetas={carpetas} favoritos={favoritos} titulo={`Bloque ${indice + 1}${ambito ? ` · ${AMBITOS_BLOQUE[ambito]}` : ''}`}
+      agregar={(fila) => cambiar({ ...bloque, ejercicios: [...bloque.ejercicios, nuevoEjercicio(fila, ambito)] })} cerrar={() => setSelector(false)} />}
+    {editando !== null && bloque.ejercicios[editando] && <EditorTarea key={bloque.ejercicios[editando].id} tarea={bloque.ejercicios[editando]} ambito={ambito} categoriaId={categoriaId}
+      puedeBiblioteca={puedeEditar(rol, ambitoDe(bloque.ejercicios[editando]))} onCerrar={() => setEditando(null)}
+      onAplicar={(valor, tambien) => { tarea(editando, valor); setEditando(null); if (tambien) void sincronizar(valor, ambitoDe(valor)) }} />}
   </section>
 }
 
@@ -79,6 +97,8 @@ export default function PlanificacionSection({ perfil, fechaInicial, categoriaIn
   const [categoriaId, setCategoriaId] = useState(() => perfil?.rol === 'coordinacion' ? categoriaInicial || '' : perfil?.categoria_id || '')
   const [categorias, setCategorias] = useState([])
   const [biblioteca, setBiblioteca] = useState([])
+  const [carpetas, setCarpetas] = useState([])
+  const [favoritos, setFavoritos] = useState(() => new Set())
   const [bibliotecaError, setBibliotecaError] = useState('')
   const [sesiones, setSesiones] = useState([])
   const [reales, setReales] = useState([])
@@ -99,30 +119,46 @@ export default function PlanificacionSection({ perfil, fechaInicial, categoriaIn
   const rolPermitido = ['coordinacion', 'tecnico', 'preparador_fisico'].includes(perfil?.rol)
   const autorizado = puedePlanificar(perfil, categoriaId)
 
+  // Biblioteca con sus carpetas y favoritos (para el selector de cada bloque).
   const cargarBiblioteca = useCallback(async () => {
-    const { data, error: fallo } = await supabase.from('biblioteca').select('*').order('contenido')
-    setBiblioteca(data || [])
-    setBibliotecaError(fallo ? 'No se pudo leer la biblioteca. Podés usar tareas libres y reintentar.' : '')
+    const [b, c, f] = await Promise.all([
+      supabase.from('biblioteca').select('*').order('contenido'),
+      supabase.from('biblioteca_carpetas').select('*').order('orden'),
+      supabase.from('biblioteca_favoritos').select('biblioteca_id'),
+    ])
+    setBiblioteca((b.data || []).map(e => ({ ...e, ambito: e.ambito || 'cancha' })))
+    setCarpetas(c.data || []); setFavoritos(new Set((f.data || []).map(x => x.biblioteca_id)))
+    setBibliotecaError(b.error ? 'No se pudo leer la biblioteca. Podés usar tareas libres y reintentar.' : '')
   }, [])
+  // "También en la biblioteca": actualiza el ejercicio original con los datos de la sesión (la sesión ya quedó cambiada).
+  async function sincronizar(tarea, ambito) {
+    const fila = biblioteca.find(e => e.id === tarea.biblioteca_id)
+    if (!fila) { setError('El ejercicio ya no está en la biblioteca: el cambio quedó solo para este día.'); return }
+    const { error: fallo } = await supabase.rpc('guardar_ejercicio_pizarra', { p_id: fila.id, p_revision: fila.pizarra_revision, p_datos: datosBibliotecaDesde(tarea, ambito, fila) })
+    if (fallo) setError(fallo.code === '40001' ? 'El ejercicio de la biblioteca cambió en otra sesión: recargá la biblioteca y volvé a aplicar. Este día sí quedó cambiado.' : `No se pudo actualizar la biblioteca: ${fallo.message}. Este día sí quedó cambiado.`)
+    else { setMensaje(`"${tarea.nombre}" también se actualizó en la biblioteca. Las otras sesiones conservan su copia.`); void cargarBiblioteca() }
+  }
+  // "Guardar en biblioteca": una tarea libre pasa a la biblioteca (Sin clasificar) y queda vinculada.
+  async function guardarEnBiblioteca(tarea, ambito, actualizar) {
+    const { data, error: fallo } = await supabase.rpc('guardar_ejercicio_pizarra', { p_id: null, p_revision: null, p_datos: datosBibliotecaDesde(tarea, ambito) })
+    if (fallo || !data?.id) { setError(`No se pudo guardar en la biblioteca: ${fallo?.message || 'sin confirmación'}.`); return }
+    actualizar({ ...tarea, biblioteca_id: data.id }); setMensaje(`"${tarea.nombre || 'La tarea'}" quedó guardada en la biblioteca de ${AMBITOS_BLOQUE[ambito]} (Sin clasificar).`); void cargarBiblioteca()
+  }
 
   useEffect(() => {
     if (!rolPermitido) return
     let activo = true
     async function cargar() {
-      const [{ data, error: fallo }, bibliotecaRes] = await Promise.all([
-        supabase.from('categorias').select('id,nombre,orden').order('orden'),
-        supabase.from('biblioteca').select('*').order('contenido'),
-      ])
+      const { data, error: fallo } = await supabase.from('categorias').select('id,nombre,orden').order('orden')
       if (activo) {
         setCategorias(data || [])
         if (fallo) setError('No se pudieron cargar las categorías.')
-        setBiblioteca(bibliotecaRes.data || [])
-        setBibliotecaError(bibliotecaRes.error ? 'No se pudo leer la biblioteca. Podés usar tareas libres y reintentar.' : '')
+        await cargarBiblioteca()
       }
     }
     void cargar()
     return () => { activo = false }
-  }, [rolPermitido])
+  }, [rolPermitido, cargarBiblioteca])
 
   useEffect(() => {
     if (!categoriaId || !autorizado) return
@@ -193,7 +229,7 @@ export default function PlanificacionSection({ perfil, fechaInicial, categoriaIn
   if (perfil.rol !== 'coordinacion' && !perfil.categoria_id) return <p className="p-6">Necesitás una categoría asignada en tu perfil para planificar.</p>
 
   return <div className="planificacion p-4 md:p-8">
-    <EncabezadoSeccion eyebrow="Planificación" eyebrowResaltado="Sesiones, bloques y ejercicios" titulo="Semana " resaltado="planificada" />
+    <EncabezadoSeccion eyebrow="Entrenamientos" eyebrowResaltado="Sesiones por bloques desde la biblioteca" titulo="Semana " resaltado="planificada" />
     <fieldset disabled={ocupado} className="planificacion-fila planificacion-tarjeta">
       <label className="planificacion-campo"><span>Categoría</span><select value={categoriaId} disabled={perfil.rol !== 'coordinacion'} onChange={(e) => navegar(lunes, e.target.value)}>
         <option value="">Elegir categoría…</option>{categorias.filter((c) => perfil.rol === 'coordinacion' || c.id === perfil.categoria_id).map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
@@ -214,7 +250,7 @@ export default function PlanificacionSection({ perfil, fechaInicial, categoriaIn
           <strong>{s.hora?.slice(0, 5) || 'Sin horario'} · {s.tipo}</strong><span>{s.objetivo || 'Sesión sin objetivo cargado'}</span>
           <span>{s.estado === 'publicado' ? 'Publicado' : 'Borrador'} · {s.bloques.length} bloque(s)</span>
         </button>)}
-        <button type="button" disabled={ocupado || cargando} onClick={() => abrir(nuevaSesion(dia, categoriaId))}>+ Sesión</button>
+        <button type="button" disabled={ocupado || cargando} onClick={() => abrir(nuevoEntrenamiento(dia, categoriaId))}>+ Sesión</button>
       </section>)}</div>
       <details className="planificacion-tarjeta"><summary>Duplicar esta semana</summary>
         <p>Agrega copias como borradores; no reemplaza sesiones existentes ni crea asistencia o cargas.</p>
@@ -255,11 +291,16 @@ export default function PlanificacionSection({ perfil, fechaInicial, categoriaIn
           </select></label><p>No se modifica el registro real. La asistencia sigue consultándose por categoría y fecha.</p>
         </details>
         {bibliotecaError && <p role="alert">{bibliotecaError} <button type="button" onClick={cargarBiblioteca}>Reintentar biblioteca</button></p>}
-        {form.bloques.map((b, i) => <BloqueEditor key={b.id} bloque={b} indice={i} total={form.bloques.length} biblioteca={biblioteca} categoriaId={form.categoria_id || categoriaId}
+        {form.bloques.map((b, i) => <BloqueEditor key={b.id} bloque={b} indice={i} total={form.bloques.length} biblioteca={biblioteca} carpetas={carpetas} favoritos={favoritos} categoriaId={form.categoria_id || categoriaId}
+          rol={perfil.rol} sincronizar={sincronizar} guardarEnBiblioteca={guardarEnBiblioteca}
           cambiar={(valor) => cambiar({ ...form, bloques: form.bloques.map((x, j) => i === j ? valor : x) })}
           mover={(hasta) => cambiar({ ...form, bloques: moverElemento(form.bloques, i, hasta) })}
           quitar={() => cambiar({ ...form, bloques: form.bloques.filter((_, j) => j !== i) })} />)}
-        <button type="button" onClick={() => cambiar({ ...form, bloques: [...form.bloques, nuevoBloque()] })}>+ Agregar bloque libre</button>
+        <div className="planificacion-fila">
+          <button type="button" onClick={() => cambiar({ ...form, bloques: [...form.bloques, nuevoBloque('gimnasio')] })}>+ Bloque de gimnasio</button>
+          <button type="button" onClick={() => cambiar({ ...form, bloques: [...form.bloques, nuevoBloque('cancha')] })}>+ Bloque de cancha</button>
+          <button type="button" onClick={() => cambiar({ ...form, bloques: [...form.bloques, nuevoBloque()] })}>+ Bloque libre</button>
+        </div>
         <p>En Wellness sólo aparecen bloques marcados para compartir y con contenido. Las tareas también deben estar habilitadas. Las notas internas nunca se muestran.</p>
         <div className="planificacion-fila planificacion-acciones">
           <button className="planificacion-primario" type="submit" disabled={conflicto}>Guardar {form.estado === 'borrador' ? 'borrador' : 'cambios'}</button>

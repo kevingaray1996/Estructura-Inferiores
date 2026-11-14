@@ -10,10 +10,14 @@ const leer = p => readFileSync(p, 'utf8').replaceAll('\r', '')
 const antes = p => execFileSync('git', ['show', `${base}:${p}`], { encoding: 'utf8' }).replaceAll('\r', '')
 
 test('Bibliotecas Premium conservan escrituras, filtros, reproducción por enlace y pizarra', () => {
-  for (const n of ['EntrenamientosSection', 'VideoSection']) {
-    const p = `src/components/${n}.jsx`, a = antes(p), b = leer(p)
-    const inicio = n === 'EntrenamientosSection' ? '  function abrirNuevo()' : '  function cambiarTipo(t)'
-    const fin = n === 'EntrenamientosSection' ? '\n  return (' : '  const videosFiltrados ='
+  // EntrenamientosSection se reemplazó por BibliotecaSection (etapas D + G; su comportamiento lo cubren
+  // tests/biblioteca.test.mjs y bibliotecasPremium.interaccion.mjs). VideoSection conserva su lógica.
+  for (const n of ['VideoSection']) {
+    // Seguridad Storage (2026-11-13) cambió a propósito la subida: carpeta videos/ y sin reemplazar (upsert: false).
+    const p = `src/components/${n}.jsx`, b = leer(p)
+    const a = antes(p).replace("const nombreArchivo = `${Date.now()}-", "const nombreArchivo = `videos/${Date.now()}-").replace('upsert: true,', 'upsert: false,')
+    const inicio = '  function cambiarTipo(t)'
+    const fin = '  const videosFiltrados ='
     const bloque = s => s.slice(s.indexOf(inicio), s.lastIndexOf(fin))
     assert.equal(soloLogica(bloque(b)), soloLogica(bloque(a)), 'Handlers y payloads idénticos: ' + n)
     for (const re of [/\.from\('[^']+'\)/g, /\.select\('[^']*'\)/g, /\.rpc\('[^']+'/g]) assert.deepEqual(b.match(re), a.match(re), n)
@@ -21,9 +25,8 @@ test('Bibliotecas Premium conservan escrituras, filtros, reproducción por enlac
   // La referencia espacial de Analisis cambia en la entrega de orientacion;
   // su catalogo se conserva (ahora en catalogoAcciones.js) y su comportamiento tiene regresiones especificas.
   compararCatalogoAnalisis(leer('src/components/AnalisisSection.jsx'), antes('src/components/AnalisisSection.jsx'))
-  const entrenamiento = leer('src/components/EntrenamientosSection.jsx')
-  const pizarras = s => s.match(/<PizarraEjercicio[^\n]+\/>/g)
-  assert.deepEqual(pizarras(entrenamiento), pizarras(antes('src/components/EntrenamientosSection.jsx')))
+  // La Biblioteca sigue ofreciendo la pizarra al editar y al ver un ejercicio de cancha.
+  assert.ok((leer('src/components/BibliotecaSection.jsx').match(/<PizarraEjercicio /g) || []).length >= 2)
   assert.match(leer('src/components/VideoSection.jsx'), /href=\{v.url\}/)
   // Los estilos de fotografiasClub.css cambian con el rediseño; los componentes conservan su lógica.
   // PizarraTactica.jsx se rediseñó a propósito (etapa 1 de la pizarra); su comportamiento lo cubren
@@ -38,7 +41,7 @@ test('Fotografías Etapa 2: originales completos, rutas públicas y recurso de r
     'foto_analisis_rival_reserva.jpg': '77ef38e0c0a071bb819197081f9802a7d1580a074c03a5c59c5cb2bc7654fdb2',
   }
   for (const [n, hash] of Object.entries(hashes)) assert.equal(createHash('sha256').update(readFileSync(`public/images/fotos-comunicaciones/${n}`)).digest('hex'), hash, n)
-  for (const [n, foto] of [['EntrenamientosSection', 'banner_entrenamientos.jpg'], ['VideoSection', 'banner_videoanalisis.jpg']]) {
+  for (const [n, foto] of [['BibliotecaSection', 'banner_entrenamientos.jpg'], ['VideoSection', 'banner_videoanalisis.jpg']]) {
     assert.ok(leer(`src/components/${n}.jsx`).includes(`/images/fotos-comunicaciones/${foto}`))
     assert.doesNotMatch(leer(`src/components/${n}.jsx`), /foto_analisis_rival_reserva/)
   }
