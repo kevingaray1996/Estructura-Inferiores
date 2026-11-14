@@ -89,7 +89,7 @@ const PizarraCancha = memo(forwardRef(function PizarraCancha({ doc, poses, selec
   const franjas = doc.superficie === 'libre' ? 0 : Math.max(4, Math.round(w / 8.75))
   return <svg ref={ref} xmlns="http://www.w3.org/2000/svg" viewBox={`-3 -3 ${ancho + 6} ${alto + 6}`} role="img" aria-label={miniatura ? 'Vista previa de cancha' : 'Cancha táctica editable'} className={miniatura ? 'pizarra-vista-miniatura' : 'pizarra-cancha'} style={miniatura ? undefined : { aspectRatio: `${ancho + 6} / ${alto + 6}` }}
     onPointerDown={onFondo} onPointerDownCapture={onPointerDownCapture} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel} onDragOver={onDragOver} onDrop={onDrop}>
-    <title>Pizarra táctica de Comunicaciones</title><defs><clipPath id={recorte}><rect width={w} height={h} /></clipPath>
+    <defs><clipPath id={recorte}><rect width={w} height={h} /></clipPath>
       <radialGradient id={brillo} cx=".34" cy=".28" r=".78"><stop offset="0" style={BRILLO} stopOpacity=".55" /><stop offset=".42" style={BRILLO} stopOpacity=".06" /><stop offset="1" style={RELIEVE} stopOpacity=".32" /></radialGradient>
       <radialGradient id={vineta} cx=".5" cy=".5" r=".72"><stop offset=".62" style={BORDE_CESPED} stopOpacity="0" /><stop offset="1" style={BORDE_CESPED} stopOpacity=".55" /></radialGradient></defs><rect x="-3" y="-3" width={ancho + 6} height={alto + 6} style={cesped} />
     <ContextoCancha.Provider value={brillo}><g data-viewport="true" transform={`translate(${pan.x} ${pan.y}) scale(${zoom})`}>
@@ -109,7 +109,8 @@ const PizarraCancha = memo(forwardRef(function PizarraCancha({ doc, poses, selec
             {doc.superficie === 'completa' && <g transform={`translate(${w} ${h}) rotate(180)`}><path d={`M0 ${h / 2 - 20.16} H16.5 V${h / 2 + 20.16} H0 M0 ${h / 2 - 9.16} H5.5 V${h / 2 + 9.16} H0 M0 ${h / 2 - 3.66} H-1.5 V${h / 2 + 3.66} H0`} /><circle cx="11" cy={h / 2} r=".3" style={PUNTO} /></g>}
           </> : <><path d={`M${w / 2} 0 V${h}`} /><circle cx={w / 2} cy={h / 2} r={h / 6} /></>}
         </g>}
-        <text transform={`translate(${w / 2} ${h - 1.5}) rotate(${contragiro})`} textAnchor={!vertical ? 'middle' : giro === 90 ? 'start' : 'end'} style={TEXTO_CANCHA} opacity=".75" fontSize="1.6" fontWeight="700" letterSpacing=".12">Ataque {flechaAtaque}</text>
+        {/* Rótulo del ataque en el margen, fuera de la cancha: ninguna ficha puede quedar debajo. */}
+        {!miniatura && <text data-ataque="true" pointerEvents="none" transform={vertical ? `translate(${w + 2.1} ${h / 2}) rotate(${contragiro})` : `translate(${w} ${h + 2.1})`} textAnchor={vertical ? 'middle' : 'end'} dominantBaseline="middle" style={TEXTO_CANCHA} opacity=".7" fontSize="1.5" fontWeight="700" letterSpacing=".12">Ataque {flechaAtaque}</text>}
         {estelas?.length > 0 && <Estelas estelas={estelas} modo={modoEstela} w={w} h={h} />}
         {fantasmas && <g data-fantasmas="true" pointerEvents="none">{doc.elementos.map(e => {
           const antes = fantasmas[e.id], ahora = poses[e.id]

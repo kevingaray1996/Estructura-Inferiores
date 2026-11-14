@@ -1,45 +1,53 @@
 import { memo, useState } from 'react'
 import PizarraObjeto from './PizarraObjeto'
-import PizarraCancha from './PizarraCancha'
-import { LINEAS, PALETA, plantillaHerramienta, SUPERFICIES } from '../utils/pizarra'
+import { FORMACIONES, LINEAS, PALETA, plantillaHerramienta } from '../utils/pizarra'
 
-const GRUPOS = {
-  Jugadoras: ['jugadora', 'rival'],
-  Materiales: ['pelota', 'cono', 'tortuga', 'escalera', 'valla', 'pica', 'aro', 'arco', 'mini'],
-  Movimientos: ['flecha', 'curva', 'punteada', 'conduccion', 'pase', 'movimiento', 'remate'],
-  Dibujo: ['sombra', 'zona', 'rectangulo', 'circulo', 'texto'],
-  Canchas: [],
-}
+// Menú "＋ Agregar" (ronda de uso): flota sobre la cancha y reemplaza a la paleta lateral y a la barra rápida.
+// Tocar un objeto lo deja listo para colocar (el menú se pliega); arrastrarlo lo suelta directo en la cancha.
+const GRUPOS = [
+  ['Jugadoras', ['jugadora', 'rival']],
+  ['Pelota y materiales', ['pelota', 'cono', 'tortuga', 'escalera', 'valla', 'pica', 'aro', 'arco', 'mini']],
+  ['Flechas', ['pase', 'conduccion', 'movimiento', 'flecha', 'curva', 'punteada', 'remate']],
+  ['Zonas y texto', ['sombra', 'zona', 'rectangulo', 'circulo', 'texto']],
+]
+const CORTOS = { jugadora: 'Propia', movimiento: 'Sin pelota', arco: 'Arco', mini: 'Arco chico', punteada: 'Punteada', curva: 'Curva', flecha: 'Recta', sombra: 'Sombreada', rectangulo: 'Rectángulo' }
 
-// Ícono de una herramienta (también lo usa la barra rápida del editor).
+// Ícono de una herramienta (también lo usa el fantasma al arrastrar).
 export function IconoHerramienta({ id }) {
   const { tipo, extra } = plantillaHerramienta(id), esLinea = LINEAS.includes(tipo)
   const e = { tipo, tamano: tipo === 'pelota' ? 8 : tipo === 'jugadora' ? 7 : 5, color: tipo === 'pelota' ? PALETA.pelota : tipo === 'sombra' ? PALETA.sombra : tipo === 'jugadora' ? PALETA.local : esLinea ? PALETA.trazo : PALETA.material, tinta: PALETA.tinta, grosor: .6, numero: tipo === 'jugadora' ? '10' : '', texto: tipo === 'texto' ? 'ABC' : '', dx: 22, dy: 0, curva: 5, puntos: [{ x: -9, y: -6 }, { x: 8, y: -8 }, { x: 9, y: 6 }, { x: -7, y: 7 }], ...extra }
   return <svg viewBox={esLinea ? '-4 -12 34 24' : ['arco', 'mini'].includes(tipo) ? '-12 -8 26 12' : '-12 -12 24 24'} aria-hidden="true" focusable="false"><PizarraObjeto e={e} ancho={100} alto={100} /></svg>
 }
 
-export default memo(function PizarraPaleta({ herramienta, elegir, superficie, cambiarSuperficie, deshabilitada, alArrastrar, alTerminar, abierta = false, onCerrar }) {
-  const [grupo, setGrupo] = useState('Materiales')
-  return <section className={`pizarra-biblioteca ${abierta ? 'pizarra-hoja-abierta' : ''}`} aria-label="Objetos y canchas">
-    <header className="pizarra-biblioteca-cabecera"><strong>Objetos y canchas</strong><span>Tocá y después la cancha, o arrastrá</span>
-      {onCerrar && <button type="button" className="pizarra-hoja-cerrar" aria-label="Cerrar objetos" onClick={onCerrar}>✕</button>}</header>
-    <fieldset disabled={deshabilitada}>
-      <div className="pizarra-categorias" role="group" aria-label="Categorías de herramientas">{Object.keys(GRUPOS).map(g => <button type="button" key={g} aria-pressed={grupo === g} onClick={() => setGrupo(g)}>{g}</button>)}</div>
-      <div className="pizarra-paleta" aria-label="Herramientas de pizarra">
-        {GRUPOS[grupo].map(id => {
-          const { nombre } = plantillaHerramienta(id)
-          return <button type="button" key={id} className="pizarra-objeto" title={`${nombre}: arrastrar o tocar y colocar`} aria-label={nombre} aria-pressed={herramienta === id}
-            draggable={!deshabilitada} onDragStart={event => { event.dataTransfer.setData('application/x-comunicaciones-herramienta', id); event.dataTransfer.effectAllowed = 'copy'; alArrastrar(id) }} onDragEnd={alTerminar}
-            onClick={() => elegir(id)}>
-            <IconoHerramienta id={id} />
-            <span>{nombre}</span>
-          </button>
-        })}
-        {grupo === 'Canchas' && Object.entries(SUPERFICIES).map(([tipo, s]) => <button type="button" key={tipo} className="pizarra-objeto pizarra-superficie" aria-label={s[2]} aria-pressed={superficie === tipo} onClick={() => cambiarSuperficie(tipo)}>
-          <PizarraCancha miniatura doc={{ superficie: tipo, orientacion: 'horizontal', ataque: 'derecha', elementos: [] }} poses={{}} /><span>{s[2]}</span>
-        </button>)}
+// `arrastre` = { inicio, mover, fin, cancelar }: manejo con puntero (mouse y dedo) que distingue toque de arrastre.
+export default memo(function PizarraMenuAgregar({ abierto, herramienta, arrastre, onFormacion, onCerrar, deshabilitado }) {
+  const [equipo, setEquipo] = useState('propio')
+  if (!abierto) return null
+  const grupo = ([titulo, ids]) => <div key={titulo} className="pizarra-agregar-grupo">
+    <h3>{titulo}</h3>
+    <div className="pizarra-agregar-grilla">{ids.map(id => {
+      const { nombre } = plantillaHerramienta(id)
+      return <button type="button" key={id} className="pizarra-objeto" aria-label={nombre} title={nombre} aria-pressed={herramienta === id}
+        onPointerDown={e => arrastre.inicio(e, id)} onPointerMove={arrastre.mover} onPointerUp={e => arrastre.fin(e)} onPointerCancel={e => arrastre.fin(e, true)} onClick={e => arrastre.click(e, id)}>
+        <IconoHerramienta id={id} /><span>{CORTOS[id] || nombre}</span>
+      </button>
+    })}</div>
+  </div>
+  return <section className="pizarra-agregar-menu" role="dialog" aria-label="Agregar a la cancha">
+    <header><strong>Agregar</strong><span>Tocá y después la cancha, o arrastrá</span>
+      <button type="button" className="pizarra-icono" aria-label="Cerrar menú" onClick={onCerrar}>✕</button></header>
+    <fieldset disabled={deshabilitado}>
+      {GRUPOS.slice(0, 1).map(grupo)}
+      <div className="pizarra-agregar-grupo">
+        <h3>Formaciones</h3>
+        <div className="pizarra-segmentado pizarra-grupo" role="group" aria-label="Equipo de la formación">
+          <button type="button" aria-pressed={equipo === 'propio'} onClick={() => setEquipo('propio')}>Propio</button>
+          <button type="button" aria-pressed={equipo === 'rival'} onClick={() => setEquipo('rival')}>Rival</button>
+        </div>
+        <div className="pizarra-agregar-formaciones">{Object.keys(FORMACIONES).map(sistema =>
+          <button type="button" key={sistema} aria-label={`Formación ${sistema} ${equipo === 'rival' ? 'rival' : 'propia'}`} onClick={() => onFormacion(sistema, equipo)}>{sistema}</button>)}</div>
       </div>
-      <p className="pizarra-ayuda">{grupo === 'Canchas' ? 'Cambiar superficie conserva el diseño.' : 'La herramienta queda activa para colocar varias seguidas; tocá Mover para terminar.'}</p>
+      {GRUPOS.slice(1).map(grupo)}
     </fieldset>
   </section>
 })

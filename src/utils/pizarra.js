@@ -121,6 +121,95 @@ export function alternarFoco(doc, indice, id) {
   if (!paso || (id !== null && e?.tipo !== 'jugadora')) return doc
   return { ...doc, pasos: doc.pasos.map((p, i) => i === indice ? { ...p, foco: p.foco === id ? null : id } : p) }
 }
+// Pasos: eliminar (queda al menos uno), duplicar tal cual y mover de lugar.
+export function eliminarPaso(doc, indice) {
+  if (doc.pasos.length < 2 || !doc.pasos[indice]) return doc
+  return { ...doc, pasos: doc.pasos.filter((_, i) => i !== indice) }
+}
+export function duplicarPaso(doc, indice) {
+  if (doc.pasos.length >= 60 || !doc.pasos[indice]) return doc
+  const pasos = [...doc.pasos], original = pasos[indice]
+  pasos.splice(indice + 1, 0, { ...structuredClone(original), id: crypto.randomUUID(), nombre: `${original.nombre} (copia)`.slice(0, 80) })
+  return { ...doc, pasos }
+}
+export function moverPaso(doc, desde, hasta) {
+  if (desde === hasta || !doc.pasos[desde] || hasta < 0 || hasta >= doc.pasos.length) return doc
+  const pasos = [...doc.pasos], [paso] = pasos.splice(desde, 1)
+  pasos.splice(hasta, 0, paso)
+  return { ...doc, pasos }
+}
+// Textos y zonas sombreadas son anotaciones: están en el mismo lugar en todos los pasos (se muestran u ocultan por paso).
+// Así un texto no puede quedar movido en un solo paso por estar dentro de una selección.
+export const FIJOS = ['texto', 'sombra']
+export function fijarAnotaciones(doc, indice) {
+  const ids = doc.elementos.filter(e => FIJOS.includes(e.tipo)).map(e => e.id), origen = doc.pasos[indice]?.poses
+  if (!ids.length || !origen) return doc
+  return { ...doc, pasos: doc.pasos.map((p, i) => i === indice ? p : { ...p, poses: { ...p.poses, ...Object.fromEntries(ids.map(id => [id, { ...origen[id] }])) } }) }
+}
+
+// Formaciones prearmadas. Líneas de atrás hacia adelante (la primera es la arquera) con los números de cada puesto,
+// ordenados de izquierda a derecha desde el punto de vista del equipo.
+export const FORMACIONES = {
+  '4-4-2': [[1], [3, 6, 2, 4], [11, 5, 8, 7], [10, 9]],
+  '4-3-3': [[1], [3, 6, 2, 4], [8, 5, 10], [11, 9, 7]],
+  '4-2-3-1': [[1], [3, 6, 2, 4], [8, 5], [11, 10, 7], [9]],
+  '3-5-2': [[1], [3, 2, 6], [11, 8, 5, 4, 7], [10, 9]],
+  '3-4-3': [[1], [3, 2, 6], [10, 8, 5, 4], [11, 9, 7]],
+  '4-1-4-1': [[1], [3, 6, 2, 4], [5], [11, 10, 8, 7], [9]],
+}
+const ANCHOS = { 1: [.5], 2: [.36, .64], 3: [.24, .5, .76], 4: [.13, .38, .62, .87], 5: [.1, .3, .5, .7, .9] }
+export const esRival = e => e.tipo === 'jugadora' && e.color.toLowerCase() === PALETA.rival.toLowerCase()
+// Lugares (en %) de una formación. `profundidad` va de 0 (arco propio) a 1 (arco rival).
+// Cancha completa: cada equipo en su mitad. Media cancha (se ve el arco de la izquierda): el equipo que defiende ese arco
+// se para atrás y el que ataca se para adelantado, sin arquera (quedaría fuera de la vista).
+export function lugaresFormacion(doc, sistema, equipo) {
+  const lineas = FORMACIONES[sistema]
+  if (!lineas) return []
+  const media = doc.superficie === 'media', largo = 105
+  // ¿Hacia dónde ataca este equipo? El propio según el documento; el rival, al revés.
+  const atacaDerecha = (doc.ataque === 'derecha') === (equipo === 'propio')
+  const defiendeVisible = atacaDerecha // con media cancha se ve el arco de la izquierda
+  const adelantado = media && !defiendeVisible
+  const salida = []
+  lineas.forEach((numeros, i) => {
+    if (i === 0 && adelantado) return
+    const t = i === 0 ? .04 : adelantado ? .56 + (i - 1) * (.34 / Math.max(1, lineas.length - 2)) : .17 + (i - 1) * (.28 / Math.max(1, lineas.length - 2))
+    const xMetros = atacaDerecha ? t * largo : largo - t * largo
+    numeros.forEach((numero, k) => {
+      const s = ANCHOS[numeros.length][k], y = (atacaDerecha ? s : 1 - s) * 100
+      const x = media ? xMetros * 100 / 52.5 : xMetros * 100 / largo
+      salida.push({ numero: String(numero), x: redondear(limitar(x, 2, 98)), y: redondear(limitar(y, 4, 96)) })
+    })
+  })
+  return salida
+}
+// Aplica una formación en el paso indicado: reubica a las jugadoras de ese equipo que ya están (por número, y las demás
+// en orden) y agrega solo las que faltan. Nunca duplica fichas.
+export function aplicarFormacion(doc, indice, sistema, equipo) {
+  const lugares = lugaresFormacion(doc, sistema, equipo)
+  if (!lugares.length || !doc.pasos[indice]) return doc
+  const delEquipo = doc.elementos.filter(e => e.tipo === 'jugadora' && (equipo === 'rival') === esRival(e))
+  const libres = [...delEquipo], asignadas = new Map()
+  for (const lugar of lugares) {
+    const i = libres.findIndex(e => e.numero === lugar.numero)
+    if (i >= 0) asignadas.set(lugar, libres.splice(i, 1)[0])
+  }
+  for (const lugar of lugares) if (!asignadas.has(lugar) && libres.length) asignadas.set(lugar, libres.shift())
+  let siguiente = doc
+  const extra = equipo === 'rival' ? { color: PALETA.rival, tinta: PALETA.tintaClara } : {}
+  for (const lugar of lugares) {
+    const e = asignadas.get(lugar)
+    if (e) {
+      siguiente = { ...siguiente, pasos: siguiente.pasos.map((p, i) => i === indice ? { ...p, poses: { ...p.poses, [e.id]: { ...p.poses[e.id], x: lugar.x, y: lugar.y } } } : p) }
+    } else {
+      const antes = siguiente
+      siguiente = agregarElemento(siguiente, 'jugadora', lugar.x, lugar.y, { ...extra, numero: lugar.numero })
+      if (siguiente === antes) break
+    }
+  }
+  return siguiente
+}
+
 // Paso nuevo copiado del actual: conserva posiciones, ocultos y foco; subtítulo, pausa y pase arrancan de cero.
 export function copiarPaso(doc, indice) {
   if (doc.pasos.length >= 60) return doc

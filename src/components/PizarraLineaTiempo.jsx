@@ -1,6 +1,4 @@
 import { memo } from 'react'
-import PizarraCancha from './PizarraCancha'
-import { PALETA } from '../utils/pizarra'
 
 // Íconos propios (los caracteres ⏮ ⏭ se ven como emoji en iPhone).
 const RUTAS = {
@@ -15,18 +13,16 @@ function Icono({ nombre }) {
 const VELOCIDADES = [.25, .5, 1, 1.5, 2, 3]
 const RECORRIDOS = [['estela', 'Estela'], ['completo', 'Completo'], ['oculto', 'Ocultos']]
 
-// Barra de reproducción siempre visible: transporte, línea de tiempo con una marca por paso,
-// chips de pasos con "+ Paso" y el menú Ver. La edición del paso queda plegada al final.
+// Barra de reproducción siempre visible: transporte, línea de tiempo con una marca por paso y el menú Ver.
+// Los pasos y su panel están en PizarraPasos.
 export default memo(function PizarraLineaTiempo({
-  doc, indice, indiceVisible, animando, tiempo, total, tiempos, reproduciendo, velocidad, bucle, soloLectura, bloqueado, miniaturas,
-  onReproducir, onPaso, onAnterior, onSiguiente, onBuscar, onVelocidad, onBucle, onAgregar,
-  vista, onVista, onNombre, onDuracion, onOrdenar, onEliminar,
-  recorrido = 'suave', onRecorrido, jugadoras = [], onTexto, onPausa, onPase, onFoco,
+  doc, indice, indiceVisible, animando, tiempo, total, tiempos, reproduciendo, velocidad, bucle, soloLectura, bloqueado,
+  onReproducir, onPaso, onAnterior, onSiguiente, onBuscar, onVelocidad, onBucle, vista, onVista, recorrido = 'suave', onRecorrido,
 }) {
-  const ultimo = doc.pasos.length - 1, paso = doc.pasos[indice]
+  const ultimo = doc.pasos.length - 1
   const segundos = v => v.toFixed(1).replace('.', ',')
   const etiquetaTiempo = `${segundos(tiempo)} / ${segundos(total)} s`
-  return <section className="pizarra-linea" aria-label="Reproducción y pasos">
+  return <section className="pizarra-linea" aria-label="Reproducción">
     <div className="pizarra-transporte" role="group" aria-label="Reproducción">
       <button type="button" className="pizarra-icono" aria-label="Ir al primer paso" title="Primer paso" onClick={() => onPaso(0)}><Icono nombre="inicio" /></button>
       <button type="button" className="pizarra-icono" aria-label="Paso anterior" title="Paso anterior" disabled={!animando && indice === 0} onClick={onAnterior}><Icono nombre="anterior" /></button>
@@ -56,31 +52,5 @@ export default memo(function PizarraLineaTiempo({
       <input type="range" aria-label="Línea de tiempo" aria-valuetext={etiquetaTiempo} min="0" max={Math.max(total, .01)} step=".05" value={Math.min(tiempo, total)} disabled={doc.pasos.length < 2} onChange={e => onBuscar(Number(e.target.value))} />
       <div className="pizarra-marcas" aria-hidden="true">{total > 0 && tiempos.map((t, i) => <span key={doc.pasos[i].id} className={i === indiceVisible ? 'pizarra-marca-activa' : undefined} style={{ left: `${t / total * 100}%` }} />)}</div>
     </div>
-    <div className="pizarra-chips" aria-label="Pasos">
-      {doc.pasos.map((p, i) => <button type="button" key={p.id} className="pizarra-chip" aria-label={`Paso ${i + 1}: ${p.nombre}`} title={p.nombre} aria-pressed={!animando && indice === i} aria-current={animando && indiceVisible === i ? 'step' : undefined} onClick={() => onPaso(i)}>
-        {miniaturas && (doc.pasos.length <= 12 || Math.abs(indice - i) <= 2) && <PizarraCancha miniatura doc={doc} poses={p.poses} />}
-        <span><b>{i + 1}</b> {p.nombre}</span>
-      </button>)}
-      {!soloLectura && <button type="button" className="pizarra-chip pizarra-agregar-paso" aria-label="Agregar paso" title="Agregar paso: copia el paso actual" disabled={doc.pasos.length >= 60 || bloqueado} onClick={onAgregar}>+ Paso</button>}
-    </div>
-    {!soloLectura && <details className="pizarra-editar-paso"><summary>Editar paso {indice + 1}</summary>
-      <fieldset disabled={bloqueado} className="pizarra-fila">
-        <label>Nombre del paso<input maxLength={80} value={paso.nombre} onChange={e => onNombre(e.target.value)} /></label>
-        <label>Transición hacia este paso (s)<input type="number" min=".1" max="60" step=".1" value={paso.duracion} onChange={e => onDuracion(Number(e.target.value))} /></label>
-        <label>Pausa al llegar (s)<input type="number" min="0" max="30" step=".5" value={paso.pausa} onChange={e => onPausa(Number(e.target.value))} /></label>
-        <label className="pizarra-subtitulo-campo">Subtítulo del paso<textarea maxLength={200} rows={2} placeholder="Ej.: la 6 baja a recibir entre centrales" value={paso.texto} onChange={e => onTexto(e.target.value)} /></label>
-        {indice > 0 && <div className="pizarra-segmentado" role="group" aria-label="Pase hacia este paso">
-          <span>Pase hacia este paso</span>
-          {[['bajo', 'Bajo'], ['alto', 'Alto']].map(([valor, nombre]) => <button type="button" key={valor} aria-pressed={paso.pase === valor} onClick={() => onPase(valor)}>{nombre}</button>)}
-        </div>}
-        <label>Foco en<select value={paso.foco || ''} onChange={e => onFoco(e.target.value)}>
-          <option value="">Nadie</option>
-          {jugadoras.map(j => <option key={j.id} value={j.id}>{j.color.toLowerCase() === PALETA.rival.toLowerCase() ? 'Rival' : 'Propia'}{j.numero ? ` N.º ${j.numero}` : ''}{j.texto ? ` · ${j.texto}` : ''}</option>)}
-        </select></label>
-        <button type="button" disabled={!indice} onClick={() => onOrdenar(-1)}>Mover paso antes</button>
-        <button type="button" disabled={indice === ultimo} onClick={() => onOrdenar(1)}>Mover paso después</button>
-        <button type="button" disabled={doc.pasos.length === 1} onClick={onEliminar}>Eliminar paso</button>
-      </fieldset>
-    </details>}
   </section>
 })

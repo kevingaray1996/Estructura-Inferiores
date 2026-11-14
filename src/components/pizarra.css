@@ -1,21 +1,22 @@
 /* Pizarra táctica. Todos los colores salen del tema (apariencia.css): --ui-* y --pizarra-*. */
-.pizarra { color: var(--ui-texto); background: var(--ui-fondo-pagina); padding: 1rem; border: 1px solid var(--ui-borde); border-radius: .8rem; }
-.pizarra-modal { position: fixed; inset: 0; z-index: 120; overflow: auto; overscroll-behavior: contain; background: var(--ui-fondo-pagina); padding: .8rem; }
-.pizarra button, .pizarra select, .pizarra input { background: var(--ui-superficie); color: var(--ui-texto); border: 1px solid var(--ui-borde); border-radius: .4rem; padding: .35rem .5rem; max-width: 100%; }
+.pizarra { color: var(--ui-texto); background: var(--ui-fondo-pagina); padding: .8rem; border: 1px solid var(--ui-borde); border-radius: .8rem; }
+.pizarra-modal { position: fixed; inset: 0; z-index: 120; overflow: auto; overscroll-behavior: contain; background: var(--ui-fondo-pagina); padding: .5rem; }
+.pizarra button, .pizarra select, .pizarra input, .pizarra textarea { background: var(--ui-superficie); color: var(--ui-texto); border: 1px solid var(--ui-borde); border-radius: .4rem; padding: .35rem .5rem; max-width: 100%; }
 .pizarra button:disabled { opacity: .45; cursor: default; }
 .pizarra button[aria-pressed=true], .pizarra .pizarra-guardar { background: var(--ui-acento); color: var(--ui-texto-sobre-acento); border-color: var(--ui-acento); }
-.pizarra button:focus-visible, .pizarra input:focus-visible, .pizarra select:focus-visible, .pizarra summary:focus-visible { outline: 2px solid var(--ui-foco); outline-offset: 2px; }
+.pizarra button:focus-visible, .pizarra input:focus-visible, .pizarra select:focus-visible, .pizarra textarea:focus-visible, .pizarra summary:focus-visible { outline: 2px solid var(--ui-foco); outline-offset: 2px; }
 .pizarra button, .pizarra select, .pizarra summary { min-height: 44px; }
 .pizarra button { cursor: pointer; transition: border-color .15s, background-color .15s; -webkit-tap-highlight-color: transparent; }
 .pizarra button:hover:not(:disabled) { border-color: var(--ui-texto-acento); }
 .pizarra .pizarra-peligro { color: var(--ui-peligro-texto); }
 .pizarra-fila { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: .6rem; }
 .pizarra-ayuda { color: var(--ui-texto-secundario); font-size: .8rem; margin: .5rem 0; }
-.pizarra-error { color: var(--ui-peligro-texto); }
+.pizarra-error { color: var(--ui-peligro-texto); margin: .2rem 0; }
 .pizarra-miniatura { width: 100%; max-height: 150px; object-fit: contain; background: var(--pizarra-cesped); }
+.pizarra-solo-lector { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* Barra superior: una sola fila. */
-.pizarra-barra { position: sticky; top: -.8rem; z-index: 6; display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; background: var(--ui-fondo-pagina); border-bottom: 1px solid var(--ui-borde); margin-bottom: .6rem; padding: .4rem 0; }
+.pizarra-barra { position: sticky; top: -.5rem; z-index: 6; display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; background: var(--ui-fondo-pagina); border-bottom: 1px solid var(--ui-borde); margin-bottom: .5rem; padding: .3rem 0; }
 .pizarra-titulo { font-family: var(--fuente-titulo); font-size: 1.2rem; letter-spacing: .02em; text-transform: uppercase; margin-right: .5rem; }
 .pizarra-titulo small { display: block; font-size: .62rem; letter-spacing: .15em; color: var(--ui-texto-secundario); margin-top: .25rem; }
 .pizarra-grupo { display: flex; gap: 0; }
@@ -30,7 +31,7 @@
 .pizarra-menu > summary { list-style: none; min-width: 44px; display: grid; place-items: center; font-size: 1.3rem; border: 1px solid var(--ui-borde); border-radius: .4rem; background: var(--ui-superficie); cursor: pointer; }
 .pizarra-menu > summary::-webkit-details-marker { display: none; }
 .pizarra-menu[open] > summary { border-color: var(--ui-acento); }
-.pizarra-menu-panel { position: absolute; right: 0; top: calc(100% + .35rem); z-index: 8; width: min(340px, calc(100vw - 1rem)); max-height: 75vh; overflow-y: auto; display: flex; flex-direction: column; gap: .5rem; padding: .75rem; background: var(--ui-superficie); border: 1px solid var(--ui-borde); border-radius: .7rem; box-shadow: 0 10px 30px var(--pizarra-sombra); }
+.pizarra-menu-panel { position: absolute; right: 0; top: calc(100% + .35rem); z-index: 8; width: min(360px, calc(100vw - 1rem)); max-height: 75vh; overflow-y: auto; display: flex; flex-direction: column; gap: .5rem; padding: .75rem; background: var(--ui-superficie); border: 1px solid var(--ui-borde); border-radius: .7rem; box-shadow: 0 10px 30px var(--pizarra-sombra); }
 .pizarra-menu-panel strong { font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ui-texto-secundario); }
 .pizarra-menu-panel .pizarra-fila { margin: 0; }
 .pizarra-menu-panel fieldset { border: 0; padding: 0; margin: 0; }
@@ -39,62 +40,69 @@
 .pizarra-zoom input { flex: 1; min-height: 44px; }
 .pizarra-archivo input { font-size: .75rem; }
 
-/* Cancha. */
-.pizarra-layout { display: grid; grid-template-columns: 190px minmax(0, 1fr) 210px; gap: .75rem; align-items: start; }
-.pizarra-centro { min-width: 0; display: flex; flex-direction: column; }
-/* Marco de la cancha: borde del tema, esquinas suaves y sombra que la separa del fondo. */
-.pizarra-lienzo { min-width: 0; background: var(--pizarra-cesped); border: 1px solid var(--ui-borde); border-radius: .75rem; overflow: hidden; position: relative; box-shadow: 0 10px 28px var(--pizarra-sombra); }
-.pizarra-cancha { width: 100%; height: auto; max-height: max(300px, min(calc(100dvh - 400px), 680px)); margin: 0 auto; display: block; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-.pizarra-visor .pizarra-cancha { max-height: min(65vh, 550px); }
+/* Cuerpo: la cancha y la reproducción a la izquierda; los pasos y su panel a la derecha.
+   En la compu el editor ocupa toda la pantalla y nada obliga a bajar. */
+.pizarra-modal > .pizarra-editor { height: 100%; }
+.pizarra-editor { display: flex; flex-direction: column; min-height: 0; }
+.pizarra-cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) clamp(260px, 19vw, 340px); gap: .6rem; min-height: 0; }
+.pizarra-editor .pizarra-cuerpo { flex: 1; }
+.pizarra-escenario { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: .45rem; }
+.pizarra-lateral { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+/* Marco de la cancha: ocupa todo el alto disponible; la cancha se ajusta adentro sin deformarse. */
+.pizarra-lienzo { position: relative; min-width: 0; min-height: 0; background: var(--pizarra-cesped); border: 1px solid var(--ui-borde); border-radius: .75rem; overflow: hidden; box-shadow: 0 10px 28px var(--pizarra-sombra); }
+.pizarra-editor .pizarra-lienzo { flex: 1; }
+.pizarra-cancha { display: block; width: 100%; height: 100%; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.pizarra-visor .pizarra-lienzo { height: min(68dvh, 620px); }
 .pizarra-colocando .pizarra-cancha { cursor: crosshair; }
-.pizarra-soltar { outline: 3px solid var(--ui-acento); outline-offset: -3px; }
 .pizarra-elevado { filter: drop-shadow(0 .6px .5px var(--pizarra-sombra)); }
-.pizarra-flotante { position: absolute; z-index: 2; box-shadow: 0 4px 14px var(--pizarra-sombra); }
-.pizarra .pizarra-ajustar { top: .5rem; right: .5rem; font-size: .75rem; }
-.pizarra-aviso { left: 50%; bottom: .6rem; transform: translateX(-50%); display: flex; align-items: center; gap: .6rem; padding: .25rem .3rem .25rem .8rem; border-radius: 999px; background: var(--ui-superficie); border: 1px solid var(--ui-borde); font-size: .8rem; white-space: nowrap; }
+.pizarra-flotante { position: absolute; z-index: 3; box-shadow: 0 4px 14px var(--pizarra-sombra); }
+.pizarra .pizarra-ajustar { bottom: .6rem; right: .6rem; font-size: .75rem; }
+.pizarra-aviso { left: 50%; top: .6rem; transform: translateX(-50%); display: flex; align-items: center; gap: .6rem; padding: .25rem .3rem .25rem .8rem; border-radius: 999px; background: var(--ui-superficie); border: 1px solid var(--ui-borde); font-size: .8rem; white-space: nowrap; }
 .pizarra-aviso button { border-radius: 999px; color: var(--ui-texto-acento); font-weight: 700; }
 
-/* Barra del objeto seleccionado: alto fijo para que la cancha no salte. */
-.pizarra-contexto { display: flex; align-items: center; gap: .35rem; min-height: 56px; margin: .5rem 0 0; padding: .3rem .45rem; border: 1px solid var(--ui-borde); border-radius: .6rem; background: var(--ui-superficie); overflow-x: auto; scrollbar-width: none; }
-.pizarra-contexto button { min-width: 44px; white-space: nowrap; font-size: .8rem; }
-.pizarra-contexto-nombre { font-size: .75rem; font-weight: 700; white-space: nowrap; margin-right: auto; padding-right: .3rem; }
-.pizarra-contexto-ayuda { font-size: .78rem; color: var(--ui-texto-secundario); }
-.pizarra-colores { display: flex; gap: .25rem; }
-.pizarra .pizarra-muestra { width: 32px; min-width: 32px; min-height: 32px; height: 32px; padding: 0; border-radius: 50%; background: var(--muestra); border: 2px solid var(--ui-borde); }
-.pizarra .pizarra-muestra[aria-pressed=true] { background: var(--muestra); border-color: var(--ui-acento); box-shadow: 0 0 0 2px var(--ui-fondo-pagina) inset; }
-
-/* Barra rápida de herramientas. */
-.pizarra-herramientas { position: sticky; bottom: 0; z-index: 5; display: flex; gap: .3rem; margin: .5rem 0; padding: .35rem; overflow-x: auto; scrollbar-width: none; background: var(--ui-superficie); border: 1px solid var(--ui-borde); border-radius: .7rem; touch-action: pan-x; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-.pizarra-herramientas::-webkit-scrollbar, .pizarra-contexto::-webkit-scrollbar { display: none; }
-.pizarra-herramientas button { flex: 1 0 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .1rem; padding: .2rem .15rem; font-size: .62rem; line-height: 1.1; touch-action: pan-x; }
-.pizarra-herramientas svg { width: 34px; height: 24px; pointer-events: none; }
-.pizarra-herramienta-simbolo { font-size: 1.15rem; line-height: 24px; height: 24px; }
+/* "＋ Agregar": botón flotante y menú desplegable sobre la cancha. */
+.pizarra .pizarra-agregar { top: .6rem; left: .6rem; display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .9rem; border-radius: 999px; font-size: 1rem; font-weight: 700; background: var(--ui-acento); color: var(--ui-texto-sobre-acento); border-color: var(--ui-acento); }
+.pizarra .pizarra-agregar span { font-size: .85rem; }
+.pizarra-agregar-menu { position: absolute; z-index: 4; top: 3.7rem; left: .6rem; width: min(430px, calc(100% - 1.2rem)); max-height: calc(100% - 4.3rem); overflow-y: auto; overscroll-behavior: contain; background: var(--ui-superficie); border: 1px solid var(--ui-borde); border-radius: .8rem; box-shadow: 0 14px 34px var(--pizarra-sombra); }
+.pizarra-agregar-menu header { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: .2rem .5rem; flex-wrap: wrap; padding: .5rem .5rem .5rem .8rem; background: var(--ui-superficie); border-bottom: 1px solid var(--ui-borde); }
+.pizarra-agregar-menu header strong { font-size: .95rem; }
+.pizarra-agregar-menu header span { flex: 1; font-size: .72rem; color: var(--ui-texto-secundario); }
+.pizarra-agregar-menu fieldset { border: 0; margin: 0; padding: .3rem .6rem .7rem; min-width: 0; }
+.pizarra-agregar-grupo h3 { margin: .55rem 0 .35rem; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ui-texto-secundario); }
+.pizarra-agregar-grilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: .35rem; }
+.pizarra .pizarra-objeto { padding: .3rem; display: flex; flex-direction: column; align-items: center; gap: .25rem; min-height: 74px; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.pizarra-objeto svg { width: 100%; height: 40px; background: var(--pizarra-cesped-icono); border-radius: .4rem; pointer-events: none; }
+.pizarra-objeto span { font-size: .66rem; line-height: 1.15; text-align: center; }
+.pizarra-agregar-formaciones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .35rem; margin-top: .4rem; }
+.pizarra-agregar-formaciones button { font-weight: 700; font-variant-numeric: tabular-nums; }
+.pizarra-colocando-aviso { top: .6rem; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: .5rem; max-width: calc(100% - 10rem); padding: .2rem .25rem .2rem .6rem; border-radius: 999px; background: var(--ui-superficie); border: 1px solid var(--ui-acento); font-size: .8rem; }
+.pizarra-colocando-aviso svg { width: 28px; height: 22px; flex: none; }
+.pizarra-colocando-aviso span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pizarra-colocando-aviso button { border-radius: 999px; font-weight: 700; color: var(--ui-texto-acento); }
 .pizarra-fantasma { position: fixed; left: 0; top: 0; z-index: 140; width: 56px; height: 56px; margin: -28px 0 0 -28px; pointer-events: none; border-radius: 50%; background: var(--pizarra-cesped-icono); border: 2px solid var(--ui-acento); box-shadow: 0 8px 20px var(--pizarra-sombra); display: grid; place-items: center; }
 .pizarra-fantasma svg { width: 40px; height: 40px; }
 
-/* Paleta completa y propiedades. */
-.pizarra-panel, .pizarra-biblioteca { border: 1px solid var(--ui-borde); background: var(--ui-superficie); border-radius: .7rem; min-width: 0; }
-.pizarra-panel > summary { padding: .7rem; cursor: pointer; font-size: .85rem; font-weight: 700; }
-.pizarra-biblioteca fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
-.pizarra-biblioteca-cabecera { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: .2rem .5rem; padding: .7rem 3.6rem .7rem .7rem; font-size: .85rem; }
-.pizarra-biblioteca-cabecera span { flex-basis: 100%; font-size: .7rem; color: var(--ui-texto-secundario); }
-.pizarra .pizarra-hoja-cerrar { display: none; position: absolute; top: .45rem; right: .5rem; min-width: 44px; }
-.pizarra-velo { display: none; }
-.pizarra-propiedades { background: var(--ui-superficie); border: 0; border-radius: .5rem; padding: .65rem; display: flex; flex-direction: column; gap: .5rem; font-size: .8rem; max-height: 62vh; overflow-y: auto; }
+/* Propiedades: solo con algo seleccionado, flotando sobre la cancha. */
+.pizarra-propiedades { position: absolute; z-index: 3; top: .6rem; right: .6rem; width: min(300px, calc(100% - 1.2rem)); max-height: calc(100% - 1.2rem); overflow-y: auto; display: flex; flex-direction: column; gap: .5rem; padding: .55rem .65rem .65rem; background: var(--ui-superficie); border: 1px solid var(--ui-borde); border-radius: .8rem; box-shadow: 0 14px 34px var(--pizarra-sombra); font-size: .8rem; }
+.pizarra-propiedades header { display: flex; align-items: center; gap: .45rem; }
+.pizarra-propiedades header strong { flex: 1; font-size: .9rem; }
+.pizarra-propiedades-icono svg { width: 30px; height: 24px; display: block; }
+.pizarra-propiedades-campos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .45rem; align-items: end; }
 .pizarra-propiedades label { display: flex; flex-direction: column; gap: .2rem; }
-.pizarra-propiedades input[type=color] { height: 44px; min-width: 44px; }
-.pizarra-propiedades input[type=range] { min-height: 44px; width: 100%; }
-.pizarra-categorias { display: flex; flex-wrap: wrap; gap: .3rem; padding: .4rem; }
-.pizarra-categorias button { font-size: .7rem; flex-grow: 1; padding: .35rem; }
-.pizarra-paleta { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .45rem; padding: .5rem; max-height: 48vh; overflow-y: auto; }
-.pizarra .pizarra-objeto { padding: .35rem; display: flex; flex-direction: column; align-items: center; gap: .35rem; min-height: 90px; cursor: grab; }
-.pizarra-objeto svg { width: 100%; height: 54px; background: var(--pizarra-cesped-icono); border-radius: .45rem; pointer-events: none; }
-.pizarra-objeto span { font-size: .65rem; line-height: 1.2; }
-.pizarra-superficie svg { height: 50px; }
-.pizarra-biblioteca .pizarra-ayuda { padding: .5rem; }
+.pizarra-propiedades-ancho { grid-column: 1 / -1; }
+.pizarra-propiedades input[type=range] { min-height: 36px; width: 100%; padding: 0; border: 0; background: transparent; accent-color: var(--ui-acento); }
+.pizarra-propiedades-linea { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .4rem; }
+.pizarra-colores { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; }
+.pizarra .pizarra-muestra { width: 32px; min-width: 32px; min-height: 32px; height: 32px; padding: 0; border-radius: 50%; background: var(--muestra); border: 2px solid var(--ui-borde); }
+.pizarra .pizarra-muestra[aria-pressed=true] { background: var(--muestra); border-color: var(--ui-acento); box-shadow: 0 0 0 2px var(--ui-fondo-pagina) inset; }
+.pizarra-colores input[type=color] { width: 40px; height: 34px; padding: .1rem; }
+.pizarra-propiedades-acciones { display: flex; flex-wrap: wrap; gap: .3rem; }
+.pizarra-propiedades-acciones button { font-size: .78rem; white-space: nowrap; }
+.pizarra .pizarra-pegar { display: inline-flex; align-items: center; gap: .3rem; }
+.pizarra .pizarra-pegar svg { width: 22px; height: 18px; }
 
-/* Reproducción y pasos: siempre visible debajo de la cancha. */
-.pizarra-linea { margin-top: .5rem; padding: .35rem .45rem .45rem; border: 1px solid var(--ui-borde); border-radius: .7rem; background: var(--ui-superficie); }
+/* Reproducción: debajo de la cancha. */
+.pizarra-linea { padding: .3rem .45rem .35rem; border: 1px solid var(--ui-borde); border-radius: .7rem; background: var(--ui-superficie); }
 .pizarra-transporte { display: flex; align-items: center; gap: .25rem; }
 .pizarra-transporte .pizarra-icono { display: grid; place-items: center; padding: .3rem; }
 .pizarra .pizarra-reproducir { min-width: 52px; min-height: 48px; border-radius: 999px; display: grid; place-items: center; background: var(--ui-acento); color: var(--ui-texto-sobre-acento); border-color: var(--ui-acento); }
@@ -102,7 +110,6 @@
 .pizarra-tiempo { font-size: .78rem; color: var(--ui-texto-secundario); font-variant-numeric: tabular-nums; white-space: nowrap; margin: 0 .2rem 0 .35rem; }
 .pizarra-velocidad { margin-left: auto; }
 .pizarra-velocidad select { padding: .3rem .35rem; font-variant-numeric: tabular-nums; }
-.pizarra-solo-lector { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .pizarra-ver { position: relative; }
 .pizarra-ver > summary { list-style: none; display: grid; place-items: center; min-width: 44px; padding: 0 .55rem; font-size: .8rem; font-weight: 700; border: 1px solid var(--ui-borde); border-radius: .4rem; background: var(--ui-superficie); cursor: pointer; }
 .pizarra-ver > summary::-webkit-details-marker { display: none; }
@@ -113,44 +120,58 @@
 .pizarra-ver-panel label { display: flex; align-items: center; gap: .35rem; min-height: 36px; }
 .pizarra-ver-panel input { min-height: auto; width: 18px; height: 18px; accent-color: var(--ui-acento); }
 .pizarra-ver-panel small { flex-basis: 100%; color: var(--ui-texto-secundario); font-size: .72rem; }
-.pizarra-regla { position: relative; margin: .2rem .3rem 0; }
-.pizarra .pizarra-regla input { width: 100%; min-height: 32px; padding: 0; border: 0; background: transparent; accent-color: var(--ui-acento); }
-.pizarra-marcas { position: absolute; left: 8px; right: 8px; bottom: 2px; height: 6px; pointer-events: none; }
+.pizarra-regla { position: relative; margin: .1rem .3rem 0; }
+.pizarra .pizarra-regla input { width: 100%; min-height: 28px; padding: 0; border: 0; background: transparent; accent-color: var(--ui-acento); }
+.pizarra-marcas { position: absolute; left: 8px; right: 8px; bottom: 1px; height: 6px; pointer-events: none; }
 .pizarra-marcas span { position: absolute; top: 0; width: 2px; height: 6px; margin-left: -1px; border-radius: 1px; background: var(--ui-texto-secundario); }
 .pizarra-marcas .pizarra-marca-activa { background: var(--ui-acento); width: 4px; margin-left: -2px; }
-.pizarra-chips { display: flex; gap: .35rem; overflow-x: auto; scrollbar-width: none; padding: .3rem 0 .1rem; }
-.pizarra-chips::-webkit-scrollbar { display: none; }
-.pizarra .pizarra-chip { flex: 0 0 auto; max-width: 140px; display: flex; flex-direction: column; align-items: stretch; gap: .25rem; padding: .25rem .5rem; font-size: .75rem; }
-.pizarra-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pizarra-chip svg { pointer-events: none; }
+
+/* Pasos: en la compu, lista vertical a la derecha con el panel del paso debajo. */
+.pizarra-pasos { min-height: 0; flex: 1; display: flex; flex-direction: column; gap: .5rem; }
+.pizarra-chips { display: flex; flex-direction: column; gap: .35rem; flex: 1 1 auto; min-height: 120px; overflow-y: auto; padding: .4rem .45rem .4rem .2rem; scrollbar-width: thin; }
+.pizarra-chip-caja { position: relative; flex: none; }
+.pizarra .pizarra-chip { width: 100%; display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; column-gap: .45rem; padding: .3rem 2.1rem .3rem .45rem; text-align: left; min-height: 52px; }
+.pizarra-chip b { grid-row: 1 / span 2; font-family: var(--fuente-titulo); font-size: 1.75rem; line-height: 1; text-align: center; }
+.pizarra-chip-texto { font-size: .8rem; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.pizarra-chip-marcas { display: flex; gap: .3rem; }
+.pizarra-chip-marcas i { font-style: normal; font-size: .62rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; opacity: .8; }
 .pizarra .pizarra-chip[aria-current=step] { border-color: var(--ui-acento); box-shadow: 0 0 0 1px var(--ui-acento) inset; }
-.pizarra-vista-miniatura { width: 100%; height: 56px; display: block; border-radius: .35rem; }
-.pizarra .pizarra-agregar-paso { border-style: dashed; border-color: var(--ui-texto-acento); color: var(--ui-texto-acento); font-weight: 700; justify-content: center; min-width: 76px; }
-.pizarra-editar-paso { margin-top: .3rem; }
-.pizarra-editar-paso > summary { cursor: pointer; font-size: .8rem; font-weight: 700; display: flex; align-items: center; }
-.pizarra-editar-paso fieldset { border: 0; padding: .3rem 0 0; margin: 0; }
-.pizarra-editar-paso label { display: flex; flex-direction: column; gap: .2rem; font-size: .78rem; }
-/* Etapa I: subtítulo sobre la cancha, campos de explicar en Editar paso. */
-.pizarra-subtitulo { position: absolute; z-index: 1; left: 50%; bottom: .7rem; transform: translateX(-50%); width: max-content; max-width: calc(100% - 1.5rem); margin: 0; padding: .4rem .8rem; border-radius: .5rem; background: var(--pizarra-subtitulo-fondo); color: var(--pizarra-subtitulo-texto); font-family: var(--pizarra-fuente); font-size: clamp(.8rem, 2.4vw, 1.05rem); font-weight: 700; line-height: 1.3; text-align: center; pointer-events: none; text-wrap: balance; }
-.pizarra-editar-paso textarea { font: inherit; font-size: .85rem; resize: vertical; min-width: min(22rem, 100%); }
-.pizarra-editar-paso .pizarra-subtitulo-campo { flex: 1 1 100%; }
-.pizarra-editar-paso .pizarra-segmentado { display: flex; flex-direction: column; gap: .2rem; font-size: .78rem; }
-.pizarra-editar-paso .pizarra-segmentado span { display: block; }
-.pizarra-editar-paso .pizarra-segmentado button { margin-right: .25rem; }
-.pizarra .pizarra-pegar { display: inline-flex; align-items: center; gap: .3rem; }
-.pizarra .pizarra-pegar svg { width: 22px; height: 18px; }
+.pizarra .pizarra-chip-quitar { position: absolute; top: 50%; right: .3rem; transform: translateY(-50%); min-height: 30px; width: 30px; padding: 0; border-radius: 50%; font-size: .8rem; line-height: 1; display: grid; place-items: center; }
+.pizarra .pizarra-chip[aria-pressed=true] + .pizarra-chip-manija + .pizarra-chip-quitar { background: var(--ui-superficie); }
+.pizarra-chip-manija { position: absolute; left: -.15rem; top: 50%; transform: translateY(-50%); z-index: 1; width: 22px; height: 40px; display: grid; place-items: center; font-size: 1rem; color: var(--ui-texto-secundario); cursor: grab; touch-action: none; user-select: none; }
+.pizarra-chip-moviendo { opacity: .45; }
+.pizarra-chip-destino { box-shadow: 0 -3px 0 var(--ui-acento); border-radius: .4rem; }
+.pizarra .pizarra-agregar-paso { flex: none; display: block; text-align: center; min-height: 44px; padding: .35rem; border-style: dashed; border-color: var(--ui-texto-acento); color: var(--ui-texto-acento); font-weight: 700; }
+.pizarra-paso-panel { flex: none; display: flex; flex-direction: column; gap: .45rem; margin: 0; padding: .6rem; border: 1px solid var(--ui-borde); border-radius: .7rem; background: var(--ui-superficie); min-width: 0; font-size: .78rem; }
+.pizarra-paso-cabecera { display: flex; align-items: center; justify-content: space-between; gap: .4rem; }
+.pizarra-paso-cabecera strong { font-family: var(--fuente-titulo); font-size: 1.05rem; text-transform: uppercase; letter-spacing: .03em; }
+.pizarra-paso-cabecera button { font-size: .78rem; }
+.pizarra-paso-panel label { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
+.pizarra-paso-panel textarea { font: inherit; font-size: .88rem; resize: vertical; }
+.pizarra-paso-fila { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .45rem; align-items: end; }
+.pizarra-paso-fila input, .pizarra-paso-fila select { width: 100%; }
+.pizarra-paso-pase { display: flex; flex-direction: column; gap: .2rem; }
+.pizarra-paso-pase button { flex: 1; font-size: .8rem; }
+
+/* Subtítulo sobre la cancha. */
+.pizarra-subtitulo { position: absolute; z-index: 1; left: 50%; bottom: .9rem; transform: translateX(-50%); width: max-content; max-width: calc(100% - 1.5rem); margin: 0; padding: .4rem .8rem; border-radius: .5rem; background: var(--pizarra-subtitulo-fondo); color: var(--pizarra-subtitulo-texto); font-family: var(--pizarra-fuente); font-size: clamp(.8rem, 2.4vw, 1.15rem); font-weight: 700; line-height: 1.3; text-align: center; pointer-events: none; text-wrap: balance; }
 .pizarra:fullscreen { overflow: auto; }
 
+/* Visor (Wellness): cancha arriba y pasos debajo. */
+.pizarra-visor .pizarra-cuerpo { grid-template-columns: minmax(0, 1fr); }
+.pizarra-visor .pizarra-chips { flex-direction: row; max-height: none; overflow-x: auto; overflow-y: hidden; padding: .3rem 0; }
+.pizarra-visor .pizarra-chip-caja { flex: 0 0 auto; max-width: 180px; }
+.pizarra-visor .pizarra-chip { padding-right: .6rem; }
+
 @media (max-width: 1100px) {
-  .pizarra-layout { grid-template-columns: 170px minmax(0,1fr); }
-  .pizarra-panel { grid-column: 2; }
-  .pizarra-propiedades { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); max-height: 30vh; }
+  .pizarra-cuerpo { grid-template-columns: minmax(0, 1fr) 240px; }
 }
 
-/* Celular: cancha primero, barras a mano del pulgar, paleta como hoja inferior. */
+/* Celular (y tablet angosta): todo en una columna; la cancha arriba, la reproducción y los pasos debajo. */
 @media (max-width: 750px) {
   .pizarra { padding: .3rem; border: 0; border-radius: 0; }
   .pizarra-modal { padding: 0; }
+  .pizarra-modal > .pizarra-editor { height: auto; }
   .pizarra-barra { top: 0; gap: .25rem; flex-wrap: nowrap; margin-bottom: .3rem; padding: .3rem 0; min-width: 0; }
   .pizarra-barra .pizarra-espacio { flex: 1 1 0; min-width: 0; }
   .pizarra .pizarra-icono { min-width: 40px; padding: .35rem .3rem; }
@@ -160,40 +181,49 @@
   .pizarra-titulo small { display: none; }
   .pizarra-segmentado button { padding: .35rem .5rem; }
   .pizarra .pizarra-guardar { padding: .35rem .55rem; font-weight: 700; }
-  /* El editor se ordena como una columna: cancha, contexto y herramientas juntas; propiedades al final. */
-  .pizarra-editor { display: flex; flex-direction: column; }
-  .pizarra-editor .pizarra-layout { display: contents; }
-  .pizarra-editor .pizarra-barra { order: 0; }
-  .pizarra-editor .pizarra-error { order: 1; }
-  .pizarra-editor .pizarra-centro { display: contents; }
-  .pizarra-lienzo { order: 2; width: 100%; border-radius: .55rem; box-shadow: none; }
-  .pizarra-editor .pizarra-linea { order: 3; }
-  .pizarra-editor .pizarra-contexto { order: 4; }
-  .pizarra-editor .pizarra-herramientas { order: 5; }
-  .pizarra-panel { order: 6; width: 100%; margin-top: .4rem; }
-  /* Alto: pantalla menos barra superior, reproducción, contexto y barra de herramientas. */
-  .pizarra-editor .pizarra-cancha { height: calc(100dvh - 372px); min-height: 260px; max-height: none; }
-  /* Mientras se reproduce, la cancha gana el lugar de las barras de edición. */
-  .pizarra-reproduciendo .pizarra-contexto, .pizarra-reproduciendo .pizarra-herramientas, .pizarra-reproduciendo .pizarra-editar-paso, .pizarra-reproduciendo .pizarra-panel { display: none; }
-  .pizarra-editor.pizarra-reproduciendo .pizarra-cancha { height: calc(100dvh - 210px); }
-  .pizarra-linea { margin-top: .3rem; padding: .25rem .3rem .3rem; }
+  .pizarra-cuerpo { grid-template-columns: minmax(0, 1fr); gap: .3rem; }
+  .pizarra-escenario { gap: .3rem; }
+  /* Alto de la cancha: pantalla menos barra superior, reproducción y fila de pasos. */
+  .pizarra-editor .pizarra-lienzo { flex: none; height: max(300px, calc(100dvh - 248px)); border-radius: .55rem; box-shadow: none; }
+  .pizarra-editor.pizarra-reproduciendo .pizarra-lienzo { height: max(300px, calc(100dvh - 180px)); }
+  .pizarra-visor .pizarra-lienzo { height: 62dvh; min-height: 260px; }
+  .pizarra-linea { padding: .2rem .3rem .25rem; }
   .pizarra-transporte { gap: .15rem; }
   .pizarra-transporte .pizarra-icono { min-width: 40px; }
   .pizarra-transporte .pizarra-icono[aria-label="Ir al primer paso"], .pizarra-transporte .pizarra-icono[aria-label="Ir al último paso"] { display: none; }
   .pizarra-tiempo { font-size: .72rem; margin: 0 .1rem; }
-  .pizarra-visor .pizarra-cancha { height: 62dvh; min-height: 260px; }
-  .pizarra-contexto { margin-top: .3rem; min-height: 52px; }
-  .pizarra-herramientas { position: sticky; bottom: 0; z-index: 5; margin: .3rem 0; padding-bottom: max(.35rem, env(safe-area-inset-bottom)); box-shadow: 0 -6px 16px var(--pizarra-sombra); }
-  .pizarra-herramientas button { flex-basis: 52px; }
-  .pizarra-biblioteca { position: fixed; left: 0; right: 0; bottom: 0; z-index: 130; max-height: 70dvh; overflow-y: auto; border-radius: 1rem 1rem 0 0; padding-bottom: env(safe-area-inset-bottom); transform: translateY(105%); visibility: hidden; transition: transform .22s var(--curva-salida), visibility 0s .22s; box-shadow: 0 -10px 30px var(--pizarra-sombra); }
-  .pizarra-biblioteca.pizarra-hoja-abierta { transform: none; visibility: visible; transition: transform .22s var(--curva-salida); }
-  .pizarra .pizarra-hoja-cerrar { display: block; }
-  .pizarra-velo { display: block; position: fixed; inset: 0; z-index: 125; background: var(--pizarra-sombra); }
-  .pizarra-paleta { grid-template-columns: repeat(4,minmax(0,1fr)); max-height: none; }
-  .pizarra-categorias { flex-wrap: nowrap; overflow-x: auto; }
-  .pizarra-categorias button { flex: 0 0 auto; min-width: 65px; }
-  .pizarra-propiedades { grid-template-columns: repeat(2,minmax(0,1fr)); max-height: 40vh; }
-  .pizarra-objeto svg { height: 48px; }
+  /* Pasos en fila deslizable; el panel del paso queda justo debajo. */
+  .pizarra-chips { flex: none; min-height: 0; align-items: flex-start; flex-direction: row; max-height: none; overflow-x: auto; overflow-y: hidden; padding: .35rem .1rem .25rem .1rem; scrollbar-width: none; touch-action: pan-x; }
+  .pizarra-chips::-webkit-scrollbar { display: none; }
+  .pizarra-chip-caja { flex: 0 0 auto; width: 132px; }
+  .pizarra .pizarra-chip { min-height: 50px; grid-template-columns: 1.9rem minmax(0, 1fr); padding-right: 1.9rem; }
+  .pizarra-chip b { font-size: 1.45rem; }
+  .pizarra-chip-texto { font-size: .74rem; }
+  .pizarra .pizarra-chip-quitar { width: 26px; min-height: 26px; right: .2rem; }
+  .pizarra .pizarra-agregar-paso { flex: 0 0 auto; min-width: 76px; }
+  .pizarra-reproduciendo .pizarra-paso-panel { display: none; }
+  .pizarra-agregar-menu { top: 3.4rem; left: .35rem; width: calc(100% - .7rem); max-height: calc(100% - 3.8rem); }
+  .pizarra-agregar-grilla { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  /* En el celular el menú se desliza hacia arriba y abajo; arrastrar hacia el costado lleva el objeto a la cancha. */
+  .pizarra .pizarra-objeto { touch-action: pan-y; }
+  /* "＋" compacto arriba a la izquierda; el subtítulo pasa arriba para no tapar la salida desde el arco propio. */
+  .pizarra .pizarra-agregar { top: .4rem; left: .4rem; width: 48px; height: 48px; padding: 0; justify-content: center; font-size: 1.4rem; }
+  .pizarra .pizarra-agregar span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  /* Propiedades: hoja compacta pegada abajo de la cancha. */
+  .pizarra-propiedades { top: auto; bottom: .35rem; left: .35rem; right: .35rem; width: auto; max-height: 44%; gap: .35rem; padding: .35rem .45rem .45rem; }
+  .pizarra-propiedades header strong { font-size: .82rem; }
+  .pizarra-propiedades header .pizarra-icono { min-height: 36px; min-width: 36px; }
+  .pizarra-propiedades-icono { display: none; }
+  .pizarra-propiedades-campos { gap: .3rem .4rem; }
+  .pizarra-propiedades-campos input:not([type]), .pizarra-propiedades-campos select { min-height: 36px; }
+  .pizarra .pizarra-muestra { width: 28px; min-width: 28px; height: 28px; min-height: 28px; }
+  .pizarra-propiedades .pizarra-grupo button { min-height: 36px; min-width: 40px; }
+  .pizarra-propiedades-acciones { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .pizarra-propiedades-acciones::-webkit-scrollbar { display: none; }
+  .pizarra-propiedades-acciones button { flex: none; min-height: 40px; }
+  .pizarra-colocando-aviso { top: .45rem; left: auto; right: .4rem; transform: none; max-width: calc(100% - 7.5rem); }
+  .pizarra-aviso { top: auto; bottom: .5rem; }
+  .pizarra-subtitulo { top: 1.7rem; bottom: auto; max-width: calc(100% - 7.5rem); font-size: .82rem; padding: .3rem .6rem; }
   .pizarra-editor > .pizarra-ayuda { display: none; }
 }
 @media (max-width: 380px) {
@@ -204,5 +234,7 @@
   .pizarra-largo { display: none; }
   .pizarra-corto { display: inline; }
 }
-@media (max-height: 500px) and (orientation: landscape) { .pizarra-cancha, .pizarra-editor .pizarra-cancha { height: calc(100dvh - 70px); } .pizarra-barra { position: static; } .pizarra-herramientas { position: static; } }
-@media (prefers-reduced-motion: reduce) { .pizarra-biblioteca, .pizarra-biblioteca.pizarra-hoja-abierta { transition: none; } }
+@media (max-height: 500px) and (orientation: landscape) {
+  .pizarra-editor .pizarra-lienzo { height: calc(100dvh - 70px); }
+  .pizarra-barra { position: static; }
+}
