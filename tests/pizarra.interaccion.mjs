@@ -26,6 +26,7 @@ test('Editor interactivo: colocar, arrastrar, propiedades, multiselección, hist
   const { act } = React
   const boton = texto => [...document.querySelectorAll('button')].find(b => b.textContent === texto || b.getAttribute('aria-label') === texto)
   const click = async texto => { const b = boton(texto); assert.ok(b, texto); await act(() => b.click()) }
+  const opciones = async () => { const b = boton('Opciones del elemento'); assert.ok(b, 'botón ⋯'); await act(() => b.click()) }
   const evento = async (nodo, tipo, props) => { await act(() => { const e = new dom.window.MouseEvent(tipo, { bubbles: true, button: 0, ...props }); Object.defineProperty(e, 'pointerId', { value: props?.pointerId || 1 }); Object.defineProperty(e, 'pointerType', { value: props?.pointerType || 'mouse' }); nodo.dispatchEvent(e) }) }
   const key = async (tecla, ctrl = false) => act(() => document.querySelector('.pizarra').dispatchEvent(new dom.window.KeyboardEvent('keydown', { bubbles: true, key: tecla, ctrlKey: ctrl })))
   async function input(el, value) { await act(() => { Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(el,value); el.dispatchEvent(new dom.window.Event('input',{bubbles:true})); el.dispatchEvent(new dom.window.Event('change',{bubbles:true})) }) }
@@ -45,6 +46,9 @@ test('Editor interactivo: colocar, arrastrar, propiedades, multiselección, hist
     await evento(document.querySelector('svg.pizarra-cancha'),'pointermove',{clientX:21,clientY:20.4})
     await evento(document.querySelector('svg.pizarra-cancha'),'pointerup',{clientX:21,clientY:20.4})
     assert.match(document.querySelector('svg.pizarra-cancha').querySelector('[data-elemento]').getAttribute('transform'), /translate\(21 /)
+    // Un clic solo selecciona; las opciones se abren con doble clic o con ⋯.
+    assert.equal(document.querySelector('.pizarra-propiedades'), null)
+    await opciones()
     const panel = document.querySelector('.pizarra-propiedades')
     assert.match(panel.textContent, /Propia/); assert.ok([...panel.querySelectorAll('label')].some(l => l.textContent.startsWith('Número')))
     await input(panel.querySelector('input[type=color]'),'#2563eb')
@@ -54,7 +58,7 @@ test('Editor interactivo: colocar, arrastrar, propiedades, multiselección, hist
     await click('Duplicar selección'); assert.equal(document.querySelector('svg.pizarra-cancha').querySelectorAll('[data-elemento]').length,2)
     await key('z',true); assert.equal(document.querySelector('svg.pizarra-cancha').querySelectorAll('[data-elemento]').length,1)
     await click('Rehacer'); assert.equal(document.querySelector('svg.pizarra-cancha').querySelectorAll('[data-elemento]').length,2)
-    await key('a',true); assert.match(document.querySelector('.pizarra-propiedades').textContent,/2 seleccionado/)
+    await key('a',true); await opciones(); assert.match(document.querySelector('.pizarra-propiedades').textContent,/2 seleccionado/)
     await click('Agregar paso')
     await evento(document.querySelector('svg.pizarra-cancha').querySelector('[data-elemento]'),'pointerdown',{clientX:21,clientY:20.4})
     await evento(document.querySelector('svg.pizarra-cancha'),'pointermove',{clientX:70,clientY:40})
@@ -75,6 +79,7 @@ test('Editor interactivo: colocar, arrastrar, propiedades, multiselección, hist
     await click('Cono')
     await evento(document.querySelector('svg.pizarra-cancha'), 'pointerdown', { clientX: 52.5, clientY: 34 })
     assert.equal(document.querySelector('svg.pizarra-cancha').querySelectorAll('[data-elemento]').length, 3)
+    await opciones()
     assert.match(document.querySelector('.pizarra-propiedades').textContent, /Cono/)
     await click('Listo')
     assert.equal(document.querySelector('.pizarra-colocando-aviso'), null)
@@ -84,6 +89,7 @@ test('Editor interactivo: colocar, arrastrar, propiedades, multiselección, hist
     assert.match(seleccionada().getAttribute('transform'), /rotate\(15\)/)
     await click('Cerrar propiedades')
     assert.equal(document.querySelector('.pizarra-propiedades'), null)
+    assert.ok(seleccionada(), 'cerrar las opciones no suelta la selección')
     const main = document.querySelector('svg.pizarra-cancha')
     const posiciones = [...main.querySelectorAll('[data-elemento]')].map(e => e.getAttribute('transform'))
     await evento(main, 'pointerdown', { pointerType: 'touch', pointerId: 4, clientX: 10, clientY: 10 })
@@ -137,6 +143,7 @@ test('Etapa 1: colocación encadenada, flechas con el dedo, extremos, temblor, a
   const { act } = React
   const barra = nombre => document.querySelector(`.pizarra-agregar-menu button[aria-label="${nombre}"]`)
   const boton = texto => [...document.querySelectorAll('button')].find(b => b.textContent === texto || b.getAttribute('aria-label') === texto)
+  const opciones = async () => { const b = boton('Opciones del elemento'); assert.ok(b, 'botón ⋯'); await act(() => b.click()) }
   const abrirMenu = async () => { if (!document.querySelector('.pizarra-agregar-menu')) await act(() => boton('Agregar a la cancha').click()) }
   const herramienta = async nombre => { await abrirMenu(); await act(() => barra(nombre).click()) }
   const sinHerramienta = () => document.querySelector('.pizarra-colocando-aviso') === null
@@ -157,6 +164,7 @@ test('Etapa 1: colocación encadenada, flechas con el dedo, extremos, temblor, a
     await herramienta('Rival')
     await toque(60, 40)
     assert.equal(elementos().at(-1).querySelector('text').textContent, '1')
+    await opciones()
     assert.match(document.querySelector('.pizarra-propiedades').textContent, /Rival/)
     // Elegir de nuevo la herramienta activa la suelta.
     await herramienta('Rival')
@@ -191,6 +199,7 @@ test('Etapa 1: colocación encadenada, flechas con el dedo, extremos, temblor, a
     assert.equal(jugadora.getAttribute('transform'), antes)
     assert.equal(boton('Rehacer').disabled, true)
     // Borrar no pregunta: avisa y permite deshacer.
+    await opciones()
     await act(() => boton('Eliminar selección').click())
     assert.equal(elementos().length, 4)
     assert.match(document.querySelector('.pizarra-aviso').textContent, /eliminado/)

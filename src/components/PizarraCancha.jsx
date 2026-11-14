@@ -64,7 +64,8 @@ function Estelas({ estelas, modo, w, h }) {
 // Los anillos de posesión e imán llevan data-seleccion: el PNG los quita como a la selección.
 // Etapa I: `alturas` (pelota en el aire), `opacidades` (fundido de lo oculto por paso), `foco` ({ id, peso }) y
 // `camara` ({ x, y, escala } en metros). `verOcultos`: al editar, lo oculto se ve tenue para poder tocarlo.
-const PizarraCancha = memo(forwardRef(function PizarraCancha({ doc, poses, seleccion = [], onElemento, onExtremo, onVertice, onFondo, onPointerDownCapture, onPointerMove, onPointerUp, onPointerCancel, onDragOver, onDrop, zoom = 1, pan = { x: 0, y: 0 }, caja, toque = 3, arrastrando = null, giro = 90, miniatura = false, estelas = null, modoEstela = 'estela', automaticas = null, fantasmas = null, pegadas = null, iman = null, alturas = null, opacidades = null, foco = null, camara = null, verOcultos = false }, ref) {
+// Etapa J: `fotos` ({ idElemento: url }) de las jugadoras vinculadas al plantel.
+const PizarraCancha = memo(forwardRef(function PizarraCancha({ doc, poses, seleccion = [], onElemento, onExtremo, onVertice, onFondo, onPointerDownCapture, onPointerMove, onPointerUp, onPointerCancel, onDragOver, onDrop, zoom = 1, pan = { x: 0, y: 0 }, caja, toque = 3, arrastrando = null, giro = 90, miniatura = false, estelas = null, modoEstela = 'estela', automaticas = null, fantasmas = null, pegadas = null, iman = null, alturas = null, opacidades = null, foco = null, camara = null, verOcultos = false, fotos = null }, ref) {
   const [w, h] = SUPERFICIES[doc.superficie], vertical = doc.orientacion === 'vertical'
   const recorte = useId().replaceAll(':', '')
   const centroArco = doc.superficie === 'cuarto' ? h : h / 2
@@ -129,7 +130,7 @@ const PizarraCancha = memo(forwardRef(function PizarraCancha({ doc, poses, selec
         {objetos.map(({ elemento: e, x, y, z, rotacion }) => {
           const linea = LINEAS.includes(e.tipo), px = e.dx * w / 100, py = e.dy * h / 100, elegido = seleccion.includes(e.id), o = opacidad(e.id)
           if (o <= .001) return null
-          const dibujo = <PizarraObjeto e={e} ancho={w} alto={h} altura={z} />
+          const dibujo = <PizarraObjeto e={e} ancho={w} alto={h} altura={z} foto={fotos?.[e.id]} />
           return <g key={e.id} data-elemento={e.id} data-oculto={(opacidades?.[e.id] ?? 1) < 1 ? 'true' : undefined} opacity={o < 1 ? o : undefined} className={arrastrando === e.id ? 'pizarra-elevado' : undefined} transform={`translate(${x} ${y}) rotate(${rotacion})`}
             onPointerDown={event => { if (onElemento) { event.stopPropagation(); onElemento(event, e.id) } }} style={{ cursor: onElemento ? 'grab' : 'default' }}>
             {foco?.id === e.id && <g data-foco="true" pointerEvents="none" opacity={foco.peso}><circle r={e.tamano + 1.6} fill="none" style={FOCO} strokeWidth="1.1" strokeOpacity=".3" /><circle r={e.tamano + 1.2} fill="none" style={FOCO} strokeWidth=".45" /></g>}

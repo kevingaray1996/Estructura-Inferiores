@@ -66,6 +66,7 @@ test('Etapa I: pase alto, subtítulo, foco, ocultar en un paso, pausa y movimien
 
     // Foco en la jugadora 2 desde la barra del objeto: anillo y el resto más apagado (a medias mientras se edita).
     await tocar('b')
+    await click('Opciones del elemento')
     await click('◎ Foco')
     assert.ok(cancha().querySelector('[data-elemento="b"] [data-foco]'))
     assert.ok(Number(cancha().querySelector('[data-elemento="a"]').getAttribute('opacity')) < 1)
@@ -73,6 +74,7 @@ test('Etapa I: pase alto, subtítulo, foco, ocultar en un paso, pausa y movimien
 
     // Ocultar a la jugadora 1 en este paso: se ve tenue para poder tocarla.
     await tocar('a')
+    await click('Opciones del elemento')
     await click('◐ Ocultar')
     assert.equal(cancha().querySelector('[data-elemento="a"]').getAttribute('data-oculto'), 'true')
     assert.ok(boton('◐ Mostrar'))

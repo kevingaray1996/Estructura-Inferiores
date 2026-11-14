@@ -60,7 +60,7 @@
 .pizarra-colocando .pizarra-cancha { cursor: crosshair; }
 .pizarra-elevado { filter: drop-shadow(0 .6px .5px var(--pizarra-sombra)); }
 .pizarra-flotante { position: absolute; z-index: 3; box-shadow: 0 4px 14px var(--pizarra-sombra); }
-.pizarra .pizarra-ajustar { bottom: .6rem; right: .6rem; font-size: .75rem; }
+.pizarra .pizarra-ajustar { bottom: .6rem; right: 4rem; font-size: .75rem; }
 .pizarra-aviso { left: 50%; top: .6rem; transform: translateX(-50%); display: flex; align-items: center; gap: .6rem; padding: .25rem .3rem .25rem .8rem; border-radius: 999px; background: var(--ui-superficie); border: 1px solid var(--ui-borde); font-size: .8rem; white-space: nowrap; }
 .pizarra-aviso button { border-radius: 999px; color: var(--ui-texto-acento); font-weight: 700; }
 
@@ -79,6 +79,24 @@
 .pizarra-objeto span { font-size: .66rem; line-height: 1.15; text-align: center; }
 .pizarra-agregar-formaciones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .35rem; margin-top: .4rem; }
 .pizarra-agregar-formaciones button { font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Opciones del elemento (doble toque/clic o ⋯). */
+.pizarra .pizarra-opciones { right: .6rem; bottom: .6rem; width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 50%; font-size: 1.3rem; line-height: 1; background: var(--ui-superficie); color: var(--ui-texto); border: 1px solid var(--ui-acento); }
+/* Etapa J: plantel y rival en el menú; escudo del rival sobre la cancha. */
+.pizarra-agregar-plantel { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .35rem; }
+.pizarra-agregar-plantel button { font-size: .78rem; font-weight: 700; line-height: 1.15; }
+.pizarra-agregar-nota { margin: .2rem 0 .5rem; font-size: .75rem; color: var(--ui-texto-secundario); }
+.pizarra .pizarra-agregar-volver { font-size: .8rem; font-weight: 700; color: var(--ui-texto-acento); }
+.pizarra-agregar-lista { display: flex; flex-direction: column; gap: .3rem; }
+.pizarra-agregar-lista > button { display: flex; align-items: center; gap: .55rem; text-align: left; font-size: .85rem; }
+.pizarra-agregar-lista > button b { font-variant-numeric: tabular-nums; min-width: 2.6rem; }
+.pizarra-agregar-lista > button span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pizarra-agregar-lista > button i { font-style: normal; font-size: .72rem; color: var(--ui-texto-secundario); }
+.pizarra-agregar-lista img, .pizarra-agregar-sin-foto { flex: none; width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: var(--ui-fondo-pagina); display: grid; place-items: center; font-weight: 700; }
+.pizarra-agregar-lista input[type=search] { width: 100%; min-height: 44px; margin-bottom: .2rem; }
+.pizarra .pizarra-agregar-lista > button .pizarra-agregar-camiseta { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: .7rem; font-weight: 700; background: var(--camiseta); color: var(--numero); border: 1px solid var(--ui-borde); }
+.pizarra-rival { position: absolute; z-index: 2; right: .6rem; top: .6rem; display: flex; align-items: center; gap: .4rem; max-width: 45%; padding: .2rem .6rem .2rem .25rem; border-radius: 999px; background: var(--pizarra-subtitulo-fondo); color: var(--pizarra-subtitulo-texto); font-size: .78rem; font-weight: 700; pointer-events: none; }
+.pizarra-rival img { width: 26px; height: 26px; object-fit: contain; }
+.pizarra-rival span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pizarra-colocando-aviso { top: .6rem; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: .5rem; max-width: calc(100% - 10rem); padding: .2rem .25rem .2rem .6rem; border-radius: 999px; background: var(--ui-superficie); border: 1px solid var(--ui-acento); font-size: .8rem; }
 .pizarra-colocando-aviso svg { width: 28px; height: 22px; flex: none; }
 .pizarra-colocando-aviso span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

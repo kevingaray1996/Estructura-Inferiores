@@ -158,7 +158,8 @@ export const FORMACIONES = {
   '4-1-4-1': [[1], [3, 6, 2, 4], [5], [11, 10, 8, 7], [9]],
 }
 const ANCHOS = { 1: [.5], 2: [.36, .64], 3: [.24, .5, .76], 4: [.13, .38, .62, .87], 5: [.1, .3, .5, .7, .9] }
-export const esRival = e => e.tipo === 'jugadora' && e.color.toLowerCase() === PALETA.rival.toLowerCase()
+// Rival: vinculada a un equipo rival (etapa J, con su camiseta) o, sin vínculo, pintada con el azul de rival.
+export const esRival = e => e.tipo === 'jugadora' && (e.vinculo?.tipo === 'rival' || (e.vinculo?.tipo !== 'jugadora' && e.color.toLowerCase() === PALETA.rival.toLowerCase()))
 // Lugares (en %) de una formación. `profundidad` va de 0 (arco propio) a 1 (arco rival).
 // Cancha completa: cada equipo en su mitad. Media cancha (se ve el arco de la izquierda): el equipo que defiende ese arco
 // se para atrás y el que ataca se para adelantado, sin arquera (quedaría fuera de la vista).

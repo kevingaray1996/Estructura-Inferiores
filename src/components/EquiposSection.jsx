@@ -1,6 +1,7 @@
 import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { PALETA } from '../utils/pizarra'
 import { sanitizarNombreArchivo } from '../utils/archivos'
 import { comprimirImagen } from '../utils/comprimirImagen'
 import EncabezadoSeccion from './ui/EncabezadoSeccion'
@@ -16,6 +17,9 @@ function EquiposSection({ onVolver }) {
 
   const [nombre, setNombre] = useState('')
   const [escudoUrl, setEscudoUrl] = useState('')
+  // Colores para la pizarra (etapa J): camiseta y número de las fichas rivales. Vacío = sin cargar.
+  const [colorCamiseta, setColorCamiseta] = useState('')
+  const [colorNumero, setColorNumero] = useState('')
   const [subiendoEscudo, setSubiendoEscudo] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
@@ -45,6 +49,8 @@ function EquiposSection({ onVolver }) {
     setEquipoEditando(null)
     setNombre('')
     setEscudoUrl('')
+    setColorCamiseta('')
+    setColorNumero('')
     setErrorMsg('')
     setMostrarForm(true)
   }
@@ -53,6 +59,8 @@ function EquiposSection({ onVolver }) {
     setEquipoEditando(e)
     setNombre(e.nombre || '')
     setEscudoUrl(e.escudo_url || '')
+    setColorCamiseta(e.color_camiseta || '')
+    setColorNumero(e.color_numero || '')
     setErrorMsg('')
     setMostrarForm(true)
   }
@@ -88,7 +96,7 @@ function EquiposSection({ onVolver }) {
     }
     setGuardando(true)
 
-    const datos = { nombre, escudo_url: escudoUrl || null }
+    const datos = { nombre, escudo_url: escudoUrl || null, color_camiseta: colorCamiseta || null, color_numero: colorNumero || null }
 
     const { error } = equipoEditando
       ? await supabase.from('equipos').update(datos).eq('id', equipoEditando.id)
@@ -185,6 +193,25 @@ function EquiposSection({ onVolver }) {
                   >
                     Quitar
                   </button>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <span className="text-[10px] uppercase tracking-wide block mb-1.5" style={{ color: COLORES.textoMuted }}>
+                Colores en la pizarra
+              </span>
+              <div className="flex flex-wrap items-center gap-4">
+                {[['Camiseta', colorCamiseta, setColorCamiseta, PALETA.rival], ['Número', colorNumero, setColorNumero, PALETA.tintaClara]].map(([etiqueta, valor, cambiar, inicial]) => (
+                  <label key={etiqueta} className="flex items-center gap-2 text-sm" style={{ color: COLORES.textoSecundario }}>
+                    <input type="color" aria-label={`Color de ${etiqueta.toLowerCase()}`} value={valor || inicial} onChange={(e) => cambiar(e.target.value)}
+                      className="h-10 w-12 rounded-lg cursor-pointer" style={{ border: `1px solid ${COLORES.borde}`, backgroundColor: COLORES.fondoPagina }} />
+                    {etiqueta}{!valor && ' (sin cargar)'}
+                  </label>
+                ))}
+                {(colorCamiseta || colorNumero) && (
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold" aria-label="Vista previa de la ficha"
+                    style={{ backgroundColor: colorCamiseta || PALETA.rival, color: colorNumero || PALETA.tintaClara, border: `1px solid ${COLORES.borde}` }}>10</span>
                 )}
               </div>
             </div>

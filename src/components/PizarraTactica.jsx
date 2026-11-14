@@ -7,6 +7,7 @@ import PizarraPropiedades from './PizarraPropiedades'
 import { alturas as calcularAlturas, animar, duenasEnPaso, enMovimiento, estelas as calcularEstelas, flechasAutomaticas, imanPelotas, jugadoraCercana, pegarPelota, pelotasDe, tiemposDePasos } from '../utils/pizarraAnimacion'
 import { agregarElemento, alternarFoco, alternarOcultos, aplicarFormacion, colocarFlecha, copiarPaso, duplicarElementos, duplicarPaso, duracionTotal, eliminarPaso, esRival, fijarAnotaciones, historial, historialInicial, limitar, LINEAS, moverExtremo, moverPaso, moverVertice, nuevaPizarra, plantillaHerramienta, quitarElementos, SUPERFICIES, validarPizarra } from '../utils/pizarra'
 import { focoYCamara, opacidades as calcularOpacidades, subtitulo as calcularSubtitulo } from '../utils/pizarraExplicar'
+import { cargarConvocadas, colorearRival, equipoRival, fotosDeFichas, leerCitaciones, leerDatosPizarra, vincularJugadora } from '../utils/pizarraPlantel'
 import { descargarArchivo, miniaturaPizarra } from '../utils/pizarraExportar'
 import './pizarra.css'
 
@@ -35,7 +36,9 @@ function leerVista() {
 }
 function guardarVista({ estela, flechas, fantasmas }) { try { window.localStorage.setItem(CLAVE_VISTA, JSON.stringify({ estela, flechas, fantasmas })) } catch { /* sin almacenamiento: queda en memoria */ } }
 
-export default function PizarraTactica({ inicial, soloLectura = false, onGuardar, onCerrar, titulo = 'Pizarra táctica' }) {
+// Etapa J: `datosClub` lee plantel, partidos y equipos (solo con sesión, en el editor); `categoriaId` los acota.
+// `plantel` (visor de Wellness): jugadoras de la categoría con su foto, ya recibidas por la función pública.
+export default function PizarraTactica({ inicial, soloLectura = false, onGuardar, onCerrar, titulo = 'Pizarra táctica', datosClub = false, categoriaId = null, plantel = null }) {
   const [h, setH] = useState(() => historialInicial(inicial || nuevaPizarra()))
   const doc = h.actual
   const [paso, setPaso] = useState(0), [seleccion, setSeleccion] = useState([]), [herramienta, setHerramienta] = useState('seleccionar')
@@ -44,15 +47,26 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
   const [error, setError] = useState(''), [guardando, setGuardando] = useState(false), [guardado, setGuardado] = useState(() => JSON.stringify(doc))
   const [arrastrando, setArrastrando] = useState(null)
   const [menu, setMenu] = useState(false), [preferencias, setPreferencias] = useState(leerVista)
+  const conDatos = datosClub && !soloLectura
+  const [datos, setDatos] = useState(() => conDatos ? { jugadores: [], partidos: [], equipos: [], cargando: true, error: '' } : null)
+  const [rivalElegido, setRivalElegido] = useState(null)
   const [aviso, setAviso] = useState(null), [fantasma, setFantasma] = useState(null), [medida, setMedida] = useState(null)
   // Vista vertical automática en celular vertical: sólo cambia cómo se ve, no la orientación guardada.
   const retrato = useSyncExternalStore(suscribirRetrato, esRetrato, () => false)
-  // Celular: un toque solo selecciona; las opciones se abren con doble toque (o con "⋯") en una hoja compacta.
-  // En la compu el panel aparece apenas se selecciona algo.
+  // Un toque (o clic) solo selecciona; las opciones se abren con doble toque/doble clic (o con "⋯").
+  // En el celular, en una hoja compacta abajo (o arriba si lo elegido está abajo); en la compu, flotando arriba a la derecha.
   const movil = useSyncExternalStore(suscribirMovil, esMovil, () => false)
   // La hoja queda abierta para una selección concreta: si cambia (otro elemento o nada), se cierra sola.
   const [hojaDe, setHojaDe] = useState(null)
   const ultimoToque = useRef(null)
+  useEffect(() => {
+    if (!conDatos) return
+    let activo = true
+    import('../supabaseClient').then(({ supabase }) => leerDatosPizarra(supabase, categoriaId))
+      .then(d => { if (activo) setDatos({ ...d, cargando: false }) })
+      .catch(e => { if (activo) setDatos({ jugadores: [], partidos: [], equipos: [], cargando: false, error: e?.message || 'No se pudieron leer los datos del club.' }) })
+    return () => { activo = false }
+  }, [conDatos, categoriaId])
   const claveSeleccion = seleccion.join(), hoja = hojaDe !== null && hojaDe.clave === claveSeleccion
   // Si lo elegido está en la mitad de abajo de la cancha, la hoja se abre arriba para no taparlo.
   function setHoja(abierta) {
@@ -92,6 +106,8 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
   const foco = explicacion.foco && (animando || soloLectura ? explicacion.foco : { ...explicacion.foco, peso: explicacion.foco.peso * .5 })
   const camara = animando || soloLectura ? explicacion.camara : null
   const textoPaso = calcularSubtitulo(base, instante, indice)
+  const fotos = useMemo(() => fotosDeFichas(activo, soloLectura ? plantel || [] : datos?.jugadores?.length ? datos.jugadores : plantel || []), [activo, soloLectura, plantel, datos])
+  const rival = equipoRival(activo, datos?.equipos) || rivalElegido
   const ocultosEnPaso = seleccion.length > 0 && seleccion.every(id => doc.pasos[indice].ocultos.includes(id))
   const bloqueado = soloLectura || guardando || reproduciendo || tiempo > 0
   // Sólo conviene girar superficies apaisadas (completa, cuarto, reducida); media cancha y área ya son "de pie".
@@ -407,9 +423,37 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
     const ya = doc.elementos.filter(e => e.tipo === 'jugadora' && (equipo === 'rival') === esRival(e)).length
     const quien = equipo === 'rival' ? 'rivales' : 'propias'
     if (ya && !window.confirm(`Ya hay ${ya} jugadoras ${quien}. ¿Acomodarlas en ${sistema} en este paso? Se agregan solo las que falten.`)) return
-    const siguiente = aplicarFormacion(doc, indice, sistema, equipo)
+    let siguiente = aplicarFormacion(doc, indice, sistema, equipo)
     if (siguiente === doc) { setError('La pizarra admite hasta 200 elementos.'); return }
+    if (equipo === 'rival' && rival) siguiente = colorearRival(siguiente, rival)
     cambiar(siguiente); setMenu(false); setSeleccion([])
+  }
+  // Etapa J: convocadas de un partido, jugadora del plantel y equipo rival.
+  async function convocadas(partido) {
+    setMenu(false); setError('')
+    try {
+      const { supabase } = await import('../supabaseClient')
+      const citaciones = await leerCitaciones(supabase, partido.id)
+      const conJugadora = citaciones.filter(c => datos.jugadores.some(j => j.id === c.jugador_id))
+      if (!conJugadora.length) { setError(`El partido vs ${partido.rival} no tiene citadas para cargar.`); return }
+      const propias = doc.elementos.filter(e => e.tipo === 'jugadora' && !esRival(e)).length
+      if (propias && !window.confirm(`Se reemplazan las ${propias} fichas propias por las ${conJugadora.length} citadas vs ${partido.rival}. Podés deshacer. ¿Seguir?`)) return
+      const equipo = datos.equipos.find(e => e.id === partido.equipo_id) || null
+      if (equipo) setRivalElegido(equipo)
+      cambiar(cargarConvocadas(doc, { citaciones, jugadores: datos.jugadores, formacion: partido.formacion, equipo })); setSeleccion([])
+    } catch (e) { setError(e?.message || 'No se pudieron leer las citadas.') }
+  }
+  function jugadoraDelPlantel(j) {
+    setMenu(false)
+    const propias = doc.elementos.filter(e => e.tipo === 'jugadora' && !esRival(e)).length
+    const x = doc.ataque === 'derecha' ? 30 : 70, y = limitar(30 + (propias % 6) * 8, 10, 90)
+    const siguiente = agregarElemento(doc, 'jugadora', x, y, { numero: '', texto: (j.apellido || j.nombre || '').slice(0, 40), vinculo: { tipo: 'jugadora', id: j.id } })
+    if (siguiente === doc) { setError('La pizarra admite hasta 200 elementos.'); return }
+    cambiar(siguiente); setSeleccion([siguiente.elementos.at(-1).id])
+  }
+  function elegirRival(equipo) {
+    setMenu(false); setRivalElegido(equipo)
+    cambiar(colorearRival(doc, equipo))
   }
   function cambiarPaso(cambios, clave = null) { cambiar({ ...doc, pasos: doc.pasos.map((p, i) => i === indice ? { ...p, ...cambios } : p) }, clave) }
   // Pone a los pies de la jugadora la pelota más cercana (o crea una si no hay ninguna).
@@ -508,21 +552,26 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
     {soloLectura && <div className="pizarra-fila">{zoomControl}<button type="button" onClick={ajustarVista}>Ajustar vista</button></div>}
     <div ref={cuerpo} className={`pizarra-cuerpo${tamano ? ' pizarra-medida' : ''}`} style={tamano && !tamano.columna ? { gridTemplateColumns: `${tamano.w}px minmax(0, 1fr)` } : undefined}>
       <div className="pizarra-escenario" style={tamano?.columna ? { alignItems: 'center' } : undefined}>
-        <div className={`pizarra-lienzo ${plantillaActiva ? 'pizarra-colocando' : ''}`} style={tamano ? { width: tamano.w, height: tamano.h } : undefined}>
+        {/* Doble clic nativo (mouse): además del doble toque que se detecta con los punteros. */}
+        <div className={`pizarra-lienzo ${plantillaActiva ? 'pizarra-colocando' : ''}`} style={tamano ? { width: tamano.w, height: tamano.h } : undefined}
+          onDoubleClick={e => { const g = e.target.closest?.('[data-elemento]'); if (!soloLectura && g && seleccion.includes(g.getAttribute('data-elemento'))) setHoja(true) }}>
           <PizarraCancha ref={svg} doc={vista} poses={poses} estelas={estelas} modoEstela={modoEstela} automaticas={automaticas} fantasmas={fantasmas} pegadas={pegadas} iman={iman} seleccion={soloLectura ? [] : seleccion} zoom={zoom} pan={pan} caja={caja} toque={toque} arrastrando={arrastrando} giro={forzarVertical ? -90 : 90}
-            alturas={alturas} opacidades={opacidades} foco={foco} camara={camara} verOcultos={!soloLectura && !animando}
+            alturas={alturas} opacidades={opacidades} foco={foco} camara={camara} verOcultos={!soloLectura && !animando} fotos={fotos}
             onElemento={soloLectura ? undefined : iniciar} onExtremo={soloLectura ? undefined : iniciarExtremo} onVertice={soloLectura ? undefined : iniciarVertice} onFondo={fondo} onPointerDownCapture={registrarPuntero}
             onPointerMove={mover} onPointerUp={e => terminar(e)} onPointerCancel={e => terminar(e, true)} />
           {!soloLectura && !reproduciendo && <button type="button" className="pizarra-flotante pizarra-agregar" aria-label={menu ? 'Cerrar menú para agregar' : 'Agregar a la cancha'} aria-expanded={menu} disabled={bloqueado} onClick={() => setMenu(m => !m)}>{menu ? '✕' : '＋'} <span>Agregar</span></button>}
-          {!soloLectura && <PizarraMenuAgregar abierto={menu && !bloqueado} herramienta={herramienta} arrastre={arrastreMenu} onFormacion={formacion} onCerrar={cerrarMenu} deshabilitado={bloqueado} />}
+          {!soloLectura && <PizarraMenuAgregar abierto={menu && !bloqueado} herramienta={herramienta} arrastre={arrastreMenu} onFormacion={formacion} onCerrar={cerrarMenu} deshabilitado={bloqueado}
+            datos={datos} rival={rival} onConvocadas={convocadas} onJugadora={jugadoraDelPlantel} onRival={elegirRival} />}
+          {rival && <div className="pizarra-rival" title={`Rival: ${rival.nombre}`}>{rival.escudo_url && <img src={rival.escudo_url} alt="" />}<span>vs {rival.nombre}</span></div>}
           {!soloLectura && plantillaActiva && !menu && <div className="pizarra-flotante pizarra-colocando-aviso" role="status">
             <IconoHerramienta id={herramienta} /><span>{LINEAS.includes(plantillaActiva.tipo) ? `${plantillaActiva.nombre}: arrastrá de la salida al destino` : `${plantillaActiva.nombre}: tocá la cancha para colocar`}</span>
             <button type="button" onClick={() => setHerramienta('seleccionar')}>Listo</button>
           </div>}
-          {!soloLectura && !animando && !menu && movil && elegido && !hoja && <button type="button" className="pizarra-flotante pizarra-opciones" aria-label="Opciones del elemento" title="Opciones (o doble toque sobre el elemento)" onClick={() => setHoja(true)}>⋯</button>}
-          {!soloLectura && !animando && !menu && (!movil || hoja) && <PizarraPropiedades arriba={movil && hojaDe?.arriba} elegido={elegido} cantidad={seleccion.length} foco={elegido && enPaso.foco === elegido.id} oculto={ocultosEnPaso}
+          {!soloLectura && !animando && !menu && elegido && !hoja && <button type="button" className="pizarra-flotante pizarra-opciones" aria-label="Opciones del elemento" title="Opciones (o doble toque sobre el elemento)" onClick={() => setHoja(true)}>⋯</button>}
+          {!soloLectura && !animando && !menu && hoja && <PizarraPropiedades arriba={movil && hojaDe?.arriba} elegido={elegido} cantidad={seleccion.length} foco={elegido && enPaso.foco === elegido.id} oculto={ocultosEnPaso}
             propiedad={propiedad} onGirar={() => rotar(((doc.pasos[indice].poses[elegido.id].rotacion + 195) % 360) - 180)} onDuplicar={duplicar} onBorrar={borrar}
-            onPegarPelota={pegarPelotaAElegida} onFoco={() => cambiar(alternarFoco(doc, indice, elegido.id))} onOcultar={() => cambiar(alternarOcultos(doc, indice, seleccion))} onCerrar={() => movil ? setHoja(false) : setSeleccion([])} />}
+            onPegarPelota={pegarPelotaAElegida} onFoco={() => cambiar(alternarFoco(doc, indice, elegido.id))} onOcultar={() => cambiar(alternarOcultos(doc, indice, seleccion))} onCerrar={() => setHoja(false)}
+            plantel={datos?.jugadores} equipos={datos?.equipos} onVincular={j => cambiar(vincularJugadora(doc, elegido.id, j))} onEquipo={eq => elegirRival(eq)} />}
           {textoPaso && <p className="pizarra-subtitulo" aria-live="polite">{textoPaso}</p>}
           {zoom !== 1 && <button type="button" className="pizarra-flotante pizarra-ajustar" onClick={ajustarVista}>Ajustar vista</button>}
           {aviso && <div className="pizarra-flotante pizarra-aviso" role="status"><span>{aviso}</span><button type="button" onClick={() => historialAccion('deshacer')}>Deshacer</button></div>}

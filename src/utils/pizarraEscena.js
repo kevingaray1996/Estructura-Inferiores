@@ -4,7 +4,7 @@
 //
 // Coordenadas: x a lo largo de la cancha, y a lo ancho, z hacia arriba (altura), todo en metros, origen en la
 // esquina de la superficie. Rotación en grados alrededor del eje z.
-import { LINEAS, PALETA, SUPERFICIES } from './pizarra.js'
+import { esRival, LINEAS, SUPERFICIES } from './pizarra.js'
 
 // Capas de dibujo, de abajo hacia arriba. Un motor 3D las puede ignorar (usa z) o respetar para superposiciones.
 export const CAPAS = { zona: -1, linea: 0, material: 1, jugadora: 2, pelota: 3, texto: 4 }
@@ -18,10 +18,10 @@ function capa(tipo) {
   return CAPAS.material
 }
 
-// Equipo de una jugadora según su color (hasta el formato v2, donde cada ficha se vincula a una jugadora o rival).
+// Equipo de una jugadora: rival si está vinculada a un equipo rival o pintada de rival; si no, propia.
 export function equipo(e) {
   if (e.tipo !== 'jugadora') return null
-  return e.color.toLowerCase() === PALETA.rival.toLowerCase() ? 'rival' : 'propio'
+  return esRival(e) ? 'rival' : 'propio'
 }
 
 // `alturas`: { id: metros } opcional (por ejemplo, la pelota en un pase alto). Por defecto todo está en el piso.

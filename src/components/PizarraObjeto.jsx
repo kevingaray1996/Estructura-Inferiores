@@ -1,6 +1,6 @@
-import { memo, useContext } from 'react'
+import { memo, useContext, useId } from 'react'
 import { ContextoCancha } from './pizarraContexto'
-import { LINEAS } from '../utils/pizarra'
+import { LINEAS, PALETA } from '../utils/pizarra'
 // Convención de trazos: pase = continua con punta llena, conducción = ondulada,
 // desplazamiento sin pelota = guiones, flecha punteada = puntos.
 const TRAZOS = { punteada: '.5 1', movimiento: '2.2 1.3' }
@@ -13,8 +13,9 @@ const NUMERO = { fontFamily: 'var(--pizarra-fuente)' }
 function Sombra({ r, altura = 0 }) { return <ellipse cx={r * .2 + altura * .45} cy={r * .42 + altura * .6} rx={r * .98 / (1 + altura * .06)} ry={r * .78 / (1 + altura * .06)} style={SOMBRA} fillOpacity={.32 / (1 + altura * .12)} /> }
 function Brillo({ r, id }) { return <circle r={r} fill={`url(#${id})`} pointerEvents="none" /> }
 
-export default memo(function PizarraObjeto({ e, ancho, alto, altura = 0 }) {
-  const brillo = useContext(ContextoCancha)
+// `foto` (etapa J): foto de la jugadora vinculada; el número pasa a una pastilla y el borde lleva el color del equipo.
+export default memo(function PizarraObjeto({ e, ancho, alto, altura = 0, foto = null }) {
+  const brillo = useContext(ContextoCancha), recorte = useId().replaceAll(':', '')
   const s = e.tamano, stroke = { stroke: e.color, strokeWidth: e.grosor, fill: 'none' }
   // Zona sombreada (v2): polígono relativo a la pose; los puntos están en % de la superficie.
   if (e.tipo === 'sombra') return <polygon points={(e.puntos || []).map(p => `${p.x * ancho / 100},${p.y * alto / 100}`).join(' ')} fill={e.color} fillOpacity=".28" stroke={e.color} strokeWidth={Math.max(.15, e.grosor * .6)} strokeDasharray="1.2 .8" strokeLinejoin="round" />
@@ -35,9 +36,18 @@ export default memo(function PizarraObjeto({ e, ancho, alto, altura = 0 }) {
       {e.tipo === 'pase' ? <path d={`${punta} Z`} fill={e.color} stroke={e.color} strokeWidth={e.grosor} strokeLinejoin="round" /> : <path d={punta} {...stroke} strokeLinecap="round" strokeLinejoin="round" />}
     </g>
   }
+  // Nombre debajo de la ficha: claro con contorno oscuro, legible sobre el césped con cualquier camiseta.
+  const nombre = e.tipo === 'jugadora' && e.texto && <text y={s + 2} textAnchor="middle" fontSize="1.8" fontWeight="700" style={NUMERO} fill={PALETA.tintaClara} stroke={PALETA.tinta} strokeWidth=".32" paintOrder="stroke">{e.texto}</text>
+  if (e.tipo === 'jugadora' && foto) return <g data-con-foto="true">{brillo && <Sombra r={s} />}<circle r={s} fill={e.color} />
+    <clipPath id={recorte}><circle r={s - .45} /></clipPath>
+    <image data-foto="true" href={foto} x={-s} y={-s} width={s * 2} height={s * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#${recorte})`} />
+    <circle r={s - .22} fill="none" stroke={e.color} strokeWidth=".5" />
+    {e.numero && <g transform={`translate(${s * .74} ${s * .74})`}><circle r={s * .46} fill={e.color} stroke={e.tinta} strokeWidth=".16" />
+      <text y={s * .03} dominantBaseline="middle" textAnchor="middle" fontSize={s * .56} fontWeight="700" style={NUMERO} fill={e.tinta}>{e.numero}</text></g>}
+    {nombre}</g>
   if (e.tipo === 'jugadora') return <g>{brillo && <Sombra r={s} />}<circle r={s} fill={e.color} />{brillo && <Brillo r={s} id={brillo} />}<circle r={s - .11} fill="none" stroke={e.tinta} strokeWidth=".22" strokeOpacity=".85" />
     <text y={s * .06} dominantBaseline="middle" textAnchor="middle" fontSize={s * 1.2} fontWeight="700" style={NUMERO} fill={e.tinta}>{e.numero}</text>
-    {e.texto && <text y={s + 2} textAnchor="middle" fontSize="1.8" fontWeight="700" style={NUMERO} fill={e.tinta} stroke="#FFFFFF" strokeWidth=".08" paintOrder="stroke">{e.texto}</text>}</g>
+    {nombre}</g>
   if (e.tipo === 'texto') return <text fill={e.color} fontSize={s} dominantBaseline="middle">{e.texto}</text>
   if (e.tipo === 'pelota') return <g>{brillo && <Sombra r={s * .7} altura={altura} />}<g transform={altura ? `scale(${1 + altura * .09})` : undefined}><circle r={s * .7} fill={e.color} stroke={e.tinta} strokeWidth=".2" /><path d={`M0 ${-s * .35} L${s * .33} ${-s * .1} L${s * .2} ${s * .3} H${-s * .2} L${-s * .33} ${-s * .1} Z`} fill={e.tinta} />{Array.from({ length: 5 }, (_, i) => { const a = i * Math.PI * 2 / 5 - Math.PI / 2; return <path key={i} d={`M${Math.cos(a) * s * .3} ${Math.sin(a) * s * .3} L${Math.cos(a) * s * .68} ${Math.sin(a) * s * .68}`} stroke={e.tinta} strokeWidth=".15" /> })}{brillo && <Brillo r={s * .7} id={brillo} />}</g></g>
   if (e.tipo === 'cono') return <g><ellipse cy={s * .8} rx={s} ry={s * .35} fill={e.color} stroke={e.tinta} strokeWidth=".15" /><path d={`M0 ${-s} L${s * .65} ${s * .7} Q0 ${s * 1.05} ${-s * .65} ${s * .7} Z`} fill={e.color} stroke={e.tinta} strokeWidth=".15" /><path d={`M${-s * .27} ${-s * .25} Q0 ${-s * .12} ${s * .27} ${-s * .25} L${s * .4} ${s * .12} Q0 ${s * .3} ${-s * .4} ${s * .12} Z`} fill="#FFFFFF" fillOpacity=".85" /><path d={`M0 ${-s * .9} L${s * .6} ${s * .7} Q${s * .25} ${s * .85} 0 ${s * .85} Z`} fill="#000000" fillOpacity=".13" /></g>

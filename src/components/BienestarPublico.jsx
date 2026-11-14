@@ -270,7 +270,7 @@ function BienestarPublico({ categoriaId }) {
               Hola, {jugadorSeleccionado.nombre} 👋
             </p>
 
-            <EntrenamientoDeHoy categoriaId={categoriaId} jugadoraId={jugadorSeleccionado.id} />
+            <EntrenamientoDeHoy categoriaId={categoriaId} jugadoraId={jugadorSeleccionado.id} plantel={jugadores} />
 
             <div className="flex gap-2 mb-6">
               <button

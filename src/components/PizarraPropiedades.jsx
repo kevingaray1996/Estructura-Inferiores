@@ -13,7 +13,7 @@ function Colores({ valor, onCambio }) {
   </span>
 }
 
-export default memo(function PizarraPropiedades({ arriba = false, elegido, cantidad, foco, oculto, propiedad, onGirar, onDuplicar, onBorrar, onPegarPelota, onFoco, onOcultar, onCerrar }) {
+export default memo(function PizarraPropiedades({ arriba = false, elegido, cantidad, foco, oculto, propiedad, onGirar, onDuplicar, onBorrar, onPegarPelota, onFoco, onOcultar, onCerrar, plantel = null, equipos = null, onVincular, onEquipo }) {
   if (!elegido) return null
   const varios = cantidad > 1, tipo = elegido.tipo, linea = LINEAS.includes(tipo)
   const nombre = varios ? `${cantidad} seleccionados` : tipo === 'jugadora' ? (esRival(elegido) ? 'Rival' : 'Propia') : linea ? NOMBRES_FLECHA[tipo] : HERRAMIENTAS[tipo]
@@ -29,6 +29,13 @@ export default memo(function PizarraPropiedades({ arriba = false, elegido, canti
         <label>Número<input maxLength={4} inputMode="numeric" value={elegido.numero} onChange={e => propiedad('numero', e.target.value)} /></label>
         <label>Nombre<input maxLength={200} placeholder="Opcional" value={elegido.texto} onChange={e => propiedad('texto', e.target.value)} /></label>
       </>}
+      {/* Etapa J: la ficha propia se vincula a una jugadora del plantel (foto y apellido); la rival, a un equipo (camiseta). */}
+      {!varios && tipo === 'jugadora' && !esRival(elegido) && plantel?.length > 0 && <label className="pizarra-propiedades-ancho">Jugadora del plantel<select value={elegido.vinculo?.tipo === 'jugadora' ? elegido.vinculo.id : ''} onChange={e => onVincular(plantel.find(j => j.id === e.target.value) || null)}>
+        <option value="">Sin vincular</option>
+        {plantel.map(j => <option key={j.id} value={j.id}>{[j.apellido, j.nombre].filter(Boolean).join(', ')}</option>)}</select></label>}
+      {!varios && tipo === 'jugadora' && esRival(elegido) && equipos?.length > 0 && <label className="pizarra-propiedades-ancho">Equipo rival<select value={elegido.vinculo?.tipo === 'rival' ? elegido.vinculo.id : ''} onChange={e => { const eq = equipos.find(x => x.id === e.target.value); if (eq) onEquipo(eq) }}>
+        <option value="" disabled>Elegir equipo</option>
+        {equipos.map(eq => <option key={eq.id} value={eq.id}>{eq.nombre}</option>)}</select></label>}
       {!varios && tipo === 'texto' && <label className="pizarra-propiedades-ancho">Texto<input maxLength={200} value={elegido.texto} onChange={e => propiedad('texto', e.target.value)} /></label>}
       {!varios && linea && <label>Tipo<select value={tipo} onChange={e => propiedad('tipo', e.target.value, false)}>
         {TIPOS_FLECHA.map(t => <option key={t} value={t}>{NOMBRES_FLECHA[t]}</option>)}</select></label>}

@@ -18,6 +18,9 @@ export async function miniaturaPizarra(svg) {
   fijarColores(svg, copia)
   copia.setAttribute('width', '1200'); copia.setAttribute('height', '800')
   copia.querySelectorAll('[data-seleccion]').forEach(n => n.remove())
+  // Las fotos de jugadoras son imágenes externas: un SVG convertido en imagen no las carga. La ficha queda con su color
+  // y su número.
+  copia.querySelectorAll('image').forEach(n => n.remove())
   const cesped = getComputedStyle(svg).getPropertyValue('--pizarra-cesped').trim()
   const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(copia)], { type: 'image/svg+xml;charset=utf-8' }))
   try {

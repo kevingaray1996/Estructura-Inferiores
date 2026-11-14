@@ -4,7 +4,8 @@ import { COLORES } from '../theme'
 import { cargarEntrenamientoHoy, enlaceSeguro, fechaArgentina } from '../utils/planificacion'
 import PizarraEjercicio from './PizarraEjercicio'
 
-export function ContenidoEntrenamientoHoy({ sesiones }) {
+// `plantel`: jugadoras de la categoría con foto (Wellness público); la pizarra las muestra en sus fichas.
+export function ContenidoEntrenamientoHoy({ sesiones, plantel = null }) {
   if (!sesiones?.length) return null
   return <section aria-label="Tu entrenamiento de hoy" className="mb-6 rounded-xl border p-4 space-y-4"
     style={{ backgroundColor: COLORES.fondoTarjeta, borderColor: COLORES.borde, color: COLORES.texto }}>
@@ -28,7 +29,7 @@ export function ContenidoEntrenamientoHoy({ sesiones }) {
           </p>}
           {e.materiales && <p className="text-sm">Materiales: {e.materiales}</p>}
           {e.indicaciones && <p className="text-sm whitespace-pre-wrap">{e.indicaciones}</p>}
-          {e.pizarra && <PizarraEjercicio valor={e.pizarra} nombre={e.nombre} objetivo={e.objetivo} indicaciones={e.indicaciones} soloLectura />}
+          {e.pizarra && <PizarraEjercicio valor={e.pizarra} nombre={e.nombre} objetivo={e.objetivo} indicaciones={e.indicaciones} plantel={plantel} soloLectura />}
           {enlaceSeguro(e.imagen_url) && <img src={enlaceSeguro(e.imagen_url)} alt={e.nombre || 'Ejercicio'} loading="lazy" className="max-h-48 max-w-full rounded-lg object-contain" />}
           {enlaceSeguro(e.link_video) && <a className="inline-block text-sm underline" style={{ color: 'var(--ui-texto-acento)' }} href={enlaceSeguro(e.link_video)} target="_blank" rel="noreferrer">Ver ejercicio</a>}
         </div>)}
@@ -37,7 +38,7 @@ export function ContenidoEntrenamientoHoy({ sesiones }) {
   </section>
 }
 
-export default function EntrenamientoDeHoy({ categoriaId, jugadoraId }) {
+export default function EntrenamientoDeHoy({ categoriaId, jugadoraId, plantel = null }) {
   const [lectura, setLectura] = useState(null)
   useEffect(() => {
     if (!categoriaId || !jugadoraId) return
@@ -66,5 +67,5 @@ export default function EntrenamientoDeHoy({ categoriaId, jugadoraId }) {
     }
   }, [categoriaId, jugadoraId])
   if (!lectura || lectura.categoriaId !== categoriaId || lectura.jugadoraId !== jugadoraId || lectura.fecha !== fechaArgentina()) return null
-  return <ContenidoEntrenamientoHoy sesiones={lectura.sesiones} />
+  return <ContenidoEntrenamientoHoy sesiones={lectura.sesiones} plantel={plantel} />
 }

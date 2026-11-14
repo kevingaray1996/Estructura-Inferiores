@@ -4,7 +4,8 @@ import { validarPizarra } from '../utils/pizarra'
 import './pizarra.css'
 const Editor = lazy(() => import('./PizarraTactica'))
 
-export default function PizarraEjercicio({ valor, miniatura, onChange, soloLectura = false, nombre, objetivo, indicaciones }) {
+// `categoriaId` acota el plantel y los partidos del editor; `plantel` (Wellness) trae las jugadoras de la categoría con foto.
+export default function PizarraEjercicio({ valor, miniatura, onChange, soloLectura = false, nombre, objetivo, indicaciones, categoriaId = null, plantel = null }) {
   const [abierta, setAbierta] = useState(false)
   let doc = null, invalida = false
   try { if (valor) doc = validarPizarra(valor) } catch { invalida = true }
@@ -13,7 +14,7 @@ export default function PizarraEjercicio({ valor, miniatura, onChange, soloLectu
   // convierten "position: fixed" en relativo a ellas y lo dejaban angosto. Así ocupa siempre toda la ventana.
   const modal = abierta && <div role="dialog" aria-modal="true" aria-label={nombre || 'Pizarra táctica'} className={`pizarra-modal${soloLectura ? ' pizarra-modal-visor' : ''}`}>
     {soloLectura && <div style={{ color: 'var(--ui-texto)' }}><h2>{nombre}</h2>{objetivo && <p>{objetivo}</p>}{indicaciones && <p className="whitespace-pre-wrap">{indicaciones}</p>}</div>}
-    <Suspense fallback={<p>Cargando pizarra…</p>}><Editor inicial={doc} titulo={nombre || 'Pizarra táctica'} soloLectura={soloLectura} onCerrar={() => setAbierta(false)}
+    <Suspense fallback={<p>Cargando pizarra…</p>}><Editor inicial={doc} titulo={nombre || 'Pizarra táctica'} soloLectura={soloLectura} onCerrar={() => setAbierta(false)} datosClub={!soloLectura} categoriaId={categoriaId} plantel={plantel}
       onGuardar={soloLectura ? undefined : (pizarra, vista) => { onChange(pizarra, vista); setAbierta(false) }} /></Suspense>
   </div>
   return <div>

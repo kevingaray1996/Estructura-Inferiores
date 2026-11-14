@@ -95,6 +95,7 @@ test('Etapa B: imán de la pelota, pase arrastrando, flechas automáticas, + Pas
     // Pegar pelota: con la jugadora 1 seleccionada, la pelota vuelve a sus pies.
     await evento(cancha().querySelector('[data-elemento="a"]'), 'pointerdown', enPantalla(30, 50))
     await evento(cancha(), 'pointerup', enPantalla(30, 50))
+    await click('Opciones del elemento')
     await click('Pegar pelota')
     assert.ok(Math.hypot((posicion('pelota').x - 30) * 1.05, (posicion('pelota').y - 50) * .68) < 5)
     assert.equal(cancha().querySelectorAll('[data-pegada]').length, 1)

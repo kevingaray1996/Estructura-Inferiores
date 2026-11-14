@@ -34,7 +34,7 @@ function Orden({ indice, cantidad, mover, eliminar, nombre }) {
   </div>
 }
 
-function BloqueEditor({ bloque, indice, total, cambiar, mover, quitar, biblioteca }) {
+function BloqueEditor({ bloque, indice, total, cambiar, mover, quitar, biblioteca, categoriaId }) {
   function tarea(index, valor) { cambiar({ ...bloque, ejercicios: bloque.ejercicios.map((e, i) => i === index ? valor : e) }) }
   return <section className="planificacion-tarjeta planificacion-bloque">
     <div className="planificacion-fila planificacion-entre"><h3>Bloque {indice + 1}</h3>
@@ -57,7 +57,7 @@ function BloqueEditor({ bloque, indice, total, cambiar, mover, quitar, bibliotec
         {CAMPOS_EJERCICIO.filter(c => c !== 'pizarra').map((campo) => <Campo key={campo} titulo={etiquetas[campo]} tipo={campo === 'duracion' ? 'number' : 'text'}
           valor={e[campo]} cambiar={(valor) => tarea(j, { ...e, [campo]: valor })} {...(campo === 'duracion' ? { min: '0.1', max: '1440', step: 'any' } : {})} />)}
       </div><Campo titulo="Notas internas de la tarea (privadas)" valor={e.notas_internas} cambiar={(notas_internas) => tarea(j, { ...e, notas_internas })} /></details>
-      <PizarraEjercicio valor={e.pizarra} miniatura={e.pizarra_miniatura} nombre={e.nombre} onChange={(pizarra, pizarra_miniatura) => tarea(j, { ...e, pizarra, pizarra_miniatura })} />
+      <PizarraEjercicio valor={e.pizarra} miniatura={e.pizarra_miniatura} nombre={e.nombre} categoriaId={categoriaId} onChange={(pizarra, pizarra_miniatura) => tarea(j, { ...e, pizarra, pizarra_miniatura })} />
       {e.pizarra && <button type="button" onClick={() => { if (window.confirm('¿Quitar la pizarra de esta tarea? La biblioteca no cambia.')) tarea(j, { ...e, pizarra: null, pizarra_miniatura: '' }) }}>Quitar pizarra de la tarea</button>}
       <Visibilidad item={e} campos={CAMPOS_EJERCICIO} cambiar={(valor) => tarea(j, valor)} />
     </div>)}
@@ -255,7 +255,7 @@ export default function PlanificacionSection({ perfil, fechaInicial, categoriaIn
           </select></label><p>No se modifica el registro real. La asistencia sigue consultándose por categoría y fecha.</p>
         </details>
         {bibliotecaError && <p role="alert">{bibliotecaError} <button type="button" onClick={cargarBiblioteca}>Reintentar biblioteca</button></p>}
-        {form.bloques.map((b, i) => <BloqueEditor key={b.id} bloque={b} indice={i} total={form.bloques.length} biblioteca={biblioteca}
+        {form.bloques.map((b, i) => <BloqueEditor key={b.id} bloque={b} indice={i} total={form.bloques.length} biblioteca={biblioteca} categoriaId={form.categoria_id || categoriaId}
           cambiar={(valor) => cambiar({ ...form, bloques: form.bloques.map((x, j) => i === j ? valor : x) })}
           mover={(hasta) => cambiar({ ...form, bloques: moverElemento(form.bloques, i, hasta) })}
           quitar={() => cambiar({ ...form, bloques: form.bloques.filter((_, j) => j !== i) })} />)}
