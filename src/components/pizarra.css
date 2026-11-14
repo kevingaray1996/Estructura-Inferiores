@@ -130,6 +130,13 @@
 .pizarra-editar-paso > summary { cursor: pointer; font-size: .8rem; font-weight: 700; display: flex; align-items: center; }
 .pizarra-editar-paso fieldset { border: 0; padding: .3rem 0 0; margin: 0; }
 .pizarra-editar-paso label { display: flex; flex-direction: column; gap: .2rem; font-size: .78rem; }
+/* Etapa I: subtítulo sobre la cancha, campos de explicar en Editar paso. */
+.pizarra-subtitulo { position: absolute; z-index: 1; left: 50%; bottom: .7rem; transform: translateX(-50%); width: max-content; max-width: calc(100% - 1.5rem); margin: 0; padding: .4rem .8rem; border-radius: .5rem; background: var(--pizarra-subtitulo-fondo); color: var(--pizarra-subtitulo-texto); font-family: var(--pizarra-fuente); font-size: clamp(.8rem, 2.4vw, 1.05rem); font-weight: 700; line-height: 1.3; text-align: center; pointer-events: none; text-wrap: balance; }
+.pizarra-editar-paso textarea { font: inherit; font-size: .85rem; resize: vertical; min-width: min(22rem, 100%); }
+.pizarra-editar-paso .pizarra-subtitulo-campo { flex: 1 1 100%; }
+.pizarra-editar-paso .pizarra-segmentado { display: flex; flex-direction: column; gap: .2rem; font-size: .78rem; }
+.pizarra-editar-paso .pizarra-segmentado span { display: block; }
+.pizarra-editar-paso .pizarra-segmentado button { margin-right: .25rem; }
 .pizarra .pizarra-pegar { display: inline-flex; align-items: center; gap: .3rem; }
 .pizarra .pizarra-pegar svg { width: 22px; height: 18px; }
 .pizarra:fullscreen { overflow: auto; }

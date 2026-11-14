@@ -31,17 +31,20 @@ test('PostgreSQL aislado: pizarra, RPC invoker, RLS, revisión, snapshot y proye
     const base = readFileSync(new URL('../supabase/migrations/20261026190426_planificacion_semanal.sql', import.meta.url), 'utf8')
     const sql = readFileSync(new URL('../supabase/migrations/20261030002005_pizarra_tactica.sql', import.meta.url), 'utf8')
     await db.exec(base.replace(/^\uFEFF/, '')); await db.exec(sql.replace(/^\uFEFF/, ''))
+    // La base ya tiene el validador v1 + v2 de la etapa C: se toma de esa migraci\u00F3n (la app guarda v2).
+    const etapaC = readFileSync(new URL('../supabase/migrations/20261114120000_pizarra_etapa_c.sql', import.meta.url), 'utf8').replace(/\r\n/g, '\n')
+    await db.exec(etapaC.match(/ {2}CREATE OR REPLACE FUNCTION pizarra_privado\.validar\(d jsonb\)[\s\S]*?END \$function\$;/)[0])
     assert.equal((await db.query('select count(*)::int n from public.biblioteca where pizarra is null')).rows[0].n, 1)
     const pizarra = agregarElemento(nuevaPizarra(), 'pelota')
     const fecha = (await db.query("select to_char(now() at time zone 'America/Argentina/Buenos_Aires','YYYY-MM-DD') f")).rows[0].f
     const datos = { fecha, descripcion: 'Actividad', pizarra: { ...pizarra, notas_internas: 'NO_PUBLICAR' }, pizarra_miniatura: '' }
     await rol('authenticated', user)
     let ejercicio = await rpc(datos)
-    assert.equal(ejercicio.pizarra_revision, 1); assert.equal(ejercicio.pizarra.version, 1)
+    assert.equal(ejercicio.pizarra_revision, 1); assert.equal(ejercicio.pizarra.version, 2)
     assert.doesNotMatch(JSON.stringify(ejercicio.pizarra), /NO_PUBLICAR/)
     ejercicio = await rpc({ ...datos, descripcion: 'Corregida' }, ejercicio.id, 1)
     assert.equal(ejercicio.pizarra_revision, 2)
-    // Etapa 1: rival, flechas dibujadas y extremos movidos siguen siendo v1 válido para la base, sin pérdidas.
+    // Etapa 1: rival, flechas dibujadas y extremos movidos son válidos para la base, sin pérdidas.
     const rival = plantillaHerramienta('rival')
     let etapa1 = colocarFlecha(agregarElemento(nuevaPizarra(), rival.tipo, 70, 40, rival.extra), 'pase', { x: 10, y: 20 }, { x: 95, y: -30 })
     etapa1 = moverExtremo(colocarFlecha({ ...etapa1, superficie: 'media' }, 'conduccion', { x: 30, y: 30 }, { x: 50, y: 60 }), 0, etapa1.elementos[1].id, 'punta', { x: 40, y: 70 })

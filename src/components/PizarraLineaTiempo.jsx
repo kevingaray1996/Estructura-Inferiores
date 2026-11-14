@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import PizarraCancha from './PizarraCancha'
+import { PALETA } from '../utils/pizarra'
 
 // Íconos propios (los caracteres ⏮ ⏭ se ven como emoji en iPhone).
 const RUTAS = {
@@ -20,6 +21,7 @@ export default memo(function PizarraLineaTiempo({
   doc, indice, indiceVisible, animando, tiempo, total, tiempos, reproduciendo, velocidad, bucle, soloLectura, bloqueado, miniaturas,
   onReproducir, onPaso, onAnterior, onSiguiente, onBuscar, onVelocidad, onBucle, onAgregar,
   vista, onVista, onNombre, onDuracion, onOrdenar, onEliminar,
+  recorrido = 'suave', onRecorrido, jugadoras = [], onTexto, onPausa, onPase, onFoco,
 }) {
   const ultimo = doc.pasos.length - 1, paso = doc.pasos[indice]
   const segundos = v => v.toFixed(1).replace('.', ',')
@@ -43,9 +45,9 @@ export default memo(function PizarraLineaTiempo({
           </fieldset>
           <label><input type="checkbox" checked={vista.flechas} onChange={e => onVista({ flechas: e.target.checked })} /> Flechas automáticas entre pasos</label>
           {!soloLectura && <label><input type="checkbox" checked={vista.fantasmas} onChange={e => onVista({ fantasmas: e.target.checked })} /> Ver el paso anterior</label>}
-          {!soloLectura && <fieldset><legend>Movimiento</legend>
-            {[['suave', 'Suave'], ['recto', 'Recto']].map(([valor, nombre]) => <label key={valor}><input type="radio" name="pizarra-movimiento" checked={vista.recorrido === valor} onChange={() => onVista({ recorrido: valor })} /> {nombre}</label>)}
-            <small>Todavía no se guarda con el ejercicio.</small>
+          {!soloLectura && <fieldset disabled={bloqueado && !reproduciendo}><legend>Movimiento</legend>
+            {[['suave', 'Suave'], ['recto', 'Recto']].map(([valor, nombre]) => <label key={valor}><input type="radio" name="pizarra-movimiento" checked={recorrido === valor} onChange={() => onRecorrido(valor)} /> {nombre}</label>)}
+            <small>Se guarda con el ejercicio.</small>
           </fieldset>}
         </div>
       </details>
@@ -65,6 +67,16 @@ export default memo(function PizarraLineaTiempo({
       <fieldset disabled={bloqueado} className="pizarra-fila">
         <label>Nombre del paso<input maxLength={80} value={paso.nombre} onChange={e => onNombre(e.target.value)} /></label>
         <label>Transición hacia este paso (s)<input type="number" min=".1" max="60" step=".1" value={paso.duracion} onChange={e => onDuracion(Number(e.target.value))} /></label>
+        <label>Pausa al llegar (s)<input type="number" min="0" max="30" step=".5" value={paso.pausa} onChange={e => onPausa(Number(e.target.value))} /></label>
+        <label className="pizarra-subtitulo-campo">Subtítulo del paso<textarea maxLength={200} rows={2} placeholder="Ej.: la 6 baja a recibir entre centrales" value={paso.texto} onChange={e => onTexto(e.target.value)} /></label>
+        {indice > 0 && <div className="pizarra-segmentado" role="group" aria-label="Pase hacia este paso">
+          <span>Pase hacia este paso</span>
+          {[['bajo', 'Bajo'], ['alto', 'Alto']].map(([valor, nombre]) => <button type="button" key={valor} aria-pressed={paso.pase === valor} onClick={() => onPase(valor)}>{nombre}</button>)}
+        </div>}
+        <label>Foco en<select value={paso.foco || ''} onChange={e => onFoco(e.target.value)}>
+          <option value="">Nadie</option>
+          {jugadoras.map(j => <option key={j.id} value={j.id}>{j.color.toLowerCase() === PALETA.rival.toLowerCase() ? 'Rival' : 'Propia'}{j.numero ? ` N.º ${j.numero}` : ''}{j.texto ? ` · ${j.texto}` : ''}</option>)}
+        </select></label>
         <button type="button" disabled={!indice} onClick={() => onOrdenar(-1)}>Mover paso antes</button>
         <button type="button" disabled={indice === ultimo} onClick={() => onOrdenar(1)}>Mover paso después</button>
         <button type="button" disabled={doc.pasos.length === 1} onClick={onEliminar}>Eliminar paso</button>

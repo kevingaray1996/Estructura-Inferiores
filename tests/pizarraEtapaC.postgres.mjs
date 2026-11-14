@@ -139,3 +139,22 @@ test('los dos archivos son un solo DO más un SELECT final', () => {
     assert.doesNotMatch(sinComentarios, /TEMP(ORARY)? TABLE/i)
   }
 })
+
+test('etapa C: la base devuelve igual una pizarra v2 armada por la app (etapa I)', async () => {
+  const { agregarElemento, alternarFoco, alternarOcultos, copiarPaso, nuevaPizarra, validarPizarra } = await import('../src/utils/pizarra.js')
+  let d = nuevaPizarra()
+  for (const tipo of ['jugadora', 'jugadora', 'pelota', 'sombra', 'pase', 'cono']) d = agregarElemento(d, tipo, 40, 40)
+  d = copiarPaso(d, 0)
+  const [j, r, , z] = d.elementos.map(e => e.id)
+  d = alternarOcultos(alternarFoco(d, 1, j), 0, [z])
+  d = { ...d, recorrido: 'recto', placa: { titulo: 'Córner a favor', analista: 'Cuerpo técnico' },
+    elementos: d.elementos.map(e => e.id === r ? { ...e, vinculo: { tipo: 'rival', id: crypto.randomUUID() } } : e),
+    pasos: d.pasos.map((p, i) => i === 1 ? { ...p, texto: 'Centro al segundo palo', pausa: 1.5, pase: 'alto' } : p) }
+  const limpio = validarPizarra(d)
+  const db = await crearBase()
+  try {
+    await db.exec(cambio)
+    const deLaBase = (await db.query('select pizarra_privado.validar($1::jsonb) d', [JSON.stringify(limpio)])).rows[0].d
+    assert.deepEqual(deLaBase, limpio)
+  } finally { await db.close() }
+})

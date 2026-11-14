@@ -102,7 +102,7 @@ test('Editor interactivo: colocar, arrastrar, propiedades, multiselección, hist
     await click('Media cancha')
     assert.match(main.getAttribute('viewBox'), /58.5 74/)
     await click('Movimientos'); assert.equal(document.querySelectorAll('.pizarra-objeto svg').length, 7)
-    await click('Dibujo'); assert.equal(document.querySelectorAll('.pizarra-objeto svg').length, 4)
+    await click('Dibujo'); assert.equal(document.querySelectorAll('.pizarra-objeto svg').length, 5)
     // El visor público conserva zoom táctil, pero no ofrece materiales ni propiedades.
     const { nuevaPizarra } = await import('../src/utils/pizarra.js')
     await act(() => root.render(React.createElement(Editor, { key: 'solo-lectura', inicial: nuevaPizarra(), soloLectura: true })))

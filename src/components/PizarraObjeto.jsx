@@ -9,12 +9,15 @@ const SOMBRA = { fill: 'var(--pizarra-ficha-sombra)' }
 const NUMERO = { fontFamily: 'var(--pizarra-fuente)' }
 
 // Volumen (etapa H): sombra apoyada en el piso, desplazada abajo a la derecha, y brillo/relieve encima del color.
-function Sombra({ r }) { return <ellipse cx={r * .2} cy={r * .42} rx={r * .98} ry={r * .78} style={SOMBRA} fillOpacity=".32" /> }
+// `altura` (m, pase alto de la etapa I): la sombra se separa y se achica a medida que la pelota sube.
+function Sombra({ r, altura = 0 }) { return <ellipse cx={r * .2 + altura * .45} cy={r * .42 + altura * .6} rx={r * .98 / (1 + altura * .06)} ry={r * .78 / (1 + altura * .06)} style={SOMBRA} fillOpacity={.32 / (1 + altura * .12)} /> }
 function Brillo({ r, id }) { return <circle r={r} fill={`url(#${id})`} pointerEvents="none" /> }
 
-export default memo(function PizarraObjeto({ e, ancho, alto }) {
+export default memo(function PizarraObjeto({ e, ancho, alto, altura = 0 }) {
   const brillo = useContext(ContextoCancha)
   const s = e.tamano, stroke = { stroke: e.color, strokeWidth: e.grosor, fill: 'none' }
+  // Zona sombreada (v2): polígono relativo a la pose; los puntos están en % de la superficie.
+  if (e.tipo === 'sombra') return <polygon points={(e.puntos || []).map(p => `${p.x * ancho / 100},${p.y * alto / 100}`).join(' ')} fill={e.color} fillOpacity=".28" stroke={e.color} strokeWidth={Math.max(.15, e.grosor * .6)} strokeDasharray="1.2 .8" strokeLinejoin="round" />
   if (LINEAS.includes(e.tipo)) {
     const dx = e.dx * ancho / 100, dy = e.dy * alto / 100, largo = Math.hypot(dx, dy) || 1, ux = dx / largo, uy = dy / largo
     const cx = dx / 2 - uy * (e.tipo === 'curva' ? e.curva : 0), cy = dy / 2 + ux * (e.tipo === 'curva' ? e.curva : 0)
@@ -36,7 +39,7 @@ export default memo(function PizarraObjeto({ e, ancho, alto }) {
     <text y={s * .06} dominantBaseline="middle" textAnchor="middle" fontSize={s * 1.2} fontWeight="700" style={NUMERO} fill={e.tinta}>{e.numero}</text>
     {e.texto && <text y={s + 2} textAnchor="middle" fontSize="1.8" fontWeight="700" style={NUMERO} fill={e.tinta} stroke="#FFFFFF" strokeWidth=".08" paintOrder="stroke">{e.texto}</text>}</g>
   if (e.tipo === 'texto') return <text fill={e.color} fontSize={s} dominantBaseline="middle">{e.texto}</text>
-  if (e.tipo === 'pelota') return <g>{brillo && <Sombra r={s * .7} />}<circle r={s * .7} fill={e.color} stroke={e.tinta} strokeWidth=".2" /><path d={`M0 ${-s * .35} L${s * .33} ${-s * .1} L${s * .2} ${s * .3} H${-s * .2} L${-s * .33} ${-s * .1} Z`} fill={e.tinta} />{Array.from({ length: 5 }, (_, i) => { const a = i * Math.PI * 2 / 5 - Math.PI / 2; return <path key={i} d={`M${Math.cos(a) * s * .3} ${Math.sin(a) * s * .3} L${Math.cos(a) * s * .68} ${Math.sin(a) * s * .68}`} stroke={e.tinta} strokeWidth=".15" /> })}{brillo && <Brillo r={s * .7} id={brillo} />}</g>
+  if (e.tipo === 'pelota') return <g>{brillo && <Sombra r={s * .7} altura={altura} />}<g transform={altura ? `scale(${1 + altura * .09})` : undefined}><circle r={s * .7} fill={e.color} stroke={e.tinta} strokeWidth=".2" /><path d={`M0 ${-s * .35} L${s * .33} ${-s * .1} L${s * .2} ${s * .3} H${-s * .2} L${-s * .33} ${-s * .1} Z`} fill={e.tinta} />{Array.from({ length: 5 }, (_, i) => { const a = i * Math.PI * 2 / 5 - Math.PI / 2; return <path key={i} d={`M${Math.cos(a) * s * .3} ${Math.sin(a) * s * .3} L${Math.cos(a) * s * .68} ${Math.sin(a) * s * .68}`} stroke={e.tinta} strokeWidth=".15" /> })}{brillo && <Brillo r={s * .7} id={brillo} />}</g></g>
   if (e.tipo === 'cono') return <g><ellipse cy={s * .8} rx={s} ry={s * .35} fill={e.color} stroke={e.tinta} strokeWidth=".15" /><path d={`M0 ${-s} L${s * .65} ${s * .7} Q0 ${s * 1.05} ${-s * .65} ${s * .7} Z`} fill={e.color} stroke={e.tinta} strokeWidth=".15" /><path d={`M${-s * .27} ${-s * .25} Q0 ${-s * .12} ${s * .27} ${-s * .25} L${s * .4} ${s * .12} Q0 ${s * .3} ${-s * .4} ${s * .12} Z`} fill="#FFFFFF" fillOpacity=".85" /><path d={`M0 ${-s * .9} L${s * .6} ${s * .7} Q${s * .25} ${s * .85} 0 ${s * .85} Z`} fill="#000000" fillOpacity=".13" /></g>
   if (e.tipo === 'tortuga') return <g><ellipse cy={s * .2} rx={s} ry={s * .4} fill={e.color} stroke={e.tinta} strokeWidth=".15" /><path d={`M${-s} ${s * .2} Q0 ${-s * 1.2} ${s} ${s * .2} Q0 ${s * .55} ${-s} ${s * .2}`} fill={e.color} stroke={e.tinta} strokeWidth=".15" /><ellipse cy={-s * .15} rx={s * .23} ry={s * .1} fill={e.tinta} /></g>
   if (['aro', 'circulo'].includes(e.tipo)) return <circle r={s} {...stroke} strokeWidth={e.tipo === 'aro' ? Math.max(.4, e.grosor) : e.grosor} />

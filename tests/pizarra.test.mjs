@@ -10,7 +10,7 @@ test('Pizarra versionada: todos los materiales, validacion y exclusión de clave
   const limpio = validarPizarra({ ...d, notas_internas: 'PRIVADO' })
   assert.equal(limpio.elementos.length, Object.keys(HERRAMIENTAS).length)
   assert.doesNotMatch(JSON.stringify(limpio), /PRIVADO/)
-  assert.throws(() => validarPizarra({ ...d, version: 2 }))
+  assert.throws(() => validarPizarra({ ...d, version: 3 }))
   assert.throws(() => validarPizarra({ ...d, pasos: [] }))
   assert.throws(() => validarPizarra({ ...d, elementos: [{ ...d.elementos[0], color: 'url(javascript:x)' }] }))
   assert.throws(() => validarPizarra({ ...d, pasos: [{ ...d.pasos[0], poses: {} }] }))
@@ -29,8 +29,10 @@ test('Secuencia mantiene identidades, pelota y materiales; interpola suavemente 
   assert.deepEqual(interpolar(d, 2).poses[c.id], primero.poses[c.id])
   assert.equal(interpolar(d, 2).poses[b.id].x, 47)
   assert.equal(d.elementos[0].numero, '1')
+  // Un paso armado a mano sin los campos v2 se completa con los valores por defecto; recargar no cambia nada.
   const recargada = validarPizarra(JSON.parse(JSON.stringify(d)))
-  assert.deepEqual(recargada, d)
+  assert.deepEqual(recargada.pasos[1], { ...d.pasos[1], texto: '', pausa: 0, pase: 'bajo', foco: null, ocultos: [] })
+  assert.deepEqual(validarPizarra(recargada), recargada)
   assert.ok(interpolar(d, .1).poses[j.id].x < 10 + 70 * .1 / 4)
 })
 

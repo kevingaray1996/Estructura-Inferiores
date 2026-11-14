@@ -1,4 +1,4 @@
-// Motor de animación de la pizarra (etapa A). Sólo lee el documento v1: no agrega campos.
+// Motor de animación de la pizarra (etapa A; pausas y pase alto de la etapa I).
 //
 // Recorridos:
 // - 'suave' (por defecto): jugadoras y pelota suelta recorren una curva que pasa por todos los pasos sin frenar
@@ -19,11 +19,40 @@ const anguloCorto = (a, b, t) => a + ((((b - a + 540) % 360) - 180) * t)
 // Alcance para considerar que la pelota está "pegada" a una jugadora, en metros de cancha.
 export function alcancePosesion(jugadora, pelota) { return jugadora.tamano + pelota.tamano * .7 + 1 }
 
-export function tiemposDePasos(doc) {
+// Tiempos del movimiento, sin pausas: cuándo se llega a cada paso si nadie se detiene.
+function tiemposDeMovimiento(doc) {
   const tiempos = [0]
   for (let i = 1; i < doc.pasos.length; i++) tiempos.push(tiempos[i - 1] + doc.pasos[i].duracion)
   return tiempos
 }
+
+// Línea de tiempo con pausas (etapa I): cada paso se alcanza en `llegadas[i]` y se queda quieto hasta `salidas[i]`.
+// La pausa del último paso también cuenta (sirve para que el video termine con la jugada quieta).
+const cronogramas = new WeakMap()
+export function cronograma(doc) {
+  if (cronogramas.has(doc)) return cronogramas.get(doc)
+  const llegadas = [], salidas = [], movimiento = tiemposDeMovimiento(doc)
+  let t = 0
+  doc.pasos.forEach((p, i) => { if (i) t += p.duracion; llegadas.push(t); t += p.pausa || 0; salidas.push(t) })
+  const c = { llegadas, salidas, movimiento, total: t }
+  cronogramas.set(doc, c)
+  return c
+}
+
+// Instante de la línea de tiempo → instante del movimiento. `paso`: el paso donde está detenido (pausa) o desde el
+// que sale (transición hacia `paso + 1`).
+export function enMovimiento(doc, tiempo) {
+  const c = cronograma(doc), t = Math.max(0, tiempo), n = doc.pasos.length
+  for (let i = 0; i < n; i++) {
+    if (t > c.salidas[i]) continue
+    if (t >= c.llegadas[i]) return { m: c.movimiento[i], paso: i, pausa: true }
+    return { m: c.movimiento[i] - (c.llegadas[i] - t), paso: i - 1, pausa: false, u: limitar(1 - (c.llegadas[i] - t) / doc.pasos[i].duracion, 0, 1) }
+  }
+  return { m: c.movimiento[n - 1], paso: n - 1, pausa: true }
+}
+
+// Momento en que se llega a cada paso en la línea de tiempo (con pausas).
+export function tiemposDePasos(doc) { return cronograma(doc).llegadas }
 
 // Para cada pelota y cada paso: id de la jugadora que la tiene (o null).
 export function posesiones(doc) {
@@ -76,7 +105,7 @@ export function planAnimacion(doc, recorrido = 'suave') {
   const cache = planes.get(doc) || {}
   if (cache[recorrido]) return cache[recorrido]
   const [w, h] = SUPERFICIES[doc.superficie]
-  const tiempos = tiemposDePasos(doc), duraciones = doc.pasos.map(p => p.duracion)
+  const tiempos = tiemposDeMovimiento(doc), duraciones = doc.pasos.map(p => p.duracion)
   const curvas = {}
   if (recorrido === 'suave' && doc.pasos.length > 2) {
     for (const e of doc.elementos) {
@@ -140,14 +169,35 @@ function poseEn(plan, id, k, u) {
   return { ...lugar, rotacion }
 }
 
-// Poses de todos los elementos en un instante de la animación.
-export function animar(doc, tiempo, recorrido = 'suave') {
+// Poses de todos los elementos en un instante de la línea de tiempo (con pausas).
+// `recorrido` por defecto es el guardado en el documento (v2) o 'suave'.
+export function animar(doc, tiempo, recorrido = doc.recorrido || 'suave') {
   if (doc.pasos.length < 2) return { indice: 0, poses: doc.pasos[0].poses }
+  const info = enMovimiento(doc, tiempo)
+  if (info.pausa) return { indice: info.paso, poses: doc.pasos[info.paso].poses }
   const plan = planAnimacion(doc, recorrido)
-  if (tiempo >= plan.total) return { indice: doc.pasos.length - 1, poses: doc.pasos.at(-1).poses }
-  const { k, u } = tramo(plan, tiempo)
+  const { k, u } = tramo(plan, info.m)
   if (u <= 0) return { indice: k, poses: doc.pasos[k].poses }
   return { indice: k, poses: Object.fromEntries(doc.elementos.map(e => [e.id, poseEn(plan, e.id, k, u)])) }
+}
+
+// Pase alto (etapa I): altura de la pelota (en metros) mientras vuela hacia un paso marcado "alto".
+// Sube y baja en parábola; la altura máxima crece con el largo del pase. La conducción nunca vuela.
+export function alturas(doc, tiempo, recorrido = doc.recorrido || 'suave') {
+  if (doc.pasos.length < 2) return {}
+  const info = enMovimiento(doc, tiempo)
+  if (info.pausa || doc.pasos[info.paso + 1]?.pase !== 'alto') return {}
+  const plan = planAnimacion(doc, recorrido), { k, u } = tramo(plan, info.m)
+  const salida = {}
+  for (const e of doc.elementos) {
+    if (e.tipo !== 'pelota') continue
+    const duena = plan.posesiones[e.id] || []
+    if (duena[k] && duena[k] === duena[k + 1]) continue
+    const a = poseEn(plan, e.id, k, 0), b = poseEn(plan, e.id, k, 1), largo = Math.hypot((b.x - a.x) * plan.w / 100, (b.y - a.y) * plan.h / 100)
+    if (largo < 3) continue
+    salida[e.id] = 4 * limitar(largo * .22, 1.5, 7) * u * (1 - u)
+  }
+  return salida
 }
 
 export const MODOS_RECORRIDO = ['estela', 'completo', 'oculto']
@@ -155,9 +205,11 @@ const MUESTRAS_POR_SEGUNDO = 24, VENTANA_ESTELA = 1.2, MAX_MUESTRAS = 240
 
 // Recorridos visibles: para cada jugadora o pelota que se movió, los puntos (en %) desde hace un rato
 // ('estela') o desde el principio ('completo') hasta el instante actual.
-export function estelas(doc, tiempo, modo = 'estela', recorrido = 'suave') {
+export function estelas(doc, tiempo, modo = 'estela', recorrido = doc.recorrido || 'suave') {
   if (modo === 'oculto' || doc.pasos.length < 2 || tiempo <= 0) return []
-  const plan = planAnimacion(doc, recorrido), fin = Math.min(tiempo, plan.total)
+  // La estela se mide en tiempo de movimiento: durante una pausa queda congelada.
+  const plan = planAnimacion(doc, recorrido), fin = Math.min(enMovimiento(doc, tiempo).m, plan.total)
+  if (fin <= 0) return []
   const inicio = modo === 'completo' ? 0 : Math.max(0, fin - VENTANA_ESTELA)
   const muestras = Math.max(2, Math.min(MAX_MUESTRAS, Math.ceil((fin - inicio) * MUESTRAS_POR_SEGUNDO) + 1))
   const ids = doc.elementos.filter(e => CURVAS.includes(e.tipo)).map(e => e.id)
@@ -274,12 +326,14 @@ export function flechasAutomaticas(doc, j) {
   const duenasAntes = duenasEnPaso(doc, j - 1), duenasAhora = duenasEnPaso(doc, j)
   const dibujadas = doc.elementos.filter(e => LINEAS.includes(e.tipo)).flatMap(e => [j - 1, j].map(s => extremosDibujada(doc, e, doc.pasos[s].poses[e.id])))
   const yaDibujada = (a, b) => dibujadas.some(([s, f]) => Math.hypot(s[0] - a[0], s[1] - a[1]) <= TOLERANCIA_DIBUJADA && Math.hypot(f[0] - b[0], f[1] - b[1]) <= TOLERANCIA_DIBUJADA)
+  // Pase alto (etapa I): el paso de llegada lo marca; la flecha del pase se dibuja curva, de otro color y con sombra.
+  const alto = doc.pasos[j].pase === 'alto'
   const flecha = (id, tipo, color, origen, destino, r0, r1) => {
     const a = metros(doc, origen), b = metros(doc, destino), largo = Math.hypot(b[0] - a[0], b[1] - a[1])
     if (largo < UMBRAL_MOVIMIENTO || yaDibujada(a, b) || largo - r0 - r1 < 1.5) return []
     const ux = (b[0] - a[0]) / largo, uy = (b[1] - a[1]) / largo
     const inicio = porcentaje(doc, [a[0] + ux * r0, a[1] + uy * r0]), fin = porcentaje(doc, [b[0] - ux * r1, b[1] - uy * r1])
-    return [{ id: `auto-${tipo}-${id}`, tipo, color, x: inicio.x, y: inicio.y, dx: fin.x - inicio.x, dy: fin.y - inicio.y }]
+    return [{ id: `auto-${tipo}-${id}`, tipo, color, x: inicio.x, y: inicio.y, dx: fin.x - inicio.x, dy: fin.y - inicio.y, ...(tipo === 'pase' && alto ? { alto: true } : {}) }]
   }
   const conduce = id => Object.keys(duenasAntes).some(b => duenasAntes[b] === id && duenasAhora[b] === id)
   return doc.elementos.flatMap(e => {

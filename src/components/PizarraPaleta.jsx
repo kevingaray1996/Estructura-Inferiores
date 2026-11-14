@@ -7,14 +7,14 @@ const GRUPOS = {
   Jugadoras: ['jugadora', 'rival'],
   Materiales: ['pelota', 'cono', 'tortuga', 'escalera', 'valla', 'pica', 'aro', 'arco', 'mini'],
   Movimientos: ['flecha', 'curva', 'punteada', 'conduccion', 'pase', 'movimiento', 'remate'],
-  Dibujo: ['zona', 'rectangulo', 'circulo', 'texto'],
+  Dibujo: ['sombra', 'zona', 'rectangulo', 'circulo', 'texto'],
   Canchas: [],
 }
 
 // Ícono de una herramienta (también lo usa la barra rápida del editor).
 export function IconoHerramienta({ id }) {
   const { tipo, extra } = plantillaHerramienta(id), esLinea = LINEAS.includes(tipo)
-  const e = { tipo, tamano: tipo === 'pelota' ? 8 : tipo === 'jugadora' ? 7 : 5, color: tipo === 'pelota' ? PALETA.pelota : tipo === 'jugadora' ? PALETA.local : esLinea ? PALETA.trazo : PALETA.material, tinta: PALETA.tinta, grosor: .6, numero: tipo === 'jugadora' ? '10' : '', texto: tipo === 'texto' ? 'ABC' : '', dx: 22, dy: 0, curva: 5, ...extra }
+  const e = { tipo, tamano: tipo === 'pelota' ? 8 : tipo === 'jugadora' ? 7 : 5, color: tipo === 'pelota' ? PALETA.pelota : tipo === 'sombra' ? PALETA.sombra : tipo === 'jugadora' ? PALETA.local : esLinea ? PALETA.trazo : PALETA.material, tinta: PALETA.tinta, grosor: .6, numero: tipo === 'jugadora' ? '10' : '', texto: tipo === 'texto' ? 'ABC' : '', dx: 22, dy: 0, curva: 5, puntos: [{ x: -9, y: -6 }, { x: 8, y: -8 }, { x: 9, y: 6 }, { x: -7, y: 7 }], ...extra }
   return <svg viewBox={esLinea ? '-4 -12 34 24' : ['arco', 'mini'].includes(tipo) ? '-12 -8 26 12' : '-12 -12 24 24'} aria-hidden="true" focusable="false"><PizarraObjeto e={e} ancho={100} alto={100} /></svg>
 }
 

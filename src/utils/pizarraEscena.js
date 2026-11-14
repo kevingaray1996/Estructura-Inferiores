@@ -7,9 +7,10 @@
 import { LINEAS, PALETA, SUPERFICIES } from './pizarra.js'
 
 // Capas de dibujo, de abajo hacia arriba. Un motor 3D las puede ignorar (usa z) o respetar para superposiciones.
-export const CAPAS = { linea: 0, material: 1, jugadora: 2, pelota: 3, texto: 4 }
+export const CAPAS = { zona: -1, linea: 0, material: 1, jugadora: 2, pelota: 3, texto: 4 }
 
 function capa(tipo) {
+  if (tipo === 'sombra') return CAPAS.zona
   if (LINEAS.includes(tipo)) return CAPAS.linea
   if (tipo === 'jugadora') return CAPAS.jugadora
   if (tipo === 'pelota') return CAPAS.pelota

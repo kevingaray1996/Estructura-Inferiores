@@ -240,6 +240,11 @@
   --pizarra-relieve: #000000;
   --pizarra-ficha-sombra: #000000;
   --pizarra-fuente: var(--fuente-titulo);
+  /* Explicar (etapa I): pase alto, foco y subtítulos. Directos para que el PNG y el video los resuelvan igual. */
+  --pizarra-pase-alto: #ffd23f;
+  --pizarra-foco: #ffd23f;
+  --pizarra-subtitulo-fondo: rgba(11, 11, 10, .78);
+  --pizarra-subtitulo-texto: #ffffff;
 }
 
 /* Equivalentes claros de los mismos tokens. El tema de pantalla nunca cambia
