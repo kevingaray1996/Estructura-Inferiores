@@ -158,3 +158,34 @@ test('etapa C: la base devuelve igual una pizarra v2 armada por la app (etapa I)
     assert.deepEqual(deLaBase, limpio)
   } finally { await db.close() }
 })
+
+test('Biblioteca (D + G): la base acepta el set inicial y un ejercicio de gimnasio como los manda la pantalla, con permisos por ámbito', async () => {
+  const { SET_INICIAL } = await import('../src/utils/bibliotecaInicial.js')
+  const { datosParaGuardar } = await import('../src/utils/biblioteca.js')
+  const db = await crearBase()
+  try {
+    await db.exec(cambio)
+    const carpeta = async nombre => (await db.query('select id from public.biblioteca_carpetas where nombre = $1', [nombre])).rows[0].id
+    // Como como(), pero confirmando: lo cargado queda para los pasos siguientes.
+    const guardando = async (sub, email, sql) => { await db.exec('BEGIN'); try { await db.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ sub, email, role: 'authenticated' })]); await db.exec('SET LOCAL ROLE authenticated'); const r = await db.query(sql); await db.exec('COMMIT'); return r } catch (e) { await db.exec('ROLLBACK'); throw e } }
+    const rpc = (sub, email, datos, id = null, revision = null) => guardando(sub, email, `select public.guardar_ejercicio_pizarra(${id ? `'${id}'` : 'null'}, ${revision ?? 'null'}, '${JSON.stringify(datos).replace(/'/g, "''")}'::jsonb) d`)
+    for (const j of SET_INICIAL) {
+      const d = await rpc(U.tec, 'tec@club.test', { ambito: 'cancha', tipo: 'jugada', carpeta_id: await carpeta(j.carpeta), contenido: j.contenido, descripcion: j.descripcion,
+        objetivo: j.objetivo, duracion_minutos: j.duracion_minutos, cantidad_jugadores: j.cantidad_jugadores, pizarra: j.pizarra, pizarra_miniatura: '' })
+      assert.deepEqual(d.rows[0].d.pizarra, j.pizarra, `${j.contenido}: la pizarra vuelve igual`)
+    }
+    const gimnasio = datosParaGuardar({ ambito: 'gimnasio', carpeta_id: await carpeta('Core'), contenido: 'Plancha', descripcion: 'Isométrico', musculos: ['Core'], material: ['Peso corporal'],
+      tecnica: 'Cadera alineada', demo_tipo: 'youtube', demo_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', demo_credito: 'Canal X', duracion_minutos: '5' })
+    const pf = (await rpc(U.pf, 'pf@club.test', gimnasio)).rows[0].d
+    assert.equal(pf.ambito, 'gimnasio'); assert.deepEqual(pf.musculos, ['Core']); assert.equal(pf.demo_tipo, 'youtube')
+    await assert.rejects(rpc(U.tec, 'tec@club.test', gimnasio), e => e.code === '42501', 'el técnico no carga gimnasio')
+    await assert.rejects(rpc(U.pf, 'pf@club.test', { ...gimnasio, ambito: 'cancha', musculos: [], material: [], tecnica: '', demo_tipo: null, demo_url: null, demo_credito: '' }), e => e.code === '42501', 'el PF no carga cancha')
+    // Editar sin mandar carpeta ni tipo no los borra (el editor de pizarra viejo no los manda).
+    const salida = (await db.query(`select id, pizarra_revision, carpeta_id from public.biblioteca where contenido = 'Salida con 3'`)).rows[0]
+    const editado = (await rpc(U.tec, 'tec@club.test', { contenido: 'Salida con 3', descripcion: 'Otra consigna', pizarra: SET_INICIAL[0].pizarra }, salida.id, salida.pizarra_revision)).rows[0].d
+    assert.equal(editado.carpeta_id, salida.carpeta_id); assert.equal(editado.tipo, 'jugada')
+    // Favoritos y carpetas con usuarios reales.
+    await como(db, U.tec, 'tec@club.test', `insert into public.biblioteca_favoritos (biblioteca_id) values ('${salida.id}')`)
+    assert.equal((await db.query('select count(*)::int n from public.biblioteca_favoritos')).rows[0].n, 0, 'como() deshace: la prueba no deja datos')
+  } finally { await db.close() }
+})

@@ -54,7 +54,7 @@ test('Accesos Calendario: Inicio, orden por rol, menú compacto y móvil, sin du
       if (rol === 'medico') continue
       // Calendario y Entrenamientos quedan juntos en el grupo Planificación, después de Partidos.
       assert.ok(botones.indexOf('Partidos') < botones.indexOf('Calendario'))
-      assert.equal(botones[botones.indexOf('Calendario') + 1], 'Entrenamientos')
+      assert.equal(botones[botones.indexOf('Calendario') + 1], 'Biblioteca')
       const menu = document.querySelector('[role="dialog"]')
       assert.ok(!menu.classList.contains('abierto'))
       await click(document.querySelector('[aria-label="Abrir secciones"]'))

@@ -78,9 +78,10 @@ test('Auditoría 1 y 2: Médico consulta sin Físico/offline; categoría PF, acc
     for(const categoria_id of [null,cat]){
       perfil={...perfil,rol:'preparador_fisico',categoria_id}
       await render(ConTema)
-      assert.equal(!!document.querySelector('nav button[aria-label="Planificación semanal"]'),!!categoria_id)
-      await click(document.querySelector('nav button[aria-label="Entrenamientos"]'))
-      assert.equal(!!boton('Planificación semanal'),!!categoria_id)
+      // Menú: "Biblioteca" (antes Entrenamientos) y "Entrenamientos" (antes Planificación semanal).
+      assert.equal(!!document.querySelector('nav button[aria-label="Entrenamientos"]'),!!categoria_id)
+      await click(document.querySelector('nav button[aria-label="Biblioteca"]'))
+      assert.equal(!!boton('▦ Entrenamientos'),!!categoria_id)
     }
     const {default:Asistencia}=await server.ssrLoadModule('/src/components/AsistenciaSection.jsx')
     await render(Asistencia,{perfil,fechaInicial:'2026-10-30',categoriaInicial:otra,onVerPlanificacion(){}})

@@ -19,7 +19,7 @@ import PsicologiaSection from './components/PsicologiaSection'
 import VideoSection from './components/VideoSection'
 import AnalisisSection from './components/AnalisisSection'
 import PartidosSection from './components/PartidosSection'
-import EntrenamientosSection from './components/EntrenamientosSection'
+import BibliotecaSection from './components/BibliotecaSection'
 import UsuariosSection from './components/UsuariosSection'
 import PaseCategoriaSection from './components/PaseCategoriaSection'
 import BuscadorGlobal from './components/BuscadorGlobal'
@@ -313,7 +313,8 @@ function App() {
         />
       )}
 
-      {seccion === 'entrenamientos' && <EntrenamientosSection onPlanificar={puedePlanificar(perfil) ? () => { setContextoPlanificacion(null); setSeccion('planificacion') } : undefined} />}
+      {/* 'entrenamientos' es la Biblioteca (etapas D + G); 'planificacion' se muestra como Entrenamientos. */}
+      {seccion === 'entrenamientos' && <BibliotecaSection perfil={perfil} onPlanificar={puedePlanificar(perfil) ? () => { setContextoPlanificacion(null); setSeccion('planificacion') } : undefined} />}
 
       {seccion === 'planificacion' && <PlanificacionSection perfil={perfil} fechaInicial={contextoPlanificacion?.fecha} categoriaInicial={contextoPlanificacion?.categoriaId} sesionInicialId={contextoPlanificacion?.sesionId}
         onVerAsistencia={(fecha, categoriaId) => { setContextoAsistencia({ fecha, categoriaId }); setSeccion('asistencia') }} />}
