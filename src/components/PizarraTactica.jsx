@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import PizarraCancha from './PizarraCancha'
 import PizarraMenuAgregar, { IconoHerramienta } from './PizarraPaleta'
 import PizarraLineaTiempo from './PizarraLineaTiempo'
@@ -83,6 +83,37 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
   const [cw, ch] = SUPERFICIES[vista.superficie]
   const pxPorUnidad = medida ? Math.min(medida.w / ((vertical ? ch : cw) + 6), medida.h / ((vertical ? cw : ch) + 6)) : 0
   const toque = pxPorUnidad ? limitar(TOQUE_PX / (pxPorUnidad * zoom), 1.2, 9) : 3
+  // Tamaño de la cancha: lo más grande posible en su proporción (con el margen de 3 m del dibujo), según el espacio libre.
+  // En la compu: alto del cuerpo menos la reproducción, y ancho menos la columna de pasos (que se queda con lo que sobra).
+  // En el celular (una columna): todo el ancho y un alto que deje a la vista la reproducción y la fila de pasos.
+  const aspecto = ((vertical ? ch : cw) + 6) / ((vertical ? cw : ch) + 6)
+  const cuerpo = useRef(null), cajaLinea = useRef(null)
+  const [tamano, setTamano] = useState(null)
+  useLayoutEffect(() => {
+    const nodo = cuerpo.current
+    if (!nodo || typeof ResizeObserver === 'undefined') return
+    const calcular = () => {
+      const ancho = nodo.clientWidth, alto = nodo.clientHeight, linea = cajaLinea.current?.offsetHeight || 0
+      if (!ancho) return
+      const columna = soloLectura || window.innerWidth <= 750
+      const separacion = 8, lateralMinimo = ancho >= 1500 ? 340 : 300
+      const altoLibre = columna
+        // Visor: que entren la reproducción y los pasos debajo, sin bajar (desde donde arranca el cuerpo en la pantalla).
+        ? (soloLectura ? Math.max(240, window.innerHeight - nodo.getBoundingClientRect().top - linea - (nodo.querySelector('.pizarra-lateral')?.offsetHeight || 0) - 3 * separacion - 16)
+          : Math.max(300, window.innerHeight - (window.innerWidth <= 750 ? 248 : 200)))
+        : alto - linea - separacion
+      const anchoLibre = columna ? ancho : ancho - lateralMinimo - separacion
+      const w = Math.max(160, Math.floor(Math.min(anchoLibre, altoLibre * aspecto)))
+      const h = Math.floor(w / aspecto)
+      setTamano(t => t && t.w === w && t.h === h && t.columna === columna ? t : { w, h, columna })
+    }
+    const observador = new ResizeObserver(calcular)
+    observador.observe(nodo)
+    if (cajaLinea.current) observador.observe(cajaLinea.current)
+    window.addEventListener('resize', calcular)
+    calcular()
+    return () => { observador.disconnect(); window.removeEventListener('resize', calcular) }
+  }, [aspecto, soloLectura])
 
   useEffect(() => {
     if (!sucio || soloLectura) return
@@ -445,9 +476,9 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
     </header>
     {error && <p role="alert" className="pizarra-error">{error}</p>}
     {soloLectura && <div className="pizarra-fila">{zoomControl}<button type="button" onClick={ajustarVista}>Ajustar vista</button></div>}
-    <div className="pizarra-cuerpo">
-      <div className="pizarra-escenario">
-        <div className={`pizarra-lienzo ${plantillaActiva ? 'pizarra-colocando' : ''}`}>
+    <div ref={cuerpo} className={`pizarra-cuerpo${tamano ? ' pizarra-medida' : ''}`} style={tamano && !tamano.columna ? { gridTemplateColumns: `${tamano.w}px minmax(0, 1fr)` } : undefined}>
+      <div className="pizarra-escenario" style={tamano?.columna ? { alignItems: 'center' } : undefined}>
+        <div className={`pizarra-lienzo ${plantillaActiva ? 'pizarra-colocando' : ''}`} style={tamano ? { width: tamano.w, height: tamano.h } : undefined}>
           <PizarraCancha ref={svg} doc={vista} poses={poses} estelas={estelas} modoEstela={modoEstela} automaticas={automaticas} fantasmas={fantasmas} pegadas={pegadas} iman={iman} seleccion={soloLectura ? [] : seleccion} zoom={zoom} pan={pan} caja={caja} toque={toque} arrastrando={arrastrando} giro={forzarVertical ? -90 : 90}
             alturas={alturas} opacidades={opacidades} foco={foco} camara={camara} verOcultos={!soloLectura && !animando}
             onElemento={soloLectura ? undefined : iniciar} onExtremo={soloLectura ? undefined : iniciarExtremo} onVertice={soloLectura ? undefined : iniciarVertice} onFondo={fondo} onPointerDownCapture={registrarPuntero}
@@ -465,11 +496,11 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
           {zoom !== 1 && <button type="button" className="pizarra-flotante pizarra-ajustar" onClick={ajustarVista}>Ajustar vista</button>}
           {aviso && <div className="pizarra-flotante pizarra-aviso" role="status"><span>{aviso}</span><button type="button" onClick={() => historialAccion('deshacer')}>Deshacer</button></div>}
         </div>
-        <PizarraLineaTiempo doc={doc} indice={indice} indiceVisible={indiceVisible} animando={animando} tiempo={tiempo} total={total} tiempos={tiempos}
+        <div ref={cajaLinea} className="pizarra-caja-linea" style={tamano ? { width: tamano.w, maxWidth: '100%' } : undefined}><PizarraLineaTiempo doc={doc} indice={indice} indiceVisible={indiceVisible} animando={animando} tiempo={tiempo} total={total} tiempos={tiempos}
           reproduciendo={reproduciendo} velocidad={velocidad} bucle={bucle} soloLectura={soloLectura} bloqueado={bloqueado}
           onReproducir={alternarReproduccion} onPaso={elegirPaso} onAnterior={pasoAnterior} onSiguiente={pasoSiguiente} onBuscar={buscar}
           onVelocidad={v => { setVelocidad(v); ajustar({ ...doc, velocidad: v }) }} onBucle={b => { setBucle(b); ajustar({ ...doc, bucle: b }) }}
-          vista={preferencias} onVista={cambiarVista} recorrido={doc.recorrido} onRecorrido={r => ajustar({ ...doc, recorrido: r })} />
+          vista={preferencias} onVista={cambiarVista} recorrido={doc.recorrido} onRecorrido={r => ajustar({ ...doc, recorrido: r })} /></div>
       </div>
       <aside className="pizarra-lateral">{pasos}</aside>
     </div>

@@ -47,10 +47,14 @@
 .pizarra-cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) clamp(260px, 19vw, 340px); gap: .6rem; min-height: 0; }
 .pizarra-editor .pizarra-cuerpo { flex: 1; }
 .pizarra-escenario { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: .45rem; }
-.pizarra-lateral { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.pizarra-lateral { min-width: 0; min-height: 0; display: flex; flex-direction: column; container-type: inline-size; }
 /* Marco de la cancha: ocupa todo el alto disponible; la cancha se ajusta adentro sin deformarse. */
 .pizarra-lienzo { position: relative; min-width: 0; min-height: 0; background: var(--pizarra-cesped); border: 1px solid var(--ui-borde); border-radius: .75rem; overflow: hidden; box-shadow: 0 10px 28px var(--pizarra-sombra); }
 .pizarra-editor .pizarra-lienzo { flex: 1; }
+/* Con la medida calculada (JS), el recuadro tiene exactamente la proporción de la cancha: sin verde vacío. */
+.pizarra-medida .pizarra-lienzo, .pizarra-editor .pizarra-medida .pizarra-lienzo { flex: none; max-width: 100%; }
+.pizarra-medida .pizarra-escenario { align-self: start; }
+.pizarra-caja-linea { min-width: 0; }
 .pizarra-cancha { display: block; width: 100%; height: 100%; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .pizarra-visor .pizarra-lienzo { height: min(68dvh, 620px); }
 .pizarra-colocando .pizarra-cancha { cursor: crosshair; }
@@ -128,7 +132,8 @@
 
 /* Pasos: en la compu, lista vertical a la derecha con el panel del paso debajo. */
 .pizarra-pasos { min-height: 0; flex: 1; display: flex; flex-direction: column; gap: .5rem; }
-.pizarra-chips { display: flex; flex-direction: column; gap: .35rem; flex: 1 1 auto; min-height: 120px; overflow-y: auto; padding: .4rem .45rem .4rem .2rem; scrollbar-width: thin; }
+/* Si la columna queda ancha (media cancha o vertical), los chips se acomodan en grilla. */
+.pizarra-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); align-content: start; gap: .35rem; flex: 1 1 auto; min-height: 120px; overflow-y: auto; padding: .4rem .45rem .4rem .2rem; scrollbar-width: thin; }
 .pizarra-chip-caja { position: relative; flex: none; }
 .pizarra .pizarra-chip { width: 100%; display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; column-gap: .45rem; padding: .3rem 2.1rem .3rem .45rem; text-align: left; min-height: 52px; }
 .pizarra-chip b { grid-row: 1 / span 2; font-family: var(--fuente-titulo); font-size: 1.75rem; line-height: 1; text-align: center; }
@@ -153,13 +158,20 @@
 .pizarra-paso-pase { display: flex; flex-direction: column; gap: .2rem; }
 .pizarra-paso-pase button { flex: 1; font-size: .8rem; }
 
+/* Columna de pasos ancha (media cancha, vertical): chips a la izquierda y panel del paso al lado, con ancho fijo. */
+@container (min-width: 760px) {
+  .pizarra-editor .pizarra-pasos { flex-direction: row; align-items: stretch; }
+  .pizarra-editor .pizarra-chips { flex: 1 1 auto; min-height: 0; }
+  .pizarra-editor .pizarra-paso-panel { width: 400px; align-self: flex-start; }
+}
+
 /* Subtítulo sobre la cancha. */
 .pizarra-subtitulo { position: absolute; z-index: 1; left: 50%; bottom: .9rem; transform: translateX(-50%); width: max-content; max-width: calc(100% - 1.5rem); margin: 0; padding: .4rem .8rem; border-radius: .5rem; background: var(--pizarra-subtitulo-fondo); color: var(--pizarra-subtitulo-texto); font-family: var(--pizarra-fuente); font-size: clamp(.8rem, 2.4vw, 1.15rem); font-weight: 700; line-height: 1.3; text-align: center; pointer-events: none; text-wrap: balance; }
 .pizarra:fullscreen { overflow: auto; }
 
 /* Visor (Wellness): cancha arriba y pasos debajo. */
 .pizarra-visor .pizarra-cuerpo { grid-template-columns: minmax(0, 1fr); }
-.pizarra-visor .pizarra-chips { flex-direction: row; max-height: none; overflow-x: auto; overflow-y: hidden; padding: .3rem 0; }
+.pizarra-visor .pizarra-chips { display: flex; flex-direction: row; max-height: none; overflow-x: auto; overflow-y: hidden; padding: .3rem 0; }
 .pizarra-visor .pizarra-chip-caja { flex: 0 0 auto; max-width: 180px; }
 .pizarra-visor .pizarra-chip { padding-right: .6rem; }
 
@@ -193,7 +205,7 @@
   .pizarra-transporte .pizarra-icono[aria-label="Ir al primer paso"], .pizarra-transporte .pizarra-icono[aria-label="Ir al último paso"] { display: none; }
   .pizarra-tiempo { font-size: .72rem; margin: 0 .1rem; }
   /* Pasos en fila deslizable; el panel del paso queda justo debajo. */
-  .pizarra-chips { flex: none; min-height: 0; align-items: flex-start; flex-direction: row; max-height: none; overflow-x: auto; overflow-y: hidden; padding: .35rem .1rem .25rem .1rem; scrollbar-width: none; touch-action: pan-x; }
+  .pizarra-chips { display: flex; flex: none; min-height: 0; align-items: flex-start; flex-direction: row; max-height: none; overflow-x: auto; overflow-y: hidden; padding: .35rem .1rem .25rem .1rem; scrollbar-width: none; touch-action: pan-x; }
   .pizarra-chips::-webkit-scrollbar { display: none; }
   .pizarra-chip-caja { flex: 0 0 auto; width: 132px; }
   .pizarra .pizarra-chip { min-height: 50px; grid-template-columns: 1.9rem minmax(0, 1fr); padding-right: 1.9rem; }
