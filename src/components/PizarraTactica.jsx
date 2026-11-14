@@ -12,11 +12,15 @@ import './pizarra.css'
 
 const UMBRAL_PX = 4, TOQUE_PX = 22
 const RETRATO = '(orientation: portrait) and (max-width: 750px)'
+const MOVIL = '(max-width: 750px)'
+const DOBLE_TOQUE_MS = 400
 
 function consulta(q) { return typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia(q) : null }
 function suscribir(q) { return cb => { const m = consulta(q); m?.addEventListener?.('change', cb); return () => m?.removeEventListener?.('change', cb) } }
 const suscribirRetrato = suscribir(RETRATO)
 const esRetrato = () => !!consulta(RETRATO)?.matches
+const suscribirMovil = suscribir(MOVIL)
+const esMovil = () => !!consulta(MOVIL)?.matches
 
 // Preferencias de vista de cada dispositivo (no son del ejercicio). El movimiento suave o recto sí es del ejercicio:
 // se guarda en el documento v2.
@@ -43,6 +47,20 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
   const [aviso, setAviso] = useState(null), [fantasma, setFantasma] = useState(null), [medida, setMedida] = useState(null)
   // Vista vertical automática en celular vertical: sólo cambia cómo se ve, no la orientación guardada.
   const retrato = useSyncExternalStore(suscribirRetrato, esRetrato, () => false)
+  // Celular: un toque solo selecciona; las opciones se abren con doble toque (o con "⋯") en una hoja compacta.
+  // En la compu el panel aparece apenas se selecciona algo.
+  const movil = useSyncExternalStore(suscribirMovil, esMovil, () => false)
+  // La hoja queda abierta para una selección concreta: si cambia (otro elemento o nada), se cierra sola.
+  const [hojaDe, setHojaDe] = useState(null)
+  const ultimoToque = useRef(null)
+  const claveSeleccion = seleccion.join(), hoja = hojaDe !== null && hojaDe.clave === claveSeleccion
+  // Si lo elegido está en la mitad de abajo de la cancha, la hoja se abre arriba para no taparlo.
+  function setHoja(abierta) {
+    if (!abierta) { setHojaDe(null); return }
+    const nodo = svg.current?.querySelector(`[data-elemento="${seleccion[0]}"]`), lienzo = svg.current?.getBoundingClientRect()
+    const r = nodo?.getBoundingClientRect?.()
+    setHojaDe({ clave: claveSeleccion, arriba: !!(r && lienzo && lienzo.height && r.top + r.height / 2 > lienzo.top + lienzo.height / 2) })
+  }
   const svg = useRef(null), svgExportar = useRef(null), raiz = useRef(null), arrastre = useRef(null), reloj = useRef(0), ultimo = useRef(0)
   const punteros = useRef(new Map()), gesto = useRef(null), cuadro = useRef(0), pendiente = useRef(null), barra = useRef(null), temporizador = useRef(0), manejadoresMenu = useRef({})
   const indice = Math.min(paso, doc.pasos.length - 1), sucio = JSON.stringify(doc) !== guardado
@@ -128,6 +146,12 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
     observador.observe(nodo)
     return () => observador.disconnect()
   }, [])
+  useEffect(() => {
+    if (!hoja) return
+    const fuera = e => { if (!e.target.closest?.('.pizarra-propiedades')) setHojaDe(null) }
+    document.addEventListener('pointerdown', fuera, true)
+    return () => document.removeEventListener('pointerdown', fuera, true)
+  }, [hoja])
   useEffect(() => () => { window.clearTimeout(temporizador.current); cancelAnimationFrame(cuadro.current); barra.current?.quitar?.() }, [])
   useEffect(() => {
     if (!reproduciendo) return
@@ -214,7 +238,7 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
     setSeleccion(ids)
     // La pelota que tiene una jugadora arrastrada la acompaña (salvo que también esté seleccionada).
     const acompanan = pelotasDe(doc, indice, ids).filter(b => !ids.includes(b))
-    capturar(e, { tipo: 'mover', inicio: punto(e), ids, acompanan })
+    capturar(e, { tipo: 'mover', inicio: punto(e), ids, acompanan, tocado: id })
   }
   function iniciarExtremo(e, id, extremo) {
     if (bloqueado || e.button !== 0 || gesto.current) return
@@ -297,6 +321,12 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
         // Textos y zonas quedan en el mismo lugar en todos los pasos.
         cambiar(a.tipo === 'mover' ? fijarAnotaciones(imanPelotas(a.final, indice, a.ids), indice) : a.final)
       }
+      // Doble toque sobre el mismo elemento (sin arrastrar): abre las opciones en el celular.
+      if (a.tipo === 'mover' && !a.activo && a.tocado) {
+        const ahora = performance.now(), previo = ultimoToque.current
+        if (previo && previo.id === a.tocado && ahora - previo.t < DOBLE_TOQUE_MS) { setHoja(true); ultimoToque.current = null }
+        else ultimoToque.current = { id: a.tocado, t: ahora }
+      } else ultimoToque.current = null
       if (a.tipo === 'caja' && a.activo && a.fin) setSeleccion(doc.elementos.filter(el => { const p = doc.pasos[indice].poses[el.id]; return p.x >= Math.min(a.inicio.x, a.fin.x) && p.x <= Math.max(a.inicio.x, a.fin.x) && p.y >= Math.min(a.inicio.y, a.fin.y) && p.y <= Math.max(a.inicio.y, a.fin.y) }).map(el => el.id))
     }
     arrastre.current = null; setBorrador(null); setCaja(null); setArrastrando(null)
@@ -489,9 +519,10 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
             <IconoHerramienta id={herramienta} /><span>{LINEAS.includes(plantillaActiva.tipo) ? `${plantillaActiva.nombre}: arrastrá de la salida al destino` : `${plantillaActiva.nombre}: tocá la cancha para colocar`}</span>
             <button type="button" onClick={() => setHerramienta('seleccionar')}>Listo</button>
           </div>}
-          {!soloLectura && !animando && !menu && <PizarraPropiedades elegido={elegido} cantidad={seleccion.length} foco={elegido && enPaso.foco === elegido.id} oculto={ocultosEnPaso}
+          {!soloLectura && !animando && !menu && movil && elegido && !hoja && <button type="button" className="pizarra-flotante pizarra-opciones" aria-label="Opciones del elemento" title="Opciones (o doble toque sobre el elemento)" onClick={() => setHoja(true)}>⋯</button>}
+          {!soloLectura && !animando && !menu && (!movil || hoja) && <PizarraPropiedades arriba={movil && hojaDe?.arriba} elegido={elegido} cantidad={seleccion.length} foco={elegido && enPaso.foco === elegido.id} oculto={ocultosEnPaso}
             propiedad={propiedad} onGirar={() => rotar(((doc.pasos[indice].poses[elegido.id].rotacion + 195) % 360) - 180)} onDuplicar={duplicar} onBorrar={borrar}
-            onPegarPelota={pegarPelotaAElegida} onFoco={() => cambiar(alternarFoco(doc, indice, elegido.id))} onOcultar={() => cambiar(alternarOcultos(doc, indice, seleccion))} onCerrar={() => setSeleccion([])} />}
+            onPegarPelota={pegarPelotaAElegida} onFoco={() => cambiar(alternarFoco(doc, indice, elegido.id))} onOcultar={() => cambiar(alternarOcultos(doc, indice, seleccion))} onCerrar={() => movil ? setHoja(false) : setSeleccion([])} />}
           {textoPaso && <p className="pizarra-subtitulo" aria-live="polite">{textoPaso}</p>}
           {zoom !== 1 && <button type="button" className="pizarra-flotante pizarra-ajustar" onClick={ajustarVista}>Ajustar vista</button>}
           {aviso && <div className="pizarra-flotante pizarra-aviso" role="status"><span>{aviso}</span><button type="button" onClick={() => historialAccion('deshacer')}>Deshacer</button></div>}

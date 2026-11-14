@@ -222,17 +222,22 @@
   .pizarra .pizarra-agregar { top: .4rem; left: .4rem; width: 48px; height: 48px; padding: 0; justify-content: center; font-size: 1.4rem; }
   .pizarra .pizarra-agregar span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   /* Propiedades: hoja compacta pegada abajo de la cancha. */
-  .pizarra-propiedades { top: auto; bottom: .35rem; left: .35rem; right: .35rem; width: auto; max-height: 44%; gap: .35rem; padding: .35rem .45rem .45rem; }
+  /* Hoja de opciones (doble toque): compacta, pegada abajo. */
+  .pizarra-propiedades { top: auto; bottom: .3rem; left: .3rem; right: .3rem; width: auto; max-height: 40%; gap: .3rem; padding: .3rem .4rem .4rem; border-radius: .7rem; }
+  .pizarra-propiedades.pizarra-propiedades-arriba { top: 3.6rem; bottom: auto; }
+  .pizarra-propiedades header { min-height: 0; }
+  .pizarra-propiedades label { font-size: .72rem; gap: .1rem; }
+  .pizarra .pizarra-opciones { right: .45rem; bottom: .45rem; width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 50%; font-size: 1.3rem; line-height: 1; background: var(--ui-superficie); color: var(--ui-texto); border: 1px solid var(--ui-acento); }
   .pizarra-propiedades header strong { font-size: .82rem; }
   .pizarra-propiedades header .pizarra-icono { min-height: 36px; min-width: 36px; }
   .pizarra-propiedades-icono { display: none; }
   .pizarra-propiedades-campos { gap: .3rem .4rem; }
   .pizarra-propiedades-campos input:not([type]), .pizarra-propiedades-campos select { min-height: 36px; }
-  .pizarra .pizarra-muestra { width: 28px; min-width: 28px; height: 28px; min-height: 28px; }
+  .pizarra .pizarra-muestra { width: 26px; min-width: 26px; height: 26px; min-height: 26px; }
   .pizarra-propiedades .pizarra-grupo button { min-height: 36px; min-width: 40px; }
   .pizarra-propiedades-acciones { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .pizarra-propiedades-acciones::-webkit-scrollbar { display: none; }
-  .pizarra-propiedades-acciones button { flex: none; min-height: 40px; }
+  .pizarra-propiedades-acciones button { flex: none; min-height: 38px; padding: .25rem .5rem; }
   .pizarra-colocando-aviso { top: .45rem; left: auto; right: .4rem; transform: none; max-width: calc(100% - 7.5rem); }
   .pizarra-aviso { top: auto; bottom: .5rem; }
   .pizarra-subtitulo { top: 1.7rem; bottom: auto; max-width: calc(100% - 7.5rem); font-size: .82rem; padding: .3rem .6rem; }

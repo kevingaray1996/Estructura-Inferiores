@@ -92,3 +92,56 @@ test('Pasos a la vista: eliminar con deshacer, duplicar, reordenar arrastrando y
     for (const [n, p] of previos) { if (p) Object.defineProperty(globalThis, n, p); else delete globalThis[n] }
   }
 })
+
+test('Celular: un toque solo selecciona; doble toque abre las opciones; ✕ y tocar fuera las cierran; arrastrar no las abre', async () => {
+  const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', { url: 'http://localhost' })
+  const previos = new Map()
+  function global(nombre, valor) { previos.set(nombre, Object.getOwnPropertyDescriptor(globalThis, nombre)); Object.defineProperty(globalThis, nombre, { value: valor, configurable: true, writable: true }) }
+  for (const nombre of ['window', 'document', 'HTMLElement', 'SVGElement', 'Event', 'MouseEvent', 'KeyboardEvent']) global(nombre, dom.window[nombre])
+  global('IS_REACT_ACT_ENVIRONMENT', true)
+  global('DOMPoint', class { constructor(x, y) { this.x = x; this.y = y } matrixTransform() { return this } })
+  let cuadros = []
+  global('requestAnimationFrame', fn => { cuadros.push(fn); return cuadros.length }); global('cancelAnimationFrame', () => {})
+  // Pantalla de celular (390 px): solo responde a las consultas de ancho máximo 750 px.
+  dom.window.matchMedia = q => ({ matches: q.includes('max-width: 750px'), addEventListener() {}, removeEventListener() {} })
+  dom.window.SVGElement.prototype.getScreenCTM = () => ({ inverse: () => ({}) })
+  dom.window.SVGElement.prototype.setPointerCapture = () => {}
+  dom.window.SVGElement.prototype.hasPointerCapture = () => false
+  const { crearServidorVitePrueba: createServer } = await import('./helpers/servidorVite.mjs'), React = await import('react'), { createRoot } = await import('react-dom/client')
+  const server = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom' })
+  const root = createRoot(document.getElementById('root'))
+  const { act } = React
+  const cancha = () => document.querySelector('svg.pizarra-cancha')
+  const ficha = () => cancha().querySelector('[data-elemento="a"]')
+  const hoja = () => document.querySelector('.pizarra-propiedades')
+  const evento = async (nodo, tipo, props) => { await act(() => { const e = new dom.window.MouseEvent(tipo, { bubbles: true, cancelable: true, button: 0, ...props }); Object.defineProperty(e, 'pointerId', { value: 7 }); Object.defineProperty(e, 'pointerType', { value: 'touch' }); nodo.dispatchEvent(e) }) }
+  const enPantalla = (x, y) => ({ clientX: x * 1.05, clientY: y * .68 })
+  const toque = async () => { await evento(ficha(), 'pointerdown', enPantalla(20, 50)); await evento(cancha(), 'pointerup', enPantalla(20, 50)) }
+  try {
+    const { default: Editor } = await server.ssrLoadModule('/src/components/PizarraTactica.jsx')
+    await act(() => root.render(React.createElement(Editor, { inicial: INICIAL, onGuardar() {} })))
+    await toque()
+    assert.ok(ficha().querySelector('[data-seleccion]'), 'un toque selecciona')
+    assert.equal(hoja(), null, 'un toque no abre las opciones')
+    assert.ok(document.querySelector('.pizarra-opciones'), 'botón ⋯ a mano')
+    await toque()
+    assert.ok(hoja(), 'doble toque abre las opciones')
+    await act(() => document.querySelector('button[aria-label="Cerrar propiedades"]').click())
+    assert.equal(hoja(), null); assert.ok(ficha().querySelector('[data-seleccion]'), 'cerrar no suelta la selección')
+    await act(() => document.querySelector('.pizarra-opciones').click())
+    assert.ok(hoja(), '⋯ abre las opciones')
+    await evento(document.querySelector('.pizarra-linea'), 'pointerdown', { clientX: 1, clientY: 1 })
+    assert.equal(hoja(), null, 'tocar fuera las cierra')
+    // Toque y enseguida arrastre sobre la misma ficha: se mueve y no abre las opciones.
+    await toque()
+    await evento(ficha(), 'pointerdown', enPantalla(20, 50))
+    await evento(cancha(), 'pointermove', enPantalla(40, 60))
+    const pendientes = cuadros; cuadros = []; await act(() => pendientes.forEach(fn => fn(0)))
+    await evento(cancha(), 'pointerup', enPantalla(40, 60))
+    assert.match(ficha().getAttribute('transform'), /translate\(42 /)
+    assert.equal(hoja(), null, 'arrastrar no abre las opciones')
+  } finally {
+    await act(() => root.unmount()); await server.close(); dom.window.close()
+    for (const [n, p] of previos) { if (p) Object.defineProperty(globalThis, n, p); else delete globalThis[n] }
+  }
+})

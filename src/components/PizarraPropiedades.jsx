@@ -13,12 +13,12 @@ function Colores({ valor, onCambio }) {
   </span>
 }
 
-export default memo(function PizarraPropiedades({ elegido, cantidad, foco, oculto, propiedad, onGirar, onDuplicar, onBorrar, onPegarPelota, onFoco, onOcultar, onCerrar }) {
+export default memo(function PizarraPropiedades({ arriba = false, elegido, cantidad, foco, oculto, propiedad, onGirar, onDuplicar, onBorrar, onPegarPelota, onFoco, onOcultar, onCerrar }) {
   if (!elegido) return null
   const varios = cantidad > 1, tipo = elegido.tipo, linea = LINEAS.includes(tipo)
   const nombre = varios ? `${cantidad} seleccionados` : tipo === 'jugadora' ? (esRival(elegido) ? 'Rival' : 'Propia') : linea ? NOMBRES_FLECHA[tipo] : HERRAMIENTAS[tipo]
   const tamano = (delta) => propiedad('tamano', limitar(Math.round((elegido.tamano + delta) * 10) / 10, 1, 12), false)
-  return <section className="pizarra-propiedades" aria-label={`Propiedades: ${nombre}`}>
+  return <section className={`pizarra-propiedades${arriba ? ' pizarra-propiedades-arriba' : ''}`} aria-label={`Propiedades: ${nombre}`}>
     <header>
       {!varios && <span className="pizarra-propiedades-icono"><IconoHerramienta id={tipo === 'jugadora' && esRival(elegido) ? 'rival' : tipo} /></span>}
       <strong>{nombre}</strong>
