@@ -146,6 +146,25 @@ test('Cuentas de jugadoras: estados, alta con validación al salir del campo, er
     assert.deepEqual(f.llamadas.filter(l => l.tipo === 'invoke').at(-1).body, { accion: 'reactivar', jugador_id: caro })
     assert.match(fila('Castro').textContent, /No se pudo guardar\. Revisá la conexión y probá de nuevo\./)
 
+    // Quitar cuenta (solo en una cuenta desactivada): pide confirmar con el nombre y el mail, y la jugadora vuelve a
+    // "Sin cuenta". Las cuentas activas no ofrecen quitar.
+    assert.equal(boton('Quitar cuenta', fila('Alvarez')), undefined, 'una cuenta activa no ofrece quitar')
+    f.estado.respuestaInvoke = { data: { ok: true }, error: null }
+    const invokesAntesDeQuitar = f.llamadas.filter(l => l.tipo === 'invoke').length
+    await clic(boton('Quitar cuenta', fila('Castro')))
+    assert.equal(f.llamadas.filter(l => l.tipo === 'invoke').length, invokesAntesDeQuitar, 'el primer clic solo pide confirmar')
+    assert.match(fila('Castro').textContent, /Quitar la cuenta de Caro Castro\. Se borra su usuario de ingreso \(caro@club\.test\)/)
+    assert.equal(boton('Reactivar cuenta', fila('Castro')), undefined, 'mientras confirma no ofrece otras acciones')
+    await clic(boton('Cancelar', fila('Castro')))
+    assert.doesNotMatch(fila('Castro').textContent, /Quitar la cuenta de/)
+    await clic(boton('Quitar cuenta', fila('Castro')))
+    f.estado.filas[2] = { ...f.estado.filas[2], email: null, activa: null }
+    await clic(boton('Quitar cuenta', fila('Castro')))
+    await act(pausa)
+    assert.deepEqual(f.llamadas.filter(l => l.tipo === 'invoke').at(-1).body, { accion: 'quitar', jugador_id: caro })
+    assert.match(fila('Castro').textContent, /Sin cuenta/)
+    assert.match(texto(), /Cuenta de Caro Castro quitada\. Ya se le puede crear una nueva\./)
+
     // Nunca consulta tablas de cuentas directamente: solo categorías (para el selector) y la función de la base.
     assert.deepEqual([...new Set(f.llamadas.filter(l => l.tipo === 'from').map(l => l.tabla))], ['categorias'])
   } finally {

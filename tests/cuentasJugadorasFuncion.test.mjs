@@ -325,3 +325,32 @@ test('src/ y dist/ no tienen SERVICE_ROLE ni claves de Resend (re_...)', () => {
   recorrer('dist')
   assert.deepEqual(hallazgos, [])
 })
+
+test('quitar: desactiva la fila, borra el usuario de Auth (la cuenta se borra en cascada) y responde 200', async () => {
+  const c = clientes()
+  const r = await leer(await atender(pedido({ accion: 'quitar', jugador_id: JUGADORA }), c))
+  assert.deepEqual(r, { status: 200, cuerpo: { ok: true } })
+  assert.deepEqual(nombres(c.llamadas), ['getUser', 'rpcUsuario:mi_rol', 'rpcAdmin:cuentas_jugadoras_estado', 'deleteUser'])
+  assert.deepEqual(c.llamadas[2][2], { p_jugador_id: JUGADORA, p_activa: false })
+  assert.equal(c.llamadas[3][1], NUEVO)
+})
+
+test('quitar: si borrar el usuario falla, la cuenta queda desactivada (nunca reactiva) y responde 500', async (t) => {
+  const errores = []
+  t.mock.method(console, 'error', (...args) => errores.push(args))
+  const c = clientes({ borrar: () => ({ data: null, error: { code: 'unexpected_failure', message: 'auth caído' } }) })
+  const r = await leer(await atender(pedido({ accion: 'quitar', jugador_id: JUGADORA }), c))
+  assert.deepEqual(r, { status: 500, cuerpo: { error: 'error_interno' } })
+  assert.ok(!c.llamadas.some((l) => l[0] === 'rpcAdmin' && l[2]?.p_activa === true), 'no reactiva')
+  assert.ok(errores.some((e) => e.includes('quitar_usuario')))
+})
+
+test('quitar: sin cuenta → 404 sin_cuenta sin tocar Auth; técnico → 403 sin tocar nada', async () => {
+  const sinCuenta = clientes({ estado: () => ({ data: null, error: { code: 'P0002', message: 'sin_cuenta' } }) })
+  assert.deepEqual(await leer(await atender(pedido({ accion: 'quitar', jugador_id: JUGADORA }), sinCuenta)), { status: 404, cuerpo: { error: 'sin_cuenta' } })
+  assert.ok(!sinCuenta.llamadas.some((l) => l[0] === 'deleteUser'))
+  const tecnico = clientes({ rol: 'tecnico' })
+  assert.deepEqual(await leer(await atender(pedido({ accion: 'quitar', jugador_id: JUGADORA }), tecnico)), { status: 403, cuerpo: { error: 'sin_permiso' } })
+  assert.ok(!tocoAdmin(tecnico.llamadas))
+  assert.deepEqual(validarPedido({ accion: 'quitar', jugador_id: JUGADORA.toUpperCase(), email: 'x@y.z' }), { accion: 'quitar', jugador_id: JUGADORA })
+})

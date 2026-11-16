@@ -30,6 +30,7 @@ function CuentasJugadorasPanel({ perfil, activo = true }) {
   const [email, setEmail] = useState('')
   const [emailTocado, setEmailTocado] = useState(false)
   const [confirmando, setConfirmando] = useState(null)
+  const [quitando, setQuitando] = useState(null)
   const [trabajando, setTrabajando] = useState(null)
   const [errores, setErrores] = useState({})
   const [aviso, setAviso] = useState('')
@@ -84,6 +85,7 @@ function CuentasJugadorasPanel({ perfil, activo = true }) {
   function abrirAlta(fila) {
     setAltaAbierta(fila.jugador_id)
     setConfirmando(null)
+    setQuitando(null)
     setEmail('')
     setEmailTocado(false)
     ponerError(fila.jugador_id, '')
@@ -130,6 +132,14 @@ function CuentasJugadorasPanel({ perfil, activo = true }) {
       `Cuenta de ${fila.nombre} ${fila.apellido} reactivada.`)
   }
 
+  // Para una cuenta creada por error: borra el usuario de ingreso y la jugadora vuelve a "Sin cuenta".
+  // La jugadora y sus datos no se tocan.
+  async function quitarCuenta(fila) {
+    const listo = await ejecutar(fila, { accion: 'quitar', jugador_id: fila.jugador_id },
+      `Cuenta de ${fila.nombre} ${fila.apellido} quitada. Ya se le puede crear una nueva.`)
+    if (listo) setQuitando(null)
+  }
+
   const conCuenta = filas.filter(f => f.email)
   const numeros = cargando || errorCarga ? null : {
     total: filas.length,
@@ -151,7 +161,7 @@ function CuentasJugadorasPanel({ perfil, activo = true }) {
         </div>
         <label className="cj-campo-categoria">
           <span>Categoría</span>
-          <select className="ui-control" value={categoriaId} onChange={e => { setCategoriaId(e.target.value); cerrarAlta(); setConfirmando(null); setErrores({}) }}
+          <select className="ui-control" value={categoriaId} onChange={e => { setCategoriaId(e.target.value); cerrarAlta(); setConfirmando(null); setQuitando(null); setErrores({}) }}
             disabled={!categorias?.length}>
             {(categorias || []).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
           </select>
@@ -200,11 +210,15 @@ function CuentasJugadorasPanel({ perfil, activo = true }) {
                   {estado.clave === 'sin' && altaAbierta !== fila.jugador_id &&
                     <Boton variante="secundario" onClick={() => abrirAlta(fila)}>Crear cuenta</Boton>}
                   {estado.clave === 'activa' && confirmando !== fila.jugador_id &&
-                    <Boton variante="secundario" onClick={() => { setConfirmando(fila.jugador_id); cerrarAlta() }}>Desactivar cuenta</Boton>}
-                  {estado.clave === 'desactivada' &&
+                    <Boton variante="secundario" onClick={() => { setConfirmando(fila.jugador_id); setQuitando(null); cerrarAlta() }}>Desactivar cuenta</Boton>}
+                  {estado.clave === 'desactivada' && quitando !== fila.jugador_id && <>
                     <Boton variante="secundario" onClick={() => reactivar(fila)} disabled={ocupado} aria-busy={ocupado}>
                       {ocupado ? 'Reactivando…' : 'Reactivar cuenta'}
-                    </Boton>}
+                    </Boton>
+                    <Boton variante="secundario" onClick={() => { setQuitando(fila.jugador_id); setConfirmando(null); cerrarAlta() }} disabled={ocupado}>
+                      Quitar cuenta
+                    </Boton>
+                  </>}
                 </div>
 
                 {altaAbierta === fila.jugador_id && (
@@ -232,6 +246,21 @@ function CuentasJugadorasPanel({ perfil, activo = true }) {
                         {ocupado ? 'Desactivando…' : 'Desactivar cuenta'}
                       </Boton>
                       <Boton variante="secundario" onClick={() => setConfirmando(null)} disabled={ocupado}>Cancelar</Boton>
+                    </div>
+                  </div>
+                )}
+
+                {quitando === fila.jugador_id && (
+                  <div className="cj-confirmar" role="group" aria-labelledby={`cj-quitar-${fila.jugador_id}`}>
+                    <p id={`cj-quitar-${fila.jugador_id}`}>
+                      Quitar la cuenta de {nombreCompleto}. Se borra su usuario de ingreso ({fila.email}) y vuelve a quedar
+                      sin cuenta. La jugadora y sus datos no se tocan.
+                    </p>
+                    <div className="cj-botones">
+                      <Boton variante="peligro" onClick={() => quitarCuenta(fila)} disabled={ocupado} aria-busy={ocupado}>
+                        {ocupado ? 'Quitando…' : 'Quitar cuenta'}
+                      </Boton>
+                      <Boton variante="secundario" onClick={() => setQuitando(null)} disabled={ocupado}>Cancelar</Boton>
                     </div>
                   </div>
                 )}

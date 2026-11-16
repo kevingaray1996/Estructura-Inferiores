@@ -21,6 +21,7 @@
 .cj-estado[data-estado="desactivada"] { color: var(--ui-texto-muted); }
 .cj-email { color: var(--ui-texto-muted); }
 
+.cj-acciones { display: grid; gap: 8px; }
 .cj-acciones:empty { display: none; }
 .cj-acciones .dp-btn, .cj-botones .dp-btn { width: 100%; }
 .cj-alta, .cj-confirmar { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--ui-borde); }
@@ -36,6 +37,6 @@
   .cj-fila { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
   .cj-acciones .dp-btn, .cj-botones .dp-btn, .cj-copiar.dp-btn { width: auto; }
   .cj-alta, .cj-confirmar, .cj-fila > .cj-error { grid-column: 1 / -1; }
-  .cj-botones { grid-auto-flow: column; justify-content: start; }
+  .cj-botones, .cj-acciones { grid-auto-flow: column; justify-content: start; }
   .cj-input { max-width: 28rem; }
 }

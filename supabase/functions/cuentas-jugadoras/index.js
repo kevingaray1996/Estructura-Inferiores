@@ -9,7 +9,9 @@
 // La clave service_role la inyecta Supabase y solo se lee de Deno.env acá adentro. Antes de tocar auth.admin o
 // cualquier función de service_role se comprueba que quien llama tenga sesión (401) y sea coordinación (403).
 //
-// Pedido: POST {accion:'crear', jugador_id, email} | {accion:'desactivar'|'reactivar', jugador_id}
+// Pedido: POST {accion:'crear', jugador_id, email} | {accion:'desactivar'|'reactivar'|'quitar', jugador_id}
+// quitar: para una cuenta creada por error. Desactiva la fila y borra el usuario de Auth; la base borra la cuenta en
+// cascada y la jugadora vuelve a "Sin cuenta" (la jugadora no se toca).
 // Respuesta: 200 {ok:true} o {error:<código>} (sin_sesion, sin_permiso, pedido_invalido, email_en_uso,
 // ya_tiene_cuenta, jugadora_inexistente, sin_cuenta, error_interno). Nunca devuelve detalles internos.
 
@@ -21,7 +23,7 @@ const CORS = {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const ACCIONES = ['crear', 'desactivar', 'reactivar']
+const ACCIONES = ['crear', 'desactivar', 'reactivar', 'quitar']
 const BAN_DESACTIVADA = '876000h'
 
 const INVALIDO = { error: 'pedido_invalido' }
@@ -134,6 +136,29 @@ async function cambiarEstado(clienteAdmin, { jugador_id }, activa) {
   return responder(200, { ok: true })
 }
 
+// Quitar: primero desactiva la fila (así, si algo falla después, la cuenta queda bloqueada para la red y para las
+// funciones del portal) y después borra el usuario de Auth. cuentas_jugadoras.usuario_id es ON DELETE CASCADE, así
+// que la fila desaparece con el usuario. Si el borrado falla, la cuenta queda desactivada y se puede reintentar.
+async function quitar(clienteAdmin, { jugador_id }) {
+  const estado = await seguro(clienteAdmin.rpc('cuentas_jugadoras_estado', { p_jugador_id: jugador_id, p_activa: false }))
+  if (estado.error) {
+    if (estado.error.code === 'P0002' && String(estado.error.message ?? '').includes('sin_cuenta')) return responder(404, { error: 'sin_cuenta' })
+    registrarFalla('estado', estado.error)
+    return errorInterno()
+  }
+  const usuarioId = estado.data
+  if (typeof usuarioId !== 'string' || !usuarioId) {
+    registrarFalla('quitar_usuario', { message: 'sin usuario' })
+    return errorInterno()
+  }
+  const borrado = await seguro(clienteAdmin.auth.admin.deleteUser(usuarioId))
+  if (borrado.error) {
+    registrarFalla('quitar_usuario', borrado.error)
+    return errorInterno()
+  }
+  return responder(200, { ok: true })
+}
+
 export async function atender(request, { clienteUsuario, clienteAdmin }) {
   if (request.method === 'OPTIONS') return new Response('ok', { status: 200, headers: CORS })
   if (request.method !== 'POST') return responder(405, INVALIDO)
@@ -164,6 +189,7 @@ export async function atender(request, { clienteUsuario, clienteAdmin }) {
     if (pedido.error) return responder(400, INVALIDO)
 
     if (pedido.accion === 'crear') return await crear(clienteAdmin, pedido, creadaPor)
+    if (pedido.accion === 'quitar') return await quitar(clienteAdmin, pedido)
     return await cambiarEstado(clienteAdmin, pedido, pedido.accion === 'reactivar')
   } catch (e) {
     registrarFalla('inesperado', e)
