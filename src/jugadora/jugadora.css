@@ -1,0 +1,68 @@
+/* App de la jugadora (/jugadora/). Mobile primero; colores solo por tokens --ui-* de apariencia.css. */
+.jg-app { min-height: 100dvh; display: grid; grid-template-rows: auto 1fr auto; background: var(--ui-fondo-pagina); color: var(--ui-texto); }
+.jg-centro, .jg-ingreso { min-height: 100dvh; display: grid; align-content: start; gap: 16px; padding: 24px 16px 32px; max-width: 30rem; margin-inline: auto; color: var(--ui-texto); }
+.jg-centro { align-content: center; }
+
+.jg-marca { display: flex; align-items: center; gap: 12px; padding-block: 8px; }
+.jg-escudo { width: 56px; height: 56px; object-fit: contain; }
+.jg-antetitulo { margin: 0; font-family: var(--fuente-titulo); font-size: .8125rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--ui-texto-acento); }
+.jg-titulo { margin: 0; font-family: var(--fuente-titulo); font-size: 2rem; font-weight: 700; line-height: 1.05; }
+.jg-subtitulo { margin: 0; font-family: var(--fuente-titulo); font-size: 1.25rem; font-weight: 700; letter-spacing: .02em; }
+
+.jg-tarjeta { display: grid; gap: 12px; padding: 16px; background: var(--ui-superficie); border: 1px solid var(--ui-borde); border-radius: 14px; min-width: 0; }
+.jg-form { gap: 12px; }
+.jg-pila { display: grid; gap: 16px; }
+.jg-texto { margin: 0; font-size: .9375rem; line-height: 1.5; color: var(--ui-texto-secundario); }
+.jg-texto-suave { font-size: .8125rem; color: var(--ui-texto-muted); }
+.jg-ok { color: var(--ui-texto); font-weight: 600; }
+.jg-etiqueta { font-size: .875rem; font-weight: 600; color: var(--ui-texto-secundario); }
+.jg-input { min-height: 48px; width: 100%; padding: 10px 14px; border-radius: 10px; font: inherit; font-size: 1rem; color: var(--ui-control-texto); background: var(--ui-control-fondo); border: 1px solid var(--ui-control-borde); }
+.jg-input[aria-invalid="true"] { border-color: var(--ui-peligro); }
+.jg-input-codigo { font-size: 1.5rem; letter-spacing: .4em; text-align: center; font-variant-numeric: tabular-nums; }
+.jg-error { margin: 0; font-size: .875rem; color: var(--ui-peligro-texto); }
+
+.jg-boton { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 10px 16px; border-radius: 10px; font: inherit; font-size: .9375rem; font-weight: 600; text-decoration: none; cursor: pointer; color: var(--ui-texto); background: var(--ui-superficie-alternativa); border: 1px solid var(--ui-borde); }
+.jg-boton-principal { color: var(--ui-texto-sobre-acento); background: var(--ui-acento); border-color: var(--ui-acento); font-weight: 700; }
+.jg-boton-chico { min-height: 44px; padding: 8px 12px; font-size: .875rem; }
+.jg-boton:disabled { opacity: .6; cursor: default; }
+.jg-boton:focus-visible, .jg-pestana:focus-visible, .jg-segmento:focus-visible, .jg-input:focus-visible, .jg-instalar summary:focus-visible { outline: 2px solid var(--ui-foco); outline-offset: 2px; }
+.jg-fila-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.jg-instalar summary { min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; font-weight: 600; list-style: none; }
+.jg-instalar summary::-webkit-details-marker { display: none; }
+.jg-instalar summary::after { content: '+'; font-size: 1.25rem; line-height: 1; color: var(--ui-texto-secundario); }
+.jg-instalar[open] summary::after { content: '−'; }
+.jg-instalar-cuerpo h3 { margin: 8px 0 4px; font-size: .9375rem; font-weight: 700; }
+.jg-instalar-cuerpo ol { margin: 0; padding-left: 1.25rem; list-style: decimal; display: grid; gap: 4px; font-size: .875rem; line-height: 1.5; color: var(--ui-texto-secundario); }
+
+.jg-cabecera { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--ui-superficie); border-bottom: 1px solid var(--ui-borde); position: sticky; top: 0; z-index: 2; }
+.jg-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.jg-avatar-iniciales { display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: .875rem; background: var(--ui-fondo-sidebar); color: var(--ui-texto-secundario); }
+.jg-cabecera-textos { min-width: 0; flex: 1; }
+.jg-nombre { margin: 0; font-weight: 700; font-size: 1rem; overflow-wrap: anywhere; }
+.jg-categoria { margin: 0; font-size: .8125rem; color: var(--ui-texto-secundario); }
+
+.jg-contenido { padding: 16px 16px 24px; width: 100%; max-width: 40rem; margin-inline: auto; min-width: 0; }
+.jg-navegacion { position: sticky; bottom: 0; display: grid; grid-template-columns: repeat(3, 1fr); background: var(--ui-superficie); border-top: 1px solid var(--ui-borde); padding-bottom: env(safe-area-inset-bottom); }
+.jg-pestana { min-height: 56px; border: 0; background: transparent; font: inherit; font-size: .875rem; font-weight: 600; color: var(--ui-texto-secundario); cursor: pointer; border-top: 3px solid transparent; }
+.jg-pestana[aria-current="page"] { color: var(--ui-texto); border-top-color: var(--ui-acento); }
+
+.jg-segmentos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.jg-segmento { min-height: 48px; border-radius: 10px; font: inherit; font-size: .9375rem; font-weight: 600; cursor: pointer; color: var(--ui-texto-secundario); background: var(--ui-superficie); border: 1px solid var(--ui-borde); }
+.jg-segmento[aria-pressed="true"] { color: var(--ui-texto-sobre-acento); background: var(--ui-acento); border-color: var(--ui-acento); }
+
+.jg-campo-anio { display: grid; gap: 6px; max-width: 12rem; }
+.jg-datos { margin: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.jg-datos-4 { grid-template-columns: repeat(2, 1fr); }
+.jg-dato { display: flex; flex-direction: column-reverse; gap: 2px; padding: 12px; border-radius: 10px; background: var(--ui-superficie-alternativa); min-width: 0; }
+.jg-dato-valor { margin: 0; font-family: var(--fuente-titulo); font-size: 1.75rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.jg-dato-etiqueta { font-size: .8125rem; color: var(--ui-texto-secundario); }
+.jg-porcentaje { margin: 0; font-size: .9375rem; color: var(--ui-texto-secundario); }
+.jg-porcentaje-valor { display: block; font-family: var(--fuente-titulo); font-size: 3rem; font-weight: 700; line-height: 1; color: var(--ui-texto); font-variant-numeric: tabular-nums; }
+
+@media (min-width: 768px) {
+  .jg-datos-4 { grid-template-columns: repeat(4, 1fr); }
+  .jg-contenido { padding-top: 24px; }
+  /* La cabecera y la barra ocupan todo el ancho, pero su contenido se alinea con la columna central. */
+  .jg-cabecera, .jg-navegacion { padding-inline: max(16px, calc((100% - 40rem) / 2 + 16px)); }
+}

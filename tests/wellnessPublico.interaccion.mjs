@@ -40,7 +40,8 @@ test('Wellness público: solo usa las funciones de la base, arranca vacío y con
   }] })
   const root = createRoot(document.getElementById('root'))
   const esperar = async () => { for (let i = 0; i < 10; i++) await new Promise(r => setTimeout(r, 0)) }
-  const botones = texto => [...document.querySelectorAll('button')].filter(b => b.textContent.trim() === texto)
+  // Solo los botones visibles: la pestaña inactiva (Bienestar o RPE) queda montada pero con hidden.
+  const botones = texto => [...document.querySelectorAll('button')].filter(b => b.textContent.trim() === texto && !b.closest('[hidden]'))
   const tocar = async el => act(async () => { el.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true })); await esperar() })
   const fila = nombre => [...document.querySelectorAll('div.cursor-pointer')].find(d => d.textContent.includes(nombre))
   try {

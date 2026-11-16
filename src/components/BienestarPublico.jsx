@@ -6,22 +6,8 @@ import { COLORES } from '../theme'
 import { fechaLarga } from '../utils/formatoFecha'
 import EncabezadoSeccion from './ui/EncabezadoSeccion'
 import EstadoVacio from './ui/EstadoVacio'
-
- const CAMPOS = [
-  { clave: 'sueno', label: '¿Cómo dormiste?' },
-  { clave: 'dolor_muscular', label: '¿Tenés dolor muscular?' },
-  { clave: 'fatiga', label: '¿Qué tan cansado estás?' },
-  { clave: 'estres', label: '¿Cómo está tu estrés?' },
-  { clave: 'animo_entrenar', label: '¿Cómo estás de ánimo para entrenar?' },
-]
-
-const FASES_CICLO = [
-  { valor: 'menstrual', label: 'Menstrual' },
-  { valor: 'folicular', label: 'Folicular' },
-  { valor: 'ovulacion', label: 'Ovulación' },
-  { valor: 'lutea', label: 'Lútea' },
-  { valor: 'no_responde', label: 'No estoy segura / Prefiero no responder' },
-]
+import FormularioWellness from './wellness/FormularioWellness'
+import FormularioRpe from './wellness/FormularioRpe'
 
 function iniciales(nombre, apellido) {
   return `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
@@ -46,21 +32,8 @@ function BienestarPublico({ categoriaId }) {
   const [jugadorSeleccionado, setJugadorSeleccionado] = useState(null)
   const [vista, setVista] = useState('bienestar')
   const [cargando, setCargando] = useState(true)
-
-  // Bienestar (hoy)
-  const [valores, setValores] = useState({})
-  const [guardando, setGuardando] = useState(false)
   const [enviado, setEnviado] = useState(false)
-  const [error, setError] = useState('')
-  const [mostrarAyudaCiclo, setMostrarAyudaCiclo] = useState(false)
 
-  // Esfuerzo percibido (RPE)
-  const [fechaRpe, setFechaRpe] = useState(fecha)
-  const [tipoRpe, setTipoRpe] = useState('entrenamiento')
-  const [valorRpe, setValorRpe] = useState(null)
-  const [rpeGuardando, setRpeGuardando] = useState(false)
-  const [rpeEnviado, setRpeEnviado] = useState(false)
-  const [rpeError, setRpeError] = useState('')
   const [errorCarga, setErrorCarga] = useState('')
   const seleccionActual = useRef(null)
 
@@ -86,12 +59,7 @@ function BienestarPublico({ categoriaId }) {
     seleccionActual.current = j.id
     setJugadorSeleccionado(j)
     setVista('bienestar')
-    setError('')
-    setValores({})
     setEnviado(false)
-    reiniciarRpe()
-    setFechaRpe(fecha)
-    setTipoRpe('entrenamiento')
     const { data: yaCompleto } = await supabase.rpc('wellness_publico_respondio', {
       p_categoria_id: categoriaId,
       p_jugadora_id: j.id,
@@ -100,50 +68,9 @@ function BienestarPublico({ categoriaId }) {
     if (seleccionActual.current === j.id) setEnviado(yaCompleto === true)
   }
 
-  function reiniciarRpe() {
-    setValorRpe(null)
-    setRpeEnviado(false)
-    setRpeError('')
-  }
-
-  function editarRespuesta() {
-    setValores({})
-    setError('')
-    setEnviado(false)
-  }
-
-  function marcar(campo, valor) {
-    setValores((prev) => ({
-      ...prev,
-      [campo]: prev[campo] === valor ? null : valor,
-    }))
-  }
-
-  function actualizarTexto(campo, valor) {
-    setValores((prev) => ({
-      ...prev,
-      [campo]: valor,
-    }))
-  }
-
-  function elegirFase(valor) {
-    setValores((prev) => ({
-      ...prev,
-      fase_ciclo: prev.fase_ciclo === valor ? null : valor,
-    }))
-  }
-
-  async function handleEnviar() {
-    const completo = CAMPOS.every((c) => valores[c.clave])
-    if (!completo) {
-      setError('Completá todas las preguntas antes de enviar.')
-      return
-    }
-    setGuardando(true)
-    setError('')
-
-    // La fecha la pone la base (hoy en Argentina). Si ya había respuesta hoy, la reemplaza.
-    const { error: errorGuardar } = await supabase.rpc('wellness_publico_guardar', {
+  // La fecha del Wellness la pone la base (hoy en Argentina). Si ya había respuesta hoy, la reemplaza.
+  async function guardarWellness(valores) {
+    const { error } = await supabase.rpc('wellness_publico_guardar', {
       p_categoria_id: categoriaId,
       p_jugadora_id: jugadorSeleccionado.id,
       p_sueno: valores.sueno,
@@ -151,44 +78,24 @@ function BienestarPublico({ categoriaId }) {
       p_fatiga: valores.fatiga,
       p_estres: valores.estres,
       p_animo_entrenar: valores.animo_entrenar,
-      p_zona_dolor: valores.zona_dolor?.trim() || null,
-      p_fase_ciclo: valores.fase_ciclo || null,
+      p_zona_dolor: valores.zona_dolor,
+      p_fase_ciclo: valores.fase_ciclo,
     })
-
-    setGuardando(false)
-
-    if (errorGuardar) {
-      setError('No se pudo guardar: ' + errorGuardar.message)
-      return
-    }
-    setEnviado(true)
+    return { error: error?.message }
   }
 
-  async function handleEnviarRpe() {
-    if (!valorRpe) {
-      setRpeError('Elegí un valor del 1 al 10.')
-      return
-    }
-    setRpeGuardando(true)
-    setRpeError('')
-
-    // Solo guarda el RPE: la base valida el día (hoy y 3 días antes) y no toca minutos ni GPS.
-    const { error: errorGuardar } = await supabase.rpc('rpe_publico_guardar', {
+  // Solo guarda el RPE: la base valida el día (hoy y 3 días antes) y no toca minutos ni GPS.
+  async function guardarRpe({ fecha: dia, tipo, rpe }) {
+    const { error } = await supabase.rpc('rpe_publico_guardar', {
       p_categoria_id: categoriaId,
       p_jugadora_id: jugadorSeleccionado.id,
-      p_fecha: fechaRpe,
-      p_tipo: tipoRpe,
-      p_rpe: valorRpe,
+      p_fecha: dia,
+      p_tipo: tipo,
+      p_rpe: rpe,
     })
-
-    setRpeGuardando(false)
-
-    if (errorGuardar) {
-      setRpeError('No se pudo guardar: ' + errorGuardar.message)
-      return
-    }
-    setRpeEnviado(true)
+    return { error: error?.message }
   }
+
 
   const jugadoresFiltrados = jugadores.filter((j) => {
     const nombreCompleto = `${j.nombre} ${j.apellido}`.toLowerCase()
@@ -285,7 +192,7 @@ function BienestarPublico({ categoriaId }) {
                 🧠 Bienestar
               </button>
               <button
-                onClick={() => { if (vista !== 'rpe') reiniciarRpe(); setVista('rpe') }}
+                onClick={() => setVista('rpe')}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
                 style={{
                   backgroundColor: vista === 'rpe' ? COLORES.acento : COLORES.fondoTarjeta,
@@ -297,224 +204,16 @@ function BienestarPublico({ categoriaId }) {
               </button>
             </div>
 
-            {vista === 'bienestar' && !enviado && (
-              <>
-                <div className="space-y-5 mb-6">
-                  {CAMPOS.map((c) => (
-                    <div key={c.clave}>
-                      <p className="text-sm mb-2" style={{ color: COLORES.texto }}>{c.label}</p>
-                      <div className="flex gap-2">
-                        {[1, 2, 3, 4, 5].map((v) => {
-                          const activo = valores[c.clave] === v
-                          return (
-                            <button
-                              key={v}
-                              onClick={() => marcar(c.clave, v)}
-                              className="flex-1 py-3 rounded-xl text-sm font-mono transition-opacity hover:opacity-80"
-                              style={{
-                                backgroundColor: activo ? COLORES.acento : COLORES.fondoTarjeta,
-                                color: activo ? 'var(--ui-texto-sobre-acento)' : COLORES.textoSecundario,
-                                fontWeight: activo ? 700 : 400,
-                                border: `1px solid ${COLORES.borde}`,
-                              }}
-                            >
-                              {v}
-                            </button>
-                          )
-                        })}
-                      </div>
-                      <div className="flex justify-between mt-1">
-                        <span className="text-[10px]" style={{ color: COLORES.textoMuted }}>Mejor</span>
-                        <span className="text-[10px]" style={{ color: COLORES.textoMuted }}>Peor</span>
-                      </div>
-                      {c.clave === 'dolor_muscular' && (
-                        <div className="mt-3">
-                          <label className="text-sm mb-2 block" style={{ color: COLORES.texto }}>
-                            ¿Qué parte del cuerpo te duele?
-                          </label>
-                          <textarea
-                            rows={3}
-                            value={valores.zona_dolor || ''}
-                            onChange={(e) => actualizarTexto('zona_dolor', e.target.value)}
-                            placeholder="Ej: rodilla, espalda, hombro..."
-                            className="w-full p-3 rounded-xl ui-control outline-none text-sm"
-                            style={{
-                              ...inputStyle,
-                              resize: 'vertical',
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+            {/* Los dos formularios quedan montados: al cambiar de pestaña no se pierde lo que ya marcó. La key por
+                jugadora los reinicia cuando elige otro nombre. */}
+            <div hidden={vista !== 'bienestar'}>
+              <FormularioWellness key={jugadorSeleccionado.id} completado={enviado} onCompletado={setEnviado} onGuardar={guardarWellness} />
+            </div>
 
-                <div className="mb-6" style={{ borderTop: `1px solid ${COLORES.borde}`, paddingTop: '1.25rem' }}>
-                  <div className="flex justify-between items-center mb-1">
-                    <p className="text-sm" style={{ color: COLORES.texto }}>Fase del ciclo menstrual</p>
-                    <button
-                      type="button"
-                      onClick={() => setMostrarAyudaCiclo((v) => !v)}
-                      className="text-xs"
-                      style={{ color: COLORES.acento }}
-                    >
-                      ❔ ¿Qué es esto?
-                    </button>
-                  </div>
-                  <p className="text-xs mb-2" style={{ color: COLORES.textoMuted }}>
-                    Solo lo ven preparación física, coordinación y cuerpo técnico.
-                  </p>
+            <div hidden={vista !== 'rpe'}>
+              <FormularioRpe key={jugadorSeleccionado.id} fechaHoy={fecha} fechaMinima={fechaMinima} onGuardar={guardarRpe} />
+            </div>
 
-                  {mostrarAyudaCiclo && (
-                    <div
-                      className="rounded-xl p-3 mb-3 text-xs"
-                      style={{ backgroundColor: COLORES.fondoTarjeta, border: `1px solid ${COLORES.borde}` }}
-                    >
-                      <p className="font-medium mb-1" style={{ color: COLORES.acento }}>Menstrual (días 1 a 5 aprox.)</p>
-                      <p className="mb-2" style={{ color: COLORES.textoSecundario }}>Cuando tenés tu período.</p>
-                      <p className="font-medium mb-1" style={{ color: COLORES.textoSecundario }}>Folicular (después del período)</p>
-                      <p className="mb-2" style={{ color: COLORES.textoSecundario }}>Los días siguientes, hasta la ovulación.</p>
-                      <p className="font-medium mb-1" style={{ color: COLORES.textoSecundario }}>Ovulación (mitad del ciclo)</p>
-                      <p className="mb-2" style={{ color: COLORES.textoSecundario }}>Alrededor del día 14, aprox.</p>
-                      <p className="font-medium mb-1" style={{ color: COLORES.textoSecundario }}>Lútea (previo al próximo período)</p>
-                      <p style={{ color: COLORES.textoSecundario }}>Los días antes de que vuelva a empezar.</p>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col gap-2">
-                    {FASES_CICLO.map((f) => {
-                      const activo = valores.fase_ciclo === f.valor
-                      return (
-                        <button
-                          key={f.valor}
-                          type="button"
-                          onClick={() => elegirFase(f.valor)}
-                          className="text-left px-3 py-2.5 rounded-xl text-sm transition-opacity hover:opacity-80"
-                          style={{
-                            backgroundColor: activo ? COLORES.acento : COLORES.fondoTarjeta,
-                            color: activo ? 'var(--ui-texto-sobre-acento)' : f.valor === 'no_responde' ? COLORES.textoMuted : COLORES.textoSecundario,
-                            border: `1px solid ${COLORES.borde}`,
-                            fontWeight: activo ? 500 : 400,
-                          }}
-                        >
-                          {f.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {error && (
-                  <p className="text-sm mb-4" style={{ color: COLORES.peligro }}>{error}</p>
-                )}
-
-                <button
-                  onClick={handleEnviar}
-                  disabled={guardando}
-                  className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-                  style={{ backgroundColor: COLORES.acento, color: 'var(--ui-texto-sobre-acento)' }}
-                >
-                  {guardando ? 'Enviando...' : 'Enviar'}
-                </button>
-              </>
-            )}
-
-            {vista === 'bienestar' && enviado && (
-              <div className="text-center py-12">
-                <p className="text-3xl mb-3">✅</p>
-                <p className="text-sm mb-4" style={{ color: COLORES.texto }}>
-                  ¡Gracias! Ya se guardó tu bienestar de hoy.
-                </p>
-                <button
-                  onClick={editarRespuesta}
-                  className="text-xs px-3 py-1.5 rounded-lg hover:opacity-80"
-                  style={{ backgroundColor: COLORES.fondoTarjeta, color: COLORES.textoSecundario, border: `1px solid ${COLORES.borde}` }}
-                >
-                  ✏️ Editar mi respuesta
-                </button>
-              </div>
-            )}
-
-            {vista === 'rpe' && !rpeEnviado && (
-              <>
-                <div className="grid grid-cols-2 gap-3 mb-5">
-                  <div>
-                    <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Día</label>
-                    <input
-                      type="date"
-                      value={fechaRpe}
-                      min={fechaMinima}
-                      max={fecha}
-                      onChange={(e) => { reiniciarRpe(); setFechaRpe(e.target.value) }}
-                      className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
-                      style={inputStyle}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] uppercase" style={{ color: COLORES.textoMuted }}>Actividad</label>
-                    <select
-                      value={tipoRpe}
-                      onChange={(e) => { reiniciarRpe(); setTipoRpe(e.target.value) }}
-                      className="w-full p-2.5 rounded-xl ui-control outline-none text-sm"
-                      style={inputStyle}
-                    >
-                      <option value="entrenamiento">Entrenamiento</option>
-                      <option value="partido">Partido</option>
-                    </select>
-                  </div>
-                </div>
-
-                <p className="text-sm mb-2" style={{ color: COLORES.texto }}>
-                  ¿Qué tan duro sentiste el esfuerzo?
-                </p>
-                <div className="grid grid-cols-5 gap-2 mb-1">
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => {
-                    const activo = valorRpe === v
-                    return (
-                      <button
-                        key={v}
-                        onClick={() => setValorRpe(v)}
-                        className="py-3 rounded-xl text-sm font-mono transition-opacity hover:opacity-80"
-                        style={{
-                          backgroundColor: activo ? COLORES.acento : COLORES.fondoTarjeta,
-                          color: activo ? 'var(--ui-texto-sobre-acento)' : COLORES.textoSecundario,
-                          fontWeight: activo ? 700 : 400,
-                          border: `1px solid ${COLORES.borde}`,
-                        }}
-                      >
-                        {v}
-                      </button>
-                    )
-                  })}
-                </div>
-                <div className="flex justify-between mb-6">
-                  <span className="text-[10px]" style={{ color: COLORES.textoMuted }}>Muy suave</span>
-                  <span className="text-[10px]" style={{ color: COLORES.textoMuted }}>Al máximo</span>
-                </div>
-
-                {rpeError && (
-                  <p className="text-sm mb-4" style={{ color: COLORES.peligro }}>{rpeError}</p>
-                )}
-
-                <button
-                  onClick={handleEnviarRpe}
-                  disabled={rpeGuardando}
-                  className="w-full p-3 rounded-xl font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-                  style={{ backgroundColor: COLORES.acento, color: 'var(--ui-texto-sobre-acento)' }}
-                >
-                  {rpeGuardando ? 'Enviando...' : 'Enviar'}
-                </button>
-              </>
-            )}
-
-            {vista === 'rpe' && rpeEnviado && (
-              <div className="text-center py-12">
-                <p className="text-3xl mb-3">✅</p>
-                <p className="text-sm" style={{ color: COLORES.texto }}>
-                  ¡Gracias! Ya se guardó tu esfuerzo de ese día.
-                </p>
-              </div>
-            )}
           </>
         )}
       </div>

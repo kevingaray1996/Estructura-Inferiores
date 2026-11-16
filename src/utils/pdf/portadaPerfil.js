@@ -1,6 +1,7 @@
 // Página 1 del PDF de perfil: identidad de la jugadora y sus números principales.
 // armarPortadaPerfil decide qué se muestra (lógica pura); dibujarPortadaPerfil lo dibuja.
 import { AMARILLO, BLANCO, GRIS, GRIS_CLARO, GRIS_LINEA, GRIS_SOBRE_NEGRO, NEGRO } from './paleta.js'
+import { asistenciaSobreSesiones } from '../asistencia.js'
 
 const dosDigitos = (n) => String(n).padStart(2, '0')
 const fechaTexto = (fecha) => `${dosDigitos(fecha.getDate())}/${dosDigitos(fecha.getMonth() + 1)}/${fecha.getFullYear()}`
@@ -14,16 +15,20 @@ export function calcularEdad(fechaNacimiento, hoy = new Date()) {
   return edad
 }
 
-// Lesionada y enferma son ausencias justificadas: no cuentan en el total.
+// Lesionada y enferma son ausencias justificadas: no cuentan en el total (mismo cálculo que la app de la jugadora).
 function tarjetaAsistencia(resumen = {}, totalMarcado = 0) {
-  const sesiones = totalMarcado - (resumen.lesionado || 0) - (resumen.enfermo || 0)
-  if (sesiones <= 0) return null
-  const presentes = (resumen.presente || 0) + (resumen.tarde || 0)
+  const asistencia = asistenciaSobreSesiones({
+    presentes: resumen.presente || 0,
+    tardes: resumen.tarde || 0,
+    justificadas: (resumen.lesionado || 0) + (resumen.enfermo || 0),
+    total: totalMarcado,
+  })
+  if (!asistencia) return null
   return {
     clave: 'asistencia',
     etiqueta: 'Asistencia a entrenamientos',
-    valor: `${Math.round((presentes / sesiones) * 100)}%`,
-    detalle: `sobre ${sesiones} ${sesiones === 1 ? 'sesión' : 'sesiones'}`,
+    valor: `${asistencia.porcentaje}%`,
+    detalle: asistencia.detalle,
   }
 }
 

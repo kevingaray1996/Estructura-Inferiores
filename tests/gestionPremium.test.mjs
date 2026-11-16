@@ -8,7 +8,7 @@ const leer = p => readFileSync(p, 'utf8').replaceAll('\r', '')
 const anterior = p => execFileSync('git', ['show', `${base}:${p}`], { encoding: 'utf8' }).replaceAll('\r', '')
 
 test('Gestión Premium conserva íntegros handlers, payloads, filtros, roles y exportación', () => {
-  for (const nombre of ['CaptacionSection', 'UsuariosSection']) {
+  for (const nombre of ['CaptacionSection']) {
     const ruta = `src/components/${nombre}.jsx`
     const bloque = s => s.slice(s.indexOf(nombre === 'CaptacionSection' ? 'const ESTADO_CONFIG' : 'const rolLabel'), s.lastIndexOf('\n  return ('))
     const nuevo = bloque(leer(ruta))
@@ -23,6 +23,28 @@ test('Gestión Premium conserva íntegros handlers, payloads, filtros, roles y e
     assert.match(leer(ruta), /TarjetaIndicador/)
     assert.doesNotMatch(leer(ruta), /BOTON_GESTION/)
   }
+})
+
+// Usuarios se compara contra main antes de la pestaña Jugadoras (9acc69b): esa versión ya incluye los cambios de
+// seguridad de Storage (foto comprimida, sin reemplazar archivos) y el rediseño (FranjaNumeros). La pestaña Jugadoras
+// (cuentas de jugadoras, 2026-11-16) se sumó a propósito: el componente recibe el perfil, guarda la pestaña elegida y
+// arma el contenido del staff antes del return. Los handlers y payloads del staff tienen que quedar idénticos.
+test('Usuarios conserva íntegros handlers, payloads, roles y exportación del staff al sumar la pestaña Jugadoras', () => {
+  const ruta = 'src/components/UsuariosSection.jsx'
+  const antesDeJugadoras = execFileSync('git', ['show', `9acc69b:${ruta}`], { encoding: 'utf8' }).replaceAll('\r', '')
+  const actual = leer(ruta)
+  const handlersAntes = antesDeJugadoras.slice(antesDeJugadoras.indexOf('const rolLabel'), antesDeJugadoras.lastIndexOf('\n  return ('))
+  assert.ok(actual.includes('\n  const enStaff = '), 'el contenido del staff se arma antes del return')
+  const handlersAhora = actual.slice(actual.indexOf('const rolLabel'), actual.indexOf('\n  const enStaff = '))
+    .replace('function UsuariosSection({ perfil }) {', 'function UsuariosSection() {')
+    .replace("\n  const esCoordinacion = perfil?.rol === 'coordinacion'\n  const [pestana, setPestana] = useState('staff')", '')
+    // Mensajes de error claros (mail de jugadora o de otro usuario del staff): misma rama, otro texto.
+    .replace('setErrorMsg(mensajeErrorPerfil(error))', "setErrorMsg(error.code === '42501' ? 'No tenés permiso para guardar este perfil. Revisá tu sesión.' : 'Error al guardar: ' + error.message)")
+  assert.equal(handlersAhora, handlersAntes)
+  assert.match(actual, /EncabezadoSeccion/)
+  assert.match(actual, /EstadoContenido/)
+  assert.match(actual, /FranjaNumeros/)
+  assert.doesNotMatch(actual, /BOTON_GESTION/)
 })
 
 test('Gestión Premium amplía CSS únicamente por adhesión explícita y conserva los estilos compartidos anteriores', () => {

@@ -1,0 +1,139 @@
+import { useCallback, useEffect, useState } from 'react'
+import { supabase } from '../supabaseClient'
+import { obtenerPerfil, rolStaff } from './portal'
+import IngresoJugadora from './IngresoJugadora'
+import InicioJugadora from './InicioJugadora'
+import WellnessJugadora from './WellnessJugadora'
+import MisNumeros from './MisNumeros'
+
+const SECCIONES = [
+  { id: 'inicio', etiqueta: 'Inicio' },
+  { id: 'wellness', etiqueta: 'Wellness' },
+  { id: 'numeros', etiqueta: 'Mis números' },
+]
+
+function Iniciales({ perfil }) {
+  return `${perfil.nombre?.[0] || ''}${perfil.apellido?.[0] || ''}`.toUpperCase()
+}
+
+// App de la jugadora: ingreso con código, y después su cuenta (Inicio, Wellness y Mis números).
+// Más adelante se suman pestañas (videos, devoluciones) sin cambiar esta estructura.
+function AppJugadora() {
+  const [sesion, setSesion] = useState(undefined)
+  const [cuenta, setCuenta] = useState({ estado: 'cargando' })
+  const [seccion, setSeccion] = useState('inicio')
+  const usuarioId = sesion?.user?.id ?? null
+
+  useEffect(() => {
+    let activo = true
+    let recibioEvento = false
+    const { data } = supabase.auth.onAuthStateChange((_evento, nueva) => {
+      recibioEvento = true
+      if (!activo) return
+      setSesion(nueva ?? null)
+      // Al salir se olvida la cuenta anterior: un ingreso posterior nunca muestra, ni por un instante, su estado.
+      if (!nueva) setCuenta({ estado: 'cargando' })
+    })
+    supabase.auth.getSession().then(({ data: resultado }) => {
+      if (activo && !recibioEvento) setSesion(resultado?.session ?? null)
+    })
+    return () => { activo = false; data?.subscription?.unsubscribe() }
+  }, [])
+
+  const cargarCuenta = useCallback(async () => {
+    setCuenta({ estado: 'cargando' })
+    const { data, error } = await obtenerPerfil()
+    if (!error && data) { setCuenta({ estado: 'ok', perfil: data }); return }
+    if (error?.code === 'cuenta_inactiva') {
+      const rol = await rolStaff()
+      setCuenta({ estado: 'inactiva', esStaff: Boolean(rol) })
+      return
+    }
+    setCuenta({ estado: 'error' })
+  }, [])
+
+  useEffect(() => {
+    // Cada vez que cambia el usuario se vuelve a pedir su cuenta; el estado se actualiza cuando responde la base.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (usuarioId) { setSeccion('inicio'); cargarCuenta() }
+  }, [usuarioId, cargarCuenta])
+
+  // scope 'local': cierra solo este dispositivo; las otras sesiones de la jugadora siguen abiertas.
+  async function cerrarSesion() {
+    await supabase.auth.signOut({ scope: 'local' })
+  }
+
+  if (sesion === undefined || (sesion && cuenta.estado === 'cargando')) {
+    return <main className="jg-centro" aria-busy="true"><p className="jg-texto" role="status">Cargando…</p></main>
+  }
+
+  if (!sesion) return <IngresoJugadora />
+
+  if (cuenta.estado === 'inactiva') {
+    return (
+      <main className="jg-centro">
+        <div className="jg-tarjeta jg-form">
+          {cuenta.esStaff ? (
+            <>
+              <h1 className="jg-subtitulo">Esta es la app de jugadoras</h1>
+              <p className="jg-texto">Entraste con una cuenta del staff. Para trabajar, usá el sistema del club.</p>
+              <a className="jg-boton jg-boton-principal" href="/">Abrir el sistema del club</a>
+            </>
+          ) : (
+            <>
+              <h1 className="jg-subtitulo">No podés entrar</h1>
+              <p className="jg-texto">Esta cuenta no está activa. Hablá con coordinación.</p>
+            </>
+          )}
+          <button type="button" className="jg-boton" onClick={cerrarSesion}>Cerrar sesión</button>
+        </div>
+      </main>
+    )
+  }
+
+  if (cuenta.estado === 'error') {
+    return (
+      <main className="jg-centro">
+        <div className="jg-tarjeta jg-form" role="alert">
+          <h1 className="jg-subtitulo">No se pudo cargar tu cuenta</h1>
+          <p className="jg-texto">Revisá la conexión y probá de nuevo.</p>
+          <button type="button" className="jg-boton jg-boton-principal" onClick={cargarCuenta}>Reintentar</button>
+          <button type="button" className="jg-boton" onClick={cerrarSesion}>Cerrar sesión</button>
+        </div>
+      </main>
+    )
+  }
+
+  const { perfil } = cuenta
+  return (
+    <div className="jg-app">
+      <header className="jg-cabecera">
+        {perfil.foto_url
+          ? <img src={perfil.foto_url} alt="" className="jg-avatar" />
+          : <span className="jg-avatar jg-avatar-iniciales" aria-hidden="true"><Iniciales perfil={perfil} /></span>}
+        <div className="jg-cabecera-textos">
+          <p className="jg-nombre">{perfil.nombre} {perfil.apellido}</p>
+          <p className="jg-categoria">{perfil.categoria}</p>
+        </div>
+        <button type="button" className="jg-boton jg-boton-chico" onClick={cerrarSesion}>Salir</button>
+      </header>
+
+      <main className="jg-contenido">
+        {seccion === 'inicio' && <InicioJugadora perfil={perfil} onIrAWellness={() => setSeccion('wellness')} />}
+        {seccion === 'wellness' && <WellnessJugadora />}
+        {seccion === 'numeros' && <MisNumeros />}
+      </main>
+
+      <nav className="jg-navegacion" aria-label="Secciones de la jugadora">
+        {SECCIONES.map(s => (
+          <button key={s.id} type="button" className="jg-pestana" aria-current={seccion === s.id ? 'page' : undefined}
+            onClick={() => setSeccion(s.id)}>
+            {s.etiqueta}
+          </button>
+        ))}
+      </nav>
+    </div>
+  )
+}
+
+export default AppJugadora

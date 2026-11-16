@@ -8,6 +8,9 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { exportarBackupCompleto } from '../utils/exportarBackup'
 import { comprimirImagen } from '../utils/comprimirImagen'
+import PestanasAccesibles from './ui/PestanasAccesibles'
+import CuentasJugadorasPanel from './usuarios/CuentasJugadorasPanel'
+import { mensajeErrorPerfil } from '../utils/cuentasJugadoras'
 
 const rolLabel = {
   coordinacion: 'Coordinación',
@@ -33,7 +36,9 @@ async function subirFotoPerfil(file, email) {
   return data.publicUrl
 }
 
-function UsuariosSection() {
+function UsuariosSection({ perfil }) {
+  const esCoordinacion = perfil?.rol === 'coordinacion'
+  const [pestana, setPestana] = useState('staff')
   const [usuarios, setUsuarios] = useState([])
   const [categorias, setCategorias] = useState([])
   const [cargando, setCargando] = useState(true)
@@ -185,7 +190,7 @@ function UsuariosSection() {
 
     setGuardando(false)
     if (error) {
-      setErrorMsg(error.code === '42501' ? 'No tenés permiso para guardar este perfil. Revisá tu sesión.' : 'Error al guardar: ' + error.message)
+      setErrorMsg(mensajeErrorPerfil(error))
     } else if (!data?.length) {
       setErrorMsg('No se confirmó el guardado del perfil. Puede haber cambiado o no tenés permiso; revisá tu acceso antes de reintentar.')
     } else {
@@ -202,11 +207,10 @@ function UsuariosSection() {
     cargarDatos()
   }
 
-  return (
-    <div className="dp-gestion" data-modulo="usuarios">
-      <div className="dp-gestion-contenido">
-        <EncabezadoSeccion eyebrow="Gestión" eyebrowResaltado="Equipo de trabajo" titulo="Usua" resaltado="rios" acciones={<><Boton variante="secundario" onClick={handleExportarBackup} disabled={exportando} aria-busy={exportando}>{exportando ? 'Generando…' : 'Exportar backup'}</Boton><Boton variante={mostrarForm ? 'secundario' : 'principal'} onClick={mostrarForm ? cancelarForm : abrirNuevo} aria-expanded={mostrarForm} aria-controls="usuarios-editor">{mostrarForm ? 'Cancelar' : '+ Nuevo usuario'}</Boton></>} />
+  const enStaff = !esCoordinacion || pestana === 'staff'
 
+  const contenidoStaff = (
+      <>
         <p className="text-xs mb-6" style={{ color: COLORES.textoMuted }}>
           Antes de darlo de alta acá, creá el login de esa persona en Supabase
           (Authentication → Add user) con este mismo email.
@@ -415,6 +419,20 @@ function UsuariosSection() {
           ))}
         </div>
         {!cargando && !errorCarga && usuarios.length === 0 && <EstadoContenido estado="vacio" titulo="Sin usuarios registrados" mensaje="No hay perfiles devueltos por la consulta actual." />}
+      </>
+  )
+
+  return (
+    <div className="dp-gestion" data-modulo="usuarios">
+      <div className="dp-gestion-contenido">
+        <EncabezadoSeccion eyebrow="Gestión" eyebrowResaltado="Equipo de trabajo" titulo="Usua" resaltado="rios" acciones={<><Boton variante="secundario" onClick={handleExportarBackup} disabled={exportando} aria-busy={exportando}>{exportando ? 'Generando…' : 'Exportar backup'}</Boton>{enStaff && <Boton variante={mostrarForm ? 'secundario' : 'principal'} onClick={mostrarForm ? cancelarForm : abrirNuevo} aria-expanded={mostrarForm} aria-controls="usuarios-editor">{mostrarForm ? 'Cancelar' : '+ Nuevo usuario'}</Boton>}</>} />
+
+        {esCoordinacion
+          ? <PestanasAccesibles etiqueta="Tipo de usuarios" seleccionada={pestana} onSeleccionar={setPestana} pestanas={[
+              { id: 'staff', etiqueta: 'Staff', contenido: contenidoStaff },
+              { id: 'jugadoras', etiqueta: 'Jugadoras', contenido: <CuentasJugadorasPanel perfil={perfil} activo={pestana === 'jugadoras'} /> },
+            ]} />
+          : contenidoStaff}
       </div>
     </div>
   )

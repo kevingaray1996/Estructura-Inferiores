@@ -1,0 +1,41 @@
+/* Cuentas de jugadoras (Usuarios → Jugadoras). Mobile primero; colores solo por tokens --ui-*. */
+.cj-panel { display: grid; gap: 16px; min-width: 0; color: var(--ui-texto); }
+.cj-cabecera { display: grid; gap: 12px; }
+.cj-titulo { margin: 0; font-family: var(--fuente-titulo); font-size: 1.375rem; font-weight: 700; letter-spacing: .02em; }
+.cj-ayuda { margin: 4px 0 0; max-width: 65ch; font-size: .875rem; line-height: 1.5; color: var(--ui-texto-secundario); }
+.cj-link { color: var(--ui-texto-acento); overflow-wrap: anywhere; }
+.cj-copiar.dp-btn { margin-top: 8px; width: 100%; }
+.cj-campo-categoria { display: grid; gap: 6px; font-size: .8125rem; font-weight: 600; color: var(--ui-texto-secundario); }
+.cj-campo-categoria select { min-height: 44px; width: 100%; padding: 8px 12px; border-radius: 10px; font: inherit; font-size: .9375rem; color: var(--ui-control-texto); background: var(--ui-control-fondo); border: 1px solid var(--ui-control-borde); }
+.cj-aviso { margin: 0; min-height: 1.25rem; font-size: .875rem; color: var(--ui-texto-secundario); }
+
+.cj-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cj-fila { display: grid; gap: 12px; padding: 12px; background: var(--ui-superficie); border: 1px solid var(--ui-borde); border-radius: 12px; min-width: 0; }
+.cj-identidad { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.cj-foto { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.cj-iniciales { display: inline-flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700; background: var(--ui-fondo-sidebar); color: var(--ui-texto-secundario); }
+.cj-textos { min-width: 0; }
+.cj-nombre { margin: 0; font-size: .9375rem; font-weight: 600; overflow-wrap: anywhere; }
+.cj-estado { margin: 2px 0 0; font-size: .8125rem; color: var(--ui-texto-secundario); overflow-wrap: anywhere; }
+.cj-estado[data-estado="activa"] { color: var(--ui-texto); }
+.cj-estado[data-estado="desactivada"] { color: var(--ui-texto-muted); }
+.cj-email { color: var(--ui-texto-muted); }
+
+.cj-acciones:empty { display: none; }
+.cj-acciones .dp-btn, .cj-botones .dp-btn { width: 100%; }
+.cj-alta, .cj-confirmar { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--ui-borde); }
+.cj-confirmar p { margin: 0; font-size: .875rem; line-height: 1.5; }
+.cj-etiqueta { font-size: .8125rem; font-weight: 600; color: var(--ui-texto-secundario); }
+.cj-input { min-height: 44px; width: 100%; padding: 8px 12px; border-radius: 10px; font: inherit; font-size: 1rem; color: var(--ui-control-texto); background: var(--ui-control-fondo); border: 1px solid var(--ui-control-borde); }
+.cj-input[aria-invalid="true"] { border-color: var(--ui-peligro); }
+.cj-botones { display: grid; gap: 8px; }
+.cj-error { margin: 0; font-size: .8125rem; color: var(--ui-peligro-texto); }
+
+@media (min-width: 768px) {
+  .cj-cabecera { grid-template-columns: 1fr minmax(200px, 260px); align-items: end; }
+  .cj-fila { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .cj-acciones .dp-btn, .cj-botones .dp-btn, .cj-copiar.dp-btn { width: auto; }
+  .cj-alta, .cj-confirmar, .cj-fila > .cj-error { grid-column: 1 / -1; }
+  .cj-botones { grid-auto-flow: column; justify-content: start; }
+  .cj-input { max-width: 28rem; }
+}

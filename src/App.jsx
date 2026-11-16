@@ -26,6 +26,7 @@ import BuscadorGlobal from './components/BuscadorGlobal'
 import AsistenciaSection from './components/AsistenciaSection'
 import FisicoSection from './components/FisicoSection'
 import BienestarPublico from './components/BienestarPublico'
+import { destinoSinPerfil } from './utils/derivarJugadora'
 import CaptacionSection from './components/CaptacionSection'
 import RepresentantesSection from './components/RepresentantesSection'
 import PensionesSection from './components/PensionesSection'
@@ -93,6 +94,12 @@ function App() {
 
       if (error) {
         console.error('Error cargando perfil:', error)
+      }
+
+      // Una jugadora con cuenta no tiene perfil del staff: se la manda a su app en vez de mostrar el aviso.
+      if (!data) {
+        const destino = await destinoSinPerfil(supabase)
+        if (vigente && destino) { window.location.replace(destino); return }
       }
 
       if (vigente) setPerfil(data || null)
@@ -356,7 +363,7 @@ function App() {
 
       {seccion === 'pases' && <PaseCategoriaSection />}
 
-      {seccion === 'usuarios' && <UsuariosSection />}
+      {seccion === 'usuarios' && <UsuariosSection perfil={perfil} />}
 
       {/* Nuevo módulo de informes automáticos */}
       {seccion === 'informes' && (

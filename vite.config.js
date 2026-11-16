@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
     rollupOptions: {
-      input: { principal: 'index.html', analisisVentana: 'analisis-ventana.html' },
+      input: { principal: 'index.html', analisisVentana: 'analisis-ventana.html', jugadora: 'jugadora/index.html' },
     },
   },
 })
