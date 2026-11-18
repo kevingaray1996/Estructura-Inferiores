@@ -7,6 +7,7 @@ import { CAMPOS_FISICOS } from '../utils/camposFisicos'
 import { fechaHora } from '../utils/formatoFecha'
 import EncabezadoSeccion from './ui/EncabezadoSeccion'
 import EstadoVacio from './ui/EstadoVacio'
+import AvisarConvocatoria from './avisos/AvisarConvocatoria'
 
 function fechaISO(date) {
   const anio = date.getFullYear()
@@ -226,6 +227,11 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
       [jugadorId]: { ...(prev[jugadorId] || statsVacias), [campo]: valor },
     }))
   }
+
+  // El aviso de convocatoria sale con lo guardado: si la lista en pantalla difiere de la guardada, primero hay que guardar.
+  const idsGuardados = citacionesExistentes.map((c) => c.jugador_id)
+  const idsEnPantalla = Object.keys(convocados)
+  const hayCambiosConvocatoria = idsEnPantalla.length !== idsGuardados.length || idsEnPantalla.some((id) => !idsGuardados.includes(id))
 
   async function handleGuardarConvocados() {
     setErrorMsg('')
@@ -702,6 +708,12 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
             >
               {guardando ? 'Guardando...' : 'Guardar convocados y estadísticas'}
             </button>
+
+            <AvisarConvocatoria
+              partidoId={partidoId}
+              convocadasGuardadas={citacionesExistentes.length}
+              hayCambios={hayCambiosConvocatoria}
+            />
 
             <div className="flex items-center justify-between mt-10 mb-3">
               <p className="text-xs uppercase tracking-wide" style={{ color: P.tenue }}>

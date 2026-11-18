@@ -39,3 +39,18 @@ export async function rolStaff() {
   const { data } = await llamar('mi_rol')
   return data || null
 }
+
+// Avisos (etapa 2). La identidad sale de la cuenta: nunca se manda el id de la jugadora.
+export const avisosEstado = () => llamar('portal_avisos_estado')
+
+export function avisosSuscribir({ endpoint, p256dh, auth, dispositivo }) {
+  return llamar('portal_avisos_suscribir', { p_endpoint: endpoint, p_p256dh: p256dh, p_auth: auth, p_dispositivo: dispositivo })
+}
+
+export const avisosDesuscribir = (endpoint) => llamar('portal_avisos_desuscribir', { p_endpoint: endpoint })
+
+export function avisosPreferencias({ wellness, rpe, entrenamiento, convocatoria, mensajes }) {
+  return llamar('portal_avisos_preferencias', {
+    p_wellness: wellness, p_rpe: rpe, p_entrenamiento: entrenamiento, p_convocatoria: convocatoria, p_mensajes: mensajes,
+  })
+}

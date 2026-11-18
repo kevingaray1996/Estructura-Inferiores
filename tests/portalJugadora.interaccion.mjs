@@ -51,6 +51,8 @@ function crearCliente({ conSesion = false } = {}) {
       if (nombre === 'portal_entrenamiento_hoy') return { data: [], error: null }
       if (nombre === 'portal_wellness_guardar') { estado.respondio = true; return { data: null, error: null } }
       if (nombre === 'portal_rpe_guardar') return { data: null, error: null }
+      if (nombre === 'portal_avisos_estado') return { data: { preferencias: { wellness: true, rpe: true, entrenamiento: true, convocatoria: true, mensajes: true }, dispositivos: 1 }, error: null }
+      if (['portal_avisos_suscribir', 'portal_avisos_desuscribir', 'portal_avisos_preferencias'].includes(nombre)) return { data: null, error: null }
       return { data: null, error: { code: '42883', message: 'no existe' } }
     },
     from(tabla) { llamadas.push({ nombre: 'from', tabla }); throw new Error('La app de la jugadora no lee tablas') },
@@ -58,8 +60,12 @@ function crearCliente({ conSesion = false } = {}) {
   return { cliente, llamadas, estado }
 }
 
-async function montar(f) {
-  const dom = new JSDOM('<div id="root"></div>', { url: 'https://fixture.invalid/jugadora/' })
+// Clave pública de prueba (65 bytes): solo para que la pestaña Avisos esté disponible.
+const CLAVE_PRUEBA = 'B' + 'A'.repeat(86)
+
+async function montar(f, { url = 'https://fixture.invalid/jugadora/', prepararDom } = {}) {
+  const dom = new JSDOM('<div id="root"></div>', { url })
+  prepararDom?.(dom)
   const previos = new Map()
   const poner = (n, v) => { previos.set(n, Object.getOwnPropertyDescriptor(globalThis, n)); Object.defineProperty(globalThis, n, { value: v, configurable: true, writable: true }) }
   for (const n of ['window', 'document', 'HTMLElement', 'Event', 'FocusEvent', 'MouseEvent', 'navigator', 'location']) poner(n, dom.window[n])
@@ -67,7 +73,7 @@ async function montar(f) {
   const { act, createElement: h } = await import('react')
   const { createRoot } = await import('react-dom/client')
   const { crearServidorVitePrueba } = await import('./helpers/servidorVite.mjs')
-  const vite = await crearServidorVitePrueba({ server: { middlewareMode: true, hmr: false }, appType: 'custom', plugins: [{ name: 'jugadora-sin-servicios', enforce: 'pre', resolveId(s) { if (s.endsWith('/supabaseClient')) return '\0jugadora-cliente' }, load(id) { if (id === '\0jugadora-cliente') return 'export const supabase=globalThis.__clienteJugadora' } }] })
+  const vite = await crearServidorVitePrueba({ server: { middlewareMode: true, hmr: false }, appType: 'custom', define: { 'import.meta.env.VITE_AVISOS_VAPID_PUBLICA': JSON.stringify(CLAVE_PRUEBA) }, plugins: [{ name: 'jugadora-sin-servicios', enforce: 'pre', resolveId(s) { if (s.endsWith('/supabaseClient')) return '\0jugadora-cliente' }, load(id) { if (id === '\0jugadora-cliente') return 'export const supabase=globalThis.__clienteJugadora' } }] })
   const root = createRoot(document.getElementById('root'))
   const pausa = () => new Promise(r => setTimeout(r, 25))
   const restaurar = () => { for (const [n, d] of previos) { if (d) Object.defineProperty(globalThis, n, d); else delete globalThis[n] } }
@@ -267,5 +273,96 @@ test('Wellness de la jugadora: lo marcado sobrevive al cambiar a RPE y volver', 
     assert.ok(!filas()[0].closest('[hidden]'))
     assert.deepEqual(filas().slice(0, 3).map(elegido), [['2'], ['4'], []])
     assert.ok(!f.llamadas.some(l => l.nombre === 'portal_wellness_guardar'), 'cambiar de pestaña no guarda nada')
+  } finally { await a.cerrar() }
+})
+
+// Navegador simulado con push: un registro del service worker, su pushManager y Notification.
+const UA_ANDROID = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36'
+const UA_IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1'
+function navegadorConPush(dom, { ua = UA_ANDROID, permiso = 'default', respuesta = 'granted', suscripta = false } = {}) {
+  const w = dom.window
+  const registro = { opciones: null, desuscripto: false }
+  const crearSub = () => ({
+    endpoint: 'https://fcm.googleapis.com/fcm/send/prueba',
+    toJSON() { return { endpoint: this.endpoint, keys: { p256dh: 'P'.repeat(87), auth: 'A'.repeat(22) } } },
+    async unsubscribe() { registro.pushManager.sub = null; registro.desuscripto = true; return true },
+  })
+  registro.pushManager = {
+    sub: suscripta ? crearSub() : null,
+    async getSubscription() { return this.sub },
+    async subscribe(opciones) { registro.opciones = opciones; this.sub = crearSub(); return this.sub },
+  }
+  Object.defineProperty(w.navigator, 'userAgent', { value: ua, configurable: true })
+  Object.defineProperty(w.navigator, 'serviceWorker', { value: { getRegistration: async () => registro, register: async () => registro, ready: Promise.resolve(registro) }, configurable: true })
+  w.PushManager = function PushManager() {}
+  w.Notification = { permission: permiso, requestPermission: async () => { w.Notification.permission = respuesta; return respuesta } }
+  return registro
+}
+const pestanaJugadora = nombre => [...document.querySelectorAll('nav[aria-label="Secciones de la jugadora"] button')].find(b => b.textContent.trim() === nombre)
+
+test('Avisos: activar con permiso, elegir tipos y desactivar en este celular', async () => {
+  const f = crearCliente({ conSesion: true })
+  let registro
+  const a = await montar(f, { prepararDom: dom => { registro = navegadorConPush(dom) } })
+  try {
+    await a.clic(pestanaJugadora('Avisos'))
+    assert.equal(pestanaJugadora('Avisos').getAttribute('aria-current'), 'page')
+    assert.ok(!f.llamadas.some(l => l.nombre === 'portal_avisos_suscribir'), 'sin permiso todavía no se asocia nada')
+    await a.clic(a.boton('Activar avisos'))
+    assert.equal(registro.opciones.userVisibleOnly, true)
+    assert.equal(registro.opciones.applicationServerKey.length, 65)
+    assert.deepEqual(f.llamadas.find(l => l.nombre === 'portal_avisos_suscribir').args,
+      { p_endpoint: 'https://fcm.googleapis.com/fcm/send/prueba', p_p256dh: 'P'.repeat(87), p_auth: 'A'.repeat(22), p_dispositivo: 'android' })
+    assert.match(a.texto(), /Los avisos están activados en este celular/)
+
+    const rpe = [...document.querySelectorAll('label')].find(l => l.textContent.includes('RPE')).querySelector('input')
+    await a.clic(rpe)
+    assert.deepEqual(f.llamadas.filter(l => l.nombre === 'portal_avisos_preferencias').at(-1).args,
+      { p_wellness: true, p_rpe: false, p_entrenamiento: true, p_convocatoria: true, p_mensajes: true })
+    assert.equal(rpe.checked, false)
+
+    await a.clic(a.boton('Desactivar avisos en este celular'))
+    assert.deepEqual(f.llamadas.find(l => l.nombre === 'portal_avisos_desuscribir').args, { p_endpoint: 'https://fcm.googleapis.com/fcm/send/prueba' })
+    assert.equal(registro.desuscripto, true)
+    assert.ok(a.boton('Activar avisos'))
+  } finally { await a.cerrar() }
+})
+
+test('Avisos: bloqueados, iPhone sin instalar y sincronización al abrir con permiso', async () => {
+  let f = crearCliente({ conSesion: true })
+  let a = await montar(f, { prepararDom: dom => navegadorConPush(dom, { permiso: 'denied' }) })
+  try {
+    await a.clic(pestanaJugadora('Avisos'))
+    assert.match(a.texto(), /Los avisos están bloqueados para esta app/)
+    assert.equal(a.boton('Activar avisos'), undefined)
+  } finally { await a.cerrar() }
+
+  f = crearCliente({ conSesion: true })
+  a = await montar(f, { prepararDom: dom => navegadorConPush(dom, { ua: UA_IPHONE }) })
+  try {
+    await a.clic(pestanaJugadora('Avisos'))
+    assert.match(a.texto(), /Agregar a pantalla de inicio/)
+  } finally { await a.cerrar() }
+
+  // Con permiso y suscripción, al abrir la app la vuelve a asociar a esta cuenta (sin tocar nada).
+  f = crearCliente({ conSesion: true })
+  a = await montar(f, { prepararDom: dom => navegadorConPush(dom, { permiso: 'granted', suscripta: true }) })
+  try {
+    assert.equal(f.llamadas.filter(l => l.nombre === 'portal_avisos_suscribir').length, 1)
+  } finally { await a.cerrar() }
+})
+
+test('Aviso tocado: ?seccion=rpe abre Wellness en la vista RPE y limpia la dirección; Salir desasocia el celular antes de cerrar', async () => {
+  const f = crearCliente({ conSesion: true })
+  let registro
+  const a = await montar(f, { url: 'https://fixture.invalid/jugadora/?seccion=rpe', prepararDom: dom => { registro = navegadorConPush(dom, { permiso: 'granted', suscripta: true }) } })
+  try {
+    assert.equal(pestanaJugadora('Wellness').getAttribute('aria-current'), 'page')
+    assert.equal(a.boton('Esfuerzo (RPE)').getAttribute('aria-pressed'), 'true')
+    assert.equal(window.location.search, '')
+    await a.clic(a.boton('Salir'))
+    const orden = f.llamadas.map(l => l.nombre)
+    assert.ok(orden.lastIndexOf('portal_avisos_desuscribir') < orden.indexOf('signOut'), 'desasocia antes de cerrar la sesión')
+    assert.equal(registro.desuscripto, true)
   } finally { await a.cerrar() }
 })

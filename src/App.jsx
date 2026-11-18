@@ -24,6 +24,7 @@ import UsuariosSection from './components/UsuariosSection'
 import PaseCategoriaSection from './components/PaseCategoriaSection'
 import BuscadorGlobal from './components/BuscadorGlobal'
 import AsistenciaSection from './components/AsistenciaSection'
+import AvisosSection from './components/avisos/AvisosSection'
 import FisicoSection from './components/FisicoSection'
 import BienestarPublico from './components/BienestarPublico'
 import { destinoSinPerfil } from './utils/derivarJugadora'
@@ -326,6 +327,7 @@ function App() {
       {seccion === 'planificacion' && <PlanificacionSection perfil={perfil} fechaInicial={contextoPlanificacion?.fecha} categoriaInicial={contextoPlanificacion?.categoriaId} sesionInicialId={contextoPlanificacion?.sesionId}
         onVerAsistencia={(fecha, categoriaId) => { setContextoAsistencia({ fecha, categoriaId }); setSeccion('asistencia') }} />}
 
+      {seccion === 'avisos' && <AvisosSection perfil={perfil} />}
       {seccion === 'asistencia' && <AsistenciaSection perfil={perfil} fechaInicial={contextoAsistencia?.fecha} categoriaInicial={contextoAsistencia?.categoriaId}
         onVerPlanificacion={puedePlanificar(perfil) ? (fecha, categoriaId) => { if (!puedePlanificar(perfil, categoriaId)) return; setContextoPlanificacion({ fecha, categoriaId }); setSeccion('planificacion') } : undefined} />}
 
