@@ -64,6 +64,7 @@ function PartidosSection({ perfil, onIrAFisico }) {
         categoriaId={categoriaId}
         onVolver={() => setVista('lista')}
         onIrAFisico={onIrAFisico}
+        puedeAvisar={['coordinacion', 'tecnico'].includes(perfil?.rol)}
       />
     )
   }

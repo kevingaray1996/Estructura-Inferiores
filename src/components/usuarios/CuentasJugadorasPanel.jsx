@@ -3,6 +3,7 @@ import { supabase } from '../../supabaseClient'
 import Boton from '../ui/Boton'
 import EstadoContenido from '../ui/EstadoContenido'
 import FranjaNumeros from '../ui/FranjaNumeros'
+import useFocoConfirmacion from '../../hooks/useFocoConfirmacion'
 import { emailValido, fechaCorta, llamarCuentas, mensajeCuentas, normalizarEmail } from '../../utils/cuentasJugadoras'
 import './cuentasJugadoras.css'
 
@@ -34,6 +35,8 @@ function CuentasJugadorasPanel({ perfil, activo = true }) {
   const [trabajando, setTrabajando] = useState(null)
   const [errores, setErrores] = useState({})
   const [aviso, setAviso] = useState('')
+  const { primerBoton: primerDesactivar, disparador: disparadorDesactivar, cancelar: cancelarDesactivar } = useFocoConfirmacion(confirmando)
+  const { primerBoton: primerQuitar, disparador: disparadorQuitar, cancelar: cancelarQuitar } = useFocoConfirmacion(quitando)
 
   const cargarCategorias = useCallback(async () => {
     setErrorCarga(null)
@@ -210,12 +213,12 @@ function CuentasJugadorasPanel({ perfil, activo = true }) {
                   {estado.clave === 'sin' && altaAbierta !== fila.jugador_id &&
                     <Boton variante="secundario" onClick={() => abrirAlta(fila)}>Crear cuenta</Boton>}
                   {estado.clave === 'activa' && confirmando !== fila.jugador_id &&
-                    <Boton variante="secundario" onClick={() => { setConfirmando(fila.jugador_id); setQuitando(null); cerrarAlta() }}>Desactivar cuenta</Boton>}
+                    <Boton ref={disparadorDesactivar(fila.jugador_id)} variante="secundario" onClick={() => { setConfirmando(fila.jugador_id); setQuitando(null); cerrarAlta() }}>Desactivar cuenta</Boton>}
                   {estado.clave === 'desactivada' && quitando !== fila.jugador_id && <>
                     <Boton variante="secundario" onClick={() => reactivar(fila)} disabled={ocupado} aria-busy={ocupado}>
                       {ocupado ? 'Reactivando…' : 'Reactivar cuenta'}
                     </Boton>
-                    <Boton variante="secundario" onClick={() => { setQuitando(fila.jugador_id); setConfirmando(null); cerrarAlta() }} disabled={ocupado}>
+                    <Boton ref={disparadorQuitar(fila.jugador_id)} variante="secundario" onClick={() => { setQuitando(fila.jugador_id); setConfirmando(null); cerrarAlta() }} disabled={ocupado}>
                       Quitar cuenta
                     </Boton>
                   </>}
@@ -242,10 +245,10 @@ function CuentasJugadorasPanel({ perfil, activo = true }) {
                   <div className="cj-confirmar" role="group" aria-labelledby={`cj-confirmar-${fila.jugador_id}`}>
                     <p id={`cj-confirmar-${fila.jugador_id}`}>Desactivar la cuenta de {nombreCompleto}. No va a poder entrar hasta que la reactives.</p>
                     <div className="cj-botones">
-                      <Boton variante="peligro" onClick={() => desactivar(fila)} disabled={ocupado} aria-busy={ocupado}>
+                      <Boton ref={primerDesactivar} variante="peligro" onClick={() => desactivar(fila)} disabled={ocupado} aria-busy={ocupado}>
                         {ocupado ? 'Desactivando…' : 'Desactivar cuenta'}
                       </Boton>
-                      <Boton variante="secundario" onClick={() => setConfirmando(null)} disabled={ocupado}>Cancelar</Boton>
+                      <Boton variante="secundario" onClick={() => { cancelarDesactivar(); setConfirmando(null) }} disabled={ocupado}>Cancelar</Boton>
                     </div>
                   </div>
                 )}
@@ -257,10 +260,10 @@ function CuentasJugadorasPanel({ perfil, activo = true }) {
                       sin cuenta. La jugadora y sus datos no se tocan.
                     </p>
                     <div className="cj-botones">
-                      <Boton variante="peligro" onClick={() => quitarCuenta(fila)} disabled={ocupado} aria-busy={ocupado}>
+                      <Boton ref={primerQuitar} variante="peligro" onClick={() => quitarCuenta(fila)} disabled={ocupado} aria-busy={ocupado}>
                         {ocupado ? 'Quitando…' : 'Quitar cuenta'}
                       </Boton>
-                      <Boton variante="secundario" onClick={() => setQuitando(null)} disabled={ocupado}>Cancelar</Boton>
+                      <Boton variante="secundario" onClick={() => { cancelarQuitar(); setQuitando(null) }} disabled={ocupado}>Cancelar</Boton>
                     </div>
                   </div>
                 )}

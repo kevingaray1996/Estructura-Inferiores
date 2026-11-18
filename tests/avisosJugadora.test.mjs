@@ -31,6 +31,35 @@ test('soporte: iPhone sin instalar, listo, bloqueado y sin soporte', () => {
   assert.equal(soporte({ plataforma: 'android', standalone: false, tienePush: true, permiso: 'denied' }), 'bloqueado')
   assert.equal(soporte({ plataforma: 'android', standalone: false, tienePush: true, permiso: 'granted' }), 'listo')
   assert.equal(soporte({ plataforma: 'compu', standalone: false, tienePush: false, permiso: 'default' }), 'sin_soporte')
+  // iPhone instalado sin push: iOS anterior a 16.4, hay que actualizarlo.
+  assert.equal(soporte({ plataforma: 'iphone', standalone: true, tienePush: false, permiso: 'default' }), 'actualizar_ios')
+  assert.equal(soporte({ plataforma: 'android', standalone: true, tienePush: false, permiso: 'default' }), 'sin_soporte')
+})
+
+test('registroAvisos: siempre devuelve el registro activo (serviceWorker.ready), esté o no registrado', async () => {
+  const { crearServidorVitePrueba } = await import('./helpers/servidorVite.mjs')
+  const vite = await crearServidorVitePrueba({ server: { middlewareMode: true, hmr: false }, appType: 'custom', plugins: [{ name: 'sin-supabase', enforce: 'pre', resolveId(s) { if (s.endsWith('/supabaseClient')) return '\0sin-supabase' }, load(id) { if (id === '\0sin-supabase') return 'export const supabase={}' } }] })
+  try {
+    const { registroAvisos } = await vite.ssrLoadModule('/src/jugadora/avisosDispositivo.js')
+    const instalando = { estado: 'instalando' }, activo = { estado: 'activo' }
+    const crearNav = actual => {
+      const nav = { registrados: [], serviceWorker: {
+        getRegistration: async scope => { nav.scope = scope; return actual },
+        register: async (url, opciones) => { nav.registrados.push([url, opciones]); return instalando },
+        ready: Promise.resolve(activo),
+      } }
+      return nav
+    }
+    // Ya registrado (pero quizá todavía instalándose): espera a ready.
+    let nav = crearNav(instalando)
+    assert.equal(await registroAvisos(nav), activo)
+    assert.equal(nav.scope, '/jugadora/')
+    assert.deepEqual(nav.registrados, [])
+    // Sin registrar: lo registra y también espera a ready.
+    nav = crearNav(undefined)
+    assert.equal(await registroAvisos(nav), activo)
+    assert.deepEqual(nav.registrados, [['/jugadora/sw.js', { scope: '/jugadora/' }]])
+  } finally { await vite.close() }
 })
 
 test('claveAplicacion: base64url a bytes (con y sin relleno)', () => {

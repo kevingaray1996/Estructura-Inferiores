@@ -52,7 +52,7 @@ const statsVacias = {
   capitan: false,
 }
 
-function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
+function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico, puedeAvisar = true }) {
   const [partido, setPartido] = useState(null)
   const [jugadores, setJugadores] = useState([])
   const [tab, setTab] = useState('convocados') // 'convocados' | 'formacion' | 'post' | 'destacados'
@@ -697,6 +697,9 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico }) {
               partidoId={partidoId}
               convocadasGuardadas={citacionesExistentes.length}
               hayCambios={hayCambiosConvocatoria}
+              puedeAvisar={puedeAvisar}
+              rival={partido.rival}
+              fecha={partido.fecha}
             />
 
             <div className="flex items-center justify-between mt-10 mb-3">

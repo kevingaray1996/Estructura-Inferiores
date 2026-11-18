@@ -432,29 +432,51 @@ la app, y pasarme el resumen.
 
 **G. Preview.** El usuario autoriza el commit y el push a `origin/avisos`.
 
-## Cómo probarlo con la cuenta de prueba (Esmilse Acosta, Primera)
+**H. Ajustes de la revisión final.** Correr completo `supabase/migrations/20261118120000_avisos_ajustes.sql` en el
+editor SQL, con poco uso de la app, y pasarme el resumen. Se puede correr antes o después del merge a main: es
+compatible con el código de las dos versiones.
+- Agrega el corte de las 20:00 al aviso de una sesión publicada tarde, hace que `tick()` marque como error lo
+  vencido (el historial ya no muestra «En cola» por horas) y deja la tarea `avisos-limpieza` buscando
+  `avisos-tick` por nombre.
+- No hace falta volver a desplegar la función `avisos-enviar` ni tocar Vercel.
+- Reversión: `supabase/rollback/20261118120000_avisos_ajustes.sql` (si se revierte también la etapa 2, primero
+  esta).
+- Después, correr `supabase/verification/20261118_prueba_calendario_avisos.sql` (ver «Cómo probarlo»).
 
-**En la preview, con Chrome en la compu.** El push funciona sin instalar nada.
-- [ ] Entrar a `/jugadora/` con Esmilse → pestaña Avisos → «Activar avisos» → permitir. En el staff, Avisos →
-  Jugadoras, tiene que aparecer «Avisos activos en 1 celular».
-- [ ] Mandar un aviso manual solo a Esmilse. Tiene que llegar en menos de 2 minutos. Tocarlo tiene que abrir
-  Inicio.
-- [ ] En Horarios, poner la hora de Wellness de Primera a 2 minutos de la hora actual, con el día de hoy marcado.
-  Tiene que llegar el recordatorio de Wellness. Completar el Wellness. Repetirlo con otra hora: no tiene que
-  llegar, porque ya lo completó.
-- [ ] Lo mismo con la hora de RPE. Tocar el aviso tiene que abrir Wellness en la vista RPE.
-- [ ] Publicar una sesión de hoy después de la hora de Wellness: tiene que llegar «Ya está tu entrenamiento de
-  hoy». Retirarla y volver a publicarla: no tiene que llegar de nuevo.
-- [ ] Crear una pausa para hoy: con otra hora de prueba no tiene que llegar nada. Quitar la pausa.
-- [ ] Marcar hoy como Descanso en la planificación: no tiene que llegar nada.
-- [ ] En la pestaña Avisos, apagar «Mensajes» y mandar otro manual: no tiene que llegar. El historial lo muestra
-  con «sin avisos».
-- [ ] Guardar una convocatoria con Esmilse citada y tocar «Avisar convocatoria»: tiene que llegar «Estás
-  convocada…».
-- [ ] Con un usuario técnico: intentar mandar a otra categoría no se puede, y el sexto aviso del día se rechaza.
-- [ ] Volver a dejar los horarios de Primera en miércoles, jueves y viernes, 7:10 y 10:15.
+## Cómo probarlo con la cuenta de prueba (Esmilse Acosta)
 
-**En Android (Chrome), en la preview:** activar los avisos y recibir un manual.
+**En vivo, en la preview, con Chrome en la compu o en Android.** El push funciona sin instalar nada. Esmilse es
+una jugadora de prueba.
+- [ ] **1. Activar.** Entrar a `/jugadora/` con Esmilse → pestaña Avisos → «Activar avisos» → permitir. En el
+  staff, Avisos → Jugadoras, tiene que aparecer «Avisos activos en 1 celular».
+- [ ] **2. Un manual solo a Esmilse.** Avisos → Mandar aviso → «Jugadoras elegidas» → Esmilse. Tiene que llegar en
+  menos de 2 minutos y, al tocarlo, abrir Inicio. En Historial: «1 de 1».
+- [ ] **3. Mensajes apagados.** En la pestaña Avisos de Esmilse, apagar «Mensajes» y mandarle otro manual: no tiene
+  que llegar, y el historial lo cuenta como «sin avisos». Volver a prender «Mensajes».
+- [ ] **4. Convocatoria.** En un partido donde Esmilse está convocada (guardada), tocar «Avisar convocatoria»: tiene
+  que llegar «Estás convocada: vs …».
+- [ ] **5. Un recordatorio de Wellness y uno de RPE, en una categoría de prueba** (así nunca se toca la
+  planificación real de Primera):
+  1. Crear la categoría «Prueba avisos» en la app.
+  2. Pasar a Esmilse a «Prueba avisos» por un rato (es jugadora de prueba).
+  3. En Avisos → Horarios, en «Prueba avisos»: marcar el día de hoy y poner la hora de Wellness 2 minutos más
+     tarde que la hora actual. Tiene que llegar «Completá tu Wellness de hoy.».
+  4. Lo mismo con la hora de RPE: tiene que llegar «Cargá tu RPE de hoy.» y, al tocarlo, abrir Wellness en la
+     vista RPE.
+  - Cada recordatorio sale **una sola vez por categoría y por día**: si hay que repetirlo, es al día siguiente
+    (o con otra categoría de prueba).
+- [ ] **6. Publicación tarde.** Publicar una sesión de hoy en «Prueba avisos» después de su hora de Wellness (y
+  antes de las 20:00): tiene que llegar «Ya está tu entrenamiento de hoy.». Solo sirve si ese día no salió a la
+  mañana el combinado («Ya está tu entrenamiento de hoy · Completá tu Wellness.»), porque ese ya avisó.
+- [ ] **7. Dejar todo como estaba.** Borrar las sesiones de prueba, volver a pasar a Esmilse a Primera y borrar la
+  categoría «Prueba avisos».
+
+**Lo que no se puede probar en vivo** (que no se repita, que no le llegue a quien completó, la pausa, el Descanso,
+la ventana de 90 minutos, que una sesión no se anuncia antes de su día y el corte de las 20:00): correr
+`supabase/verification/20261118_prueba_calendario_avisos.sql` en el editor SQL, después de los ajustes (paso H).
+No toca datos reales: todo lo de prueba se deshace. Todas las filas del resultado tienen que decir **OK**. Para
+borrar la tabla de resultados después: `DROP TABLE seguridad_privado.prueba_calendario_avisos;`.
 
 **En iPhone, en producción después del OK para main:** instalar la app, activar los avisos desde el ícono y recibir
-un manual. Si se borra el ícono, el aviso deja de llegar hasta volver a activarlo.
+un manual. Si se borra el ícono, el aviso deja de llegar hasta volver a activarlo. Con un iOS anterior a 16.4, la
+pestaña Avisos pide actualizar el iPhone.

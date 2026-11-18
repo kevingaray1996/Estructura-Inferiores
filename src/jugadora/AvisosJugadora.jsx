@@ -18,13 +18,19 @@ const TODAS = { wellness: true, rpe: true, entrenamiento: true, convocatoria: tr
 function AvisosJugadora({ clavePublica = import.meta.env.VITE_AVISOS_VAPID_PUBLICA }) {
   const [estado, setEstado] = useState('cargando')
   const [preferencias, setPreferencias] = useState(TODAS)
+  // null mientras carga, 'ok' o 'error'. Con error no se muestran los interruptores (no se sabe cómo están).
+  const [cargaPreferencias, setCargaPreferencias] = useState(null)
+  const [guardando, setGuardando] = useState(false)
   const [trabajando, setTrabajando] = useState(false)
   const [aviso, setAviso] = useState('')
   const [error, setError] = useState('')
 
   const cargarPreferencias = useCallback(async () => {
-    const { data } = await avisosEstado()
-    if (data?.preferencias) setPreferencias({ ...TODAS, ...data.preferencias })
+    setCargaPreferencias(null)
+    const { data, error: fallo } = await avisosEstado()
+    if (fallo || !data) { setCargaPreferencias('error'); return }
+    setPreferencias({ ...TODAS, ...(data.preferencias || {}) })
+    setCargaPreferencias('ok')
   }, [])
 
   useEffect(() => {
@@ -71,11 +77,15 @@ function AvisosJugadora({ clavePublica = import.meta.env.VITE_AVISOS_VAPID_PUBLI
     setEstado('inactivo'); setAviso('Avisos desactivados en este celular.')
   }
 
+  // Un cambio por vez: mientras se guarda, los interruptores quedan deshabilitados (dos toques rápidos no pueden
+  // llegar a la base en otro orden).
   async function cambiar(clave) {
+    if (guardando) return
     const anterior = preferencias
     const nuevas = { ...preferencias, [clave]: !preferencias[clave] }
-    setPreferencias(nuevas); setError(''); setAviso('')
+    setPreferencias(nuevas); setError(''); setAviso(''); setGuardando(true)
     const { error: fallo } = await avisosPreferencias(nuevas)
+    setGuardando(false)
     if (fallo) {
       setPreferencias(anterior)
       setError('No se pudo guardar el cambio. Revisá la conexión y probá de nuevo.')
@@ -97,6 +107,9 @@ function AvisosJugadora({ clavePublica = import.meta.env.VITE_AVISOS_VAPID_PUBLI
               <li>Abrí la app desde el ícono y volvé a esta pestaña.</li>
             </ol>
           </>
+        )}
+        {estado === 'actualizar_ios' && (
+          <p className="jg-texto">Tu iPhone necesita iOS 16.4 o más para recibir avisos. Actualizalo desde Ajustes → General → Actualización de software.</p>
         )}
         {estado === 'sin_soporte' && (
           <p className="jg-texto">Este navegador no recibe avisos. En Android usá Chrome; en iPhone, la app instalada desde Safari.</p>
@@ -132,11 +145,18 @@ function AvisosJugadora({ clavePublica = import.meta.env.VITE_AVISOS_VAPID_PUBLI
       {estado === 'activo' && (
         <section className="jg-tarjeta" aria-labelledby="jg-avisos-tipos">
           <h2 id="jg-avisos-tipos" className="jg-subtitulo">Qué avisos querés recibir</h2>
-          <ul className="jg-interruptores">
+          {cargaPreferencias === null && <p className="jg-texto" role="status">Cargando tus preferencias…</p>}
+          {cargaPreferencias === 'error' && (
+            <>
+              <p className="jg-error" role="alert">No se pudieron cargar tus preferencias. Probá de nuevo.</p>
+              <button type="button" className="jg-boton" onClick={() => { void cargarPreferencias() }}>Reintentar</button>
+            </>
+          )}
+          {cargaPreferencias === 'ok' && <ul className="jg-interruptores" aria-busy={guardando}>
             {TIPOS.map((t) => (
               <li key={t.clave}>
                 <label className="jg-interruptor">
-                  <input type="checkbox" checked={preferencias[t.clave]} onChange={() => cambiar(t.clave)} />
+                  <input type="checkbox" checked={preferencias[t.clave]} onChange={() => cambiar(t.clave)} disabled={guardando} />
                   <span>
                     <span className="jg-interruptor-etiqueta">{t.etiqueta}</span>
                     <span className="jg-interruptor-ayuda">{t.ayuda}</span>
@@ -144,7 +164,7 @@ function AvisosJugadora({ clavePublica = import.meta.env.VITE_AVISOS_VAPID_PUBLI
                 </label>
               </li>
             ))}
-          </ul>
+          </ul>}
           <button type="button" className="jg-boton" onClick={desactivar} disabled={trabajando} aria-busy={trabajando}>
             {trabajando ? 'Desactivando…' : 'Desactivar avisos en este celular'}
           </button>

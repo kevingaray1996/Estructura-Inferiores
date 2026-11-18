@@ -26,6 +26,8 @@ function crearCliente({ conSesion = false } = {}) {
     numeros: NUMEROS,
     respondio: false,
     oyentes: [],
+    fallos: {},
+    esperas: {},
   }
   const avisar = (evento) => estado.oyentes.forEach(f => f(evento, estado.sesion))
   const cliente = {
@@ -44,6 +46,8 @@ function crearCliente({ conSesion = false } = {}) {
     },
     async rpc(nombre, args) {
       llamadas.push({ nombre, args })
+      if (estado.esperas[nombre]) await estado.esperas[nombre]
+      if (estado.fallos[nombre]) return { data: null, error: estado.fallos[nombre] }
       if (nombre === 'portal_mi_perfil') return estado.perfil
       if (nombre === 'mi_rol') return { data: estado.rol, error: null }
       if (nombre === 'portal_mis_numeros') return { data: estado.numeros, error: null }
@@ -279,7 +283,7 @@ test('Wellness de la jugadora: lo marcado sobrevive al cambiar a RPE y volver', 
 // Navegador simulado con push: un registro del service worker, su pushManager y Notification.
 const UA_ANDROID = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36'
 const UA_IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1'
-function navegadorConPush(dom, { ua = UA_ANDROID, permiso = 'default', respuesta = 'granted', suscripta = false } = {}) {
+function navegadorConPush(dom, { ua = UA_ANDROID, permiso = 'default', respuesta = 'granted', suscripta = false, instalada = false, conPush = true } = {}) {
   const w = dom.window
   const registro = { opciones: null, desuscripto: false }
   const crearSub = () => ({
@@ -294,8 +298,11 @@ function navegadorConPush(dom, { ua = UA_ANDROID, permiso = 'default', respuesta
   }
   Object.defineProperty(w.navigator, 'userAgent', { value: ua, configurable: true })
   Object.defineProperty(w.navigator, 'serviceWorker', { value: { getRegistration: async () => registro, register: async () => registro, ready: Promise.resolve(registro) }, configurable: true })
-  w.PushManager = function PushManager() {}
-  w.Notification = { permission: permiso, requestPermission: async () => { w.Notification.permission = respuesta; return respuesta } }
+  if (conPush) {
+    w.PushManager = function PushManager() {}
+    w.Notification = { permission: permiso, requestPermission: async () => { w.Notification.permission = respuesta; return respuesta } }
+  }
+  if (instalada) w.matchMedia = consulta => ({ matches: consulta === '(display-mode: standalone)' })
   return registro
 }
 const pestanaJugadora = nombre => [...document.querySelectorAll('nav[aria-label="Secciones de la jugadora"] button')].find(b => b.textContent.trim() === nombre)
@@ -344,11 +351,62 @@ test('Avisos: bloqueados, iPhone sin instalar y sincronización al abrir con per
     assert.match(a.texto(), /Agregar a pantalla de inicio/)
   } finally { await a.cerrar() }
 
+  // iPhone con la app instalada pero sin push (iOS anterior a 16.4): pide actualizar, no el texto genérico.
+  f = crearCliente({ conSesion: true })
+  a = await montar(f, { prepararDom: dom => navegadorConPush(dom, { ua: UA_IPHONE, instalada: true, conPush: false }) })
+  try {
+    await a.clic(pestanaJugadora('Avisos'))
+    assert.match(a.texto(), /Tu iPhone necesita iOS 16\.4 o más para recibir avisos\. Actualizalo desde Ajustes → General → Actualización de software\./)
+    assert.doesNotMatch(a.texto(), /Este navegador no recibe avisos|Agregar a pantalla de inicio/)
+  } finally { await a.cerrar() }
+
   // Con permiso y suscripción, al abrir la app la vuelve a asociar a esta cuenta (sin tocar nada).
   f = crearCliente({ conSesion: true })
   a = await montar(f, { prepararDom: dom => navegadorConPush(dom, { permiso: 'granted', suscripta: true }) })
   try {
     assert.equal(f.llamadas.filter(l => l.nombre === 'portal_avisos_suscribir').length, 1)
+  } finally { await a.cerrar() }
+})
+
+test('Avisos: si no se cargan las preferencias, no muestra los interruptores y deja reintentar', async () => {
+  const f = crearCliente({ conSesion: true })
+  f.estado.fallos.portal_avisos_estado = { message: 'Failed to fetch' }
+  const a = await montar(f, { prepararDom: dom => navegadorConPush(dom, { permiso: 'granted', suscripta: true }) })
+  try {
+    await a.clic(pestanaJugadora('Avisos'))
+    assert.match(a.texto(), /Los avisos están activados en este celular/)
+    assert.match(a.texto(), /No se pudieron cargar tus preferencias\. Probá de nuevo\./)
+    assert.equal(document.querySelectorAll('input[type="checkbox"]').length, 0, 'sin interruptores')
+    assert.ok(a.boton('Desactivar avisos en este celular'), 'desactivar sigue disponible')
+    delete f.estado.fallos.portal_avisos_estado
+    await a.clic(a.boton('Reintentar'))
+    assert.equal(document.querySelectorAll('input[type="checkbox"]').length, 5)
+    assert.doesNotMatch(a.texto(), /No se pudieron cargar tus preferencias/)
+  } finally { await a.cerrar() }
+})
+
+test('Avisos: mientras se guarda un cambio, los interruptores quedan deshabilitados', async () => {
+  const f = crearCliente({ conSesion: true })
+  const a = await montar(f, { prepararDom: dom => navegadorConPush(dom, { permiso: 'granted', suscripta: true }) })
+  try {
+    await a.clic(pestanaJugadora('Avisos'))
+    let soltar
+    f.estado.esperas.portal_avisos_preferencias = new Promise(r => { soltar = r })
+    const interruptores = () => [...document.querySelectorAll('input[type="checkbox"]')]
+    assert.equal(interruptores().length, 5)
+    const rpe = [...document.querySelectorAll('label')].find(l => l.textContent.includes('RPE')).querySelector('input')
+    await a.clic(rpe)
+    assert.ok(interruptores().every(i => i.disabled), 'todos deshabilitados mientras guarda')
+    // Un segundo toque mientras guarda no manda otra llamada.
+    const wellness = [...document.querySelectorAll('label')].find(l => l.textContent.includes('Wellness')).querySelector('input')
+    await a.clic(wellness)
+    assert.equal(f.llamadas.filter(l => l.nombre === 'portal_avisos_preferencias').length, 1)
+    delete f.estado.esperas.portal_avisos_preferencias
+    soltar()
+    await a.clic(document.body)
+    assert.ok(interruptores().every(i => !i.disabled), 'se habilitan al terminar')
+    assert.deepEqual(f.llamadas.filter(l => l.nombre === 'portal_avisos_preferencias').at(-1).args,
+      { p_wellness: true, p_rpe: false, p_entrenamiento: true, p_convocatoria: true, p_mensajes: true })
   } finally { await a.cerrar() }
 })
 

@@ -101,6 +101,23 @@ test('mensajeErrorAvisos: cada código de la base con un texto claro', async () 
   assert.equal(mensajeErrorAvisos({ code: '22023', message: 'sin_convocadas' }), 'Guardá la convocatoria con al menos una jugadora antes de avisar.')
   assert.equal(mensajeErrorAvisos({ code: '42501', message: 'sin_permiso' }), 'No tenés permiso para esto.')
   assert.equal(mensajeErrorAvisos({ code: 'XX', message: 'otra cosa' }), 'No se pudo guardar. Revisá la conexión y probá de nuevo.')
+  assert.equal(mensajeErrorAvisos({ code: 'XX', message: 'otra cosa' }, 'guardar'), 'No se pudo guardar. Revisá la conexión y probá de nuevo.')
+  assert.equal(mensajeErrorAvisos({ code: 'XX', message: 'otra cosa' }, 'mandar'), 'No se pudo mandar. Revisá la conexión y probá de nuevo.')
+  assert.equal(mensajeErrorAvisos({ code: 'P0001', message: 'limite_remitente' }, 'mandar'), 'Ya mandaste 5 avisos hoy. Probá mañana.')
+})
+
+test('IconoNavegacion: Avisos tiene su campana (no la casa de Inicio)', async () => {
+  const { crearServidorVitePrueba } = await import('./helpers/servidorVite.mjs')
+  const { createElement: h } = await import('react')
+  const { renderToStaticMarkup } = await import('react-dom/server')
+  const vite = await crearServidorVitePrueba({ server: { middlewareMode: true, hmr: false }, appType: 'custom' })
+  try {
+    const Icono = (await vite.ssrLoadModule('/src/components/IconoNavegacion.jsx')).default
+    const trazo = nombre => renderToStaticMarkup(h(Icono, { nombre })).match(/ d="([^"]+)"/)[1]
+    assert.notEqual(trazo('avisos'), trazo('inicio'))
+    assert.match(trazo('avisos'), /^M6 8a6 6 0 0 1 12 0/)
+    assert.equal(trazo('no-existe'), trazo('inicio'))
+  } finally { await vite.close() }
 })
 
 test('Técnico: solo Mandar aviso e Historial, con su categoría fija; manda con el texto limpio y ve los límites', async () => {
@@ -116,6 +133,13 @@ test('Técnico: solo Mandar aviso e Historial, con su categoría fija; manda con
     await a.clic(a.boton('Mandar aviso'))
     assert.ok(!f.llamadas.some(l => l.nombre === 'avisos_mandar'), 'primero pide confirmar')
     assert.match(a.texto(), /Va a todo el plantel de Primera \(2 jugadoras\)/)
+    // El foco va al botón de confirmar; Cancelar lo devuelve al botón que abrió la confirmación.
+    assert.equal(document.activeElement, a.boton('Mandar aviso'))
+    assert.ok(document.activeElement.closest('.av-confirmar'))
+    await a.clic(a.boton('Cancelar'))
+    assert.equal(document.activeElement, a.boton('Mandar aviso'))
+    assert.equal(document.activeElement.closest('.av-confirmar'), null)
+    await a.clic(a.boton('Mandar aviso'))
     await a.clic(a.boton('Mandar aviso'))
     assert.deepEqual(f.llamadas.find(l => l.nombre === 'avisos_mandar').args, { p_categoria_id: PRIMERA, p_jugadoras: null, p_texto: 'Mañana traer pechera' })
     assert.match(a.texto(), /Aviso en camino/)
@@ -125,6 +149,12 @@ test('Técnico: solo Mandar aviso e Historial, con su categoría fija; manda con
     await a.clic(a.boton('Mandar aviso'))
     await a.clic(a.boton('Mandar aviso'))
     assert.match(a.texto(), /Ya mandaste 5 avisos hoy\. Probá mañana\./)
+    // Sin conexión: el texto genérico dice «mandar», no «guardar».
+    f.estado.errores.avisos_mandar = { message: 'Failed to fetch' }
+    await a.escribir(a.campo('Mensaje'), 'Otro aviso más')
+    await a.clic(a.boton('Mandar aviso'))
+    await a.clic(a.boton('Mandar aviso'))
+    assert.match(a.texto(), /No se pudo mandar\. Revisá la conexión y probá de nuevo\./)
 
     await a.clic(a.pestana('Historial'))
     assert.deepEqual(f.llamadas.filter(l => l.nombre === 'avisos_historial').at(-1).args, { p_categoria_id: PRIMERA, p_limite: 50 })
@@ -172,6 +202,12 @@ test('Coordinación: elegir jugadoras, horarios con días ISO, pausas con confir
     await a.clic(a.boton('Quitar pausa'))
     assert.ok(!f.llamadas.some(l => l.nombre === 'avisos_borrar_pausa'), 'primero pide confirmar')
     assert.match(a.texto(), /Quitar la pausa «Navidad»/)
+    assert.equal(document.activeElement, a.boton('Quitar pausa'))
+    assert.ok(document.activeElement.closest('.av-confirmar'))
+    await a.clic(a.boton('Cancelar'))
+    assert.equal(document.activeElement, a.boton('Quitar pausa'))
+    assert.equal(document.activeElement.closest('.av-confirmar'), null)
+    await a.clic(a.boton('Quitar pausa'))
     await a.clic(a.boton('Quitar pausa'))
     assert.deepEqual(f.llamadas.find(l => l.nombre === 'avisos_borrar_pausa').args, { p_id: PAUSA })
 
@@ -190,10 +226,30 @@ test('Avisar convocatoria: deshabilitado con cambios sin guardar, confirma con l
     assert.match(a.texto(), /Guardá la convocatoria antes de avisar/)
   } finally { await a.cerrar() }
 
+  // Sin rival ni fecha: el texto de siempre.
   a = await montar(f, '/src/components/avisos/AvisarConvocatoria.jsx', { partidoId: PARTIDO, convocadasGuardadas: 16, hayCambios: false })
   try {
     await a.clic(a.boton('Avisar convocatoria'))
-    assert.match(a.texto(), /Avisar a las 16 convocadas/)
+    assert.match(a.texto(), /Avisar a las 16 convocadas\. Les llega/)
+  } finally { await a.cerrar() }
+
+  // PF (o cualquiera que no sea coordinación ni técnico): no ve el botón.
+  a = await montar(f, '/src/components/avisos/AvisarConvocatoria.jsx', { partidoId: PARTIDO, convocadasGuardadas: 16, hayCambios: false, puedeAvisar: false })
+  try {
+    assert.equal(a.boton('Avisar convocatoria'), undefined)
+    assert.doesNotMatch(a.texto(), /Avisar|Guardá/)
+  } finally { await a.cerrar() }
+
+  a = await montar(f, '/src/components/avisos/AvisarConvocatoria.jsx', { partidoId: PARTIDO, convocadasGuardadas: 16, hayCambios: false, rival: 'Boca', fecha: '2026-11-22' })
+  try {
+    await a.clic(a.boton('Avisar convocatoria'))
+    assert.match(a.texto(), /Avisar a las 16 convocadas del partido vs Boca · 22\/11\./)
+    assert.equal(document.activeElement, a.boton('Avisar convocatoria'))
+    assert.ok(document.activeElement.closest('.av-confirmar'))
+    await a.clic(a.boton('Cancelar'))
+    assert.equal(document.activeElement, a.boton('Avisar convocatoria'))
+    assert.equal(document.activeElement.closest('.av-confirmar'), null)
+    await a.clic(a.boton('Avisar convocatoria'))
     assert.ok(!f.llamadas.some(l => l.nombre === 'avisos_avisar_convocatoria'))
     await a.clic(a.boton('Avisar convocatoria'))
     assert.deepEqual(f.llamadas.find(l => l.nombre === 'avisos_avisar_convocatoria').args, { p_partido_id: PARTIDO })
@@ -202,5 +258,23 @@ test('Avisar convocatoria: deshabilitado con cambios sin guardar, confirma con l
     await a.clic(a.boton('Avisar convocatoria'))
     await a.clic(a.boton('Avisar convocatoria'))
     assert.match(a.texto(), /Ya se avisó 3 veces esta convocatoria hoy/)
+    f.estado.errores.avisos_avisar_convocatoria = { message: 'Failed to fetch' }
+    await a.clic(a.boton('Avisar convocatoria'))
+    await a.clic(a.boton('Avisar convocatoria'))
+    assert.match(a.texto(), /No se pudo mandar\. Revisá la conexión/)
   } finally { await a.cerrar() }
+})
+
+test('Partidos: el PF no recibe permiso para avisar la convocatoria; coordinación y técnico sí', async () => {
+  const { readFileSync } = await import('node:fs')
+  const fuente = readFileSync(new URL('../src/components/PartidosSection.jsx', import.meta.url), 'utf8')
+  const expresion = fuente.match(/puedeAvisar=\{(.+)\}\s*$/m)[1]
+  const puedeAvisar = new Function('perfil', 'return ' + expresion)
+  assert.equal(puedeAvisar({ rol: 'coordinacion' }), true)
+  assert.equal(puedeAvisar({ rol: 'tecnico' }), true)
+  assert.equal(puedeAvisar({ rol: 'preparador_fisico' }), false)
+  assert.equal(puedeAvisar({ rol: 'medico' }), false)
+  assert.equal(puedeAvisar(null), false)
+  const convocar = readFileSync(new URL('../src/components/ConvocarPartido.jsx', import.meta.url), 'utf8')
+  assert.match(convocar, /<AvisarConvocatoria[^>]*puedeAvisar=\{puedeAvisar\}[^>]*rival=\{partido\.rival\}[^>]*fecha=\{partido\.fecha\}/s)
 })

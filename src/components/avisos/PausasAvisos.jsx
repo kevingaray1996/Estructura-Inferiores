@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../../supabaseClient'
 import Boton from '../ui/Boton'
 import { mensajeErrorAvisos } from '../../utils/avisos'
+import useFocoConfirmacion from '../../hooks/useFocoConfirmacion'
 
 const fecha = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '')
 
@@ -15,6 +16,7 @@ function PausasAvisos({ panel, categorias, onCambio }) {
   const [trabajando, setTrabajando] = useState(false)
   const [error, setError] = useState('')
   const [aviso, setAviso] = useState('')
+  const { primerBoton, disparador, cancelar } = useFocoConfirmacion(confirmando)
 
   async function crear(evento) {
     evento.preventDefault()
@@ -55,13 +57,13 @@ function PausasAvisos({ panel, categorias, onCambio }) {
                 <p className="av-texto">{p.categoria || 'Todas las categorías'} · {fecha(p.desde)}{p.hasta !== p.desde ? ` al ${fecha(p.hasta)}` : ''}</p>
               </div>
               {confirmando !== p.id
-                ? <Boton variante="secundario" onClick={() => setConfirmando(p.id)} disabled={trabajando}>Quitar pausa</Boton>
+                ? <Boton ref={disparador(p.id)} variante="secundario" onClick={() => setConfirmando(p.id)} disabled={trabajando}>Quitar pausa</Boton>
                 : (
                   <div className="av-confirmar" role="group" aria-labelledby={`av-quitar-${p.id}`}>
                     <p id={`av-quitar-${p.id}`}>Quitar la pausa «{p.motivo || 'Pausa'}». Los recordatorios vuelven a salir esos días.</p>
                     <div className="av-botones">
-                      <Boton variante="peligro" onClick={() => quitar(p)} disabled={trabajando} aria-busy={trabajando}>Quitar pausa</Boton>
-                      <Boton variante="secundario" onClick={() => setConfirmando(null)} disabled={trabajando}>Cancelar</Boton>
+                      <Boton ref={primerBoton} variante="peligro" onClick={() => quitar(p)} disabled={trabajando} aria-busy={trabajando}>Quitar pausa</Boton>
+                      <Boton variante="secundario" onClick={() => { cancelar(); setConfirmando(null) }} disabled={trabajando}>Cancelar</Boton>
                     </div>
                   </div>
                 )}

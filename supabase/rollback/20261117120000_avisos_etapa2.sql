@@ -12,6 +12,7 @@
 -- y recién después correr este archivo.
 --
 -- Si se revierte también la etapa 1 (cuentas de jugadoras), revertir primero esta.
+-- Si se aplicaron los ajustes (20261118120000_avisos_ajustes), revertí primero esos; si no, esta reversión falla sin aplicar nada.
 --
 -- Todo está en un único bloque DO: es una sola sentencia, atómico aunque el editor SQL de Supabase ejecute las
 -- sentencias por separado. Correr como postgres. Si algo no coincide, no se revierte nada.

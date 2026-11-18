@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../supabaseClient'
 import Boton from '../ui/Boton'
 import { destinoTexto, mensajeErrorAvisos } from '../../utils/avisos'
+import useFocoConfirmacion from '../../hooks/useFocoConfirmacion'
 
 const MAXIMO = 140
 
@@ -17,6 +18,7 @@ function MandarAviso({ categorias, categoriaFija }) {
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
   const [aviso, setAviso] = useState('')
+  const { primerBoton, disparador, cancelar } = useFocoConfirmacion(confirmando)
 
   const categoriaActual = categoriaId || categorias[0]?.id || ''
   const nombreCategoria = categorias.find((c) => c.id === categoriaActual)?.nombre || 'la categoría'
@@ -44,7 +46,7 @@ function MandarAviso({ categorias, categoriaFija }) {
       p_categoria_id: categoriaActual, p_jugadoras: todas ? null : elegidas, p_texto: limpio,
     })
     setEnviando(false); setConfirmando(false)
-    if (fallo) { setError(mensajeErrorAvisos(fallo)); return }
+    if (fallo) { setError(mensajeErrorAvisos(fallo, 'mandar')); return }
     setTexto(''); setElegidas([])
     setAviso('Aviso en camino. Puede tardar hasta un minuto en llegar.')
   }
@@ -95,13 +97,13 @@ function MandarAviso({ categorias, categoriaFija }) {
       </label>
       <p id="av-mandar-contador" className="av-contador">{limpio.length} / {MAXIMO}</p>
 
-      {!confirmando && <Boton onClick={pedirConfirmacion} disabled={enviando}>Mandar aviso</Boton>}
+      {!confirmando && <Boton ref={disparador()} onClick={pedirConfirmacion} disabled={enviando}>Mandar aviso</Boton>}
       {confirmando && (
         <div className="av-confirmar" role="group" aria-labelledby="av-mandar-confirmar">
           <p id="av-mandar-confirmar">{destinoTexto({ todas, cantidad, categoria: nombreCategoria })} ¿Lo mandamos?</p>
           <div className="av-botones">
-            <Boton onClick={mandar} disabled={enviando} aria-busy={enviando}>{enviando ? 'Mandando…' : 'Mandar aviso'}</Boton>
-            <Boton variante="secundario" onClick={() => setConfirmando(false)} disabled={enviando}>Cancelar</Boton>
+            <Boton ref={primerBoton} onClick={mandar} disabled={enviando} aria-busy={enviando}>{enviando ? 'Mandando…' : 'Mandar aviso'}</Boton>
+            <Boton variante="secundario" onClick={() => { cancelar(); setConfirmando(false) }} disabled={enviando}>Cancelar</Boton>
           </div>
         </div>
       )}

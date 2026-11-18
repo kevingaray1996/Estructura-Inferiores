@@ -4,11 +4,11 @@ import { claveAplicacion, datosSuscripcion, plataforma } from './avisos'
 const SCOPE = '/jugadora/'
 
 // El service worker de la app (scope /jugadora/). Si todavía no está (por ejemplo en desarrollo), se registra.
+// Siempre devuelve el registro ya activo (serviceWorker.ready): suscribirse con uno que todavía se está instalando falla.
 export async function registroAvisos(nav = globalThis.navigator) {
   const actual = await nav.serviceWorker.getRegistration(SCOPE)
-  if (actual) return actual
-  await nav.serviceWorker.register('/jugadora/sw.js', { scope: SCOPE })
-  return nav.serviceWorker.ready
+  if (!actual) await nav.serviceWorker.register('/jugadora/sw.js', { scope: SCOPE })
+  return await nav.serviceWorker.ready
 }
 
 export async function suscripcionActual(nav = globalThis.navigator) {

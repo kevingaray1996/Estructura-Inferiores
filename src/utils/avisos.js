@@ -16,11 +16,13 @@ const MENSAJES = {
 }
 
 // El código viene en el mensaje del error de la base (RAISE EXCEPTION '<código>').
-export function mensajeErrorAvisos(error) {
+// accion: 'guardar' (horarios, pausas) o 'mandar' (avisos manuales y de convocatoria), para el texto genérico.
+export function mensajeErrorAvisos(error, accion = 'guardar') {
   const texto = String(error?.message || '')
   const codigo = Object.keys(MENSAJES).find((c) => texto.includes(c))
   if (codigo) return MENSAJES[codigo]
   if (error?.code === '42501') return MENSAJES.sin_permiso
+  if (accion === 'mandar') return 'No se pudo mandar. Revisá la conexión y probá de nuevo.'
   return 'No se pudo guardar. Revisá la conexión y probá de nuevo.'
 }
 

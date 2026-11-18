@@ -19,10 +19,12 @@ export function tienePush(win = globalThis.window) {
   return Boolean(win && 'serviceWorker' in (win.navigator || {}) && 'PushManager' in win && 'Notification' in win)
 }
 
-// 'listo' | 'instalar_iphone' | 'sin_soporte' | 'bloqueado'.
-// En iPhone los avisos solo funcionan con la app instalada desde Safari (iOS 16.4 o más).
+// 'listo' | 'instalar_iphone' | 'actualizar_ios' | 'sin_soporte' | 'bloqueado'.
+// En iPhone los avisos solo funcionan con la app instalada desde Safari (iOS 16.4 o más): instalada y sin push quiere
+// decir un iOS anterior.
 export function soporte({ plataforma: donde, standalone, tienePush: hayPush, permiso }) {
   if (donde === 'iphone' && !standalone) return 'instalar_iphone'
+  if (donde === 'iphone' && !hayPush) return 'actualizar_ios'
   if (!hayPush) return 'sin_soporte'
   if (permiso === 'denied') return 'bloqueado'
   return 'listo'
