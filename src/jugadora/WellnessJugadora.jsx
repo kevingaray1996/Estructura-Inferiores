@@ -13,8 +13,8 @@ function fechaHaceNDias(n) {
 const MENSAJE_INACTIVA = 'tu cuenta no está activa. Hablá con coordinación.'
 
 // Mismos formularios que el link público; guardan con la identidad de la cuenta (funciones portal_*).
-function WellnessJugadora() {
-  const [vista, setVista] = useState('bienestar')
+function WellnessJugadora({ vistaInicial = 'bienestar' }) {
+  const [vista, setVista] = useState(vistaInicial === 'rpe' ? 'rpe' : 'bienestar')
   const [completado, setCompletado] = useState(false)
   const fechaHoy = obtenerFechaHoy()
 

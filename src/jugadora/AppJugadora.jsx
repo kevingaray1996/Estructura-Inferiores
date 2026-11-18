@@ -1,16 +1,30 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerPerfil, rolStaff } from './portal'
 import IngresoJugadora from './IngresoJugadora'
 import InicioJugadora from './InicioJugadora'
 import WellnessJugadora from './WellnessJugadora'
 import MisNumeros from './MisNumeros'
+import AvisosJugadora from './AvisosJugadora'
+import { desactivarAvisos, sincronizarAvisos } from './avisosDispositivo'
 
 const SECCIONES = [
   { id: 'inicio', etiqueta: 'Inicio' },
   { id: 'wellness', etiqueta: 'Wellness' },
   { id: 'numeros', etiqueta: 'Mis números' },
+  { id: 'avisos', etiqueta: 'Avisos' },
 ]
+
+// Pestaña pedida por un aviso (/jugadora/?seccion=...). Se lee una sola vez y se limpia la dirección.
+function leerPedido() {
+  if (typeof window === 'undefined') return null
+  const pedida = new URLSearchParams(window.location.search).get('seccion')
+  if (!pedida) return null
+  window.history.replaceState(null, '', window.location.pathname)
+  if (pedida === 'rpe') return { seccion: 'wellness', vista: 'rpe' }
+  if (['inicio', 'wellness', 'numeros', 'avisos'].includes(pedida)) return { seccion: pedida, vista: 'bienestar' }
+  return null
+}
 
 function Iniciales({ perfil }) {
   return `${perfil.nombre?.[0] || ''}${perfil.apellido?.[0] || ''}`.toUpperCase()
@@ -22,6 +36,9 @@ function AppJugadora() {
   const [sesion, setSesion] = useState(undefined)
   const [cuenta, setCuenta] = useState({ estado: 'cargando' })
   const [seccion, setSeccion] = useState('inicio')
+  const [vistaWellness, setVistaWellness] = useState('bienestar')
+  const pedido = useRef(undefined)
+  if (pedido.current === undefined) pedido.current = leerPedido()
   const usuarioId = sesion?.user?.id ?? null
 
   useEffect(() => {
@@ -54,12 +71,23 @@ function AppJugadora() {
 
   useEffect(() => {
     // Cada vez que cambia el usuario se vuelve a pedir su cuenta; el estado se actualiza cuando responde la base.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (usuarioId) { setSeccion('inicio'); cargarCuenta() }
+    if (usuarioId) {
+      setSeccion(pedido.current?.seccion || 'inicio')
+      setVistaWellness(pedido.current?.vista || 'bienestar')
+      pedido.current = null
+      cargarCuenta()
+    }
   }, [usuarioId, cargarCuenta])
 
+  // Con la cuenta abierta, si este celular ya tiene los avisos activados, se vuelve a asociar a esta cuenta.
+  useEffect(() => {
+    if (cuenta.estado === 'ok') void sincronizarAvisos()
+  }, [cuenta.estado])
+
   // scope 'local': cierra solo este dispositivo; las otras sesiones de la jugadora siguen abiertas.
+  // Antes de salir, este celular deja de recibir los avisos de esta cuenta (celular compartido).
   async function cerrarSesion() {
+    await desactivarAvisos()
     await supabase.auth.signOut({ scope: 'local' })
   }
 
@@ -120,14 +148,15 @@ function AppJugadora() {
 
       <main className="jg-contenido">
         {seccion === 'inicio' && <InicioJugadora perfil={perfil} onIrAWellness={() => setSeccion('wellness')} />}
-        {seccion === 'wellness' && <WellnessJugadora />}
+        {seccion === 'wellness' && <WellnessJugadora vistaInicial={vistaWellness} />}
         {seccion === 'numeros' && <MisNumeros />}
+        {seccion === 'avisos' && <AvisosJugadora />}
       </main>
 
       <nav className="jg-navegacion" aria-label="Secciones de la jugadora">
         {SECCIONES.map(s => (
           <button key={s.id} type="button" className="jg-pestana" aria-current={seccion === s.id ? 'page' : undefined}
-            onClick={() => setSeccion(s.id)}>
+            onClick={() => { setSeccion(s.id); setVistaWellness('bienestar') }}>
             {s.etiqueta}
           </button>
         ))}

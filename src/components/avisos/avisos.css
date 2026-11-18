@@ -1,0 +1,51 @@
+/* Sección Avisos del staff y botón «Avisar convocatoria». Mobile primero; colores solo por tokens --ui-*. */
+.av-pila { display: grid; gap: 16px; min-width: 0; }
+.av-tarjeta { display: grid; gap: 12px; padding: 16px; background: var(--ui-superficie); border: 1px solid var(--ui-borde); border-radius: 12px; min-width: 0; color: var(--ui-texto); }
+.av-titulo { margin: 0; font-family: var(--fuente-titulo); font-size: 1.25rem; font-weight: 700; letter-spacing: .02em; }
+.av-subtitulo { margin: 0; font-family: var(--fuente-titulo); font-size: 1.125rem; font-weight: 700; }
+.av-texto { margin: 0; font-size: .875rem; line-height: 1.5; color: var(--ui-texto-secundario); overflow-wrap: anywhere; }
+.av-suave { color: var(--ui-texto-muted); font-size: .8125rem; }
+.av-advertencia { margin: 0; padding: 10px 12px; border-radius: 10px; font-size: .875rem; line-height: 1.5; color: var(--ui-texto); background: var(--ui-alerta-suave); border: 1px solid var(--ui-alerta); }
+.av-campo { display: grid; gap: 6px; font-size: .8125rem; font-weight: 600; color: var(--ui-texto-secundario); min-width: 0; }
+.av-control { min-height: 44px; width: 100%; padding: 8px 12px; border-radius: 10px; font: inherit; font-size: 1rem; font-weight: 400; color: var(--ui-control-texto); background: var(--ui-control-fondo); border: 1px solid var(--ui-control-borde); }
+textarea.av-control { min-height: 88px; resize: vertical; }
+.av-contador { margin: -4px 0 0; font-size: .75rem; text-align: right; color: var(--ui-texto-muted); font-variant-numeric: tabular-nums; }
+.av-grupo { margin: 0; padding: 0; border: 0; display: grid; gap: 4px; min-width: 0; }
+.av-grupo legend { padding: 0; margin-bottom: 4px; font-size: .8125rem; font-weight: 600; color: var(--ui-texto-secundario); }
+.av-opcion { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: .9375rem; color: var(--ui-texto); cursor: pointer; }
+.av-opcion input, .av-dia input { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--ui-acento); }
+.av-lista-elegir { list-style: none; margin: 0; padding: 0 0 0 30px; display: grid; max-height: 280px; overflow-y: auto; }
+.av-dias { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.av-dia { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border: 1px solid var(--ui-borde); border-radius: 10px; font-size: .875rem; font-weight: 600; cursor: pointer; background: var(--ui-superficie-alternativa); }
+.av-dia:has(input:checked) { border-color: var(--ui-acento); }
+.av-horas { display: grid; gap: 12px; }
+.av-cabecera-tarjeta { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.av-hoy { margin: 0; font-size: .8125rem; font-weight: 600; color: var(--ui-texto-secundario); }
+.av-hoy[data-aplica="si"] { color: var(--ui-texto); }
+.av-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.av-fila { display: grid; gap: 8px; padding: 12px 0; border-top: 1px solid var(--ui-borde); }
+.av-fila:first-child { border-top: 0; padding-top: 0; }
+.av-fila-titulo { margin: 0; font-weight: 600; font-size: .9375rem; overflow-wrap: anywhere; }
+.av-cita { margin: 4px 0 0; padding-left: 10px; border-left: 3px solid var(--ui-borde); font-size: .875rem; color: var(--ui-texto); overflow-wrap: anywhere; }
+.av-cifras { margin: 0; font-size: .875rem; color: var(--ui-texto-secundario); }
+.av-confirmar { display: grid; gap: 8px; padding: 12px; border-radius: 10px; background: var(--ui-superficie-alternativa); border: 1px solid var(--ui-borde); }
+.av-confirmar p { margin: 0; font-size: .875rem; line-height: 1.5; }
+.av-botones { display: grid; gap: 8px; }
+.av-tarjeta .dp-btn, .av-convocatoria .dp-btn { width: 100%; }
+.av-estado { margin: 0; min-height: 1.25rem; font-size: .875rem; color: var(--ui-texto-secundario); }
+.av-error { margin: 0; font-size: .875rem; color: var(--ui-peligro-texto); }
+.av-enlace { min-height: 44px; padding: 0 4px; border: 0; background: none; font: inherit; font-size: .875rem; font-weight: 600; color: var(--ui-texto-acento); cursor: pointer; text-decoration: underline; }
+.av-convocatoria { display: grid; gap: 8px; margin-top: 12px; }
+/* En celular las pestañas se deslizan: barra fina con los colores del tema. */
+[data-modulo="avisos"] .dp-pestanas-lista { scrollbar-width: thin; scrollbar-color: var(--ui-borde) transparent; }
+
+@media (min-width: 768px) {
+  .av-dias { grid-template-columns: repeat(7, 1fr); }
+  .av-horas { grid-template-columns: repeat(2, minmax(0, 14rem)); }
+  .av-botones { grid-auto-flow: column; justify-content: start; }
+  .av-tarjeta .dp-btn, .av-convocatoria .dp-btn { width: auto; justify-self: start; }
+  .av-fila-historial { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+  .av-fila:has(.av-confirmar) { grid-template-columns: 1fr; }
+  .av-fila:not(.av-fila-historial):not(:has(.av-confirmar)) { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .av-tarjeta, .av-pila { max-width: 56rem; }
+}
