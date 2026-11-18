@@ -264,8 +264,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico, puedeA
       }
     }
 
-    // Estadísticas
-    await supabase.from('estadisticas_jugador').delete().eq('partido_id', partidoId)
+    // Estadísticas: una sola fila por jugadora y partido (upsert), sin duplicar
     const filas = Object.entries(stats)
       .filter(([, s]) => s.minutos !== '' && s.minutos != null)
       .map(([jugadorId, s]) => ({
@@ -282,8 +281,25 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico, puedeA
         pdf_url: s.pdfUrl || null,
         capitan: !!s.capitan,
       }))
+    let errorStats = null
     if (filas.length > 0) {
-      await supabase.from('estadisticas_jugador').insert(filas)
+      const { error } = await supabase
+        .from('estadisticas_jugador')
+        .upsert(filas, { onConflict: 'jugador_id,partido_id' })
+      errorStats = error
+    }
+    if (!errorStats) {
+      // Borrar solo a las jugadoras que ya no tienen estadísticas en este partido
+      let borrar = supabase.from('estadisticas_jugador').delete().eq('partido_id', partidoId)
+      const ids = filas.map((f) => f.jugador_id)
+      if (ids.length > 0) borrar = borrar.not('jugador_id', 'in', `(${ids.join(',')})`)
+      const { error } = await borrar
+      errorStats = error
+    }
+    if (errorStats) {
+      setGuardando(false)
+      setErrorMsg('Error al guardar estadísticas: ' + errorStats.message)
+      return
     }
 
     const { data: nuevasCitaciones } = await supabase
