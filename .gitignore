@@ -24,6 +24,9 @@ dist-ssr
 *.sw?
 .env
 
+# Capturas y registros del navegador de pruebas (Playwright)
+.playwright-mcp/
+
 # Informe de auditoría local, no versionar
 INFORME.md
 

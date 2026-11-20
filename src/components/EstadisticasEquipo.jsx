@@ -1,26 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { COLORES } from '../theme'
 import FranjaNumeros from './ui/FranjaNumeros'
 import EstadoVacio from './ui/EstadoVacio'
-
-function calcularResultado(p) {
-  if (p.goles_local == null || p.goles_visitante == null) return null
-  const golesPropios = p.local_visitante === 'visitante' ? p.goles_visitante : p.goles_local
-  const golesRivales = p.local_visitante === 'visitante' ? p.goles_local : p.goles_visitante
-
-  let etiqueta
-  if (golesPropios > golesRivales) etiqueta = 'Victoria'
-  else if (golesPropios < golesRivales) etiqueta = 'Derrota'
-  else etiqueta = 'Empate'
-
-  if (golesPropios === golesRivales && p.penales_favor != null && p.penales_contra != null) {
-    if (p.penales_favor > p.penales_contra) etiqueta = 'Victoria'
-    else if (p.penales_favor < p.penales_contra) etiqueta = 'Derrota'
-  }
-
-  return { etiqueta, golesPropios, golesRivales }
-}
+import EstadoContenido from './ui/EstadoContenido'
+import { leerEstadisticasEquipo } from '../utils/estadisticasEquipo'
+import { mensajeError } from '../utils/mensajesError'
 
 function Donut({ segmentos, size = 170, grosor = 26 }) {
   const r = (size - grosor) / 2
@@ -122,89 +107,39 @@ function TarjetaEstadistica({ titulo, children }) {
 }
 
 function EstadisticasEquipo({ categoriaId, categoriaNombre }) {
-  const [cargando, setCargando] = useState(true)
-  const [resultados, setResultados] = useState({ victorias: 0, empates: 0, derrotas: 0 })
-  const [goles, setGoles] = useState({ favor: 0, contra: 0 })
-  const [formaciones, setFormaciones] = useState([])
-  const [golesJugadoras, setGolesJugadoras] = useState([])
-  const [asistJugadoras, setAsistJugadoras] = useState([])
+  // { clave, datos, error }: mientras la clave guardada no sea la de la consulta actual (categoría + intento), se
+  // muestra «Cargando». Si la consulta falla se muestra un aviso, nunca números en cero.
+  const [intento, setIntento] = useState(0)
+  const clave = `${categoriaId ?? ''}|${intento}`
+  const [estado, setEstado] = useState({ clave: null, datos: null, error: null })
+  const reintentar = useCallback(() => setIntento((n) => n + 1), [])
 
   useEffect(() => {
-    async function cargar() {
-      setCargando(true)
+    let vigente = true
+    leerEstadisticasEquipo(supabase, categoriaId).then(({ datos, error }) => {
+      if (vigente) setEstado({ clave, datos: error ? null : datos, error: error || null })
+    })
+    return () => { vigente = false }
+  }, [categoriaId, clave])
 
-      let queryPartidos = supabase
-        .from('partidos')
-        .select('*')
-        .not('goles_local', 'is', null)
-        .not('goles_visitante', 'is', null)
-      if (categoriaId) queryPartidos = queryPartidos.eq('categoria_id', categoriaId)
-      const { data: partidosData } = await queryPartidos
+  const cargando = estado.clave !== clave
 
-      let victorias = 0, empates = 0, derrotas = 0, favor = 0, contra = 0
-      const conteoFormaciones = {}
-      ;(partidosData || []).forEach((p) => {
-        const r = calcularResultado(p)
-        if (r) {
-          if (r.etiqueta === 'Victoria') victorias++
-          else if (r.etiqueta === 'Empate') empates++
-          else derrotas++
-          favor += r.golesPropios
-          contra += r.golesRivales
-        }
-        if (p.formacion) {
-          conteoFormaciones[p.formacion] = (conteoFormaciones[p.formacion] || 0) + 1
-        }
-      })
-      setResultados({ victorias, empates, derrotas })
-      setGoles({ favor, contra })
-      setFormaciones(
-        Object.entries(conteoFormaciones)
-          .map(([nombre, valor]) => ({ nombre, valor }))
-          .sort((a, b) => b.valor - a.valor)
-      )
+  if (!cargando && estado.error) {
+    return (
+      <EstadoContenido
+        estado="error"
+        titulo="No se pudieron cargar las estadísticas"
+        mensaje={mensajeError(estado.error, 'consultar la información')}
+        onReintentar={reintentar}
+      />
+    )
+  }
 
-      let queryStats = supabase
-        .from('estadisticas_jugador')
-        .select('goles, asistencias, jugador_id, jugadores(nombre, apellido, categoria_id)')
-      const { data: statsData } = await queryStats
-
-      const statsFiltrados = (statsData || []).filter(
-        (s) => !categoriaId || s.jugadores?.categoria_id === categoriaId
-      )
-
-      const golesPorJugadora = {}
-      const asistPorJugadora = {}
-      statsFiltrados.forEach((s) => {
-        if (!s.jugadores) return
-        const nombre = `${s.jugadores.apellido}, ${s.jugadores.nombre}`
-        golesPorJugadora[nombre] = (golesPorJugadora[nombre] || 0) + (s.goles || 0)
-        asistPorJugadora[nombre] = (asistPorJugadora[nombre] || 0) + (s.asistencias || 0)
-      })
-
-      setGolesJugadoras(
-        Object.entries(golesPorJugadora)
-          .map(([nombre, valor]) => ({ nombre, valor }))
-          .filter((d) => d.valor > 0)
-          .sort((a, b) => b.valor - a.valor)
-          .slice(0, 8)
-      )
-      setAsistJugadoras(
-        Object.entries(asistPorJugadora)
-          .map(([nombre, valor]) => ({ nombre, valor }))
-          .filter((d) => d.valor > 0)
-          .sort((a, b) => b.valor - a.valor)
-          .slice(0, 8)
-      )
-
-      setCargando(false)
-    }
-    cargar()
-  }, [categoriaId])
-
-  if (cargando) {
+  if (cargando || !estado.datos) {
     return <EstadoVacio cargando mensaje="Cargando estadísticas…" />
   }
+
+  const { resultados, goles, formaciones, golesJugadoras, asistJugadoras } = estado.datos
 
   const totalPartidos = resultados.victorias + resultados.empates + resultados.derrotas
 

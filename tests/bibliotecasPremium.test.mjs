@@ -31,7 +31,76 @@ test('Bibliotecas Premium conservan escrituras, filtros, reproducción por enlac
   // Los estilos de fotografiasClub.css cambian con el rediseño; los componentes conservan su lógica.
   // PizarraTactica.jsx se rediseñó a propósito (etapa 1 de la pizarra); su comportamiento lo cubren
   // tests/pizarra.test.mjs y tests/pizarra.interaccion.mjs.
-  for (const p of ['src/components/EstadisticasEquipo.jsx', 'src/components/EncabezadoFotografico.jsx']) assert.equal(soloLogica(leer(p)), soloLogica(antes(p)), p)
+  // EstadisticasEquipo cambió a propósito (mejoras etapa A): lee en tandas y avisa si falla. Lo cubre el test de abajo.
+  for (const p of ['src/components/EncabezadoFotografico.jsx']) assert.equal(soloLogica(leer(p)), soloLogica(antes(p)), p)
+})
+
+// Base simulada: guarda cada consulta y responde por tramos (range), como Supabase con su límite de 1000 filas.
+function baseSimulada(tablas, { fallaEn } = {}) {
+  const consultas = []
+  return {
+    consultas,
+    from(tabla) {
+      const c = { tabla, filtros: [], select: null, orden: null, rango: null }
+      consultas.push(c)
+      const q = {
+        select(s) { c.select = s; return q },
+        not(...a) { c.filtros.push(['not', ...a]); return q },
+        eq(...a) { c.filtros.push(['eq', ...a]); return q },
+        order(o) { c.orden = o; return q },
+        range(desde, hasta) {
+          c.rango = [desde, hasta]
+          if (fallaEn === tabla) return Promise.resolve({ data: null, error: { code: 'XX000', message: 'boom' } })
+          return Promise.resolve({ data: tablas[tabla].slice(desde, Math.min(hasta + 1, desde + 1000)), error: null })
+        },
+      }
+      return q
+    },
+  }
+}
+
+test('Estadísticas del equipo: trae todo en tandas, filtra la categoría en la base y avisa si falla', async () => {
+  const { leerEstadisticasEquipo, TAMANO_TANDA } = await import('../src/utils/estadisticasEquipo.js')
+  assert.equal(TAMANO_TANDA, 1000)
+  // 1500 partidos ganados 1-0 y 2500 filas de estadísticas: 2500 goles de la jugadora a y 1250 asistencias de b.
+  const partidos = Array.from({ length: 1500 }, (_, i) => ({ id: `p${i}`, goles_local: 1, goles_visitante: 0, local_visitante: 'local', formacion: i % 2 ? '4-4-2' : '4-3-3' }))
+  const estadisticas = Array.from({ length: 2500 }, (_, i) => ({ id: `s${i}`, jugador_id: i % 2 ? 'b' : 'a', goles: i % 2 ? 0 : 2, asistencias: i % 2 ? 1 : 0, jugadores: { nombre: i % 2 ? 'Bea' : 'Ana', apellido: 'Simulada' } }))
+  const db = baseSimulada({ partidos, estadisticas_jugador: estadisticas })
+
+  const { datos, error } = await leerEstadisticasEquipo(db, 'cat')
+  assert.equal(error, undefined)
+  assert.deepEqual(datos.resultados, { victorias: 1500, empates: 0, derrotas: 0 })
+  assert.deepEqual(datos.goles, { favor: 1500, contra: 0 })
+  assert.deepEqual(datos.golesJugadoras, [{ nombre: 'Simulada, Ana', valor: 2500 }])
+  assert.deepEqual(datos.asistJugadoras, [{ nombre: 'Simulada, Bea', valor: 1250 }])
+  // Partidos: 2 tandas (1000 + 500). Estadísticas: 3 tandas (1000 + 1000 + 500). Todas ordenadas por id.
+  assert.deepEqual(db.consultas.map((c) => [c.tabla, c.rango[0]]), [['partidos', 0], ['partidos', 1000], ['estadisticas_jugador', 0], ['estadisticas_jugador', 1000], ['estadisticas_jugador', 2000]])
+  assert.ok(db.consultas.every((c) => c.orden === 'id'))
+  // La categoría se filtra en la base: en partidos por categoria_id, y en estadísticas con el join «!inner».
+  assert.ok(db.consultas.filter((c) => c.tabla === 'partidos').every((c) => c.filtros.some((f) => f[0] === 'eq' && f[1] === 'categoria_id' && f[2] === 'cat')))
+  for (const c of db.consultas.filter((x) => x.tabla === 'estadisticas_jugador')) {
+    assert.match(c.select, /jugadores!inner\(/)
+    assert.ok(c.filtros.some((f) => f[0] === 'eq' && f[1] === 'jugadores.categoria_id' && f[2] === 'cat'))
+  }
+
+  // Sin categoría: no filtra ni usa el join que descarta filas.
+  const todas = baseSimulada({ partidos: [], estadisticas_jugador: [] })
+  await leerEstadisticasEquipo(todas, null)
+  assert.ok(todas.consultas.every((c) => !c.filtros.some((f) => f[0] === 'eq')))
+  assert.doesNotMatch(todas.consultas.find((c) => c.tabla === 'estadisticas_jugador').select, /!inner/)
+
+  // Si falla cualquiera de las dos lecturas, devuelve el error (nunca datos en cero).
+  for (const tabla of ['partidos', 'estadisticas_jugador']) {
+    const r = await leerEstadisticasEquipo(baseSimulada({ partidos, estadisticas_jugador: estadisticas }, { fallaEn: tabla }), 'cat')
+    assert.equal(r.datos, undefined, tabla)
+    assert.equal(r.error.code, 'XX000', tabla)
+  }
+
+  // La pantalla usa esa lectura y muestra el aviso con «Reintentar» cuando hay error.
+  const pantalla = leer('src/components/EstadisticasEquipo.jsx')
+  assert.match(pantalla, /leerEstadisticasEquipo\(supabase, categoriaId\)/)
+  assert.match(pantalla, /<EstadoContenido[\s\S]*estado="error"[\s\S]*No se pudieron cargar las estadísticas[\s\S]*onReintentar=/)
+  assert.doesNotMatch(pantalla, /\.from\(/, 'La pantalla no consulta la base directo')
 })
 
 test('Fotografías Etapa 2: originales completos, rutas públicas y recurso de rival reservado', () => {
