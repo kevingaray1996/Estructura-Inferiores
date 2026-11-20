@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
 import { ContenidoEntrenamientoHoy } from '../components/EntrenamientoDeHoy'
 import { entrenamientoHoy, wellnessRespondio } from './portal'
+import Icono from './iconos'
+
+// Solo para mostrar la fecha de hoy arriba de todo (hora de Argentina, como el resto del club).
+const ZONA = 'America/Argentina/Buenos_Aires'
+const DIA = new Intl.DateTimeFormat('es-AR', { weekday: 'long', timeZone: ZONA })
+const FECHA = new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long', timeZone: ZONA })
 
 // Inicio de la jugadora: si ya completó el Wellness de hoy y el entrenamiento publicado de hoy.
 function InicioJugadora({ onIrAWellness }) {
@@ -15,12 +21,18 @@ function InicioJugadora({ onIrAWellness }) {
     return () => { activo = false }
   }, [])
 
+  const hoy = new Date()
   return (
     <div className="jg-pila">
-      <section className="jg-tarjeta" aria-labelledby="jg-wellness-hoy">
+      <p className="jg-hoy">
+        <span className="jg-hoy-dia">{DIA.format(hoy)}</span>
+        <span className="jg-hoy-fecha">{FECHA.format(hoy)}</span>
+      </p>
+
+      <section className={`jg-tarjeta${respondio === false ? ' jg-tarjeta-pendiente' : ''}`} aria-labelledby="jg-wellness-hoy">
         <h2 id="jg-wellness-hoy" className="jg-subtitulo">Wellness de hoy</h2>
         {respondio === null && <p className="jg-texto" role="status">Consultando…</p>}
-        {respondio === true && <p className="jg-texto jg-ok">Ya completaste el Wellness de hoy.</p>}
+        {respondio === true && <p className="jg-texto jg-ok jg-estado"><Icono nombre="listo" className="jg-estado-icono" />Ya completaste el Wellness de hoy.</p>}
         {respondio === false && (
           <>
             <p className="jg-texto">Te lleva un minuto y ayuda al cuerpo técnico a planificar.</p>

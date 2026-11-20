@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { avisosEstado, avisosPreferencias } from './portal'
 import { esInstalada, plataforma, soporte, tienePush } from './avisos'
 import { activarAvisos, desactivarAvisos, suscripcionActual } from './avisosDispositivo'
+import Icono from './iconos'
 
 const TIPOS = [
   { clave: 'wellness', etiqueta: 'Wellness', ayuda: 'Recordatorio a la mañana si no lo completaste.' },
@@ -134,7 +135,7 @@ function AvisosJugadora({ clavePublica = import.meta.env.VITE_AVISOS_VAPID_PUBLI
         )}
         {estado === 'activo' && (
           <>
-            <p className="jg-texto jg-ok">Los avisos están activados en este celular.</p>
+            <p className="jg-texto jg-ok jg-estado"><Icono nombre="listo" className="jg-estado-icono" />Los avisos están activados en este celular.</p>
             <p className="jg-texto jg-texto-suave">Pueden tardar unos minutos y no llegan si el celular está sin conexión mucho tiempo.</p>
           </>
         )}
@@ -156,7 +157,7 @@ function AvisosJugadora({ clavePublica = import.meta.env.VITE_AVISOS_VAPID_PUBLI
             {TIPOS.map((t) => (
               <li key={t.clave}>
                 <label className="jg-interruptor">
-                  <input type="checkbox" checked={preferencias[t.clave]} onChange={() => cambiar(t.clave)} disabled={guardando} />
+                  <input type="checkbox" className="jg-interruptor-control" checked={preferencias[t.clave]} onChange={() => cambiar(t.clave)} disabled={guardando} />
                   <span>
                     <span className="jg-interruptor-etiqueta">{t.etiqueta}</span>
                     <span className="jg-interruptor-ayuda">{t.ayuda}</span>

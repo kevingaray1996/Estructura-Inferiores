@@ -50,7 +50,7 @@ function MisNumeros() {
   const calculo = asistenciaSobreSesiones(asistencia)
   return (
     <div className="jg-pila">
-      <label className="jg-campo-anio">
+      <label className="jg-campo-anio jg-filtro-anio">
         <span className="jg-etiqueta">Año</span>
         <select className="jg-input" value={datos.anio} onChange={e => cambiarAnio(e.target.value)}>
           {anios.map(a => <option key={a} value={a}>{a}</option>)}
@@ -69,7 +69,12 @@ function MisNumeros() {
       <section className="jg-tarjeta" aria-labelledby="jg-entrenamientos">
         <h2 id="jg-entrenamientos" className="jg-subtitulo">Entrenamientos</h2>
         {calculo
-          ? <p className="jg-porcentaje"><span className="jg-porcentaje-valor">{calculo.porcentaje} %</span> de asistencia {calculo.detalle}</p>
+          ? <>
+              <p className="jg-porcentaje"><span className="jg-porcentaje-valor">{calculo.porcentaje} %</span> de asistencia {calculo.detalle}</p>
+              <div className="jg-barra" aria-hidden="true">
+                <span className="jg-barra-relleno" style={{ '--jg-proporcion': Math.min(Math.max(calculo.porcentaje, 0), 100) / 100 }} />
+              </div>
+            </>
           : <p className="jg-texto">Sin registros este año.</p>}
         <dl className="jg-datos jg-datos-4">
           <Dato valor={asistencia.presentes} etiqueta="Presentes" />

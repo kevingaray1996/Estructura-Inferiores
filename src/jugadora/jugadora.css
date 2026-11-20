@@ -1,79 +1,174 @@
-/* App de la jugadora (/jugadora/). Mobile primero; colores solo por tokens --ui-* de apariencia.css. */
+/* Hallmark · shape: app screen · genre: editorial · theme: brand · redesign: full
+ * paper: oklch(0.15 0.003 100) · accent: oklch(0.84 0.17 92) · display: Barlow Condensed · body: Barlow
+ * nav: kept (top bar + bottom tab bar) · signature: today's date and the attendance figure set like a scoreboard · states: loading, error, empty, full
+ * axes: dark/condensed/yellow · posture: tool · contrast: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V3 · weakest: V, the shell (top bar, tab bar) is kept on purpose; the change lives in the figures and the today card */
+
+/* App de la jugadora (/jugadora/). Mobile primero; colores solo por tokens --ui-* de apariencia.css.
+   Negro y amarillo del club; el "blanco del escudo" son los filetes y el anillo de la foto (--ui-texto mezclado). */
+:root {
+  --jg-filete: color-mix(in srgb, var(--ui-texto) 13%, transparent);
+  --jg-filete-fuerte: color-mix(in srgb, var(--ui-texto) 30%, transparent);
+  --jg-anillo: var(--ui-texto);
+  --jg-hover: color-mix(in srgb, var(--ui-texto) 6%, transparent);
+  --jg-radio: 16px;
+  --jg-radio-control: 12px;
+  --jg-dur: 160ms;
+  --jg-curva: cubic-bezier(.2, .7, .2, 1);
+}
+html, body { overflow-x: clip; }
+
+/* Estructura */
 .jg-app { min-height: 100dvh; display: grid; grid-template-rows: auto 1fr auto; background: var(--ui-fondo-pagina); color: var(--ui-texto); }
-.jg-centro, .jg-ingreso { min-height: 100dvh; display: grid; align-content: start; gap: 16px; padding: 24px 16px 32px; max-width: 30rem; margin-inline: auto; color: var(--ui-texto); }
+.jg-centro, .jg-ingreso { min-height: 100dvh; display: grid; align-content: start; gap: 16px; padding: 24px 16px 32px; max-width: 28rem; margin-inline: auto; color: var(--ui-texto); }
 .jg-centro { align-content: center; }
+.jg-ingreso { padding-top: max(40px, env(safe-area-inset-top)); }
+.jg-contenido { padding: 20px 16px 32px; width: 100%; max-width: 40rem; margin-inline: auto; min-width: 0; }
+.jg-pila { display: grid; gap: 16px; min-width: 0; }
 
-.jg-marca { display: flex; align-items: center; gap: 12px; padding-block: 8px; }
-.jg-escudo { width: 56px; height: 56px; object-fit: contain; }
-.jg-antetitulo { margin: 0; font-family: var(--fuente-titulo); font-size: .8125rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--ui-texto-acento); }
-.jg-titulo { margin: 0; font-family: var(--fuente-titulo); font-size: 2rem; font-weight: 700; line-height: 1.05; }
-.jg-subtitulo { margin: 0; font-family: var(--fuente-titulo); font-size: 1.25rem; font-weight: 700; letter-spacing: .02em; }
+/* Ingreso: el escudo grande, centrado */
+.jg-marca { display: flex; flex-direction: column; align-items: center; gap: 4px; padding-block: 8px 16px; text-align: center; }
+.jg-escudo { width: 112px; height: 112px; object-fit: contain; margin-bottom: 12px; }
+.jg-titulo { margin: 0; font-family: var(--fuente-titulo); font-size: 3rem; font-weight: 700; line-height: 1; overflow-wrap: break-word; min-width: 0; }
+.jg-club { margin: 0; font-size: .9375rem; color: var(--ui-texto-secundario); }
+.jg-subtitulo { margin: 0; font-family: var(--fuente-titulo); font-size: 1.375rem; font-weight: 700; line-height: 1.1; overflow-wrap: break-word; min-width: 0; }
 
-.jg-tarjeta { display: grid; gap: 12px; padding: 16px; background: var(--ui-superficie); border: 1px solid var(--ui-borde); border-radius: 14px; min-width: 0; }
+/* Tarjetas y texto */
+.jg-tarjeta { display: grid; gap: 12px; padding: 20px 16px; background: var(--ui-superficie); border: 1px solid var(--jg-filete); border-radius: var(--jg-radio); min-width: 0; }
+.jg-tarjeta-pendiente { border-color: var(--ui-acento); box-shadow: inset 4px 0 0 var(--ui-acento); }
 .jg-form { gap: 12px; }
-.jg-pila { display: grid; gap: 16px; }
-.jg-texto { margin: 0; font-size: .9375rem; line-height: 1.5; color: var(--ui-texto-secundario); }
-.jg-texto-suave { font-size: .8125rem; color: var(--ui-texto-muted); }
+.jg-texto { margin: 0; font-size: 1rem; line-height: 1.5; color: var(--ui-texto-secundario); overflow-wrap: anywhere; }
+.jg-texto-suave { font-size: .875rem; color: var(--ui-texto-muted); }
 .jg-ok { color: var(--ui-texto); font-weight: 600; }
+.jg-estado { display: flex; align-items: center; gap: 8px; }
+.jg-estado-icono { width: 24px; height: 24px; flex-shrink: 0; color: var(--ui-texto-acento); }
 .jg-etiqueta { font-size: .875rem; font-weight: 600; color: var(--ui-texto-secundario); }
-.jg-input { min-height: 48px; width: 100%; padding: 10px 14px; border-radius: 10px; font: inherit; font-size: 1rem; color: var(--ui-control-texto); background: var(--ui-control-fondo); border: 1px solid var(--ui-control-borde); }
-.jg-input[aria-invalid="true"] { border-color: var(--ui-peligro); }
-.jg-input-codigo { font-size: 1.5rem; letter-spacing: .4em; text-align: center; font-variant-numeric: tabular-nums; }
 .jg-error { margin: 0; font-size: .875rem; color: var(--ui-peligro-texto); }
 
-.jg-boton { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 10px 16px; border-radius: 10px; font: inherit; font-size: .9375rem; font-weight: 600; text-decoration: none; cursor: pointer; color: var(--ui-texto); background: var(--ui-superficie-alternativa); border: 1px solid var(--ui-borde); }
+/* Controles */
+.jg-input { min-height: 48px; width: 100%; padding: 12px 16px; border-radius: var(--jg-radio-control); font: inherit; font-size: 1rem; color: var(--ui-control-texto); background: var(--ui-control-fondo); border: 1px solid var(--jg-filete-fuerte); transition: border-color var(--jg-dur) var(--jg-curva); }
+.jg-input[aria-invalid="true"] { border-color: var(--ui-peligro); }
+.jg-input-codigo { min-height: 64px; font-family: var(--fuente-titulo); font-size: 2rem; font-weight: 700; letter-spacing: .4em; text-indent: .4em; text-align: center; font-variant-numeric: tabular-nums; }
+
+.jg-boton { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 12px 16px; border-radius: var(--jg-radio-control); font: inherit; font-size: 1rem; font-weight: 600; text-decoration: none; text-align: center; cursor: pointer; color: var(--ui-texto); background: transparent; border: 1px solid var(--jg-filete-fuerte); transition: background-color var(--jg-dur) var(--jg-curva), border-color var(--jg-dur) var(--jg-curva), transform var(--jg-dur) var(--jg-curva); }
 .jg-boton-principal { color: var(--ui-texto-sobre-acento); background: var(--ui-acento); border-color: var(--ui-acento); font-weight: 700; }
-.jg-boton-chico { min-height: 44px; padding: 8px 12px; font-size: .875rem; }
-.jg-boton:disabled { opacity: .6; cursor: default; }
-.jg-boton:focus-visible, .jg-pestana:focus-visible, .jg-segmento:focus-visible, .jg-input:focus-visible, .jg-instalar summary:focus-visible { outline: 2px solid var(--ui-foco); outline-offset: 2px; }
-.jg-fila-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.jg-boton:active:not(:disabled) { transform: scale(.98); }
+.jg-boton:disabled { opacity: .55; cursor: not-allowed; }
+.jg-boton[aria-busy="true"] { cursor: progress; }
+.jg-boton-salir { min-height: 44px; padding: 8px 16px; font-size: .875rem; color: var(--ui-texto-secundario); border-color: var(--jg-filete); flex-shrink: 0; }
+.jg-fila-botones { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: 8px; }
 
-.jg-instalar summary { min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; font-weight: 600; list-style: none; }
+.jg-boton:focus-visible, .jg-pestana:focus-visible, .jg-segmento:focus-visible, .jg-input:focus-visible,
+.jg-instalar summary:focus-visible, .jg-interruptor-control:focus-visible { outline: 2px solid var(--ui-foco); outline-offset: 2px; transition: none; }
+.jg-input:focus-visible { outline-offset: -2px; }
+
+@media (hover: hover) {
+  .jg-boton:hover:not(:disabled) { background: var(--jg-hover); border-color: var(--ui-texto-secundario); }
+  .jg-boton-principal:hover:not(:disabled) { background: color-mix(in srgb, var(--ui-acento) 88%, var(--ui-texto)); border-color: var(--ui-acento); }
+  .jg-pestana:hover { color: var(--ui-texto); }
+  .jg-segmento:hover:not([aria-pressed="true"]) { color: var(--ui-texto); background: var(--jg-hover); }
+  .jg-input:hover:not(:focus) { border-color: var(--ui-texto-secundario); }
+}
+
+/* Instalar en el celular */
+.jg-instalar summary { min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; font-weight: 600; list-style: none; border-radius: 8px; }
 .jg-instalar summary::-webkit-details-marker { display: none; }
-.jg-instalar summary::after { content: '+'; font-size: 1.25rem; line-height: 1; color: var(--ui-texto-secundario); }
+.jg-instalar summary::after { content: '+'; font-size: 1.5rem; line-height: 1; color: var(--ui-texto-acento); }
 .jg-instalar[open] summary::after { content: '−'; }
-.jg-instalar-cuerpo h3 { margin: 8px 0 4px; font-size: .9375rem; font-weight: 700; }
-.jg-instalar-cuerpo ol { margin: 0; padding-left: 1.25rem; list-style: decimal; display: grid; gap: 4px; font-size: .875rem; line-height: 1.5; color: var(--ui-texto-secundario); }
+.jg-instalar-cuerpo h3 { margin: 12px 0 4px; font-family: var(--fuente-titulo); font-size: 1.125rem; font-weight: 700; }
+.jg-instalar-cuerpo ol { margin: 0; padding-left: 1.5rem; list-style: decimal; display: grid; gap: 8px; font-size: .9375rem; line-height: 1.5; color: var(--ui-texto-secundario); }
+.jg-instalar-cuerpo li::marker { color: var(--ui-texto-acento); font-weight: 700; }
 
-.jg-cabecera { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--ui-superficie); border-bottom: 1px solid var(--ui-borde); position: sticky; top: 0; z-index: 2; }
-.jg-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-.jg-avatar-iniciales { display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: .875rem; background: var(--ui-fondo-sidebar); color: var(--ui-texto-secundario); }
+/* Cabecera: escudo, foto con anillo, nombre y Salir */
+.jg-cabecera { position: sticky; top: 0; z-index: 2; background: var(--ui-fondo-pagina); border-bottom: 1px solid var(--jg-filete); padding-top: env(safe-area-inset-top); }
+.jg-cabecera-interior { display: flex; align-items: center; gap: 12px; max-width: 40rem; margin-inline: auto; padding: 12px 16px; }
+.jg-cabecera-escudo { width: 28px; height: 28px; object-fit: contain; flex-shrink: 0; padding-right: 12px; box-sizing: content-box; border-right: 1px solid var(--jg-filete); }
+.jg-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid var(--jg-anillo); box-sizing: border-box; }
+.jg-avatar-iniciales { display: inline-flex; align-items: center; justify-content: center; font-family: var(--fuente-titulo); font-weight: 700; font-size: 1.125rem; background: var(--ui-superficie-alternativa); color: var(--ui-texto); }
 .jg-cabecera-textos { min-width: 0; flex: 1; }
-.jg-nombre { margin: 0; font-weight: 700; font-size: 1rem; overflow-wrap: anywhere; }
-.jg-categoria { margin: 0; font-size: .8125rem; color: var(--ui-texto-secundario); }
+.jg-nombre { margin: 0; font-family: var(--fuente-titulo); font-weight: 700; font-size: 1.1875rem; line-height: 1.05; overflow-wrap: anywhere; }
+.jg-categoria { margin: 2px 0 0; font-size: .875rem; color: var(--ui-texto-secundario); }
 
-.jg-contenido { padding: 16px 16px 24px; width: 100%; max-width: 40rem; margin-inline: auto; min-width: 0; }
-.jg-navegacion { position: sticky; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--ui-superficie); border-top: 1px solid var(--ui-borde); padding-bottom: env(safe-area-inset-bottom); }
-.jg-pestana { min-height: 56px; border: 0; background: transparent; font: inherit; font-size: .875rem; font-weight: 600; color: var(--ui-texto-secundario); cursor: pointer; border-top: 3px solid transparent; }
-.jg-pestana[aria-current="page"] { color: var(--ui-texto); border-top-color: var(--ui-acento); }
+/* Barra de pestañas */
+.jg-navegacion { position: sticky; bottom: 0; z-index: 2; background: var(--ui-fondo-pagina); border-top: 1px solid var(--jg-filete); padding-bottom: env(safe-area-inset-bottom); }
+.jg-navegacion-interior { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 40rem; margin-inline: auto; }
+.jg-pestana { position: relative; min-height: 64px; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px 2px; border: 0; background: transparent; font: inherit; font-size: .8125rem; font-weight: 600; line-height: 1.15; color: var(--ui-texto-secundario); cursor: pointer; transition: color var(--jg-dur) var(--jg-curva); }
+.jg-pestana-icono { width: 24px; height: 24px; transition: transform var(--jg-dur) var(--jg-curva); }
+.jg-pestana::before { content: ''; position: absolute; top: -1px; left: 50%; width: 32px; height: 3px; margin-left: -16px; border-radius: 0 0 3px 3px; background: var(--ui-acento); opacity: 0; transition: opacity var(--jg-dur) var(--jg-curva); }
+.jg-pestana[aria-current="page"] { color: var(--ui-texto); }
+.jg-pestana[aria-current="page"]::before { opacity: 1; }
+.jg-pestana[aria-current="page"] .jg-pestana-icono { color: var(--ui-texto-acento); }
+.jg-pestana:active .jg-pestana-icono { transform: scale(.9); }
+.jg-pestana:focus-visible { outline-offset: -4px; border-radius: 10px; }
 
-.jg-segmentos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.jg-segmento { min-height: 48px; border-radius: 10px; font: inherit; font-size: .9375rem; font-weight: 600; cursor: pointer; color: var(--ui-texto-secundario); background: var(--ui-superficie); border: 1px solid var(--ui-borde); }
-.jg-segmento[aria-pressed="true"] { color: var(--ui-texto-sobre-acento); background: var(--ui-acento); border-color: var(--ui-acento); }
+/* Inicio: la fecha de hoy, grande */
+.jg-hoy { margin: 0; display: grid; gap: 2px; padding-block: 4px 4px; }
+.jg-hoy-dia { display: block; font-size: 1rem; font-weight: 600; color: var(--ui-texto-secundario); }
+.jg-hoy-dia::first-letter { text-transform: uppercase; }
+.jg-hoy-fecha { display: block; font-family: var(--fuente-titulo); font-size: 2.75rem; font-weight: 700; line-height: .95; overflow-wrap: break-word; min-width: 0; }
 
-.jg-campo-anio { display: grid; gap: 6px; max-width: 12rem; }
-.jg-datos { margin: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.jg-datos-4 { grid-template-columns: repeat(2, 1fr); }
-.jg-dato { display: flex; flex-direction: column-reverse; gap: 2px; padding: 12px; border-radius: 10px; background: var(--ui-superficie-alternativa); min-width: 0; }
-.jg-dato-valor { margin: 0; font-family: var(--fuente-titulo); font-size: 1.75rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
-.jg-dato-etiqueta { font-size: .8125rem; color: var(--ui-texto-secundario); }
-.jg-porcentaje { margin: 0; font-size: .9375rem; color: var(--ui-texto-secundario); }
-.jg-porcentaje-valor { display: block; font-family: var(--fuente-titulo); font-size: 3rem; font-weight: 700; line-height: 1; color: var(--ui-texto); font-variant-numeric: tabular-nums; }
+/* Wellness: selector de dos partes pegadas */
+.jg-segmentos { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: var(--jg-radio); background: var(--ui-superficie); border: 1px solid var(--jg-filete); }
+.jg-segmento { min-height: 44px; min-width: 0; padding: 8px; border: 0; border-radius: var(--jg-radio-control); font: inherit; font-size: .9375rem; font-weight: 600; line-height: 1.2; cursor: pointer; color: var(--ui-texto-secundario); background: transparent; transition: background-color var(--jg-dur) var(--jg-curva), color var(--jg-dur) var(--jg-curva); }
+.jg-segmento[aria-pressed="true"] { color: var(--ui-texto-sobre-acento); background: var(--ui-acento); font-weight: 700; }
+
+/* Formularios de Wellness y RPE (compartidos con el link público): solo se retocan dentro del portal */
+.jg-formulario .space-y-5 > :not(:last-child) { margin-block-end: 1.75rem; }
+.jg-formulario .space-y-5 > div > p.text-sm,
+.jg-formulario label.text-sm { font-size: 1rem; font-weight: 600; }
+.jg-formulario button.flex-1, .jg-formulario .grid-cols-5 > button { min-height: 48px; font-size: 1rem; }
+.jg-formulario button.w-full { min-height: 52px; font-size: 1rem; font-weight: 700; }
+.jg-formulario .uppercase { text-transform: none; letter-spacing: 0; }
+.jg-formulario .text-\[10px\] { font-size: .75rem; }
+
+/* Entrenamiento de hoy (componente compartido): mismo lenguaje que las tarjetas del portal */
+.jg-app .eh { margin: 0; padding: 20px 16px; border-color: var(--jg-filete); border-radius: var(--jg-radio); background: var(--ui-superficie); }
+.jg-app .eh-titulo { font-family: var(--fuente-titulo); font-size: 1.375rem; line-height: 1.1; letter-spacing: 0; text-transform: none; color: var(--ui-texto); }
+.jg-app .eh-cuando { font-size: 1rem; }
+.jg-app .eh-etiqueta, .jg-app .eh-tecnica > span { font-size: .8125rem; letter-spacing: 0; text-transform: none; }
+.jg-app .eh-bloque { border-color: var(--jg-filete); }
+.jg-app .eh-bloque h3 { font-family: var(--fuente-titulo); font-size: 1.25rem; line-height: 1.1; }
+.jg-app .eh-ejercicio { border-color: var(--jg-filete); }
+
+/* Mis números: cifras de marcador */
+.jg-campo-anio { display: grid; gap: 8px; max-width: 12rem; }
+.jg-filtro-anio { justify-self: end; grid-template-columns: auto 7.5rem; align-items: center; gap: 12px; max-width: none; }
+.jg-filtro-anio .jg-input { min-height: 44px; padding-block: 8px; }
+.jg-datos { margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 12px; }
+.jg-datos-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.jg-dato { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 4px; padding-top: 12px; border-top: 2px solid var(--jg-filete-fuerte); min-width: 0; }
+.jg-dato-valor { margin: 0; font-family: var(--fuente-titulo); font-size: 2.5rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.jg-dato-etiqueta { font-size: .875rem; color: var(--ui-texto-secundario); }
+.jg-porcentaje { margin: 0; font-size: 1rem; color: var(--ui-texto-secundario); }
+.jg-porcentaje-valor { display: block; margin-bottom: 4px; font-family: var(--fuente-titulo); font-size: 4.5rem; font-weight: 700; line-height: .9; color: var(--ui-texto-acento); font-variant-numeric: tabular-nums; }
+.jg-barra { height: 8px; border-radius: 999px; background: var(--jg-filete); overflow: hidden; margin-bottom: 8px; }
+.jg-barra-relleno { display: block; height: 100%; border-radius: inherit; background: var(--ui-acento); transform-origin: left center; transform: scaleX(var(--jg-proporcion, 0)); }
 
 @media (min-width: 768px) {
-  .jg-datos-4 { grid-template-columns: repeat(4, 1fr); }
-  .jg-contenido { padding-top: 24px; }
-  /* La cabecera y la barra ocupan todo el ancho, pero su contenido se alinea con la columna central. */
-  .jg-cabecera, .jg-navegacion { padding-inline: max(16px, calc((100% - 40rem) / 2 + 16px)); }
+  .jg-datos-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .jg-contenido { padding-top: 28px; }
 }
 
 /* Avisos */
-.jg-pasos { margin: 0; padding-left: 1.25rem; display: grid; gap: 4px; font-size: .875rem; line-height: 1.5; color: var(--ui-texto-secundario); }
+.jg-pasos { margin: 0; padding-left: 1.5rem; display: grid; gap: 8px; font-size: .9375rem; line-height: 1.5; color: var(--ui-texto-secundario); }
 ol.jg-pasos { list-style: decimal; }
 ul.jg-pasos { list-style: disc; }
-.jg-interruptores { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.jg-interruptor { display: flex; align-items: flex-start; gap: 12px; min-height: 48px; padding: 10px 4px; cursor: pointer; }
-.jg-interruptor input { width: 22px; height: 22px; margin-top: 2px; flex-shrink: 0; accent-color: var(--ui-acento); }
-.jg-interruptor input:focus-visible { outline: 2px solid var(--ui-foco); outline-offset: 2px; }
-.jg-interruptor-etiqueta { display: block; font-weight: 600; font-size: .9375rem; color: var(--ui-texto); }
-.jg-interruptor-ayuda { display: block; font-size: .8125rem; color: var(--ui-texto-secundario); }
+.jg-pasos li::marker { color: var(--ui-texto-acento); font-weight: 700; }
+.jg-interruptores { list-style: none; margin: 0; padding: 0; display: grid; }
+.jg-interruptores > li + li { border-top: 1px solid var(--jg-filete); }
+.jg-interruptor { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; padding: 12px 0; cursor: pointer; }
+.jg-interruptor > span { min-width: 0; }
+.jg-interruptor-etiqueta { display: block; font-weight: 600; font-size: 1rem; color: var(--ui-texto); }
+.jg-interruptor-ayuda { display: block; font-size: .875rem; color: var(--ui-texto-secundario); }
+/* Sigue siendo una casilla: solo cambia su aspecto a interruptor deslizable. */
+.jg-interruptor-control { order: 2; appearance: none; -webkit-appearance: none; position: relative; flex-shrink: 0; width: 50px; height: 30px; margin: 0; border-radius: 999px; cursor: pointer; background: var(--ui-superficie-alternativa); border: 1px solid var(--jg-filete-fuerte); transition: background-color var(--jg-dur) var(--jg-curva), border-color var(--jg-dur) var(--jg-curva); }
+.jg-interruptor-control::before { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--ui-texto-secundario); transition: transform var(--jg-dur) var(--jg-curva), background-color var(--jg-dur) var(--jg-curva); }
+.jg-interruptor-control:checked { background: var(--ui-acento); border-color: var(--ui-acento); }
+.jg-interruptor-control:checked::before { transform: translateX(20px); background: var(--ui-texto-sobre-acento); }
+.jg-interruptor-control:disabled { opacity: .55; cursor: not-allowed; }
+
+@media (prefers-reduced-motion: reduce) {
+  .jg-boton, .jg-input, .jg-pestana, .jg-pestana-icono, .jg-pestana::before, .jg-segmento,
+  .jg-interruptor-control, .jg-interruptor-control::before { transition: none; }
+  .jg-boton:active:not(:disabled), .jg-pestana:active .jg-pestana-icono { transform: none; }
+}

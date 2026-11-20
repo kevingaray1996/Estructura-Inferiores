@@ -7,6 +7,7 @@ import WellnessJugadora from './WellnessJugadora'
 import MisNumeros from './MisNumeros'
 import AvisosJugadora from './AvisosJugadora'
 import { desactivarAvisos, sincronizarAvisos } from './avisosDispositivo'
+import Icono from './iconos'
 
 const SECCIONES = [
   { id: 'inicio', etiqueta: 'Inicio' },
@@ -136,14 +137,17 @@ function AppJugadora() {
   return (
     <div className="jg-app">
       <header className="jg-cabecera">
-        {perfil.foto_url
-          ? <img src={perfil.foto_url} alt="" className="jg-avatar" />
-          : <span className="jg-avatar jg-avatar-iniciales" aria-hidden="true"><Iniciales perfil={perfil} /></span>}
-        <div className="jg-cabecera-textos">
-          <p className="jg-nombre">{perfil.nombre} {perfil.apellido}</p>
-          <p className="jg-categoria">{perfil.categoria}</p>
+        <div className="jg-cabecera-interior">
+          <img src="/Escudo simplificado.png" alt="" className="jg-cabecera-escudo" width="32" height="32" />
+          {perfil.foto_url
+            ? <img src={perfil.foto_url} alt="" className="jg-avatar" width="44" height="44" />
+            : <span className="jg-avatar jg-avatar-iniciales" aria-hidden="true"><Iniciales perfil={perfil} /></span>}
+          <div className="jg-cabecera-textos">
+            <p className="jg-nombre">{perfil.nombre} {perfil.apellido}</p>
+            <p className="jg-categoria">{perfil.categoria}</p>
+          </div>
+          <button type="button" className="jg-boton jg-boton-salir" onClick={cerrarSesion}>Salir</button>
         </div>
-        <button type="button" className="jg-boton jg-boton-chico" onClick={cerrarSesion}>Salir</button>
       </header>
 
       <main className="jg-contenido">
@@ -154,12 +158,15 @@ function AppJugadora() {
       </main>
 
       <nav className="jg-navegacion" aria-label="Secciones de la jugadora">
-        {SECCIONES.map(s => (
-          <button key={s.id} type="button" className="jg-pestana" aria-current={seccion === s.id ? 'page' : undefined}
-            onClick={() => { setSeccion(s.id); setVistaWellness('bienestar') }}>
-            {s.etiqueta}
-          </button>
-        ))}
+        <div className="jg-navegacion-interior">
+          {SECCIONES.map(s => (
+            <button key={s.id} type="button" className="jg-pestana" aria-current={seccion === s.id ? 'page' : undefined}
+              onClick={() => { setSeccion(s.id); setVistaWellness('bienestar') }}>
+              <Icono nombre={s.id} className="jg-pestana-icono" />
+              <span>{s.etiqueta}</span>
+            </button>
+          ))}
+        </div>
       </nav>
     </div>
   )

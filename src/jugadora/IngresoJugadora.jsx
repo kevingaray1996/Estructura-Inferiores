@@ -87,11 +87,9 @@ function IngresoJugadora() {
   return (
     <main className="jg-ingreso">
       <header className="jg-marca">
-        <img src="/Escudo simplificado.png" alt="" className="jg-escudo" width="56" height="56" />
-        <div>
-          <p className="jg-antetitulo">Club Comunicaciones</p>
-          <h1 className="jg-titulo">Jugadoras</h1>
-        </div>
+        <img src="/Escudo simplificado.png" alt="" className="jg-escudo" width="112" height="112" />
+        <h1 className="jg-titulo">Jugadoras</h1>
+        <p className="jg-club">Club Comunicaciones</p>
       </header>
 
       {paso === 'mail' && (

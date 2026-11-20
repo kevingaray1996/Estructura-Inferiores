@@ -40,7 +40,7 @@ function WellnessJugadora({ vistaInicial = 'bienestar' }) {
         <button type="button" className="jg-segmento" aria-pressed={vista === 'bienestar'} onClick={() => setVista('bienestar')}>Bienestar de hoy</button>
         <button type="button" className="jg-segmento" aria-pressed={vista === 'rpe'} onClick={() => setVista('rpe')}>Esfuerzo (RPE)</button>
       </div>
-      <section className="jg-tarjeta">
+      <section className="jg-tarjeta jg-formulario">
         {/* Los dos quedan montados: al cambiar de pestaña no se pierde lo que ya marcó. */}
         <div hidden={vista !== 'bienestar'}>
           <FormularioWellness completado={completado} onCompletado={setCompletado} onGuardar={guardarW} />
