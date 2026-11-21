@@ -41,6 +41,7 @@ import PlaylistAnalisis from './analisis/PlaylistAnalisis'
 import usePlaylistAnalisis from '../hooks/usePlaylistAnalisis'
 import { clipDe } from '../utils/analisis/playlist'
 import PartidoEventos from './analisis/PartidoEventos'
+import InformeAnalisis from './analisis/InformeAnalisis'
 import useEventosPartido from '../hooks/useEventosPartido'
 import usePlanillaMinutos from '../hooks/usePlanillaMinutos'
 import { estabaEnCancha, faltanMarcas, minutoReal, minutosSugeridos, periodoPorMarcas, problemasOrden } from '../utils/analisis/eventosPartido'
@@ -219,113 +220,6 @@ function CanchaInteractiva({ eventos = [], coordenadas, direccion = null, intera
   )
 }
 
-function CanchaInformePDF({ eventos = [], titulo = 'Mapa de acciones', direccionReal = null, zonaDe = zonaEfectivaEvento }) {
-  const direccion = null
-  const zonasVista = ZONAS
-
-  const conteos = zonasVista.reduce((acc, nombre) => {
-    acc[nombre] = 0
-    return acc
-  }, {})
-
-  eventos.forEach((evento) => {
-    const zona = zonaDe(evento)
-    if (zona && Object.prototype.hasOwnProperty.call(conteos, zona)) conteos[zona] += 1
-  })
-
-  const totalConZona = Object.values(conteos).reduce((total, cantidad) => total + cantidad, 0)
-  const maximoZona = Math.max(1, ...Object.values(conteos))
-  const ubicacionesExactas = eventos.filter(tieneCoordenadasExactas).length
-
-  return (
-    <div className="pdf-zonas-layout grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-      <div className="pdf-zonas-cancha rounded-xl border p-3" style={{ borderColor: '#D1D5DB', backgroundColor: '#F8FAFC' }}>
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="text-xs font-black uppercase tracking-wide" style={{ color: '#374151' }}>{titulo}</p>
-          <span className="text-[10px] font-semibold" style={{ color: '#6B7280' }}>Configuración actual: {direccionReal || 'sin verificar'} (no reinterpreta el historial)</span>
-        </div>
-        <svg viewBox="0 0 100 64" role="img" aria-label="Cancha visual fija con ubicaciones originales" className="mx-auto block w-full" style={{ maxHeight: '350px' }}>
-          <rect x="1" y="1" width="98" height="62" rx="0.5" fill="#176344" stroke="#F4F7F4" strokeWidth="0.8" />
-          <line x1="50" y1="1" x2="50" y2="63" stroke="#E5F0E7" strokeWidth="0.55" />
-          <circle cx="50" cy="32" r="9.2" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
-          <circle cx="50" cy="32" r="0.7" fill="#E5F0E7" />
-          <rect x="1" y="17" width="16" height="30" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
-          <rect x="1" y="24" width="5.5" height="16" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
-          <rect x="83" y="17" width="16" height="30" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
-          <rect x="93.5" y="24" width="5.5" height="16" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
-          <path d="M17 25 A7 7 0 0 1 17 39 M83 25 A7 7 0 0 0 83 39" fill="none" stroke="#E5F0E7" strokeWidth="0.55" />
-          <line x1="33.333" y1="1" x2="33.333" y2="63" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.8" />
-          <line x1="66.666" y1="1" x2="66.666" y2="63" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.8" />
-          <line x1="1" y1="21.333" x2="99" y2="21.333" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.8" />
-          <line x1="1" y1="42.666" x2="99" y2="42.666" stroke="#D1FAE5" strokeWidth="0.3" strokeDasharray="1.2 1.2" opacity="0.8" />
-          {eventos.map((evento) => {
-            const punto = coordenadasEvento(evento)
-            if (!punto) return null
-            const cx = Math.max(1.5, Math.min(98.5, punto.x))
-            const cy = Math.max(1.5, Math.min(62.5, punto.y * 0.64))
-            return (
-              <g key={evento.id}>
-                <circle cx={cx} cy={cy} r={punto.exacta ? 1.65 : 1.35} fill={colorTipo(evento.tipo)} stroke="#FFFFFF" strokeWidth="0.35" opacity={punto.exacta ? 1 : 0.68} />
-                {punto.exacta && <circle cx={cx} cy={cy} r="2.35" fill="none" stroke="#FFFFFF" strokeWidth="0.3" />}
-              </g>
-            )
-          })}
-        </svg>
-        <div className="mt-2 flex justify-between text-[10px] font-bold" style={{ color: '#374151' }}>
-          <span>{direccion === 'derecha' ? 'DEFENSA' : direccion === 'izquierda' ? 'ATAQUE' : 'IZQUIERDA VISUAL'}</span><span>MEDIO</span><span>{direccion === 'derecha' ? 'ATAQUE' : direccion === 'izquierda' ? 'DEFENSA' : 'DERECHA VISUAL'}</span>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-x-3 gap-y-2 text-[10px]" style={{ color: '#4B5563' }}>
-          <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: '#F2C230', border: '1px solid #9CA3AF' }} />Ataque / remate / gol</span>
-          <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: '#4ADE80', border: '1px solid #9CA3AF' }} />Acción positiva</span>
-          <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: '#F87171', border: '1px solid #9CA3AF' }} />Pérdida / negativa</span>
-          <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: '#60A5FA', border: '1px solid #9CA3AF' }} />Duelo / otra acción</span>
-        </div>
-        <p className="mt-2 text-[10px]" style={{ color: '#6B7280' }}>Puntos con aro blanco: ubicación exacta. Puntos sin aro: ubicación aproximada a partir de la zona histórica.</p>
-      </div>
-
-      <div className="pdf-zonas-resumen">
-        <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <p className="text-xs font-black uppercase tracking-wide" style={{ color: '#374151' }}>Distribución por sector</p>
-            <p className="mt-1 text-xs" style={{ color: '#6B7280' }}>{totalConZona} acciones con zona identificada</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xl font-black" style={{ color: '#171717' }}>{eventos.length}</p>
-            <p className="text-[10px] uppercase tracking-wide" style={{ color: '#6B7280' }}>acciones totales</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {zonasVista.map((nombre) => {
-            const cantidad = conteos[nombre]
-            const porcentaje = totalConZona ? Math.round((cantidad / totalConZona) * 100) : 0
-            return (
-              <div key={nombre} className="pdf-zona-celda rounded-lg border p-2" style={{ borderColor: '#D1D5DB', backgroundColor: '#FFFFFF' }}>
-                <p className="text-[10px] font-semibold leading-tight" style={{ color: '#4B5563' }}>{nombre}</p>
-                <p className="mt-1 text-xl font-black" style={{ color: '#171717' }}>{cantidad}</p>
-                <div className="pdf-zona-barra-fondo mt-1.5 h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: '#E5E7EB' }}>
-                  <div className="pdf-zona-barra h-full rounded-full" style={{ width: `${(cantidad / maximoZona) * 100}%`, backgroundColor: '#F2C230' }} />
-                </div>
-                <p className="mt-1 text-[10px]" style={{ color: '#6B7280' }}>{porcentaje}% de las ubicadas</p>
-              </div>
-            )
-          })}
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <div className="rounded-lg border p-3" style={{ borderColor: '#D1D5DB', backgroundColor: '#FFFBEB' }}>
-            <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: '#6B7280' }}>Ubicación exacta</p>
-            <p className="mt-1 text-lg font-black" style={{ color: '#171717' }}>{ubicacionesExactas}</p>
-          </div>
-          <div className="rounded-lg border p-3" style={{ borderColor: '#D1D5DB', backgroundColor: '#F3F4F6' }}>
-            <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: '#6B7280' }}>Sin zona / ubicación</p>
-            <p className="mt-1 text-lg font-black" style={{ color: '#171717' }}>{Math.max(0, eventos.length - totalConZona)}</p>
-          </div>
-        </div>
-        <p className="mt-2 text-[10px]">{eventos.filter(e => !referenciaVerificada(e)).length} acciones con referencia táctica histórica no verificada. Sus zonas se conservan como fueron registradas.</p>
-        <p className="mt-3 text-[10px] leading-relaxed" style={{ color: '#6B7280' }}>Los porcentajes se calculan sobre las acciones que tienen una zona identificada. Las acciones antiguas se representan en el centro aproximado de su zona y no se modifican los registros guardados.</p>
-      </div>
-    </div>
-  )
-}
 
 let youtubeApiPromise = null
 
@@ -475,7 +369,6 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   const [bloqueoEtiquetado] = useState(crearBloqueoEtiquetado)
 
   const partidoActual = partidos.find((p) => p.id === partidoId)
-  const direccionPrimerTiempo = direccionDelPeriodo(partidoActual, 1)
   const direccionAtaqueActual = direccionDelPeriodo(partidoActual, periodoActual)
 
   const partidoCalendarioActual =
@@ -677,7 +570,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
           numero_fecha, video_partido_completo, video_resumen,
           video_analisis_propio, video_analisis_rival, video_pelota_parada,
           video_gps, video_charla_dt, video_arenga, video_resumen_vigilancias,
-          link, formacion
+          link, formacion, escudo_url, goles_local, goles_visitante, penales_favor, penales_contra
         `)
         .eq('categoria_id', CATEGORIA_ID)
         .order('fecha', { ascending: false })
@@ -1006,7 +899,6 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
   // Zona de cada acción con su partido: las viejas con punto y sin zona la calculan con la dirección del 1T del partido.
   const partidosPorId = useMemo(() => new Map(partidos.map((p) => [p.id, p])), [partidos])
-  const zonaDe = useCallback((evento) => zonaEfectivaEvento(evento, partidosPorId.get(evento.partido_id) || null), [partidosPorId])
 
   // Filtro del mapa: alcance, partido y jugadora (capa, resultado y tiempo los maneja el mapa).
   const eventosMapa = useMemo(() => {
@@ -1057,7 +949,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   // Receptoras de los pases del partido, para la Playlist. Se vuelve a leer solo si cambian los pases.
   const pasesDelPartido = useMemo(() => eventosPartido.filter((e) => esPase(e) && !e._cola).map((e) => e.id).join(','), [eventosPartido])
   useEffect(() => {
-    if (seccion !== 'video' || !pasesDelPartido) return undefined
+    if ((seccion !== 'video' && seccion !== 'informe') || !pasesDelPartido) return undefined
     let cancelado = false
     async function cargar() {
       setResumenDestinatarias((a) => ({ ...a, cargando: true, error: '' }))
@@ -1136,62 +1028,6 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     return () => { cancelado = true }
   }, [seccion, eventos, recargaDestinatarias])
 
-  const estadisticasInforme = useMemo(() => {
-    const resumen = {}
-    for (const evento of eventosPartido) {
-      if (!resumen[evento.tipo]) resumen[evento.tipo] = { total: 0, efectivas: 0, noEfectivas: 0, pendientes: 0, neutros: 0 }
-      const item = resumen[evento.tipo]
-      item.total += 1
-      if (['Exitoso', 'Gol', 'Atajada'].includes(evento.resultado)) item.efectivas += 1
-      else if (['Fallido', 'Fuera', 'Bloqueado'].includes(evento.resultado)) item.noEfectivas += 1
-      else if (!evento.resultado) item.pendientes += 1
-      else if (evento.resultado === 'Neutro') item.neutros += 1
-    }
-    return Object.entries(resumen).sort((a, b) => b[1].total - a[1].total)
-  }, [eventosPartido])
-
-  const jugadorasInforme = useMemo(() => {
-    const resumen = {}
-    for (const evento of eventosPartido) {
-      if (!evento.jugador_id) continue
-      if (!resumen[evento.jugador_id]) resumen[evento.jugador_id] = { total: 0, efectivas: 0, noEfectivas: 0, neutros: 0, pendientes: 0 }
-      resumen[evento.jugador_id].total += 1
-      if (['Exitoso', 'Gol', 'Atajada'].includes(evento.resultado)) resumen[evento.jugador_id].efectivas += 1
-      if (['Fallido', 'Fuera', 'Bloqueado'].includes(evento.resultado)) resumen[evento.jugador_id].noEfectivas += 1
-      if (evento.resultado === 'Neutro') resumen[evento.jugador_id].neutros += 1
-      if (!evento.resultado) resumen[evento.jugador_id].pendientes += 1
-    }
-    return Object.entries(resumen).map(([id, datos]) => ({
-      id,
-      nombre: nombreJugadora(jugadoras.find((j) => j.id === id)),
-      ...datos,
-      evaluadas: datos.efectivas + datos.noEfectivas,
-      efectividad: datos.efectivas + datos.noEfectivas
-        ? Math.round((datos.efectivas / (datos.efectivas + datos.noEfectivas)) * 100)
-        : null,
-    })).sort((a, b) => b.total - a.total)
-  }, [eventosPartido, jugadoras])
-
-  const resumenGraficoInforme = useMemo(() => {
-    const efectivas = eventosPartido.filter((e) => ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length
-    const noEfectivas = eventosPartido.filter((e) => ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length
-    const pendientes = eventosPartido.filter((e) => !e.resultado).length
-    const neutros = eventosPartido.filter((e) => e.resultado === 'Neutro').length
-    const evaluables = efectivas + noEfectivas
-    return {
-      efectivas,
-      noEfectivas,
-      pendientes,
-      neutros,
-      evaluables,
-      porcentaje: evaluables ? Math.round((efectivas / evaluables) * 100) : null,
-    }
-  }, [eventosPartido])
-
-  const accionesGraficoInforme = useMemo(
-    () => estadisticasInforme.slice(0, 7),
-    [estadisticasInforme],
-  )
 
   const partidosDisponibles = useMemo(
     () => [...partidosCalendario].sort((a, b) =>
@@ -1841,10 +1677,6 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       bloqueoEtiquetado.salir()
       setGuardando(false)
     }
-  }
-
-  function imprimirInforme() {
-    window.print()
   }
 
   const controlesVideo = <ControlesVideoAnalisis listo={videoListo && ventanas.conectado} reproduciendo={videoReproduciendo}
@@ -3146,204 +2978,26 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
           )}
 
           {seccion === 'informe' && (
-            <Panel id="informe-imprimible" className="pdf-informe">
-              <div className="pdf-cabecera flex flex-wrap items-start justify-between gap-4 rounded-xl border-b-4 p-5" style={{ backgroundColor: '#171717', borderColor: AMARILLO, color: '#FFFFFF' }}>
-                <div className="min-w-0">
-                  <p className="pdf-acento text-xs font-black uppercase tracking-[0.22em]" style={{ color: AMARILLO }}>
-                    COMUNICACIONES · VIDEOANÁLISIS
-                  </p>
-                  <h2 className="mt-2 text-2xl font-black tracking-tight" style={{ color: '#FFFFFF' }}>Informe técnico de partido</h2>
-                  <p className="mt-2 text-lg font-bold" style={{ color: '#FFFFFF' }}>{partidoActual.rival || 'Rival sin especificar'}</p>
-                  <p className="mt-1 text-sm" style={{ color: '#E5E5E5' }}>{datosEncuentro(partidoActual)}</p>
-                </div>
-                <Boton onClick={imprimirInforme} className="no-imprimir">
-                  Imprimir / Guardar PDF
-                </Boton>
-              </div>
-
-              <div className="pdf-meta mt-4 grid grid-cols-2 gap-3 sm:grid-cols-6 xl:grid-cols-10">
-                <div className="col-span-2 rounded-lg border p-3 sm:col-span-2" style={{ borderColor: A.borde, backgroundColor: A.fondo }}>
-                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: A.secundario }}>Acciones registradas</p>
-                  <p className="mt-1 text-2xl font-black">{eventosPartido.length}</p>
-                </div>
-                <div className="col-span-1 rounded-lg border p-3 sm:col-span-2" style={{ borderColor: A.borde, backgroundColor: A.fondo }}>
-                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: A.secundario }}>Con jugadora</p>
-                  <p className="mt-1 text-2xl font-black">{eventosPartido.filter((e) => e.jugador_id).length}</p>
-                </div>
-                <div className="col-span-1 rounded-lg border p-3 sm:col-span-2" style={{ borderColor: A.borde, backgroundColor: A.fondo }}>
-                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: A.secundario }}>Efectivas</p>
-                  <p className="mt-1 text-2xl font-black">{eventosPartido.filter((e) => ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length}</p>
-                </div>
-                <div className="col-span-1 rounded-lg border p-3 sm:col-span-3 xl:col-span-2" style={{ borderColor: A.borde, backgroundColor: A.fondo }}>
-                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: A.secundario }}>Pendientes</p>
-                  <p className="mt-1 text-2xl font-black">{resumenGraficoInforme.pendientes}</p>
-                </div>
-                <div className="col-span-1 rounded-lg border p-3 sm:col-span-3 xl:col-span-2" style={{ borderColor: A.borde, backgroundColor: A.fondo }}>
-                  <p className="min-h-8 text-xs uppercase tracking-wide" style={{ color: A.secundario }}>Neutras</p>
-                  <p className="mt-1 text-2xl font-black">{resumenGraficoInforme.neutros}</p>
-                </div>
-              </div>
-
-              <div className="pdf-seccion mt-6 rounded-xl border p-4" style={{ borderColor: A.borde, backgroundColor: '#FFF9E6' }}>
-                <h3 className="mb-3 text-base font-black" style={{ color: '#171717' }}>Resumen ejecutivo</h3>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <div className="border-l-4 pl-3" style={{ borderColor: AMARILLO }}>
-                    <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#6B7280' }}>Acción más registrada</p>
-                    <p className="mt-1 text-sm font-black" style={{ color: '#171717' }}>{estadisticasInforme[0] ? etiquetaTipo(estadisticasInforme[0][0]) : 'Sin acciones registradas'}</p>
-                    {estadisticasInforme[0] && <p className="text-xs" style={{ color: '#4B5563' }}>{estadisticasInforme[0][1].total} registro(s)</p>}
-                  </div>
-                  <div className="border-l-4 pl-3" style={{ borderColor: AMARILLO }}>
-                    <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#6B7280' }}>Jugadora con más acciones</p>
-                    <p className="mt-1 text-sm font-black" style={{ color: '#171717' }}>{jugadorasInforme[0]?.nombre || 'Sin acciones asignadas'}</p>
-                    {jugadorasInforme[0] && <p className="text-xs" style={{ color: '#4B5563' }}>{jugadorasInforme[0].total} acción(es) etiquetada(s)</p>}
-                  </div>
-                  <div className="border-l-4 pl-3" style={{ borderColor: AMARILLO }}>
-                    <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#6B7280' }}>Efectividad evaluable</p>
-                    <p className="mt-1 text-sm font-black" style={{ color: '#171717' }}>{(() => { const ef = eventosPartido.filter((e) => ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length; const noEf = eventosPartido.filter((e) => ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length; return ef + noEf ? `${Math.round((ef / (ef + noEf)) * 100)}%` : 'Sin datos evaluables' })()}</p>
-                    <p className="text-xs" style={{ color: '#4B5563' }}>Solo resultados evaluables</p>
-                  </div>
-                </div>
-                <p className="mt-3 text-xs" style={{ color: '#4B5563' }}>Este resumen destaca volumen de registro; no sustituye la interpretación táctica del analista.</p>
-              </div>
-
-              <div className="pdf-seccion pdf-graficos mt-6">
-                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: A.borde }}>Panel visual del partido</h3>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                  <div className="pdf-grafico-card rounded-xl border p-4" style={{ borderColor: A.borde, backgroundColor: '#FFFFFF' }}>
-                    <p className="text-xs font-black uppercase tracking-wide" style={{ color: '#4B5563' }}>Efectividad evaluable</p>
-                    <div className="mt-3 flex items-center gap-3">
-                      <svg viewBox="0 0 100 100" role="img" aria-label="Gráfico circular de efectividad" style={{ width: '96px', height: '96px', flexShrink: 0 }}>
-                        <circle cx="50" cy="50" r="36" fill="none" stroke="#E5E7EB" strokeWidth="13" />
-                        {resumenGraficoInforme.evaluables > 0 && <>
-                          <circle cx="50" cy="50" r="36" fill="none" stroke="#F2C230" strokeWidth="13" strokeDasharray={`${(resumenGraficoInforme.efectivas / resumenGraficoInforme.evaluables) * 226.2} 226.2`} transform="rotate(-90 50 50)" />
-                          <circle cx="50" cy="50" r="36" fill="none" stroke="#27272A" strokeWidth="13" strokeDasharray={`${(resumenGraficoInforme.noEfectivas / resumenGraficoInforme.evaluables) * 226.2} 226.2`} strokeDashoffset={`-${(resumenGraficoInforme.efectivas / resumenGraficoInforme.evaluables) * 226.2}`} transform="rotate(-90 50 50)" />
-                        </>}
-                        <text x="50" y="47" textAnchor="middle" fontSize="17" fontWeight="900" fill="#171717">{resumenGraficoInforme.porcentaje === null ? '—' : `${resumenGraficoInforme.porcentaje}%`}</text>
-                        <text x="50" y="60" textAnchor="middle" fontSize="7" fill="#6B7280">EFECTIVIDAD</text>
-                      </svg>
-                      <div className="space-y-2 text-xs">
-                        <p><span className="pdf-leyenda-amarilla inline-block mr-2 h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: '#F2C230' }} />Efectivas: <strong>{resumenGraficoInforme.efectivas}</strong></p>
-                        <p><span className="pdf-leyenda-negra inline-block mr-2 h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: '#27272A' }} />No efectivas: <strong>{resumenGraficoInforme.noEfectivas}</strong></p>
-                        <p><span className="pdf-leyenda-gris inline-block mr-2 h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: '#D1D5DB' }} />Pendientes: <strong>{resumenGraficoInforme.pendientes}</strong></p>
-                        <p>Neutras: <strong>{resumenGraficoInforme.neutros}</strong></p>
-                      </div>
-                    </div>
-                    <p className="mt-2 text-[10px]" style={{ color: '#6B7280' }}>El porcentaje excluye acciones pendientes y neutras.</p>
-                  </div>
-
-                  <div className="pdf-grafico-card rounded-xl border p-4" style={{ borderColor: A.borde, backgroundColor: '#FFFFFF' }}>
-                    <p className="text-xs font-black uppercase tracking-wide" style={{ color: '#4B5563' }}>Acciones más registradas</p>
-                    <div className="mt-3 space-y-3">
-                      {accionesGraficoInforme.length ? accionesGraficoInforme.map(([nombre, datos]) => {
-                        const maximo = Math.max(...accionesGraficoInforme.map(([, d]) => d.total), 1)
-                        return <div key={nombre}>
-                          <div className="mb-1 flex items-center justify-between gap-2 text-xs"><span className="min-w-0 truncate font-semibold">{etiquetaTipo(nombre)}</span><strong>{datos.total}</strong></div>
-                          <div className="pdf-barra-fondo h-2.5 overflow-hidden rounded-full" style={{ backgroundColor: '#E5E7EB' }}><div className="pdf-barra-amarilla" style={{ width: `${(datos.total / maximo) * 100}%`, height: '100%', backgroundColor: '#F2C230', borderRadius: '999px' }} /></div>
-                        </div>
-                      }) : <p className="text-xs" style={{ color: '#6B7280' }}>Sin acciones registradas.</p>}
-                    </div>
-                  </div>
-
-                  <div className="pdf-grafico-card rounded-xl border p-4" style={{ borderColor: A.borde, backgroundColor: '#FFFFFF' }}>
-                    <p className="text-xs font-black uppercase tracking-wide" style={{ color: '#4B5563' }}>Jugadoras · volumen de acciones</p>
-                    <div className="mt-3 space-y-3">
-                      {jugadorasInforme.slice(0, 5).length ? jugadorasInforme.slice(0, 5).map((j) => {
-                        const maximo = Math.max(...jugadorasInforme.slice(0, 5).map((item) => item.total), 1)
-                        return <div key={j.id}>
-                          <div className="mb-1 flex items-center justify-between gap-2 text-xs"><span className="min-w-0 truncate font-semibold">{j.nombre}</span><strong>{j.total}</strong></div>
-                          <div className="pdf-barra-fondo h-2.5 overflow-hidden rounded-full" style={{ backgroundColor: '#E5E7EB' }}><div className="pdf-barra-negra" style={{ width: `${(j.total / maximo) * 100}%`, height: '100%', backgroundColor: '#27272A', borderRadius: '999px' }} /></div>
-                        </div>
-                      }) : <p className="text-xs" style={{ color: '#6B7280' }}>Sin acciones asignadas a jugadoras.</p>}
-                    </div>
-                    <p className="mt-2 text-[10px]" style={{ color: '#6B7280' }}>Muestra las cinco con más etiquetas; no representa por sí solo calidad ni minutos jugados.</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pdf-seccion mt-6">
-                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: A.borde }}>1. Rendimiento colectivo · acciones por tipo</h3>
-                {estadisticasInforme.length ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm pdf-tabla">
-                      <thead><tr style={{ color: A.secundario }}>
-                        <th className="p-2">Acción</th><th className="p-2 text-right">Total</th><th className="p-2 text-right">Efectivas</th><th className="p-2 text-right">No efectivas</th><th className="p-2 text-right">Neutras</th><th className="p-2 text-right">Pendientes</th><th className="p-2 text-right">Efectividad</th>
-                      </tr></thead>
-                      <tbody>{estadisticasInforme.map(([nombre, datos]) => (
-                        <tr key={nombre} className="border-t" style={{ borderColor: A.borde }}>
-                          <td className="p-2 font-semibold">{etiquetaTipo(nombre)}</td><td className="p-2 text-right">{datos.total}</td><td className="p-2 text-right">{datos.efectivas}</td><td className="p-2 text-right">{datos.noEfectivas}</td><td className="p-2 text-right">{datos.neutros}</td><td className="p-2 text-right">{datos.pendientes}</td>
-                          <td className="p-2 text-right">{datos.efectivas + datos.noEfectivas ? `${Math.round(datos.efectivas / (datos.efectivas + datos.noEfectivas) * 100)}%` : '—'}</td>
-                        </tr>
-                      ))}</tbody>
-                    </table>
-                  </div>
-                ) : <p className="text-sm">Todavía no hay acciones etiquetadas para este partido.</p>}
-                <p className="mt-2 text-xs" style={{ color: A.secundario }}>La efectividad se calcula sobre acciones con resultado evaluable: efectivas frente a no efectivas. Las acciones neutras o sin resultado no entran en ese porcentaje.</p>
-              </div>
-
-              <div className="pdf-seccion mt-6">
-                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: A.borde }}>2. Rendimiento individual · jugadoras</h3>
-                {jugadorasInforme.length ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm pdf-tabla">
-                      <thead><tr style={{ color: A.secundario }}>
-                        <th className="p-2">Jugadora</th><th className="p-2 text-right">Acciones</th><th className="p-2 text-right">Efectivas</th><th className="p-2 text-right">No efectivas</th><th className="p-2 text-right">Neutras</th><th className="p-2 text-right">Pendientes</th><th className="p-2 text-right">Efectividad</th>
-                      </tr></thead>
-                      <tbody>{jugadorasInforme.map((j) => (
-                        <tr key={j.id} className="border-t" style={{ borderColor: A.borde }}>
-                          <td className="p-2 font-semibold">{j.nombre}</td><td className="p-2 text-right">{j.total}</td><td className="p-2 text-right">{j.efectivas}</td><td className="p-2 text-right">{j.noEfectivas}</td><td className="p-2 text-right">{j.neutros}</td><td className="p-2 text-right">{j.pendientes}</td><td className="p-2 text-right">{j.efectividad === null ? '—' : `${j.efectividad}%`}</td>
-                        </tr>
-                      ))}</tbody>
-                    </table>
-                  </div>
-                ) : <p className="text-sm">No hay acciones asignadas a jugadoras en este partido.</p>}
-              </div>
-
-              <div className="pdf-seccion pdf-distribucion-zonas mt-6">
-                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: A.borde }}>3. Distribución de acciones por zona</h3>
-                <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                  <CanchaInformePDF
-                    titulo="Primer tiempo · mapa de acciones"
-                    direccionReal={direccionPrimerTiempo}
-                    zonaDe={zonaDe}
-                    eventos={eventosPartido.filter((evento) => Number(evento.periodo || 1) === 1)}
-                  />
-                  <CanchaInformePDF
-                    titulo="Segundo tiempo · mapa de acciones"
-                    direccionReal={direccionDelPeriodo(partidoActual, 2)}
-                    zonaDe={zonaDe}
-                    eventos={eventosPartido.filter((evento) => Number(evento.periodo || 1) === 2)}
-                  />
-                </div>
-              </div>
-
-              {partidoActual.notas && (
-                <div className="pdf-seccion mt-6">
-                  <h3 className="mb-2 text-base font-black">4. Observaciones generales</h3>
-                  <p className="whitespace-pre-wrap text-sm">{partidoActual.notas}</p>
-                </div>
-              )}
-
-              <div className="pdf-seccion mt-6">
-                <h3 className="mb-3 border-b pb-2 text-base font-black" style={{ borderColor: A.borde }}>Detalle cronológico de acciones</h3>
-                {eventosPartido.length ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs pdf-tabla">
-                      <thead><tr style={{ color: A.secundario }}>
-                        <th className="p-2">Tiempo</th><th className="p-2">Acción</th><th className="p-2">Jugadora</th><th className="p-2">Zona</th><th className="p-2">Resultado</th><th className="p-2">Observaciones</th>
-                      </tr></thead>
-                      <tbody>{[...eventosPartido].sort((a, b) => Number(a.segundo) - Number(b.segundo)).map((ev) => (
-                        <tr key={ev.id} className="border-t" style={{ borderColor: A.borde }}>
-                          <td className="p-2 font-mono">{formatearTiempo(ev.segundo)}</td><td className="p-2">{etiquetaTipo(ev.tipo)}</td><td className="p-2">{nombreJugadora(jugadoras.find((j) => j.id === ev.jugador_id))}</td><td className="p-2">{ev.zona || '—'}</td><td className="p-2">{ev.resultado || 'Pendiente'}</td><td className="p-2">{ev.observaciones || '—'}</td>
-                        </tr>
-                      ))}</tbody>
-                    </table>
-                  </div>
-                ) : <p className="text-sm">Todavía no hay acciones registradas.</p>}
-              </div>
-
-              <div className="pdf-pie mt-7 border-t pt-3 text-xs" style={{ borderColor: A.borde, color: A.secundario }}>
-                Informe generado desde el módulo de videoanálisis de Comunicaciones. Los datos corresponden a las acciones guardadas para este partido.
-              </div>
+            <Panel>
+              <InformeAnalisis
+                key={partidoActual.id}
+                analisis={partidoActual}
+                calendario={partidoActual.partido_calendario || partidosCalendario.find((p) => p.id === partidoActual.partido_calendario_id) || null}
+                calendarioLista={partidosCalendario}
+                partidos={partidos}
+                eventosTemporada={eventos}
+                eventosPartido={eventosPartido}
+                eventosDelPartido={eventosDelPartido.eventos}
+                marcas={marcasPartido}
+                citaciones={citaciones}
+                minutos={minutosPartido.sugeridos}
+                jugadorasPorId={jugadorasPorId}
+                catalogo={catalogo}
+                etiquetaTipo={etiquetaTipo}
+                detallesPases={resumenDestinatarias.detalles}
+                puedeEditar={!bloqueoEscritura}
+                onGuardado={(id, informe) => setPartidos((lista) => lista.map((p) => (p.id === id ? { ...p, informe } : p)))}
+              />
             </Panel>
           )}
         </>
@@ -3358,59 +3012,6 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
           : 'Modo consulta · Los cambios están restringidos'}
       </footer>
 
-      <style>{`
-        @page { size: A4; margin: 14mm 12mm 16mm; }
-        @media print {
-          html, body { background: #fff !important; color: #171717 !important; }
-          body * { visibility: hidden !important; }
-          #informe-imprimible, #informe-imprimible * { visibility: visible !important; }
-          #informe-imprimible {
-            position: absolute !important; left: 0 !important; top: 0 !important;
-            width: 100% !important; margin: 0 !important; padding: 0 !important;
-            border: 0 !important; border-radius: 0 !important; box-shadow: none !important;
-            background: #fff !important; color: #171717 !important;
-            font-size: 10pt !important;
-          }
-          #informe-imprimible * { color: #171717 !important; background-color: transparent !important; border-color: #d1d5db !important; box-shadow: none !important; }
-          #informe-imprimible .pdf-acento { color: #F2C230 !important; }
-          #informe-imprimible .no-imprimir, #informe-imprimible button { display: none !important; }
-          #informe-imprimible .pdf-cabecera { padding: 14pt !important; margin-bottom: 10pt !important; background: #171717 !important; border-bottom: 4pt solid #F2C230 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          #informe-imprimible .pdf-cabecera h2, #informe-imprimible .pdf-cabecera p:not(.pdf-acento) { color: #FFFFFF !important; }
-          #informe-imprimible .pdf-meta { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; }
-          #informe-imprimible .pdf-meta > div { grid-column: span 2 !important; padding: 8pt !important; border: 1px solid #d1d5db !important; }
-          #informe-imprimible .pdf-meta > div:nth-last-child(-n+2) { grid-column: span 3 !important; }
-          #informe-imprimible .pdf-seccion { break-inside: auto; page-break-inside: auto; }
-          #informe-imprimible .pdf-graficos { break-inside: avoid; page-break-inside: avoid; }
-          #informe-imprimible .pdf-grafico-card { break-inside: avoid; page-break-inside: avoid; border: 1px solid #D1D5DB !important; }
-          #informe-imprimible .pdf-distribucion-zonas { break-inside: auto; page-break-inside: auto; }
-          #informe-imprimible .pdf-zonas-cancha, #informe-imprimible .pdf-zona-celda { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          #informe-imprimible .pdf-zonas-cancha { break-inside: avoid; page-break-inside: avoid; }
-          #informe-imprimible .pdf-zonas-cancha { background-color: #F8FAFC !important; }
-          #informe-imprimible .pdf-zona-celda { background-color: #FFFFFF !important; }
-          #informe-imprimible .pdf-zonas-resumen > .grid > div:first-child { background-color: #FFFBEB !important; }
-          #informe-imprimible .pdf-zonas-resumen > .grid > div:last-child { background-color: #F3F4F6 !important; }
-          #informe-imprimible .pdf-zona-barra-fondo { background-color: #E5E7EB !important; }
-          #informe-imprimible .pdf-zona-barra { background-color: #F2C230 !important; }
-          #informe-imprimible .pdf-zonas-layout { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.4fr) !important; gap: 10pt !important; }
-          #informe-imprimible .pdf-zona-celda { padding: 5pt !important; break-inside: avoid; page-break-inside: avoid; }
-          #informe-imprimible .pdf-zona-celda p { overflow-wrap: anywhere; }
-          #informe-imprimible .pdf-graficos .grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
-          #informe-imprimible .pdf-graficos .pdf-grafico-card { padding: 8pt !important; }
-          #informe-imprimible .pdf-barra-fondo { background-color: #E5E7EB !important; }
-          #informe-imprimible .pdf-barra-amarilla, #informe-imprimible .pdf-leyenda-amarilla { background-color: #F2C230 !important; }
-          #informe-imprimible .pdf-barra-negra, #informe-imprimible .pdf-leyenda-negra { background-color: #27272A !important; }
-          #informe-imprimible .pdf-leyenda-gris { background-color: #D1D5DB !important; }
-          #informe-imprimible .pdf-seccion.rounded-xl { background: #FFF9E6 !important; border: 1px solid #E7D9A5 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          #informe-imprimible .pdf-seccion.rounded-xl * { color: #171717 !important; }
-          #informe-imprimible h2, #informe-imprimible h3 { break-after: avoid; page-break-after: avoid; }
-          #informe-imprimible table { width: 100% !important; border-collapse: collapse !important; font-size: 8.5pt !important; }
-          #informe-imprimible thead { display: table-header-group; }
-          #informe-imprimible tr { break-inside: avoid; page-break-inside: avoid; }
-          #informe-imprimible th, #informe-imprimible td { padding: 4pt 5pt !important; vertical-align: top !important; }
-          #informe-imprimible .pdf-pie { margin-top: 18pt !important; }
-          a { color: #171717 !important; text-decoration: none !important; }
-        }
-      `}</style>
     </div>
   )
 }

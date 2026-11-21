@@ -1,0 +1,24 @@
+/* Pestaña Informe de Análisis (usa las piezas .pa-* de partido.css). Colores solo desde los tokens de apariencia.css. */
+
+.inf-cabecera { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .75rem; }
+.inf-acciones { display: flex; flex-wrap: wrap; gap: .5rem; }
+.inf-grilla { display: grid; grid-template-columns: minmax(0, 1fr); gap: .75rem; }
+.inf-campo { display: grid; align-content: start; gap: .25rem; min-width: 0; font-size: .8125rem; font-weight: 700; color: var(--ui-compartido-secundario); }
+.inf textarea {
+  width: 100%; padding: .5rem; border: 1px solid var(--ui-compartido-borde); border-radius: .5rem; resize: vertical;
+  background: var(--analisis-control); color: var(--ui-compartido-texto); font-size: .875rem; font-weight: 500; line-height: 1.4;
+}
+.inf textarea:focus-visible { outline: 2px solid var(--ui-foco); outline-offset: 2px; }
+.inf input::placeholder, .inf textarea::placeholder { color: var(--ui-compartido-secundario); }
+.inf-clave { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: .5rem .75rem; align-items: start; }
+.inf-clave .inf-ancho { grid-column: 2; }
+.inf-numero { grid-row: span 2; font-size: 2rem; line-height: 1; font-weight: 900; font-style: italic; color: var(--ui-texto-acento); }
+.inf-avisos {
+  display: grid; gap: .5rem; padding: .75rem 1rem; border-left: 3px solid var(--ui-peligro); border-radius: .5rem;
+  background: var(--ui-peligro-suave); font-size: .875rem; line-height: 1.4; color: var(--ui-compartido-texto);
+}
+.inf-avisos ul { display: grid; gap: .25rem; padding-left: 1.1rem; list-style: disc; }
+
+@media (min-width: 768px) {
+  .inf-grilla { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
