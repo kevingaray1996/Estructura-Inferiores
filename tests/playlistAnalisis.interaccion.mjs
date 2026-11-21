@@ -91,9 +91,8 @@ test('Filtro por tipo y zona en la misma fila', async () => {
     await h.cambio(tipo, 'Pérdida')
     assert.equal(filas().length, 1)
     await h.act(() => resumen(0).click())
-    assert.equal(campo('Zona').closest('label').dataset.falta, 'si')
-    await h.act(async () => { await h.cambio(campo('Zona'), 'Ataque derecha'); await new Promise((r) => setTimeout(r, 0)) })
-    assert.deepEqual(h.actualizaciones.at(-1), { id: 'b', zona: 'Ataque derecha' })
+    // La zona se marca en la cancha de la fila (ver la prueba de Zona); sin punto ni zona, queda señalada.
+    assert.equal(filas()[0].querySelector('.pl-cancha').dataset.falta, 'si')
   } finally {
     await h.cerrar()
   }
@@ -127,6 +126,52 @@ test('Repetir clip: al llegar a 5 s después vuelve a 3 s antes', async () => {
     h.activo().time = 105.3
     await h.tick()
     assert.equal(h.activo().pending, 97)
+  } finally {
+    await h.cerrar()
+  }
+})
+
+test('Zona: una acción vieja con punto ya no «falta zona» (calculada) y la cancha de la fila guarda punto y zona', async () => {
+  // El partido de prueba ataca a la derecha en el 1T. «v» es vieja (sin dirección de captura) con punto y sin zona;
+  // «n» es nueva (marcada con un toque), sin punto ni zona.
+  const h = await montar({ eventos: [
+    ev('v', 'Pérdida', 100, { zona: null, coordenada_x: 80, coordenada_y: 20 }),
+    ev('n', 'Pérdida', 200, { zona: null, sistema_coordenadas: 'visual_v1', direccion_captura: 'izquierda', periodo_captura: 1 }),
+  ] })
+  try {
+    await abrirPlaylist(h)
+    assert.match(filas()[0].textContent, /Ataque izquierda \(calculada\)/)
+    assert.match(filas()[0].textContent, /Detallada/)
+    assert.match(filas()[1].textContent, /Falta zona/)
+
+    // Con el mouse: se toca el lugar (la cancha mide 200 × 128 en esta prueba).
+    await h.act(() => resumen(1).click())
+    const svg = filas()[1].querySelector('.pl-cancha-svg')
+    assert.match(filas()[1].querySelector('.pl-cancha').textContent, /Atacamos ←/)
+    svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 128, right: 200, bottom: 128 })
+    await h.act(async () => {
+      svg.dispatchEvent(new h.dom.window.MouseEvent('click', { bubbles: true, clientX: 20, clientY: 64 }))
+      await new Promise((r) => setTimeout(r, 0))
+    })
+    // Atacando a la izquierda, x = 10 es campo rival.
+    assert.deepEqual(h.actualizaciones.at(-1), { id: 'n', coordenada_x: 10, coordenada_y: 50, zona: 'Ataque centro' })
+
+    // Con el teclado: cada sector es un botón. En la vieja (1T a la derecha), arriba a la derecha es Ataque izquierda.
+    await h.act(() => resumen(0).click())
+    const sector = [...filas()[0].querySelectorAll('.pl-cancha-sector')].find((r) => r.getAttribute('aria-label') === 'Marcar en Defensa derecha')
+    await h.act(async () => {
+      sector.dispatchEvent(new h.dom.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+      await new Promise((r) => setTimeout(r, 0))
+    })
+    assert.deepEqual(h.actualizaciones.at(-1), { id: 'v', coordenada_x: 16.7, coordenada_y: 83.3, zona: 'Defensa derecha' })
+    assert.doesNotMatch(filas()[0].textContent, /calculada/, 'Ya quedó guardada')
+
+    await h.act(async () => {
+      [...filas()[0].querySelectorAll('button')].find((b) => b.textContent === 'Quitar punto').click()
+      await new Promise((r) => setTimeout(r, 0))
+    })
+    assert.deepEqual(h.actualizaciones.at(-1), { id: 'v', coordenada_x: null, coordenada_y: null, zona: null })
+    assert.match(filas()[0].textContent, /Falta zona/)
   } finally {
     await h.cerrar()
   }

@@ -100,3 +100,27 @@
 }
 .pl-marcas .pl-enlace { min-height: 32px; }
 .pl-estado[data-estado='fuera'] { border: 1px solid var(--ui-peligro); color: var(--ui-peligro-texto); }
+
+/* Cancha chiquita de la fila: tocar el lugar guarda el punto y la zona. */
+.pl-cancha { grid-column: 1 / -1; display: grid; gap: .375rem; min-width: 0; }
+.pl-cancha-cabecera { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .5rem; font-size: .8125rem; }
+.pl-cancha-rotulo { font-size: .75rem; font-weight: 700; color: var(--ui-compartido-secundario); }
+.pl-cancha[data-falta] .pl-cancha-rotulo { color: var(--ui-texto-acento); }
+.pl-cancha-calculada {
+  padding: 0 .375rem; border: 1px solid var(--ui-compartido-borde); border-radius: 999px;
+  font-size: .6875rem; font-weight: 700; color: var(--ui-compartido-secundario);
+}
+.pl-cancha-ataque { margin-left: auto; font-size: .75rem; font-weight: 700; color: var(--ui-compartido-secundario); }
+.pl-cancha-svg { display: block; width: 100%; max-width: 420px; height: auto; border-radius: .375rem; cursor: crosshair; touch-action: manipulation; }
+.pl-cancha[data-falta] .pl-cancha-svg { outline: 2px solid var(--ui-acento); outline-offset: 2px; }
+.pl-cancha-svg[data-deshabilitada] { cursor: progress; opacity: .7; }
+.pl-cancha-cesped { fill: var(--pizarra-cesped); }
+.pl-cancha-lineas * { fill: none; stroke: var(--pizarra-linea); stroke-width: .5; opacity: .75; }
+.pl-cancha-tercios line { stroke: var(--pizarra-linea); stroke-width: .3; stroke-dasharray: 1.2 1.2; opacity: .45; }
+.pl-cancha-sector { fill: transparent; }
+.pl-cancha-sector[data-elegida] { fill: color-mix(in srgb, var(--pizarra-seleccion) 22%, transparent); }
+/* El anillo de foco solo con el teclado; al tocar con el mouse o el dedo no aparece. */
+.pl-cancha-sector:focus { outline: none; }
+.pl-cancha-sector:focus-visible { outline: none; stroke: var(--pizarra-seleccion); stroke-width: .8; }
+.pl-cancha-punto { fill: var(--pizarra-seleccion); stroke: var(--pizarra-seleccion-borde); stroke-width: .6; }
+.pl-cancha .pl-enlace { justify-self: start; min-height: 36px; }

@@ -32,7 +32,7 @@ export default function ExploradorAnalisis({
           (filtros.tipo === 'todos' || evento.tipo === filtros.tipo) &&
           (filtros.resultado === 'todos' ||
             (filtros.resultado === 'Pendiente' ? !evento.resultado : evento.resultado === filtros.resultado)) &&
-          (filtros.zona === 'todos' || zonaEfectivaEvento(evento) === filtros.zona) &&
+          (filtros.zona === 'todos' || zonaEfectivaEvento(evento, partidos.find((p) => p.id === evento.partido_id)) === filtros.zona) &&
           (desde === null || Number(evento.segundo) >= desde) &&
           (hasta === null || Number(evento.segundo) <= hasta) &&
           Boolean(partido)

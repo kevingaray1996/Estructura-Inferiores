@@ -1,4 +1,4 @@
-import { direccionDelPeriodo, referenciaNueva, referenciaVerificada, zonaTactica, zonaEvento as zonaEfectivaEvento } from '../utils/orientacionAnalisis'
+import { direccionDeLaAccion, direccionDelPeriodo, referenciaNueva, referenciaVerificada, zonaTactica, zonaEvento as zonaEfectivaEvento } from '../utils/orientacionAnalisis'
 import { ANALISIS as A, textoAnalisis } from '../appearance/analisis'
 
 
@@ -151,7 +151,8 @@ function colorTipo(tipo) {
   return '#60A5FA'
 }
 
-function CanchaInteractiva({ eventos = [], coordenadas, direccion = null, interactiva = false, onSelect, onEventClick, capaTrayectorias, etiquetaTipo = (codigo) => codigo }) {
+// zonaDe(evento): zona a mostrar (con el partido, las acciones viejas con punto y sin zona la calculan).
+function CanchaInteractiva({ eventos = [], coordenadas, direccion = null, interactiva = false, onSelect, onEventClick, capaTrayectorias, etiquetaTipo = (codigo) => codigo, zonaDe = zonaEfectivaEvento }) {
   function manejarClick(e) {
     if (!interactiva || !onSelect) return
     const rect = e.currentTarget.getBoundingClientRect()
@@ -195,7 +196,7 @@ function CanchaInteractiva({ eventos = [], coordenadas, direccion = null, intera
               onClick={onEventClick ? (e) => { e.stopPropagation(); onEventClick(evento) } : undefined}
               style={{ cursor: onEventClick ? 'pointer' : 'default' }}
             >
-              <title>{`${etiquetaTipo(evento.tipo)} · ${formatearTiempo(evento.segundo)} · ${evento.resultado || 'Pendiente'} · ${zonaEfectivaEvento(evento) || 'Sin zona'}${referenciaVerificada(evento) ? '' : ' (referencia no verificada)'}`}</title>
+              <title>{`${etiquetaTipo(evento.tipo)} · ${formatearTiempo(evento.segundo)} · ${evento.resultado || 'Pendiente'} · ${zonaDe(evento) || 'Sin zona'}${referenciaVerificada(evento) ? '' : ' (referencia no verificada)'}`}</title>
               <circle cx={cx} cy={cy} r={punto.exacta ? 1.65 : 1.35} fill={colorTipo(evento.tipo)} stroke="#10251B" strokeWidth="0.35" opacity={punto.exacta ? 1 : 0.65} />
               {punto.exacta && <circle cx={cx} cy={cy} r="2.35" fill="none" stroke={colorTipo(evento.tipo)} strokeWidth="0.3" />}
             </g>
@@ -217,7 +218,7 @@ function CanchaInteractiva({ eventos = [], coordenadas, direccion = null, intera
   )
 }
 
-function CanchaInformePDF({ eventos = [], titulo = 'Mapa de acciones', direccionReal = null }) {
+function CanchaInformePDF({ eventos = [], titulo = 'Mapa de acciones', direccionReal = null, zonaDe = zonaEfectivaEvento }) {
   const direccion = null
   const zonasVista = ZONAS
 
@@ -227,7 +228,7 @@ function CanchaInformePDF({ eventos = [], titulo = 'Mapa de acciones', direccion
   }, {})
 
   eventos.forEach((evento) => {
-    const zona = zonaEfectivaEvento(evento)
+    const zona = zonaDe(evento)
     if (zona && Object.prototype.hasOwnProperty.call(conteos, zona)) conteos[zona] += 1
   })
 
@@ -1006,6 +1007,10 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   const colaConError = pendientesCola.filter((e) => e._cola === 'error')
   const colaRechazadas = pendientesCola.filter((e) => e._cola === 'rechazada')
 
+  // Zona de cada acción con su partido: las viejas con punto y sin zona la calculan con la dirección del 1T del partido.
+  const partidosPorId = useMemo(() => new Map(partidos.map((p) => [p.id, p])), [partidos])
+  const zonaDe = useCallback((evento) => zonaEfectivaEvento(evento, partidosPorId.get(evento.partido_id) || null), [partidosPorId])
+
   const eventosMapa = useMemo(() => {
     const base = alcanceMapa === 'acumulado' ? eventos : eventosPartido
     return base.filter((evento) =>
@@ -1014,7 +1019,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       (filtroMapaTipo === 'todos' || evento.tipo === filtroMapaTipo) &&
       (filtroMapaResultado === 'todos' ||
         (filtroMapaResultado === 'Pendiente' ? !evento.resultado : evento.resultado === filtroMapaResultado)) &&
-      (filtroMapaZona === 'todos' || zonaEfectivaEvento(evento) === filtroMapaZona) &&
+      (filtroMapaZona === 'todos' || zonaDe(evento) === filtroMapaZona) &&
       (filtroMapaPeriodo === 'todos' || Number(evento.periodo || 1) === Number(filtroMapaPeriodo))
     )
   }, [
@@ -1027,6 +1032,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     filtroMapaResultado,
     filtroMapaZona,
     filtroMapaPeriodo,
+    zonaDe,
   ])
 
   const eventosMapaOrdenados = useMemo(() => [...eventosMapa].sort((a, b) => {
@@ -1042,7 +1048,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     const exactas = conUbicacion.filter(tieneCoordenadasExactas).length
     const zonas = ZONAS.map((nombre) => ({
       nombre,
-      total: eventosMapa.filter((evento) => zonaEfectivaEvento(evento) === nombre).length,
+      total: eventosMapa.filter((evento) => zonaDe(evento) === nombre).length,
     }))
     return {
       total: eventosMapa.length,
@@ -1052,7 +1058,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       sinUbicacion: eventosMapa.length - conUbicacion.length,
       zonas,
     }
-  }, [eventosMapa])
+  }, [eventosMapa, zonaDe])
 
   const paseDestinoActual = eventosMapa.find((evento) => evento.id === paseDestinoId && esPase(evento))
 
@@ -1072,6 +1078,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   const irAClip = useCallback((evento) => (videoListo ? solicitarVideo('salto', clipDe(evento).inicio) : false), [videoListo, solicitarVideo])
   const playlist = usePlaylistAnalisis({
     partidoId,
+    partido: partidoActual || null,
     eventos: eventosPartido,
     detalles: resumenDestinatarias.detalles,
     catalogo,
@@ -1487,7 +1494,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
           jugador_id: edicionEvento.jugador_id || null,
           segundo: tiempo,
           periodo: Number(edicionEvento.periodo) === 2 ? 2 : 1,
-          zona: zonaEfectivaEvento(edicionEvento),
+          zona: zonaEfectivaEvento(edicionEvento, partidoActual),
           resultado: resultadoParaGuardar(edicionEvento.tipo, edicionEvento.resultado, catalogo),
           observaciones: edicionEvento.observaciones.trim() || null,
           coordenada_x: edicionEvento.coordenada_x,
@@ -2623,6 +2630,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                 <div role="tabpanel" id="az-panel-playlist" aria-labelledby="az-pestana-playlist" hidden={pestanaPanel !== 'playlist'} className="az-panel-cuerpo">
                   <PlaylistAnalisis
                     pl={playlist}
+                    partido={partidoActual}
                     total={eventosPartido.length}
                     marcas={marcasPartido}
                     fueraDeCancha={fueraDeCancha}
@@ -2631,7 +2639,6 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                     catalogo={catalogo}
                     citaciones={citaciones}
                     jugadoras={jugadoras}
-                    zonas={ZONAS}
                     detalles={resumenDestinatarias.detalles}
                     cargandoDetalles={resumenDestinatarias.cargando}
                     errorDetalles={resumenDestinatarias.error}
@@ -2728,7 +2735,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                         <select
                           className={inputClass}
                           style={inputStyle}
-                          value={zonaEfectivaEvento(edicionEvento) || ''}
+                          value={zonaEfectivaEvento(edicionEvento, partidoActual) || ''}
                           disabled={referenciaVerificada(edicionEvento) && tieneCoordenadasExactas(edicionEvento)}
                           onChange={(e) => setEdicionEvento((a) => ({
                             ...a,
@@ -2799,7 +2806,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                           ...a,
                           coordenada_x: punto.x,
                           coordenada_y: punto.y,
-                          zona: referenciaVerificada(a) ? zonaTactica(punto.x, punto.y, a.direccion_captura) : a.zona,
+                          // Acciones viejas: con la dirección del partido en ese tiempo.
+                          zona: zonaTactica(punto.x, punto.y, direccionDeLaAccion(a, partidoActual)) || a.zona,
                         }))}
                       />
                       {(edicionEvento.coordenada_x != null || edicionEvento.coordenada_y != null) && (
@@ -3033,6 +3041,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                     <CanchaInteractiva
                       etiquetaTipo={etiquetaTipo}
                       eventos={eventosPartido}
+                      zonaDe={zonaDe}
                       onEventClick={(evento) => { setSegundoIr(String(evento.segundo)); irAlSegundo(evento.segundo) }}
                     />
                   </div>
@@ -3215,6 +3224,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                   <CanchaInteractiva
                     etiquetaTipo={etiquetaTipo}
                     eventos={eventosMapa}
+                    zonaDe={zonaDe}
                     onEventClick={(evento) => esPase(evento) ? setPaseDestinoId(evento.id) : abrirEventoEnVideo(evento)}
                     capaTrayectorias={!resumenDestinatarias.cargando && !resumenDestinatarias.error && <FlechasPases
                       eventos={eventosMapa}
@@ -3318,7 +3328,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                                   {nombreJugadora(jugadora)} · {partido?.rival || 'Rival sin nombre'}
                                 </p>
                                 <p className="mt-1 text-xs" style={{ color: A.secundario }}>
-                                  {zonaEfectivaEvento(evento) || 'Sin zona'} · {evento.resultado || 'Pendiente'} · {punto?.exacta ? 'Exacta' : punto ? 'Aproximada' : 'Sin ubicación'}
+                                  {zonaDe(evento) || 'Sin zona'} · {evento.resultado || 'Pendiente'} · {punto?.exacta ? 'Exacta' : punto ? 'Aproximada' : 'Sin ubicación'}
                                 </p>
                               </div>
                               <span className="shrink-0 rounded-md px-2 py-1 font-mono text-xs font-black" style={{ backgroundColor: A.activo, color: textoAnalisis(AMARILLO) }}>
@@ -3505,11 +3515,13 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                   <CanchaInformePDF
                     titulo="Primer tiempo · mapa de acciones"
                     direccionReal={direccionPrimerTiempo}
+                    zonaDe={zonaDe}
                     eventos={eventosPartido.filter((evento) => Number(evento.periodo || 1) === 1)}
                   />
                   <CanchaInformePDF
                     titulo="Segundo tiempo · mapa de acciones"
                     direccionReal={direccionDelPeriodo(partidoActual, 2)}
+                    zonaDe={zonaDe}
                     eventos={eventosPartido.filter((evento) => Number(evento.periodo || 1) === 2)}
                   />
                 </div>

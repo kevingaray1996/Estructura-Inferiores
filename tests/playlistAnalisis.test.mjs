@@ -52,3 +52,12 @@ test('dorsal: elige al instante si no hay dudas y espera si puede venir otro nú
   assert.deepEqual(resolverDorsal(citaciones, '5'), { citacion: null, esperar: false })
   assert.deepEqual(resolverDorsal(citaciones, 'x'), { citacion: null, esperar: false })
 })
+
+test('«Falta zona» solo si no hay ni punto ni zona (las viejas con punto la calculan con el partido)', () => {
+  const partido = { direccion_primer_tiempo: 'izquierda' }
+  const vieja = ev('v', 'Pérdida', { zona: null, coordenada_x: 20, coordenada_y: 30, periodo: 1 })
+  assert.deepEqual(faltasDetalle(vieja, undefined, C, partido), [])
+  assert.deepEqual(faltasDetalle(vieja, undefined, C), ['zona'], 'Sin el partido no se puede calcular')
+  assert.deepEqual(faltasDetalle(ev('s', 'Pérdida', { zona: null }), undefined, C, partido), ['zona'])
+  assert.deepEqual(progresoDetalle([vieja], {}, C, partido), { detalladas: 1, total: 1 })
+})

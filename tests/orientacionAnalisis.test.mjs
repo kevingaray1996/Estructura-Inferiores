@@ -39,7 +39,9 @@ test('Integración: mapa, filtros y PDF comparten clasificación, sin inversión
   assert.match(s, /coordenada_y: coordenadasAccion\?\.y \?\? null/)
   assert.equal((s.match(/\.\.\.referenciaCaptura,/g) || []).length, 2)
   const pdf = s.slice(s.indexOf('function CanchaInformePDF'), s.indexOf('function AnalisisSection'))
-  assert.match(pdf, /zonaEfectivaEvento\(evento\)/)
+  // La zona del informe sale de la misma regla (con el partido, si se lo pasa la pantalla).
+  assert.match(pdf, /zonaDe\(evento\)/)
+  assert.match(pdf, /zonaDe = zonaEfectivaEvento/)
   assert.match(pdf, /referencia táctica histórica no verificada/)
   assert.match(pdf, /Cancha visual fija/)
 })
@@ -80,4 +82,26 @@ test('Render real de selector e informe PDF conserva puntos y clasifica ambos se
     assert.match(pdf, /Ataque derecha/)
     assert.equal(JSON.stringify(e), previo)
   } finally { await server.close() }
+})
+
+test('Acciones viejas con punto y sin zona: con el partido, la zona se calcula con la dirección del 1T (y se marca calculada)', async () => {
+  const { zonaConOrigen, direccionDeLaAccion } = await import('../src/utils/orientacionAnalisis.js')
+  // Estrella del Sur: atacamos a la izquierda en el 1T.
+  const partido = { direccion_primer_tiempo: 'izquierda' }
+  const vieja1T = { coordenada_x: 10, coordenada_y: 90, periodo: 1 }
+  assert.deepEqual(zonaConOrigen(vieja1T, partido), { zona: 'Ataque izquierda', calculada: true })
+  assert.equal(zonaEvento(vieja1T, partido), 'Ataque izquierda')
+  assert.equal(direccionDeLaAccion(vieja1T, partido), 'izquierda')
+  // En el 2T, el sentido contrario.
+  assert.deepEqual(zonaConOrigen({ ...vieja1T, periodo: 2 }, partido), { zona: 'Defensa derecha', calculada: true })
+  // Sin el partido, como antes: no se recalcula.
+  assert.equal(zonaEvento(vieja1T), null)
+  // Una zona guardada nunca se pisa.
+  assert.deepEqual(zonaConOrigen({ ...vieja1T, zona: 'Medio centro' }, partido), { zona: 'Medio centro', calculada: false })
+  // Las nuevas usan su dirección de captura, no la del partido.
+  const nueva = { ...referenciaNueva({ direccion_primer_tiempo: 'derecha' }, 1), coordenada_x: 90, coordenada_y: 10 }
+  assert.deepEqual(zonaConOrigen(nueva, partido), { zona: 'Ataque izquierda', calculada: false })
+  assert.equal(direccionDeLaAccion(nueva, partido), 'derecha')
+  // Sin punto ni zona: nada.
+  assert.deepEqual(zonaConOrigen({ periodo: 1 }, partido), { zona: null, calculada: false })
 })

@@ -15,31 +15,32 @@ export const NOMBRE_FALTA = { jugadora: 'Jugadora', receptora: 'Receptora', zona
 
 // Qué le falta para estar detallada: jugadora; receptora si es un pase; zona o resultado si su tipo los usa.
 // detalle: fila de analisis_pases_detalle (o undefined si no hay). Desconocida / No observable cuentan como detallada.
-export function faltasDetalle(evento, detalle, catalogo) {
+// partido: con él, una acción vieja con punto y sin zona tiene la zona calculada (no le falta).
+export function faltasDetalle(evento, detalle, catalogo, partido = null) {
   const reglas = reglasDe(catalogo, evento.tipo)
   const faltan = []
   if (!evento.jugador_id) faltan.push('jugadora')
   if (reglas.es_pase && (!detalle || detalle.destinataria_estado === 'pendiente')) faltan.push('receptora')
-  if (reglas.ubicacion === 'obligatoria' && !zonaEvento(evento)) faltan.push('zona')
+  if (reglas.ubicacion === 'obligatoria' && !zonaEvento(evento, partido)) faltan.push('zona')
   if (reglas.resultados.length > 0 && !evento.resultado) faltan.push('resultado')
   return faltan
 }
 
-export function estaDetallada(evento, detalles, catalogo) {
-  return faltasDetalle(evento, detalles?.[evento.id], catalogo).length === 0
+export function estaDetallada(evento, detalles, catalogo, partido = null) {
+  return faltasDetalle(evento, detalles?.[evento.id], catalogo, partido).length === 0
 }
 
-export function progresoDetalle(eventos, detalles, catalogo) {
-  const detalladas = eventos.filter((e) => estaDetallada(e, detalles, catalogo)).length
+export function progresoDetalle(eventos, detalles, catalogo, partido = null) {
+  const detalladas = eventos.filter((e) => estaDetallada(e, detalles, catalogo, partido)).length
   return { detalladas, total: eventos.length }
 }
 
 // filtros: { tipo: 'todos' | código, jugadora: 'todos' | id, soloPendientes: boolean }
-export function filtrarPlaylist(eventos, filtros, detalles, catalogo) {
+export function filtrarPlaylist(eventos, filtros, detalles, catalogo, partido = null) {
   return eventos.filter((e) =>
     (!filtros.tipo || filtros.tipo === 'todos' || e.tipo === filtros.tipo) &&
     (!filtros.jugadora || filtros.jugadora === 'todos' || e.jugador_id === filtros.jugadora) &&
-    (!filtros.soloPendientes || !estaDetallada(e, detalles, catalogo)))
+    (!filtros.soloPendientes || !estaDetallada(e, detalles, catalogo, partido)))
 }
 
 // Anterior / siguiente en la lista visible. Sin selección: ↓ va a la primera y ↑ a la última. Sin vuelta al otro extremo.
@@ -52,10 +53,10 @@ export function vecina(lista, idActual, paso) {
 }
 
 // Próxima acción sin detallar después de la actual (en orden de la lista); si no hay, la primera pendiente de antes.
-export function siguientePendiente(lista, idActual, detalles, catalogo) {
+export function siguientePendiente(lista, idActual, detalles, catalogo, partido = null) {
   const i = lista.findIndex((e) => e.id === idActual)
   const orden = [...lista.slice(i + 1), ...lista.slice(0, Math.max(i, 0))]
-  return orden.find((e) => e.id !== idActual && !estaDetallada(e, detalles, catalogo))?.id || null
+  return orden.find((e) => e.id !== idActual && !estaDetallada(e, detalles, catalogo, partido))?.id || null
 }
 
 // Dorsal escrito con números. citacion: la jugadora con ese dorsal (o null).

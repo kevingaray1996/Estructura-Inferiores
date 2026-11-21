@@ -14,7 +14,7 @@ const FILTROS_INICIALES = { tipo: 'todos', jugadora: 'todos', soloPendientes: fa
 // irAClip(evento): salta el video al inicio del clip y lo reproduce; devuelve true si pudo.
 // guardarCampos(evento, cambios) y guardarReceptora(evento, estado, jugadoraId) devuelven la fila guardada.
 export default function usePlaylistAnalisis({
-  partidoId, eventos, detalles, catalogo, citaciones, visible, puedeEditar, reloj,
+  partidoId, partido = null, eventos, detalles, catalogo, citaciones, visible, puedeEditar, reloj,
   irAClip, guardarCampos, guardarReceptora, avisar, alFallar,
 }) {
   const [filtros, setFiltros] = useState(FILTROS_INICIALES)
@@ -30,13 +30,13 @@ export default function usePlaylistAnalisis({
     setPartidoVisto(partidoId); setFiltros(FILTROS_INICIALES); setActivoId(null); setRepetir(false); setGuardando({})
   }
 
-  const lista = useMemo(() => filtrarPlaylist(eventos, filtros, detalles, catalogo), [eventos, filtros, detalles, catalogo])
-  const progreso = useMemo(() => progresoDetalle(eventos, detalles, catalogo), [eventos, detalles, catalogo])
+  const lista = useMemo(() => filtrarPlaylist(eventos, filtros, detalles, catalogo, partido), [eventos, filtros, detalles, catalogo, partido])
+  const progreso = useMemo(() => progresoDetalle(eventos, detalles, catalogo, partido), [eventos, detalles, catalogo, partido])
   const eventoActivo = eventos.find((e) => e.id === activoId) || null
 
   // Funciones del padre siempre al día, sin volver a crear los efectos.
   const ultimas = useRef({})
-  useLayoutEffect(() => { ultimas.current = { eventos, detalles, catalogo, citaciones, filtros, irAClip, guardarCampos, guardarReceptora, avisar, alFallar } })
+  useLayoutEffect(() => { ultimas.current = { eventos, detalles, catalogo, partido, citaciones, filtros, irAClip, guardarCampos, guardarReceptora, avisar, alFallar } })
 
   const elegir = useCallback((id, { saltar = true } = {}) => {
     setActivoId(id)
@@ -51,14 +51,14 @@ export default function usePlaylistAnalisis({
 
   // Después de completar una acción, pasa sola a la siguiente pendiente (si está activado).
   const avanzarSiCorresponde = useCallback((filaGuardada, detalleNuevo) => {
-    const { eventos: evs, detalles: dets, catalogo: cat, filtros: f } = ultimas.current
+    const { eventos: evs, detalles: dets, catalogo: cat, partido: par, filtros: f } = ultimas.current
     const detallesNuevos = detalleNuevo ? { ...dets, [detalleNuevo.evento_id]: detalleNuevo } : dets
     const actualizada = { ...evs.find((e) => e.id === filaGuardada.id), ...filaGuardada }
-    if (faltasDetalle(actualizada, detallesNuevos[actualizada.id], cat).length) return
+    if (faltasDetalle(actualizada, detallesNuevos[actualizada.id], cat, par).length) return
     if (!avanceAuto) return
     const evsNuevos = evs.map((e) => e.id === actualizada.id ? actualizada : e)
-    const candidatas = filtrarPlaylist(evsNuevos, { ...f, soloPendientes: false }, detallesNuevos, cat)
-    const siguiente = siguientePendiente(candidatas, actualizada.id, detallesNuevos, cat)
+    const candidatas = filtrarPlaylist(evsNuevos, { ...f, soloPendientes: false }, detallesNuevos, cat, par)
+    const siguiente = siguientePendiente(candidatas, actualizada.id, detallesNuevos, cat, par)
     if (siguiente) elegir(siguiente)
     else ultimas.current.avisar('No quedan acciones por detallar con estos filtros.')
   }, [avanceAuto, elegir])

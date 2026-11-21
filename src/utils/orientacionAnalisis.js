@@ -18,10 +18,31 @@ export function zonaTactica(x, y, direccion) {
   const lateral = direccion === 'derecha' ? Number(y) : 100 - Number(y)
   return `${avance < 33.333 ? 'Defensa' : avance < 66.666 ? 'Medio' : 'Ataque'} ${lateral < 33.333 ? 'izquierda' : lateral < 66.666 ? 'centro' : 'derecha'}`
 }
-export function zonaEvento(evento) {
-  if (referenciaVerificada(evento)) return zonaTactica(evento.coordenada_x, evento.coordenada_y, evento.direccion_captura) || evento.zona || null
-  // Nunca recalcular zonas históricas a partir de X/Y o del partido actual.
-  return evento?.zona || null
+// Zona de una acción y de dónde sale. calculada: true si se calculó desde el punto con la dirección del partido
+// (acciones viejas, cargadas sin la dirección de captura).
+//   - Con dirección de captura: desde el punto con esa dirección (o la zona guardada si no hay punto).
+//   - Acción vieja con zona guardada: esa, nunca se pisa.
+//   - Acción vieja con punto y sin zona, y con el partido: desde el punto, con la dirección del 1T del partido
+//     (el 2T, la contraria). Decisión del usuario (2026-11-21), con la dirección de cada partido confirmada.
+export function zonaConOrigen(evento, partido = null) {
+  if (referenciaVerificada(evento)) {
+    return { zona: zonaTactica(evento.coordenada_x, evento.coordenada_y, evento.direccion_captura) || evento.zona || null, calculada: false }
+  }
+  if (evento?.zona) return { zona: evento.zona, calculada: false }
+  const direccion = partido ? direccionDelPeriodo(partido, evento?.periodo ?? 1) : null
+  const calculada = direccion ? zonaTactica(evento?.coordenada_x, evento?.coordenada_y, direccion) : null
+  return calculada ? { zona: calculada, calculada: true } : { zona: null, calculada: false }
+}
+
+// Sin el partido, las acciones viejas conservan solo la zona guardada.
+export function zonaEvento(evento, partido = null) {
+  return zonaConOrigen(evento, partido).zona
+}
+
+// Dirección con la que se lee el punto de una acción: la de captura o, si es vieja, la del partido en ese tiempo.
+export function direccionDeLaAccion(evento, partido = null) {
+  if (referenciaVerificada(evento)) return evento.direccion_captura
+  return partido ? direccionDelPeriodo(partido, evento?.periodo ?? 1) : null
 }
 export function referenciaNueva(partido, periodo) {
   const direccion = direccionDelPeriodo(partido, periodo)

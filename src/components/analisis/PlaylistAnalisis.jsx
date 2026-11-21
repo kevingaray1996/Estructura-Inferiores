@@ -4,17 +4,17 @@ import { opcionesResultado, reglasDe } from '../../utils/analisis/catalogoAccion
 import { aparienciaTipo } from '../../utils/analisis/botonera'
 import { NOMBRE_FALTA, faltasDetalle } from '../../utils/analisis/playlist'
 import { formatearTiempo, nombreJugadora } from '../../utils/analisis/formato'
-import { referenciaVerificada, zonaEvento } from '../../utils/orientacionAnalisis'
+import { zonaConOrigen } from '../../utils/orientacionAnalisis'
+import CanchaMini from './CanchaMini'
 import { mensajeError } from '../../utils/mensajesError'
 import { minutoReal } from '../../utils/analisis/eventosPartido'
 import './playlist.css'
 
 const nombreConocida = (j) => (j ? nombreJugadora(j) : 'Jugadora guardada')
-const tieneCoordenadas = (e) => e?.coordenada_x != null && e?.coordenada_y != null && e.coordenada_x !== '' && e.coordenada_y !== ''
 
 // Lista de acciones del partido para revisar y detallar. Toda la lógica está en usePlaylistAnalisis.
 export default function PlaylistAnalisis({
-  pl, total, marcas, fueraDeCancha, faltanMarcas = [], onIrAPartido, catalogo, citaciones, jugadoras, zonas, detalles, cargandoDetalles, errorDetalles, onReintentarDetalles,
+  pl, total, partido, marcas, fueraDeCancha, faltanMarcas = [], onIrAPartido, catalogo, citaciones, jugadoras, detalles, cargandoDetalles, errorDetalles, onReintentarDetalles,
   puedeEditar, videoListo, onEditarTodo, onEliminar, onDescartar, antesDeLaLista,
 }) {
   const { lista, progreso, filtros, cambiarFiltro, activoId } = pl
@@ -98,7 +98,7 @@ export default function PlaylistAnalisis({
               catalogo={catalogo}
               citaciones={citaciones}
               jugadoras={jugadoras}
-              zonas={zonas}
+              partido={partido}
               detalle={detalles[ev.id]}
               marcas={marcas}
               fuera={Boolean(ev.jugador_id && fueraDeCancha?.(ev.jugador_id, ev.segundo))}
@@ -115,23 +115,23 @@ export default function PlaylistAnalisis({
   )
 }
 
-function FilaPlaylist({ ev, activa, pl, marcas, fuera, catalogo, citaciones, jugadoras, zonas, detalle, cargandoDetalles, puedeEditar, onEditarTodo, onEliminar, onDescartar }) {
+function FilaPlaylist({ ev, activa, pl, partido, marcas, fuera, catalogo, citaciones, jugadoras, detalle, cargandoDetalles, puedeEditar, onEditarTodo, onEliminar, onDescartar }) {
   const fila = useRef(null)
   // La acción elegida (con clic o con ↑ / ↓) queda a la vista dentro de la lista.
   useEffect(() => { if (activa) fila.current?.scrollIntoView?.({ block: 'nearest' }) }, [activa])
 
   const reglas = reglasDe(catalogo, ev.tipo)
   const apariencia = aparienciaTipo(catalogo, ev.tipo)
-  const faltas = faltasDetalle(ev, detalle, catalogo)
+  const faltas = faltasDetalle(ev, detalle, catalogo, partido)
   const jugadora = jugadoras.find((j) => j.id === ev.jugador_id)
-  const zona = zonaEvento(ev)
+  // Zona guardada o calculada desde el punto (acciones viejas, con la dirección del partido).
+  const { zona, calculada: zonaCalculada } = zonaConOrigen(ev, partido)
   const enCola = ev._cola
   const estadoGuardado = pl.guardando[ev.id]
   const textoCola = enCola === 'rechazada' ? 'No se pudo guardar'
     : enCola === 'error' ? 'Sin guardar · reintentando'
       : enCola ? 'Guardando…' : ''
   const opciones = reglas.resultado_implicito ? [] : opcionesResultado(catalogo, ev.tipo)
-  const zonaFija = referenciaVerificada(ev) && tieneCoordenadas(ev)
   const editable = activa && !enCola && puedeEditar
   const ocupada = estadoGuardado === 'guardando'
   const falta = (campo) => (faltas.includes(campo) ? 'si' : undefined)
@@ -148,7 +148,8 @@ function FilaPlaylist({ ev, activa, pl, marcas, fuera, catalogo, citaciones, jug
   const convocadasSinAutora = citaciones.filter((c) => c.jugador_id !== ev.jugador_id)
   const jugadoraFueraDeLista = ev.jugador_id && !citaciones.some((c) => c.jugador_id === ev.jugador_id)
 
-  const resumen = [jugadora ? nombreJugadora(jugadora) : 'Sin jugadora', receptoraNombre && `→ ${receptoraNombre}`, zona, ev.resultado]
+  const resumen = [jugadora ? nombreJugadora(jugadora) : 'Sin jugadora', receptoraNombre && `→ ${receptoraNombre}`,
+    zona && (zonaCalculada ? `${zona} (calculada)` : zona), ev.resultado]
     .filter(Boolean).join(' · ')
 
   return (
@@ -207,15 +208,14 @@ function FilaPlaylist({ ev, activa, pl, marcas, fuera, catalogo, citaciones, jug
               </label>
             )}
 
-            <label className="pl-campo" data-falta={falta('zona')}>
-              <span>Zona</span>
-              <select value={zona || ''} disabled={ocupada || zonaFija} title={zonaFija ? 'Sale de la ubicación marcada en la cancha' : undefined}
-                onChange={(e) => pl.cambiarCampos(ev, { zona: e.target.value || null })}>
-                <option value="">Sin zona</option>
-                {zona && !zonas.includes(zona) && <option value={zona}>{zona}</option>}
-                {zonas.map((z) => <option key={z} value={z}>{z}</option>)}
-              </select>
-            </label>
+            <CanchaMini
+              evento={ev}
+              partido={partido}
+              deshabilitada={ocupada}
+              falta={Boolean(falta('zona'))}
+              onElegir={({ x, y, zona: nueva }) => pl.cambiarCampos(ev, { coordenada_x: x, coordenada_y: y, zona: nueva })}
+              onQuitar={() => pl.cambiarCampos(ev, { coordenada_x: null, coordenada_y: null, zona: null })}
+            />
 
             {opciones.length > 0 && (
               <fieldset className="pl-resultado" data-falta={falta('resultado')}>
