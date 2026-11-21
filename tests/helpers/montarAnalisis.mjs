@@ -8,7 +8,7 @@ const { JSDOM } = await import(pathToFileURL(process.env.PIZARRA_DOM_PATH || joi
 
 export async function montar({ tipos, eventos = [] } = {}) {
   const dom = new JSDOM('<!doctype html><html><head><style>body{color:black}</style></head><body><div id="root"></div></body></html>', { url: 'https://comunicaciones.test' })
-  const previos = new Map(), players = [], timers = new Map(), writes = [], borrados = [], actualizaciones = [], lecturas = {}
+  const previos = new Map(), players = [], timers = new Map(), writes = [], borrados = [], actualizaciones = [], lecturas = {}, rpcs = []
   function global(nombre, valor) { previos.set(nombre, Object.getOwnPropertyDescriptor(globalThis,nombre)); Object.defineProperty(globalThis,nombre,{value:valor,configurable:true,writable:true}) }
   for (const n of ['window','document','HTMLElement','Event','MouseEvent','KeyboardEvent']) global(n,dom.window[n])
   global('IS_REACT_ACT_ENVIRONMENT',true)
@@ -19,7 +19,10 @@ export async function montar({ tipos, eventos = [] } = {}) {
   const estado={resolverInsert:null}
   const datos={perfiles:{email:authUser.email,nombre:'Kevin Garay',rol:'coordinacion'},partidos:[],analisis_partidos:partidos,analisis_eventos:structuredClone(eventos),analisis_pases_detalle:[],analisis_tipos_accion:tipos,jugadores:[ana,bea],
     citaciones:[{id:'c',jugador_id:'j',dorsal:10,titular:true},{id:'c2',jugador_id:'j2',dorsal:7,titular:false}]}
-  global('__analisisSupabase', { rpc:async nombre=>{assert.equal(nombre,'puede_administrar_analisis');return {data:true}}, auth:{getUser:async()=>({data:{user:authUser}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},from(tabla){
+  global('__analisisSupabase', { rpc:async (nombre,args)=>{
+    // Receptora de un pase: se guarda con su revisión.
+    if(nombre==='guardar_detalle_pase'){rpcs.push(args);return {data:[{evento_id:args.p_evento_id,destinataria_estado:args.p_destinataria_estado,destinataria_id:args.p_destinataria_id,revision:(args.p_revision_esperada||0)+1}]}}
+    assert.equal(nombre,'puede_administrar_analisis');return {data:true}}, auth:{getUser:async()=>({data:{user:authUser}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},from(tabla){
     let registro, borrar=false, cambios=null
     const filtro={}
     const q={select(){return q},eq(c,v){filtro[c]=v;return q},in(){return q},order(){return q},range(){return q},limit(){return q},maybeSingle(){return Promise.resolve({data:datos[tabla]})},
@@ -51,7 +54,7 @@ export async function montar({ tipos, eventos = [] } = {}) {
   const boton=t=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes(t))
   const presionar=async(b,t)=>{assert.ok(b,t);assert.equal(b.disabled,false,t);await act(()=>b.click())}
   const h={
-    act, dom, datos, writes, borrados, actualizaciones, lecturas, boton,
+    act, dom, datos, writes, borrados, actualizaciones, lecturas, rpcs, boton,
     resolver:async()=>act(async()=>estado.resolverInsert()),
     fallar:async(error={message:'TypeError: Failed to fetch'})=>act(async()=>estado.fallarInsert(error)),
     // Tecla en la ventana principal (los atajos escuchan en window).

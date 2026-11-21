@@ -9,7 +9,8 @@ const esIframe = (elemento) => String(elemento?.tagName || '').toUpperCase() ===
 // entra al iframe, se lo devuelve a la página enseguida (el clic en el video ya llegó a YouTube). Si no se puede
 // (por ejemplo, el foco está en otra aplicación), el estado pasa a «pausados» hasta volver a la página.
 //
-// acciones: { marcar(tipo), alternar(), saltar(delta), deshacer(), ayuda() }. Se leen siempre las últimas.
+// acciones: { marcar(tipo), alternar(), saltar(delta), deshacer(), ayuda(), interceptar?(evento) }. Se leen siempre las
+// últimas. interceptar va primero (por ejemplo, la Playlist con ↑ / ↓ y el dorsal); si devuelve true, la tecla ya se usó.
 // pausar: true mientras se está eligiendo una tecla nueva en el editor de atajos.
 export default function useAtajosAnalisis({ activo, mapa, principal, auxiliar = null, acciones, pausar = false }) {
   const [estado, setEstado] = useState('activos')
@@ -40,6 +41,7 @@ export default function useAtajosAnalisis({ activo, mapa, principal, auxiliar = 
         }
         if (evento.ctrlKey || evento.metaKey || evento.altKey) return
         if (evento.repeat) return
+        if (a.interceptar?.(evento)) { evento.preventDefault(); return }
         if (evento.key === ' ' || evento.code === 'Space') {
           // Un botón enfocado se «presionaría» con Espacio: acá Espacio siempre es pausa/sigue.
           evento.preventDefault(); a.alternar(); return

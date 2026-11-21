@@ -10,6 +10,8 @@ export const TECLAS_FIJAS = [
   { tecla: '→', accion: '5 segundos adelante' },
   { tecla: 'Ctrl + Z', accion: 'Deshacer la última acción marcada' },
   { tecla: '?', accion: 'Mostrar los atajos' },
+  { tecla: '↑ / ↓', accion: 'En Playlist: acción anterior / siguiente (el video la acompaña)' },
+  { tecla: 'Números', accion: 'En Playlist: dorsal de la jugadora de la acción elegida' },
 ]
 const RESERVADAS = new Set([' ', '?', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'enter', 'escape', 'tab'])
 

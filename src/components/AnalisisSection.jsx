@@ -25,7 +25,7 @@ import { datosEncuentro, fechaLegible, formatearTiempo, nombreJugadora, videoCal
 import { resultadoImplicito, resultadoParaGuardar } from '../utils/analisis/completitud'
 import { CATALOGO_POR_DEFECTO, cargarCatalogo, etiquetaBotonDe, etiquetaDe, opcionesResultado as opcionesResultadoCatalogo } from '../utils/analisis/catalogoAcciones'
 import {
-  cargarResumenDestinatarias, esPase,
+  cargarResumenDestinatarias, esPase, guardarDestinataria, mensajeErrorDestinataria,
   nombreDestinataria,
 } from '../utils/destinatariasPases'
 import { mensajeError, mensajeErrorOPropio } from '../utils/mensajesError'
@@ -34,8 +34,11 @@ import useAtajosAnalisis from '../hooks/useAtajosAnalisis'
 import { guardarAtajos, leerAtajos, mostrarTecla } from '../utils/analisis/atajos'
 import { AvisoAccion, AyudaAtajos, IndicadorAtajos } from './analisis/AtajosEtiquetado'
 import TramosSinAcciones from './analisis/TramosSinAcciones'
-import { aparienciaTipo, atajosDeBotonera, tiposBotonera } from '../utils/analisis/botonera'
+import { atajosDeBotonera, tiposBotonera } from '../utils/analisis/botonera'
 import './analisis/panelAnalisis.css'
+import PlaylistAnalisis from './analisis/PlaylistAnalisis'
+import usePlaylistAnalisis from '../hooks/usePlaylistAnalisis'
+import { clipDe } from '../utils/analisis/playlist'
 
 const CATEGORIA_ID = '438874e7-e59f-460b-bec4-3c0ef5b44016'
 
@@ -406,9 +409,6 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   const [resultado, setResultado] = useState('Exitoso')
   const [observaciones, setObservaciones] = useState('')
 
-  const [filtroJugador, setFiltroJugador] = useState('todos')
-  const [filtroTipo, setFiltroTipo] = useState('todos')
-  const [filtroResultado, setFiltroResultado] = useState('todos')
   const [seccion, setSeccion] = useState('video')
   const [filtroExploradorPartido, setFiltroExploradorPartido] = useState('todos')
   const [filtroExploradorJugadora, setFiltroExploradorJugadora] = useState('todos')
@@ -1064,17 +1064,46 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     ? eventosPartido.find((evento) => evento.id === ultimaAccion.id) || null
     : null
 
-  const eventosFiltrados = useMemo(
-    () => eventosPartido.filter((e) =>
-      (filtroJugador === 'todos' || e.jugador_id === filtroJugador) &&
-      (filtroTipo === 'todos' || e.tipo === filtroTipo) &&
-      (filtroResultado === 'todos' ||
-        (filtroResultado === 'Pendiente'
-          ? !e.resultado
-          : e.resultado === filtroResultado)),
-    ),
-    [eventosPartido, filtroJugador, filtroTipo, filtroResultado],
-  )
+  // Playlist: salta al clip de la acción (3 s antes) y lo reproduce.
+  const irAClip = useCallback((evento) => (videoListo ? solicitarVideo('salto', clipDe(evento).inicio) : false), [videoListo, solicitarVideo])
+  const playlist = usePlaylistAnalisis({
+    partidoId,
+    eventos: eventosPartido,
+    detalles: resumenDestinatarias.detalles,
+    catalogo,
+    citaciones,
+    visible: seccion === 'video' && pestanaPanel === 'playlist',
+    puedeEditar: accesoEditor && !bloqueoEscritura,
+    reloj: relojVideo,
+    irAClip,
+    guardarCampos: guardarCamposPlaylist,
+    guardarReceptora: guardarReceptoraPlaylist,
+    avisar: (texto) => setAvisoAccion((anterior) => ({ texto, n: (anterior?.n || 0) + 1 })),
+    alFallar: (e) => {
+      const texto = e?.code === '40001' ? mensajeErrorDestinataria(e) : mensajeErrorOPropio(e, 'guardar el detalle de la acción')
+      setError(texto)
+      return texto
+    },
+  })
+
+  // Receptoras de los pases del partido, para la Playlist. Se vuelve a leer solo si cambian los pases.
+  const pasesDelPartido = useMemo(() => eventosPartido.filter((e) => esPase(e) && !e._cola).map((e) => e.id).join(','), [eventosPartido])
+  useEffect(() => {
+    if (seccion !== 'video' || pestanaPanel !== 'playlist' || !pasesDelPartido) return undefined
+    let cancelado = false
+    async function cargar() {
+      setResumenDestinatarias((a) => ({ ...a, cargando: true, error: '' }))
+      try {
+        // cargarResumenDestinatarias solo usa el id y el tipo de cada pase.
+        const resumen = await cargarResumenDestinatarias(supabase, pasesDelPartido.split(',').map((id) => ({ id, tipo: 'Pase correcto' })))
+        if (!cancelado) setResumenDestinatarias((a) => ({ detalles: { ...a.detalles, ...resumen.detalles }, nombres: { ...a.nombres, ...resumen.nombres }, cargando: false, error: '' }))
+      } catch {
+        if (!cancelado) setResumenDestinatarias((a) => ({ ...a, cargando: false, error: 'No se pudieron leer las receptoras de los pases.' }))
+      }
+    }
+    cargar()
+    return () => { cancelado = true }
+  }, [seccion, pestanaPanel, pasesDelPartido, recargaDestinatarias])
 
   const filtrosExplorador = useMemo(() => ({
     partido: filtroExploradorPartido,
@@ -1430,6 +1459,31 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     }
   }
 
+  // Playlist: guarda uno o más campos de la acción (jugadora, zona, resultado) y devuelve la fila guardada.
+  async function guardarCamposPlaylist(evento, cambios) {
+    if (!esAdmin || !escrituraAutorizada) throw { code: '42501', message: 'No tenés autorización para editar acciones.' }
+    const datos = { ...cambios }
+    if (Object.hasOwn(datos, 'resultado')) {
+      validarResultadoAccion(evento.tipo, datos.resultado)
+      datos.resultado = resultadoParaGuardar(evento.tipo, datos.resultado, catalogo)
+    }
+    const { data, error: updateError } = await supabase.from('analisis_eventos').update(datos).eq('id', evento.id).select().single()
+    if (updateError) throw updateError
+    setEventos((actuales) => actuales.map((ev) => ev.id === data.id ? data : ev))
+    setError('')
+    return data
+  }
+
+  // Playlist: guarda la receptora de un pase (con la revisión leída, para no pisar cambios de otra persona).
+  async function guardarReceptoraPlaylist(evento, estado, destinatariaId) {
+    const anterior = resumenDestinatarias.detalles[evento.id]
+    const fila = await guardarDestinataria(supabase, evento, anterior, estado, destinatariaId)
+    const detalle = { ...anterior, ...fila }
+    setResumenDestinatarias((a) => ({ ...a, detalles: { ...a.detalles, [fila.evento_id]: { ...a.detalles[fila.evento_id], ...fila } } }))
+    setError('')
+    return detalle
+  }
+
   async function eliminarEvento(evento) {
     if (!esAdmin || !escrituraAutorizada) return
 
@@ -1774,6 +1828,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       saltar: desplazarVideo,
       deshacer: deshacerUltimaAccion,
       ayuda: () => setAyudaAtajos((abierta) => !abierta),
+      interceptar: playlist.interceptar,
     },
   })
 
@@ -1999,9 +2054,6 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                   onClick={() => {
                     setPartidoId(partido.id)
                     setPeriodoActual(1)
-                    setFiltroJugador('todos')
-                    setFiltroTipo('todos')
-                    setFiltroResultado('todos')
                     setSeccion('video')
                     setTipoRapido('')
                     setError('')
@@ -2507,55 +2559,29 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                 </div>
 
                 <div role="tabpanel" id="az-panel-playlist" aria-labelledby="az-pestana-playlist" hidden={pestanaPanel !== 'playlist'} className="az-panel-cuerpo">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="az-titulo">
-                    Acciones registradas ({eventosFiltrados.length})
-                  </h2>
-
-                  <div className="flex flex-wrap gap-2">
-                    <select
-                      className="rounded-lg border p-2 text-xs"
-                      style={inputStyle}
-                      value={filtroJugador}
-                      onChange={(e) => setFiltroJugador(e.target.value)}
-                    >
-                      <option value="todos">Todas las jugadoras</option>
-                      {jugadoras.map((j) => (
-                        <option key={j.id} value={j.id}>
-                          {nombreJugadora(j)}
-                        </option>
-                      ))}
-                    </select>
-
-                    <select
-                      className="rounded-lg border p-2 text-xs"
-                      style={inputStyle}
-                      value={filtroTipo}
-                      onChange={(e) => setFiltroTipo(e.target.value)}
-                    >
-                      <option value="todos">Todas las acciones</option>
-                      {catalogo.tipos.map((t) => (
-                        <option key={t.codigo} value={t.codigo}>{t.etiqueta}</option>
-                      ))}
-                    </select>
-
-                    <select
-                      className="rounded-lg border p-2 text-xs"
-                      style={inputStyle}
-                      value={filtroResultado}
-                      onChange={(e) => setFiltroResultado(e.target.value)}
-                    >
-                      <option value="todos">Todos los resultados</option>
-                      <option value="Pendiente">Pendientes</option>
-                      {RESULTADOS.map((r) => (
-                        <option key={r} value={r}>{r}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
+                  <PlaylistAnalisis
+                    pl={playlist}
+                    total={eventosPartido.length}
+                    catalogo={catalogo}
+                    citaciones={citaciones}
+                    jugadoras={jugadoras}
+                    zonas={ZONAS}
+                    detalles={resumenDestinatarias.detalles}
+                    cargandoDetalles={resumenDestinatarias.cargando}
+                    errorDetalles={resumenDestinatarias.error}
+                    onReintentarDetalles={() => setRecargaDestinatarias((n) => n + 1)}
+                    puedeEditar={accesoEditor && !bloqueoEscritura}
+                    videoListo={videoListo}
+                    onEditarTodo={(ev) => {
+                      abrirEdicionEvento(ev)
+                      setTimeout(() => document.getElementById('az-edicion-evento')?.scrollIntoView({ block: 'start' }), 0)
+                    }}
+                    onEliminar={eliminarEvento}
+                    onDescartar={(id) => cola.descartar(id)}
+                    antesDeLaLista={<>
                 {mostrarEdicionEvento && (
                   <form
+                    id="az-edicion-evento"
                     onSubmit={guardarEdicionEvento}
                     className="mb-5 space-y-4 rounded-lg border p-4"
                     style={{ backgroundColor: A.fondo, borderColor: AMARILLO }}
@@ -2730,122 +2756,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                 )}
 
                 <TramosSinAcciones eventos={eventosPartido} puedeIr={videoListo} onIr={(segundoTramo) => { setSegundoIr(String(segundoTramo)); irAlSegundo(segundoTramo) }} />
-
-                {eventosFiltrados.length === 0 ? (
-                  <div
-                    className="rounded-lg border p-6 text-center text-sm"
-                    style={{
-                      backgroundColor: A.fondo,
-                      borderColor: A.borde,
-                      color: A.secundario,
-                    }}
-                  >
-                    No hay acciones para mostrar con estos filtros.
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {eventosFiltrados.map((ev) => {
-                      const jugadora = jugadoras.find(
-                        (j) => j.id === ev.jugador_id,
-                      )
-
-                      const accion = aparienciaTipo(catalogo, ev.tipo)
-
-                      const pendiente = !ev.resultado
-                      // Estado de guardado de una acción que todavía está en la cola.
-                      const enCola = ev._cola
-                      const textoCola = enCola === 'rechazada' ? 'No se pudo guardar'
-                        : enCola === 'error' ? 'Sin guardar · reintentando'
-                          : enCola ? 'Guardando…' : ''
-
-                      return (
-                        <article
-                          key={ev.id}
-                          data-guardado={enCola || 'guardada'}
-                          className={`flex flex-wrap items-center gap-3 rounded-lg border p-3${enCola ? ' et-fila-pendiente' : ''}`}
-                          style={{ backgroundColor: A.fondo, borderColor: enCola === 'rechazada' || enCola === 'error' ? 'var(--ui-peligro)' : A.borde }}
-                        >
-                          <button
-                            type="button"
-                            disabled={!videoListo}
-                            onClick={() => {
-                              setSegundoIr(String(ev.segundo))
-                              irAlSegundo(ev.segundo)
-                            }}
-                            className="min-w-[62px] rounded-md px-2 py-2 text-center font-mono text-sm font-black disabled:opacity-40"
-                            style={{ backgroundColor: A.activo, color: textoAnalisis(AMARILLO) }}
-                            title="Ir a este momento del video"
-                          >
-                            {formatearTiempo(ev.segundo)}
-                          </button>
-
-                          <div
-                            className="az-boton-icono h-9 w-9 shrink-0 rounded-lg text-sm"
-                            style={{ '--az-color-accion': accion.color, color: accion.colorTexto }}
-                          >
-                            {accion.icono}
-                          </div>
-
-                          <div className="min-w-[120px] flex-1">
-                            <p className="break-words font-bold">{etiquetaTipo(ev.tipo)}</p>
-                            <p className="mt-1 text-xs" style={{ color: A.secundario }}>
-                              {jugadora ? nombreJugadora(jugadora) : 'Sin jugadora'}
-                              {ev.zona ? ` · ${ev.zona}` : ''}
-                            </p>
-                            {ev.observaciones && (
-                              <p className="mt-1 text-xs" style={{ color: A.secundario }}>
-                                {ev.observaciones}
-                              </p>
-                            )}
-                          </div>
-
-                          <span
-                            className="rounded-md px-2 py-1 text-xs font-bold"
-                            style={{
-                              backgroundColor: pendiente ? A.seleccion : A.control,
-                              color: textoAnalisis(pendiente ? AMARILLO : A.texto),
-                            }}
-                          >
-                            {ev.resultado || 'Pendiente'}
-                          </span>
-
-                          {enCola && (
-                            <span className="et-guardado" data-estado={enCola} title={enCola === 'rechazada' ? mensajeError(ev._error, 'guardar la acción') : undefined}>
-                              {textoCola}
-                            </span>
-                          )}
-
-                          {accesoEditor && enCola === 'rechazada' && (
-                            <button type="button" className="text-xs font-bold" style={{ color: textoAnalisis(AMARILLO) }}
-                              onClick={() => cola.descartar(ev.id)}>
-                              Descartar
-                            </button>
-                          )}
-
-                          {accesoEditor && !enCola && (
-                            <div className="flex gap-3">
-                              <button
-                                type="button"
-                                disabled={bloqueoEscritura} onClick={() => abrirEdicionEvento(ev)}
-                                className="text-xs font-bold"
-                                style={{ color: textoAnalisis(AMARILLO) }}
-                              >
-                                Editar
-                              </button>
-                              <button
-                                type="button"
-                                disabled={bloqueoEscritura} onClick={() => eliminarEvento(ev)}
-                                className="text-xs font-bold text-red-300"
-                              >
-                                Eliminar
-                              </button>
-                            </div>
-                          )}
-                        </article>
-                      )
-                    })}
-                  </div>
-                )}
+                    </>}
+                  />
                 </div>
 
                 <div role="tabpanel" id="az-panel-partido" aria-labelledby="az-pestana-partido" hidden={pestanaPanel !== 'partido'} className="az-panel-cuerpo">
