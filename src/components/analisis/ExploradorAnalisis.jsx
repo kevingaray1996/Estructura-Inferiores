@@ -7,6 +7,7 @@ import { AMARILLO, CLASE_CAMPO, ESTILO_CAMPO } from '../../utils/analisis/estilo
 import { fechaLegible, formatearTiempo, nombreJugadora, videoCalendario, youtubeEmbed } from '../../utils/analisis/formato'
 import DetalleDestinatariaPase from '../DetalleDestinatariaPase'
 import { Boton, Campo, Panel } from './PiezasAnalisis'
+import { aparienciaTipo } from '../../utils/analisis/botonera'
 
 // Los filtros viven en AnalisisSection para que se conserven al cambiar de pestaña.
 export default function ExploradorAnalisis({
@@ -140,7 +141,7 @@ export default function ExploradorAnalisis({
             {eventosExplorador.map((ev) => {
               const partido = partidos.find((p) => p.id === ev.partido_id)
               const jugadora = jugadoras.find((j) => j.id === ev.jugador_id)
-              const accion = catalogo.tiposRapidos.find((a) => a.nombre === ev.tipo)
+              const accion = aparienciaTipo(catalogoAcciones, ev.tipo)
               return (
                 <tr key={ev.id} className="border-t" style={{ borderColor: A.borde }}>
                   <td className="p-3">
@@ -155,7 +156,7 @@ export default function ExploradorAnalisis({
                     <span className="text-xs" style={{ color: A.secundario }}>{fechaLegible(partido?.fecha)}</span>
                   </td>
                   <td className="p-3">{jugadora ? nombreJugadora(jugadora) : 'Sin jugadora'}</td>
-                  <td className="p-3 font-bold" style={{ color: textoAnalisis(accion?.color || A.texto) }}>{etiquetaDe(catalogoAcciones, ev.tipo)}</td>
+                  <td className="p-3 font-bold" style={{ color: accion.colorTexto }}>{etiquetaDe(catalogoAcciones, ev.tipo)}</td>
                   <td className="p-3">{ev.zona || '—'}</td>
                   <td className="p-3">
                     <span className="rounded-md px-2 py-1 text-xs font-bold" style={{ backgroundColor: ev.resultado ? A.control : A.seleccion, color: textoAnalisis(ev.resultado ? A.texto : AMARILLO) }}>

@@ -34,27 +34,10 @@ import useAtajosAnalisis from '../hooks/useAtajosAnalisis'
 import { guardarAtajos, leerAtajos, mostrarTecla } from '../utils/analisis/atajos'
 import { AvisoAccion, AyudaAtajos, IndicadorAtajos } from './analisis/AtajosEtiquetado'
 import TramosSinAcciones from './analisis/TramosSinAcciones'
+import { aparienciaTipo, atajosDeBotonera, tiposBotonera } from '../utils/analisis/botonera'
+import './analisis/panelAnalisis.css'
 
 const CATEGORIA_ID = '438874e7-e59f-460b-bec4-3c0ef5b44016'
-
-const TIPOS_RAPIDOS = [
-  { nombre: 'Pase correcto', corto: 'Pase +', icono: '↗', color: '#4ADE80' },
-  { nombre: 'Pase incorrecto', corto: 'Pase −', icono: '↘', color: '#F87171' },
-  { nombre: 'Pérdida', corto: 'Pérdida', icono: '×', color: '#F87171' },
-  { nombre: 'Recuperación', corto: 'Recuperación', icono: '↺', color: '#4ADE80' },
-  { nombre: 'Remate', corto: 'Remate', icono: '◎', color: '#F2C230' },
-  { nombre: 'Centro', corto: 'Centro', icono: '⌁', color: '#F2C230' },
-  { nombre: 'Duelo ofensivo', corto: 'Duelo of.', icono: '⚔', color: '#F2C230' },
-  { nombre: 'Duelo defensivo', corto: 'Duelo def.', icono: '◆', color: '#60A5FA' },
-  { nombre: 'Duelo aéreo', corto: 'Duelo aéreo', icono: '↑', color: '#60A5FA' },
-  { nombre: 'Atajada', corto: 'Atajada', icono: '⊙', color: '#4ADE80' },
-  { nombre: 'Salida de arquera', corto: 'Salida', icono: '↗', color: '#60A5FA' },
-  { nombre: 'Gol', corto: 'Gol', icono: '⚽', color: '#F2C230' },
-  { nombre: 'Falta cometida', corto: 'Falta com.', icono: '!', color: '#F87171' },
-  { nombre: 'Falta recibida', corto: 'Falta rec.', icono: '+', color: '#4ADE80' },
-  { nombre: 'Intercepción', corto: 'Intercepción', icono: '↯', color: '#60A5FA' },
-  { nombre: 'Despeje', corto: 'Despeje', icono: '⇧', color: '#60A5FA' },
-]
 
 const ZONAS = [
   'Defensa izquierda', 'Defensa centro', 'Defensa derecha',
@@ -79,7 +62,10 @@ const inputClass = CLASE_CAMPO
 
 const inputStyle = ESTILO_CAMPO
 
-const catalogoExplorador = { tiposRapidos: TIPOS_RAPIDOS, resultados: RESULTADOS, zonas: ZONAS }
+const catalogoExplorador = { resultados: RESULTADOS, zonas: ZONAS }
+
+// Pestañas del panel derecho de la vista de video.
+const PESTANAS_PANEL = [['etiquetado', 'Etiquetado'], ['playlist', 'Playlist'], ['partido', 'Partido']]
 
 // Al cambiar de tipo se conserva el resultado si sigue siendo válido para el
 // tipo nuevo según el catálogo; si no, se preselecciona su primera opción.
@@ -545,11 +531,25 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   // Atajos de teclado (se guardan en esta computadora), aviso corto y botón iluminado.
   const [atajos, setAtajos] = useState(leerAtajos)
   const cambiarAtajos = useCallback((nuevo) => { setAtajos(nuevo); guardarAtajos(nuevo) }, [])
-  // Solo las acciones de la botonera tienen tecla (la botonera todavía está fija en TIPOS_RAPIDOS).
-  const atajosBotonera = useMemo(
-    () => Object.fromEntries(Object.entries(atajos).filter(([nombre]) => TIPOS_RAPIDOS.some((a) => a.nombre === nombre))),
-    [atajos],
-  )
+  // La botonera sale del catálogo configurable (analisis_tipos_accion): tipos visibles, en su orden.
+  const botonera = useMemo(() => tiposBotonera(catalogo), [catalogo])
+  // Solo las acciones de la botonera tienen tecla.
+  const atajosBotonera = useMemo(() => atajosDeBotonera(atajos, botonera), [atajos, botonera])
+  // Pestaña del panel derecho (Etiquetado / Playlist / Partido).
+  const [pestanaPanel, setPestanaPanel] = useState('etiquetado')
+  // Flechas, Inicio y Fin mueven entre pestañas. Se frena el evento para que ← / → no muevan el video.
+  const moverPestana = useCallback((evento) => {
+    const ids = PESTANAS_PANEL.map(([id]) => id)
+    const actual = ids.indexOf(evento.target?.id?.replace('az-pestana-', ''))
+    if (actual < 0) return
+    const destino = { ArrowRight: actual + 1, ArrowLeft: actual - 1, Home: 0, End: ids.length - 1 }[evento.key]
+    if (destino === undefined) return
+    evento.preventDefault()
+    evento.stopPropagation()
+    const id = ids[(destino + ids.length) % ids.length]
+    setPestanaPanel(id)
+    evento.currentTarget.querySelector(`#az-pestana-${id}`)?.focus()
+  }, [])
   const [ayudaAtajos, setAyudaAtajos] = useState(false)
   const [eligiendoTecla, setEligiendoTecla] = useState(false)
   const [avisoAccion, setAvisoAccion] = useState(null)
@@ -2078,58 +2078,12 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
           </nav>
 
           {seccion === 'video' && (
-            <div className={ventanas.modo ? 'grid items-start gap-5 lg:grid-cols-2' : 'grid items-start gap-5 xl:grid-cols-[minmax(0,1.3fr)_minmax(350px,0.9fr)]'}>
-              <div className="analisis-ventanas" style={{ gridColumn: '1 / -1' }}>{barraVentanas}</div>
-              <div className="space-y-5">
+            <div className="az-split" data-modo={ventanas.modo || 'integrado'}>
+              <div className="analisis-ventanas az-split-barra">{barraVentanas}</div>
+
+              <div className="az-split-video">
                 <ZonaVentanaAnalisis tipo="reproductor" ventana={ventanas} encabezado={encabezadoVentana}>
-                <Panel>
-                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p
-                        className="text-xs font-bold uppercase tracking-widest"
-                        style={{ color: textoAnalisis(AMARILLO) }}
-                      >
-                        PARTIDO EN ANÁLISIS
-                      </p>
-                      <h2 className="mt-1 text-xl font-black">
-                        {partidoActual.rival}
-                      </h2>
-                      <p className="mt-1 text-sm" style={{ color: A.secundario }}>
-                        {datosEncuentro(partidoActual)}
-                      </p>
-                    </div>
-
-                    <div
-                      className="rounded-lg border px-3 py-2 text-xs"
-                      style={{
-                        backgroundColor: A.fondo,
-                        borderColor: A.borde,
-                        color: textoAnalisis(videoListo ? '#4ADE80' : A.secundario),
-                      }}
-                    >
-                      {videoListo ? '● Video conectado' : '○ Conectando video'}
-                    </div>
-                  </div>
-
-                  <div className="mb-4 grid gap-3 rounded-xl border p-3 sm:grid-cols-2" style={{ borderColor: A.borde, backgroundColor: A.fondo }}>
-                    <Campo label="Tiempo del partido que estás analizando">
-                      <select className={inputClass} style={inputStyle} value={periodoActual} onChange={(e) => setPeriodoActual(Number(e.target.value))}>
-                        <option value={1}>Primer tiempo</option>
-                        <option value={2}>Segundo tiempo</option>
-                      </select>
-                    </Campo>
-                    <Campo label={`Dirección real del ataque en ${periodoActual === 1 ? 'el primer' : 'el segundo'} tiempo`}>
-                      <select className={inputClass} style={inputStyle} value={direccionAtaqueActual || ''} onChange={(e) => cambiarDireccionAtaque(e.target.value)} disabled={bloqueoEscritura || guardando}>
-                        <option value="" disabled>Configurar dirección</option>
-                        <option value="derecha">Atacamos hacia la derecha →</option>
-                        <option value="izquierda">Atacamos hacia la izquierda ←</option>
-                      </select>
-                    </Campo>
-                    <p className="text-xs sm:col-span-2" style={{ color: A.secundario }}>
-                      La cancha permanece fija. Las acciones nuevas conservan su dirección de captura; los registros históricos no se reinterpretan. Aplicar la migración de orientación antes de usar esta versión.
-                    </p>
-                  </div>
-
+                <div className="az-video-marco">
                   {videoActual ? (
                     <div className="aspect-video overflow-hidden rounded-lg bg-black">
                       <iframe
@@ -2162,213 +2116,53 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                       )}
                     </div>
                   )}
-
+                </div>
+                <div className="az-video-pie">
+                  <p className="az-video-estado" data-listo={videoListo ? 'si' : 'no'}>{videoListo ? 'Video conectado' : 'Conectando video…'}</p>
                   {videoActual && <>
                     {controlesVideo}
                     {videoUrlActual && <a href={videoUrlActual} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-bold" style={{ color: textoAnalisis(AMARILLO) }}>Abrir video en YouTube</a>}
                   </>}
-
-                  {partidoActual.notas && (
-                    <div
-                      className="mt-4 rounded-lg border p-3"
-                      style={{ backgroundColor: A.fondo, borderColor: A.borde }}
-                    >
-                      <p className="mb-1 text-xs font-bold uppercase" style={{ color: A.secundario }}>
-                        Notas generales
-                      </p>
-                      <p className="whitespace-pre-wrap text-sm">
-                        {partidoActual.notas}
-                      </p>
-                    </div>
-                  )}
-                </Panel>
+                </div>
                 </ZonaVentanaAnalisis>
-
-                <Panel>
-                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p
-                        className="text-xs font-bold uppercase tracking-widest"
-                        style={{ color: textoAnalisis(AMARILLO) }}
-                      >
-                        CONVOCATORIA DEL PARTIDO
-                      </p>
-                      <h2 className="mt-1 text-lg font-bold">Formación y banco</h2>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xl font-black">{citaciones.length}</p>
-                      <p className="text-xs" style={{ color: A.secundario }}>
-                        convocadas
-                      </p>
-                    </div>
-                  </div>
-
-                  {citaciones.length === 0 ? (
-                    <div
-                      className="rounded-lg border p-4 text-sm"
-                      style={{
-                        backgroundColor: A.fondo,
-                        borderColor: A.borde,
-                        color: A.secundario,
-                      }}
-                    >
-                      No se encontraron convocadas para este encuentro. Revisá
-                      la pestaña Convocados del partido seleccionado.
-                    </div>
-                  ) : (
-                    <>
-                      <div
-                        className="relative overflow-hidden rounded-lg border p-3"
-                        style={{
-                          backgroundColor: '#173C32',
-                          borderColor: '#3C7562',
-                        }}
-                      >
-                        <div
-                          className="pointer-events-none absolute inset-2 rounded border opacity-40"
-                          style={{ borderColor: '#B8D9C7' }}
-                        />
-                        <div
-                          className="pointer-events-none absolute left-1/2 top-2 bottom-2 border-l opacity-30"
-                          style={{ borderColor: '#B8D9C7' }}
-                        />
-                        <div
-                          className="pointer-events-none absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full border opacity-30"
-                          style={{ borderColor: '#B8D9C7' }}
-                        />
-                        <div className="relative grid min-h-[280px] grid-cols-3 gap-2 sm:min-h-[320px]">
-                          {titulares.length > 0 && titulares.some((c) => c.coordenadas) ? (
-                            citaciones
-                              .filter((c) => c.titular || c.coordenadas)
-                              .map((c) => {
-                                const pos = c.coordenadas
-                                return (
-                                  <div
-                                    key={c.id}
-                                    className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
-                                    style={{
-                                      left: `${pos?.x ?? 50}%`,
-                                      top: `${pos?.y ?? 50}%`,
-                                      maxWidth: '30%',
-                                    }}
-                                  >
-                                    <button
-                                      type="button"
-                                      disabled={bloqueoEscritura}
-                                      onClick={() => setJugadorId(c.jugador_id)}
-                                      title={nombreJugadora(c.jugadora)}
-                                      className="flex h-9 w-9 items-center justify-center rounded-full border-2 text-xs font-black shadow-lg"
-                                      style={{
-                                        backgroundColor: jugadorId === c.jugador_id ? '#FFFFFF' : AMARILLO,
-                                        borderColor: jugadorId === c.jugador_id ? '#171717' : '#FFF0B2',
-                                        color: '#171717',
-                                      }}
-                                    >
-                                      {c.dorsal ?? '—'}
-                                    </button>
-                                    <span
-                                      className="mt-1 max-w-full truncate rounded px-1 text-center text-[10px] font-bold"
-                                      style={{
-                                        backgroundColor: '#0F1419DD',
-                                        color: '#FFFFFF',
-                                      }}
-                                    >
-                                      {c.jugadora?.apellido || c.jugadora?.nombre}
-                                    </span>
-                                  </div>
-                                )
-                              })
-                          ) : (
-                            <div className="col-span-3 flex flex-wrap content-center justify-center gap-3">
-                              {titulares.map((c) => (
-                                <button
-                                  key={c.id}
-                                  type="button"
-                                  disabled={bloqueoEscritura}
-                                  onClick={() => setJugadorId(c.jugador_id)}
-                                  className="flex w-24 flex-col items-center rounded-lg p-2"
-                                  style={{
-                                    backgroundColor: jugadorId === c.jugador_id ? '#40513B' : '#205344',
-                                    border: `1px solid ${jugadorId === c.jugador_id ? AMARILLO : '#568675'}`,
-                                  }}
-                                >
-                                  <span
-                                    className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-black"
-                                    style={{ backgroundColor: 'var(--ui-acento)', color: 'var(--ui-texto-sobre-acento)' }}
-                                  >
-                                    {c.dorsal ?? '—'}
-                                  </span>
-                                  <span className="mt-2 max-w-full truncate text-xs font-semibold">
-                                    {c.jugadora?.apellido || c.jugadora?.nombre}
-                                  </span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="mt-4">
-                        <div className="mb-2 flex items-center justify-between gap-2">
-                          <h3 className="text-sm font-bold">Suplentes</h3>
-                          <span className="text-xs" style={{ color: A.secundario }}>
-                            {suplentes.length} jugadoras
-                          </span>
-                        </div>
-
-                        {suplentes.length ? (
-                          <div className="flex flex-wrap gap-2">
-                            {suplentes.map((c) => (
-                              <button
-                                key={c.id}
-                                type="button"
-                                disabled={bloqueoEscritura}
-                                onClick={() => setJugadorId(c.jugador_id)}
-                                className="flex items-center gap-2 rounded-lg border px-3 py-2 text-left"
-                                style={{
-                                  backgroundColor: jugadorId === c.jugador_id ? A.seleccion : A.fondo,
-                                  borderColor: jugadorId === c.jugador_id ? AMARILLO : A.borde,
-                                }}
-                              >
-                                <span
-                                  className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-black"
-                                  style={{ backgroundColor: A.activo, color: A.texto }}
-                                >
-                                  {c.dorsal ?? '—'}
-                                </span>
-                                <span className="text-xs font-semibold">
-                                  {nombreJugadora(c.jugadora)}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm" style={{ color: A.secundario }}>
-                            No hay suplentes cargadas o todas tienen posición guardada en cancha.
-                          </p>
-                        )}
-                      </div>
-
-                      <p className="mt-3 text-xs" style={{ color: A.secundario }}>
-                        Seleccioná una jugadora para asignarla al próximo evento.
-                        Las posiciones se muestran cuando están guardadas en Convocados.
-                      </p>
-                    </>
-                  )}
-                </Panel>
               </div>
 
-              <div className="space-y-5">
-                <ZonaVentanaAnalisis tipo="botonera" ventana={ventanas} encabezado={encabezadoVentana}>
-                <Panel>
-                  <div className="mb-4">
-                    <p
-                      className="text-xs font-bold uppercase tracking-widest"
-                      style={{ color: textoAnalisis(AMARILLO) }}
+              <section className="az-panel" aria-label="Herramientas del análisis">
+                <div role="tablist" aria-label="Herramientas del análisis" className="az-pestanas" onKeyDown={moverPestana}>
+                  {PESTANAS_PANEL.map(([id, texto]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="tab"
+                      id={`az-pestana-${id}`}
+                      aria-controls={`az-panel-${id}`}
+                      aria-selected={pestanaPanel === id}
+                      tabIndex={pestanaPanel === id ? 0 : -1}
+                      className="az-pestana"
+                      onClick={() => setPestanaPanel(id)}
                     >
-                      LIVE TAGGING
-                    </p>
-                    <h2 className="mt-1 text-xl font-black">Etiquetado rápido</h2>
+                      {texto}
+                      {id === 'playlist' && <span className="az-pestana-cuenta">{eventosPartido.length}</span>}
+                    </button>
+                  ))}
+                </div>
+
+                <div role="tabpanel" id="az-panel-etiquetado" aria-labelledby="az-pestana-etiquetado" hidden={pestanaPanel !== 'etiquetado'} className="az-panel-cuerpo">
+                  {ventanas.modo === 'botonera' && <p className="az-nota">La botonera está abierta en la otra ventana.</p>}
+                  <ZonaVentanaAnalisis tipo="botonera" ventana={ventanas} encabezado={encabezadoVentana}>
+                  <div>
+                  <div className="mb-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <h2 className="az-titulo">Etiquetado rápido</h2>
+                      <div className="az-segmento" role="group" aria-label="Tiempo que estás etiquetando">
+                        {[[1, '1T'], [2, '2T']].map(([valor, texto]) => (
+                          <button key={valor} type="button" aria-pressed={periodoActual === valor} onClick={() => setPeriodoActual(valor)}
+                            title={valor === 1 ? 'Primer tiempo' : 'Segundo tiempo'}>
+                            {texto}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     <p className="mt-2 text-sm" style={{ color: A.secundario }}>
                       {unToque
                         ? 'Tocá una acción y se guarda al instante, sin jugadora. La completás después, en la revisión.'
@@ -2407,8 +2201,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
                       <IndicadorAtajos estado={estadoAtajos} onAyuda={() => setAyudaAtajos((abierta) => !abierta)} />
 
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-2">
-                        {TIPOS_RAPIDOS.map((accion) => {
+                      <div className="az-botonera">
+                        {botonera.map((accion) => {
                           const activa = tipoRapido === accion.nombre
                           const tecla = atajosBotonera[accion.nombre]
 
@@ -2421,27 +2215,18 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                               aria-keyshortcuts={tecla || undefined}
                               disabled={unToque && capturaBloqueada}
                               onClick={() => tocarAccion(accion.nombre)}
-                              className={`rounded-lg border p-3 text-left transition hover:brightness-125${iluminado?.tipo === accion.nombre ? ' et-iluminado' : ''}`}
-                              style={{
-                                backgroundColor: activa ? A.activo : A.fondo,
-                                borderColor: activa ? accion.color : A.borde,
-                                boxShadow: activa ? `inset 0 0 0 1px ${accion.color}` : 'none',
-                              }}
+                              className={`az-boton-accion${iluminado?.tipo === accion.nombre ? ' et-iluminado' : ''}`}
+                              data-activa={activa ? 'si' : undefined}
+                              style={{ '--az-color-accion': accion.color }}
                             >
                               <span className="flex items-start justify-between gap-2">
-                                <span
-                                  className="flex h-7 w-7 items-center justify-center rounded-md text-base font-black"
-                                  style={{
-                                    backgroundColor: `${accion.color}22`,
-                                    color: textoAnalisis(accion.color),
-                                  }}
-                                >
+                                <span className="az-boton-icono" style={{ color: accion.colorTexto }}>
                                   {accion.icono}
                                 </span>
                                 {tecla && <kbd className="et-tecla" aria-hidden="true">{mostrarTecla(tecla)}</kbd>}
                               </span>
-                              <span className="mt-2 block truncate text-xs font-bold">
-                                {etiquetaBotonDe(catalogo, accion.nombre)}
+                              <span className="az-boton-texto">
+                                {accion.corto}
                               </span>
                             </button>
                           )
@@ -2468,7 +2253,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
                       {ayudaAtajos && (
                         <AyudaAtajos
-                          tipos={TIPOS_RAPIDOS.map((a) => ({ codigo: a.nombre, etiqueta: etiquetaBotonDe(catalogo, a.nombre) }))}
+                          tipos={botonera.map((a) => ({ codigo: a.nombre, etiqueta: a.corto }))}
                           mapa={atajosBotonera}
                           onCambiar={cambiarAtajos}
                           onCerrar={() => setAyudaAtajos(false)}
@@ -2717,64 +2502,15 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                       </details>
                     </>
                   )}
-                </Panel>
-                </ZonaVentanaAnalisis>
-
-                <Panel>
-                  <div className="mb-4 flex items-center justify-between gap-3">
-                    <div>
-                      <p
-                        className="text-xs font-bold uppercase tracking-widest"
-                        style={{ color: textoAnalisis(AMARILLO) }}
-                      >
-                        RESUMEN
-                      </p>
-                      <h2 className="mt-1 text-lg font-bold">Actividad etiquetada</h2>
-                    </div>
-                    <span
-                      className="rounded-lg px-3 py-2 text-xl font-black"
-                      style={{ backgroundColor: A.fondo, color: textoAnalisis(AMARILLO) }}
-                    >
-                      {eventosPartido.length}
-                    </span>
                   </div>
+                  </ZonaVentanaAnalisis>
+                </div>
 
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      ['Pendientes', eventosPartido.filter((e) => !e.resultado).length],
-                      ['Exitosas', eventosPartido.filter((e) =>
-                        ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado),
-                      ).length],
-                      ['Fallidas', eventosPartido.filter((e) =>
-                        ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado),
-                      ).length],
-                    ].map(([label, valor]) => (
-                      <div
-                        key={label}
-                        className="rounded-lg border p-3"
-                        style={{ backgroundColor: A.fondo, borderColor: A.borde }}
-                      >
-                        <p className="text-xs" style={{ color: A.secundario }}>{label}</p>
-                        <p className="mt-1 text-2xl font-black">{valor}</p>
-                      </div>
-                    ))}
-                  </div>
-                </Panel>
-              </div>
-
-              <Panel className="xl:col-span-2">
+                <div role="tabpanel" id="az-panel-playlist" aria-labelledby="az-pestana-playlist" hidden={pestanaPanel !== 'playlist'} className="az-panel-cuerpo">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p
-                      className="text-xs font-bold uppercase tracking-widest"
-                      style={{ color: textoAnalisis(AMARILLO) }}
-                    >
-                      EVENT LOG
-                    </p>
-                    <h2 className="mt-1 text-xl font-black">
-                      Acciones registradas ({eventosFiltrados.length})
-                    </h2>
-                  </div>
+                  <h2 className="az-titulo">
+                    Acciones registradas ({eventosFiltrados.length})
+                  </h2>
 
                   <div className="flex flex-wrap gap-2">
                     <select
@@ -3013,9 +2749,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                         (j) => j.id === ev.jugador_id,
                       )
 
-                      const accion = TIPOS_RAPIDOS.find(
-                        (a) => a.nombre === ev.tipo,
-                      )
+                      const accion = aparienciaTipo(catalogo, ev.tipo)
 
                       const pendiente = !ev.resultado
                       // Estado de guardado de una acción que todavía está en la cola.
@@ -3046,13 +2780,10 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                           </button>
 
                           <div
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-black"
-                            style={{
-                              backgroundColor: `${accion?.color || AMARILLO}20`,
-                              color: textoAnalisis(accion?.color || AMARILLO),
-                            }}
+                            className="az-boton-icono h-9 w-9 shrink-0 rounded-lg text-sm"
+                            style={{ '--az-color-accion': accion.color, color: accion.colorTexto }}
                           >
-                            {accion?.icono || '•'}
+                            {accion.icono}
                           </div>
 
                           <div className="min-w-[120px] flex-1">
@@ -3115,7 +2846,249 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                     })}
                   </div>
                 )}
-              </Panel>
+                </div>
+
+                <div role="tabpanel" id="az-panel-partido" aria-labelledby="az-pestana-partido" hidden={pestanaPanel !== 'partido'} className="az-panel-cuerpo">
+                  <h2 className="az-titulo">Datos del partido</h2>
+                  <div className="mb-4 mt-3 grid gap-3 rounded-xl border p-3 sm:grid-cols-2" style={{ borderColor: A.borde, backgroundColor: A.fondo }}>
+                    <Campo label="Tiempo del partido que estás analizando">
+                      <select className={inputClass} style={inputStyle} value={periodoActual} onChange={(e) => setPeriodoActual(Number(e.target.value))}>
+                        <option value={1}>Primer tiempo</option>
+                        <option value={2}>Segundo tiempo</option>
+                      </select>
+                    </Campo>
+                    <Campo label={`Dirección real del ataque en ${periodoActual === 1 ? 'el primer' : 'el segundo'} tiempo`}>
+                      <select className={inputClass} style={inputStyle} value={direccionAtaqueActual || ''} onChange={(e) => cambiarDireccionAtaque(e.target.value)} disabled={bloqueoEscritura || guardando}>
+                        <option value="" disabled>Configurar dirección</option>
+                        <option value="derecha">Atacamos hacia la derecha →</option>
+                        <option value="izquierda">Atacamos hacia la izquierda ←</option>
+                      </select>
+                    </Campo>
+                    <p className="text-xs sm:col-span-2" style={{ color: A.secundario }}>
+                      La cancha del mapa queda fija. Cada acción guarda hacia dónde atacábamos cuando se marcó; cambiar la dirección no modifica las acciones ya cargadas.
+                    </p>
+                  </div>
+                  {partidoActual.notas && (
+                    <div
+                      className="mb-4 rounded-lg border p-3"
+                      style={{ backgroundColor: A.fondo, borderColor: A.borde }}
+                    >
+                      <h3 className="mb-1 text-sm font-bold">Notas generales</h3>
+                      <p className="whitespace-pre-wrap text-sm">
+                        {partidoActual.notas}
+                      </p>
+                    </div>
+                  )}
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="text-base font-bold">Formación y banco</h3>
+                    <div className="text-right">
+                      <p className="text-xl font-black">{citaciones.length}</p>
+                      <p className="text-xs" style={{ color: A.secundario }}>
+                        convocadas
+                      </p>
+                    </div>
+                  </div>
+
+                  {citaciones.length === 0 ? (
+                    <div
+                      className="rounded-lg border p-4 text-sm"
+                      style={{
+                        backgroundColor: A.fondo,
+                        borderColor: A.borde,
+                        color: A.secundario,
+                      }}
+                    >
+                      No se encontraron convocadas para este encuentro. Revisá
+                      la pestaña Convocados del partido seleccionado.
+                    </div>
+                  ) : (
+                    <>
+                      <div
+                        className="relative overflow-hidden rounded-lg border p-3"
+                        style={{
+                          backgroundColor: '#173C32',
+                          borderColor: '#3C7562',
+                        }}
+                      >
+                        <div
+                          className="pointer-events-none absolute inset-2 rounded border opacity-40"
+                          style={{ borderColor: '#B8D9C7' }}
+                        />
+                        <div
+                          className="pointer-events-none absolute left-1/2 top-2 bottom-2 border-l opacity-30"
+                          style={{ borderColor: '#B8D9C7' }}
+                        />
+                        <div
+                          className="pointer-events-none absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full border opacity-30"
+                          style={{ borderColor: '#B8D9C7' }}
+                        />
+                        <div className="relative grid min-h-[280px] grid-cols-3 gap-2 sm:min-h-[320px]">
+                          {titulares.length > 0 && titulares.some((c) => c.coordenadas) ? (
+                            citaciones
+                              .filter((c) => c.titular || c.coordenadas)
+                              .map((c) => {
+                                const pos = c.coordenadas
+                                return (
+                                  <div
+                                    key={c.id}
+                                    className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
+                                    style={{
+                                      left: `${pos?.x ?? 50}%`,
+                                      top: `${pos?.y ?? 50}%`,
+                                      maxWidth: '30%',
+                                    }}
+                                  >
+                                    <button
+                                      type="button"
+                                      disabled={bloqueoEscritura}
+                                      onClick={() => setJugadorId(c.jugador_id)}
+                                      title={nombreJugadora(c.jugadora)}
+                                      className="flex h-9 w-9 items-center justify-center rounded-full border-2 text-xs font-black shadow-lg"
+                                      style={{
+                                        backgroundColor: jugadorId === c.jugador_id ? '#FFFFFF' : AMARILLO,
+                                        borderColor: jugadorId === c.jugador_id ? '#171717' : '#FFF0B2',
+                                        color: '#171717',
+                                      }}
+                                    >
+                                      {c.dorsal ?? '—'}
+                                    </button>
+                                    <span
+                                      className="mt-1 max-w-full truncate rounded px-1 text-center text-[10px] font-bold"
+                                      style={{
+                                        backgroundColor: '#0F1419DD',
+                                        color: '#FFFFFF',
+                                      }}
+                                    >
+                                      {c.jugadora?.apellido || c.jugadora?.nombre}
+                                    </span>
+                                  </div>
+                                )
+                              })
+                          ) : (
+                            <div className="col-span-3 flex flex-wrap content-center justify-center gap-3">
+                              {titulares.map((c) => (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  disabled={bloqueoEscritura}
+                                  onClick={() => setJugadorId(c.jugador_id)}
+                                  className="flex w-24 flex-col items-center rounded-lg p-2"
+                                  style={{
+                                    backgroundColor: jugadorId === c.jugador_id ? '#40513B' : '#205344',
+                                    border: `1px solid ${jugadorId === c.jugador_id ? AMARILLO : '#568675'}`,
+                                  }}
+                                >
+                                  <span
+                                    className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-black"
+                                    style={{ backgroundColor: 'var(--ui-acento)', color: 'var(--ui-texto-sobre-acento)' }}
+                                  >
+                                    {c.dorsal ?? '—'}
+                                  </span>
+                                  <span className="mt-2 max-w-full truncate text-xs font-semibold">
+                                    {c.jugadora?.apellido || c.jugadora?.nombre}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <h3 className="text-sm font-bold">Suplentes</h3>
+                          <span className="text-xs" style={{ color: A.secundario }}>
+                            {suplentes.length} jugadoras
+                          </span>
+                        </div>
+
+                        {suplentes.length ? (
+                          <div className="flex flex-wrap gap-2">
+                            {suplentes.map((c) => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                disabled={bloqueoEscritura}
+                                onClick={() => setJugadorId(c.jugador_id)}
+                                className="flex items-center gap-2 rounded-lg border px-3 py-2 text-left"
+                                style={{
+                                  backgroundColor: jugadorId === c.jugador_id ? A.seleccion : A.fondo,
+                                  borderColor: jugadorId === c.jugador_id ? AMARILLO : A.borde,
+                                }}
+                              >
+                                <span
+                                  className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-black"
+                                  style={{ backgroundColor: A.activo, color: A.texto }}
+                                >
+                                  {c.dorsal ?? '—'}
+                                </span>
+                                <span className="text-xs font-semibold">
+                                  {nombreJugadora(c.jugadora)}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm" style={{ color: A.secundario }}>
+                            No hay suplentes cargadas o todas tienen posición guardada en cancha.
+                          </p>
+                        )}
+                      </div>
+
+                      <p className="mt-3 text-xs" style={{ color: A.secundario }}>
+                        Seleccioná una jugadora para asignarla al próximo evento.
+                        Las posiciones se muestran cuando están guardadas en Convocados.
+                      </p>
+                    </>
+                  )}
+                </div>
+              </section>
+
+              <div className="az-split-abajo">
+                <Panel>
+                  <h2 className="text-lg font-bold">Mapa del partido</h2>
+                  <p className="mt-1 text-xs" style={{ color: A.secundario }}>Tocá una acción para verla en el video.</p>
+                  <div className="mt-3">
+                    <CanchaInteractiva
+                      etiquetaTipo={etiquetaTipo}
+                      eventos={eventosPartido}
+                      onEventClick={(evento) => { setSegundoIr(String(evento.segundo)); irAlSegundo(evento.segundo) }}
+                    />
+                  </div>
+                </Panel>
+                <Panel>
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <h2 className="text-lg font-bold">Actividad etiquetada</h2>
+                    <span
+                      className="rounded-lg px-3 py-2 text-xl font-black"
+                      style={{ backgroundColor: A.fondo, color: textoAnalisis(AMARILLO) }}
+                    >
+                      {eventosPartido.length}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      ['Pendientes', eventosPartido.filter((e) => !e.resultado).length],
+                      ['Exitosas', eventosPartido.filter((e) =>
+                        ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado),
+                      ).length],
+                      ['Fallidas', eventosPartido.filter((e) =>
+                        ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado),
+                      ).length],
+                    ].map(([label, valor]) => (
+                      <div
+                        key={label}
+                        className="rounded-lg border p-3"
+                        style={{ backgroundColor: A.fondo, borderColor: A.borde }}
+                      >
+                        <p className="text-xs" style={{ color: A.secundario }}>{label}</p>
+                        <p className="mt-1 text-2xl font-black">{valor}</p>
+                      </div>
+                    ))}
+                  </div>
+                </Panel>
+              </div>
             </div>
           )}
 

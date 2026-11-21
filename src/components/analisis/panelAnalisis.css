@@ -1,0 +1,130 @@
+/* Vista de video de Análisis: video fijo + panel con pestañas (Etiquetado / Playlist / Partido).
+   Colores solo desde los tokens de apariencia.css. */
+
+.az-split {
+  /* Alto de la barra superior de la app (sticky): 44px de botón + 12px de margen + 1px de borde. */
+  --az-alto-barra: calc(57px + env(safe-area-inset-top, 0px));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+}
+.az-split-barra, .az-split-abajo { grid-column: 1 / -1; }
+.az-split-abajo { display: grid; gap: 1.25rem; min-width: 0; }
+
+/* Video */
+.az-video-estado {
+  display: flex; align-items: center; gap: .5rem; margin: .75rem 0 .5rem;
+  font-size: .75rem; font-weight: 700; color: var(--ui-compartido-secundario);
+}
+.az-video-estado::before {
+  content: ''; width: .5rem; height: .5rem; border-radius: 50%; flex: none;
+  background: var(--ui-compartido-borde);
+}
+.az-video-estado[data-listo='si']::before { background: var(--ui-acento); }
+
+/* Panel con pestañas */
+.az-panel {
+  min-width: 0; border: 1px solid var(--ui-compartido-borde); border-radius: .75rem;
+  background: var(--analisis-panel);
+}
+.az-pestanas { display: flex; border-bottom: 1px solid var(--ui-compartido-borde); }
+.az-pestana {
+  flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  min-height: 48px; padding: 0 .75rem; margin-bottom: -1px;
+  border-bottom: 3px solid transparent; font-weight: 700; font-size: .9375rem;
+  color: var(--ui-compartido-secundario); background: transparent;
+}
+.az-pestana[aria-selected='true'] { color: var(--ui-compartido-texto); border-bottom-color: var(--ui-acento); }
+.az-pestana:focus-visible { outline: 2px solid var(--ui-foco); outline-offset: -2px; }
+@media (hover: hover) { .az-pestana:not([aria-selected='true']):hover { color: var(--ui-compartido-texto); } }
+.az-pestana-cuenta {
+  min-width: 1.5rem; padding: .125rem .4rem; border-radius: 999px; font-size: .75rem; font-weight: 800;
+  background: var(--analisis-control); color: var(--ui-compartido-texto); font-variant-numeric: tabular-nums;
+}
+.az-panel-cuerpo { padding: 1rem; min-width: 0; }
+.az-panel-cuerpo[hidden] { display: none; }
+.az-titulo { font-size: 1.125rem; line-height: 1.3; font-weight: 800; }
+.az-nota {
+  margin-bottom: 1rem; padding: .75rem; border: 1px dashed var(--ui-compartido-borde); border-radius: .5rem;
+  font-size: .875rem; color: var(--ui-compartido-secundario);
+}
+
+/* 1T / 2T */
+.az-segmento { display: inline-flex; border: 1px solid var(--ui-compartido-borde); border-radius: .5rem; overflow: hidden; }
+.az-segmento button {
+  min-width: 48px; min-height: 44px; padding: 0 .75rem; font-weight: 800;
+  background: var(--analisis-control); color: var(--ui-compartido-secundario);
+}
+.az-segmento button + button { border-left: 1px solid var(--ui-compartido-borde); }
+.az-segmento button[aria-pressed='true'] { background: var(--ui-acento); color: var(--ui-texto-sobre-acento); }
+.az-segmento button:focus-visible { outline: 2px solid var(--ui-foco); outline-offset: -3px; }
+
+/* Botonera: los colores de cada acción vienen del catálogo (--az-color-accion). */
+.az-botonera { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
+.az-boton-accion {
+  min-width: 0; min-height: 64px; padding: .625rem; text-align: left;
+  border: 1px solid var(--ui-compartido-borde); border-radius: .5rem; background: var(--ui-compartido-fondo);
+  transition: border-color .15s ease-out, background-color .15s ease-out;
+}
+.az-boton-accion[data-activa] {
+  background: var(--analisis-activo); border-color: var(--az-color-accion);
+  box-shadow: inset 0 0 0 1px var(--az-color-accion);
+}
+.az-boton-accion:disabled { opacity: .45; cursor: not-allowed; }
+@media (hover: hover) { .az-boton-accion:not(:disabled):hover { border-color: var(--az-color-accion); } }
+.az-boton-icono {
+  display: inline-flex; align-items: center; justify-content: center; font-weight: 900;
+  background: color-mix(in srgb, var(--az-color-accion, var(--ui-acento)) 16%, transparent);
+}
+.az-boton-accion .az-boton-icono { width: 1.75rem; height: 1.75rem; border-radius: .375rem; font-size: 1rem; }
+
+@media (min-width: 768px) {
+  .az-panel-cuerpo { padding: 1.25rem; }
+  .az-botonera { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* Celular y tablet: el video queda pegado arriba, debajo de la barra de la app; las pestañas siguen abajo. */
+@media (max-width: 1023.98px) {
+  .az-split-video { display: contents; }
+  .az-video-marco {
+    position: sticky; top: var(--az-alto-barra); z-index: 20;
+    padding-bottom: .5rem; background: var(--ui-fondo-pagina);
+  }
+  .az-video-pie {
+    padding: 0 1rem 1rem; border: 1px solid var(--ui-compartido-borde); border-radius: .75rem;
+    background: var(--analisis-panel);
+  }
+}
+
+/* Compu: video a la izquierda, fijo mientras se recorre el panel; panel con pestañas a la derecha. */
+@media (min-width: 1024px) {
+  .az-split { grid-template-columns: minmax(0, 1.35fr) minmax(360px, 1fr); align-items: start; }
+  .az-split-video {
+    position: sticky; top: calc(var(--az-alto-barra) + 1rem);
+    padding: 1rem; border: 1px solid var(--ui-compartido-borde); border-radius: .75rem;
+    background: var(--analisis-panel);
+  }
+  /* Con el reproductor en otra ventana, el panel usa todo el ancho. */
+  .az-split[data-modo='reproductor'] { grid-template-columns: minmax(0, 1fr); }
+  .az-split[data-modo='reproductor'] .az-split-video { display: none; }
+  .az-botonera { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .az-split-abajo { grid-template-columns: minmax(0, 1.35fr) minmax(300px, 1fr); align-items: start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .az-boton-accion { transition: none; }
+}
+
+/* Nombre de la acción: entra entero (corta en sílabas si hace falta) en vez de quedar con «…». */
+.az-boton-texto {
+  display: block; margin-top: .5rem; font-size: .75rem; line-height: 1.2; font-weight: 700;
+  hyphens: auto;
+}
+@media (max-width: 767.98px) {
+  .az-panel-cuerpo { padding: .75rem; }
+  .az-boton-accion { padding: .5rem; }
+}
+/* En pantallas táctiles no hay teclado: se ocultan las teclas para dar lugar al nombre. */
+@media (hover: none) {
+  .az-boton-accion .et-tecla { display: none; }
+}
