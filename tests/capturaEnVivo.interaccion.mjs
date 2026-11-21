@@ -19,8 +19,8 @@ test('Análisis: Pase +/− en vivo guarda una vez, con el segundo y el período
     h.activo().time=301.2;await h.tick()
     assert.match(document.body.textContent,/Tiempo: 05:01/)
 
-    // Doble toque rápido: un solo registro, con el segundo leído del reproductor.
-    await h.act(()=>{const b=h.convocada('Ana Prueba');b.click();b.click()})
+    // Un toque: un registro, con el segundo leído del reproductor. (Varios toques rápidos: etiquetadoSinEsperas.)
+    await h.etiquetar('Ana Prueba')
     assert.equal(writes.length,1)
     assert.deepEqual([writes[0].tipo,writes[0].jugador_id,writes[0].segundo,writes[0].periodo,writes[0].partido_id,writes[0].resultado],['Pase correcto','j',301,1,'p1','Exitoso'])
     await h.resolver();h.registradas(1)
@@ -72,8 +72,8 @@ test('Análisis: un toque sin jugadora, botón "Sin jugadora" y deshacer la últ
     // Modo un toque: tocar la acción guarda al instante, sin jugadora.
     await h.click('Marcar sin jugadora')
     h.activo().time=600.4
-    await h.act(()=>{const b=h.tipo('Remate');b.click();b.click()})
-    assert.equal(writes.length,1,'Doble toque guarda una sola acción')
+    await h.marcar('Remate')
+    assert.equal(writes.length,1)
     assert.deepEqual([writes[0].tipo,writes[0].jugador_id,writes[0].segundo,writes[0].periodo,writes[0].direccion_captura,writes[0].resultado],['Remate',null,600,1,'derecha',null])
     await h.resolver();h.registradas(1)
     assert.match(document.body.textContent,/Remate registrada sin jugadora/)

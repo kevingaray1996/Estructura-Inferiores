@@ -28,7 +28,12 @@ import {
   cargarResumenDestinatarias, esPase,
   nombreDestinataria,
 } from '../utils/destinatariasPases'
-import { mensajeErrorOPropio } from '../utils/mensajesError'
+import { mensajeError, mensajeErrorOPropio } from '../utils/mensajesError'
+import useColaEtiquetado from '../hooks/useColaEtiquetado'
+import useAtajosAnalisis from '../hooks/useAtajosAnalisis'
+import { guardarAtajos, leerAtajos, mostrarTecla } from '../utils/analisis/atajos'
+import { AvisoAccion, AyudaAtajos, IndicadorAtajos } from './analisis/AtajosEtiquetado'
+import TramosSinAcciones from './analisis/TramosSinAcciones'
 
 const CATEGORIA_ID = '438874e7-e59f-460b-bec4-3c0ef5b44016'
 
@@ -515,6 +520,51 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     conectado: ventanas.gestor.conectado(), pendiente: Boolean(comandoRef.current),
   }), [videoListo, partidoId, videoListoPartidoId, ventanas.gestor])
 
+  // Segundo para etiquetar o para encadenar saltos: no espera a que YouTube confirme un comando. Si hay un salto
+  // en curso, vale el segundo al que se saltó (el reproductor todavía puede informar el anterior).
+  const tiempoCaptura = useCallback(() => {
+    const tiempo = leerTiempoActivo({
+      player: playerRef.current, iframe: iframeRef.current, listo: videoListo,
+      partidoId, partidoListo: videoListoPartidoId,
+      conectado: ventanas.gestor.conectado(), pendiente: false,
+    })
+    const comando = comandoRef.current
+    return comando?.tipo === 'salto' && comando.partidoId === partidoId ? comando.valor : tiempo
+  }, [videoListo, partidoId, videoListoPartidoId, ventanas.gestor])
+
+  // Cola de guardado del etiquetado: cada toque aparece al instante y se guarda de fondo (useColaEtiquetado).
+  const { cola, items: colaItems } = useColaEtiquetado({
+    enviar: (registro) => supabase.from('analisis_eventos').insert(registro).select().single(),
+    borrar: (id) => supabase.from('analisis_eventos').delete().eq('id', id),
+    alConfirmar: (fila) => setEventos((actuales) => actuales.some((e) => e.id === fila.id)
+      ? actuales
+      : [...actuales, fila].sort((a, b) => Number(a.segundo) - Number(b.segundo))),
+    alFallarBorrado: (fila, e) => setError(`${mensajeError(e, 'deshacer la acción')} La acción ${etiquetaDe(catalogo, fila.tipo)} · ${formatearTiempo(fila.segundo)} sigue guardada.`),
+  })
+
+  // Atajos de teclado (se guardan en esta computadora), aviso corto y botón iluminado.
+  const [atajos, setAtajos] = useState(leerAtajos)
+  const cambiarAtajos = useCallback((nuevo) => { setAtajos(nuevo); guardarAtajos(nuevo) }, [])
+  // Solo las acciones de la botonera tienen tecla (la botonera todavía está fija en TIPOS_RAPIDOS).
+  const atajosBotonera = useMemo(
+    () => Object.fromEntries(Object.entries(atajos).filter(([nombre]) => TIPOS_RAPIDOS.some((a) => a.nombre === nombre))),
+    [atajos],
+  )
+  const [ayudaAtajos, setAyudaAtajos] = useState(false)
+  const [eligiendoTecla, setEligiendoTecla] = useState(false)
+  const [avisoAccion, setAvisoAccion] = useState(null)
+  const [iluminado, setIluminado] = useState(null)
+  useEffect(() => {
+    if (!avisoAccion) return undefined
+    const t = setTimeout(() => setAvisoAccion(null), 1600)
+    return () => clearTimeout(t)
+  }, [avisoAccion])
+  useEffect(() => {
+    if (!iluminado) return undefined
+    const t = setTimeout(() => setIluminado(null), 450)
+    return () => clearTimeout(t)
+  }, [iluminado])
+
   const confirmarComando = useCallback((player) => {
     const comando = comandoRef.current
     if (!comando) return
@@ -536,7 +586,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   const solicitarVideo = useCallback((accion, valor) => {
     let emitido = null
     try {
-      const tiempo = tiempoActivo(), player = playerRef.current
+      // tiempoCaptura: permite encadenar saltos (← ← →) sin esperar la confirmación del anterior.
+      const tiempo = tiempoCaptura(), player = playerRef.current
       const tipoComando = accion === 'alternar' ? player.getPlayerState?.() === 1 ? 'pausa' : 'reproducir' : accion
       if (tipoComando === 'salto' && (!Number.isFinite(Number(valor)) || Number(valor) < 0)) throw Error('Ingresá un segundo válido.')
       if (tipoComando === 'velocidad' && !player.getAvailablePlaybackRates?.().includes(valor)) throw Error('Esta velocidad no está disponible en el video.')
@@ -555,7 +606,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       if (emitido && comandoRef.current === emitido) { comandoRef.current = null; setComandoPendiente(false) }
       setError(mensajeErrorOPropio(e, 'controlar el video')); return false
     }
-  }, [partidoId, tiempoActivo, relojVideo])
+  }, [partidoId, tiempoCaptura, relojVideo])
 
   useEffect(() => {
     if ((seccion !== 'video' || !usuario) && ventanas.gestor.getSnapshot().modo) ventanas.gestor.acoplar()
@@ -932,10 +983,24 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     }
   }, [segundoPendiente, videoListo, videoListoPartidoId, seccion, partidoId, comandoPendiente, solicitarVideo])
 
+  // Acciones de la cola que todavía no están confirmadas: se muestran al instante, marcadas con su estado.
+  const pendientesCola = useMemo(() => {
+    const confirmadas = new Set(eventos.map((e) => e.id))
+    return colaItems.filter((i) => !i.cancelada && !confirmadas.has(i.id)).map((i) => ({ ...i.registro, _cola: i.estado, _error: i.error }))
+  }, [colaItems, eventos])
+
   const eventosPartido = useMemo(
-    () => eventos.filter((e) => e.partido_id === partidoId),
-    [eventos, partidoId],
+    () => {
+      const delPartido = eventos.filter((e) => e.partido_id === partidoId)
+      const pendientes = pendientesCola.filter((e) => e.partido_id === partidoId)
+      return pendientes.length
+        ? [...delPartido, ...pendientes].sort((a, b) => Number(a.segundo) - Number(b.segundo))
+        : delPartido
+    },
+    [eventos, partidoId, pendientesCola],
   )
+  const colaConError = pendientesCola.filter((e) => e._cola === 'error')
+  const colaRechazadas = pendientesCola.filter((e) => e._cola === 'rechazada')
 
   const eventosMapa = useMemo(() => {
     const base = alcanceMapa === 'acumulado' ? eventos : eventosPartido
@@ -987,7 +1052,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
   const paseDestinoActual = eventosMapa.find((evento) => evento.id === paseDestinoId && esPase(evento))
 
-  const capturaBloqueada = bloqueoEscritura || guardando || !videoListo || comandoPendiente || !ventanas.conectado || registroIncierto
+  // El etiquetado rápido no espera a la base ni a YouTube: se bloquea solo sin permiso o sin video conectado.
+  const capturaBloqueada = bloqueoEscritura || !videoListo || !ventanas.conectado
 
   const opcionesEdicion = opcionesResultadoCatalogo(catalogo, edicionEvento.tipo)
   const resultadoAnteriorEdicion = !resultadoImplicito(edicionEvento.tipo, catalogo) && edicionEvento.resultado &&
@@ -995,7 +1061,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
   // Se oculta si la acción ya no está (borrada o recargada) o si cambió el partido.
   const accionDeshacible = ultimaAccion?.partidoId === partidoId
-    ? eventos.find((evento) => evento.id === ultimaAccion.id) || null
+    ? eventosPartido.find((evento) => evento.id === ultimaAccion.id) || null
     : null
 
   const eventosFiltrados = useMemo(
@@ -1218,7 +1284,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   }
   function alternarReproduccion() { solicitarVideo('alternar') }
   function desplazarVideo(delta) {
-    try { solicitarVideo('salto', Math.max(0, tiempoActivo() + delta)) } catch (e) { setError(mensajeErrorOPropio(e, 'mover el video')) }
+    try { solicitarVideo('salto', Math.max(0, tiempoCaptura() + delta)) } catch (e) { setError(mensajeErrorOPropio(e, 'mover el video')) }
   }
   function reconectarVideo() {
     try { playerRef.current?.pauseVideo?.() } catch { /* Ventana cerrada. */ }
@@ -1226,71 +1292,65 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     setRevisionReproductor(n => n + 1)
   }
 
-  async function registrarAccionRapida(tipoSeleccionado, idJugadora) {
-    if (!esAdmin || !escrituraAutorizada || !partidoActual || guardando || registroIncierto) return
+  // Registra la acción al instante: toma el segundo del video en el toque, la muestra enseguida y la deja en la cola
+  // de guardado (se guarda de fondo, en orden, y se reintenta si falla). Nunca espera a la base ni bloquea botones.
+  function registrarAccionRapida(tipoSeleccionado, idJugadora) {
+    if (!esAdmin || !escrituraAutorizada || !partidoActual) return null
 
     if (!ventanas.gestor.conectado() || contextoAnalisisRef.current?.partidoId !== partidoId || contextoAnalisisRef.current?.seccion !== 'video' || !videoListo || !playerRef.current) {
       setError('Esperá a que el video esté conectado antes de etiquetar.')
+      return null
+    }
+
+    let tiempo
+    try {
+      tiempo = tiempoCaptura()
+    } catch (e) {
+      setError(mensajeErrorOPropio(e, 'registrar la acción'))
+      return null
+    }
+
+    const referenciaCaptura = referenciaNueva(partidoActual, periodoActual)
+    const registro = {
+      id: crypto.randomUUID(),
+      partido_id: partidoId,
+      jugador_id: idJugadora,
+      segundo: tiempo,
+      periodo: periodoActual,
+      ...referenciaCaptura,
+      tipo: tipoSeleccionado,
+      zona: null,
+      resultado: resultadoImplicito(tipoSeleccionado, catalogo),
+      observaciones: null,
+    }
+    cola.agregar(registro)
+    setUltimaAccion({ id: registro.id, partidoId })
+    setAvisoAccion((anterior) => ({ texto: `${etiquetaBotonDe(catalogo, tipoSeleccionado)} · ${formatearTiempo(tiempo)}`, n: (anterior?.n || 0) + 1 }))
+    setError('')
+
+    // Conservamos la acción elegida para etiquetar varias jugadoras seguidas.
+    setMensaje(idJugadora
+      ? `${etiquetaTipo(tipoSeleccionado)} registrada para ${nombreJugadora(
+        jugadoras.find((j) => j.id === idJugadora),
+      )}.${resultadoImplicito(tipoSeleccionado, catalogo) ? '' : ' Resultado pendiente.'}`
+      : `${etiquetaTipo(tipoSeleccionado)} registrada sin jugadora (${formatearTiempo(tiempo)}). Completala en la revisión.`,
+    )
+    return registro
+  }
+
+  // Botón de la botonera (clic o tecla): en «un toque» registra; si no, elige la acción y espera a la jugadora.
+  function tocarAccion(nombre) {
+    setIluminado((anterior) => ({ tipo: nombre, n: (anterior?.n || 0) + 1 }))
+    if (unToque) {
+      if (!capturaBloqueada) registrarAccionRapida(nombre, null)
+      else setError('Esperá a que el video esté conectado antes de etiquetar.')
       return
     }
-    if (!bloqueoEtiquetado.entrar()) return
-    let enviado = false
-
-    setGuardando(true)
+    setTipoRapido((actual) => (actual === nombre ? '' : nombre))
+    setTipo(nombre)
+    setResultado((actual) => resultadoAlCambiarSegunCatalogo(catalogo, nombre, actual))
     setError('')
     setMensaje('')
-
-    try {
-      const tiempo = tiempoActivo()
-      const idRegistro = crypto.randomUUID()
-
-      const referenciaCaptura = referenciaNueva(partidoActual, periodoActual)
-      enviado = true
-      const { data, error: insertError } = await supabase
-        .from('analisis_eventos')
-        .insert({
-          id: idRegistro,
-          partido_id: partidoId,
-          jugador_id: idJugadora,
-          segundo: tiempo,
-          periodo: periodoActual,
-          ...referenciaCaptura,
-          tipo: tipoSeleccionado,
-          zona: null,
-          resultado: resultadoImplicito(tipoSeleccionado, catalogo),
-          observaciones: null,
-        })
-        .select()
-        .single()
-
-      if (insertError) throw insertError
-      if (data?.id !== idRegistro) throw Error('No se pudo confirmar el registro de la acción.')
-
-      setEventos((actuales) =>
-        [...actuales, data].sort(
-          (a, b) => Number(a.segundo) - Number(b.segundo),
-        ),
-      )
-      setUltimaAccion({ id: data.id, partidoId })
-
-      // Conservamos la acción elegida para etiquetar varias jugadoras seguidas.
-      setMensaje(idJugadora
-        ? `${etiquetaTipo(tipoSeleccionado)} registrada para ${nombreJugadora(
-          jugadoras.find((j) => j.id === idJugadora),
-        )}.${resultadoImplicito(tipoSeleccionado, catalogo) ? '' : ' Resultado pendiente.'}`
-        : `${etiquetaTipo(tipoSeleccionado)} registrada sin jugadora (${formatearTiempo(tiempo)}). Completala en la revisión.`,
-      )
-    } catch (e) {
-      if (enviado && registroInciertoTrasError(e)) setRegistroIncierto(true)
-      console.error('Error al etiquetar acción:', e)
-      setError(
-        enviado && registroInciertoTrasError(e) ? 'No se pudo confirmar el guardado. Revisá las acciones y recargá Análisis antes de intentar nuevamente; no se reintentó el envío.' : mensajeErrorOPropio(e, 'guardar la acción') ||
-        'No se pudo guardar la acción rápida. Verificá que la base de datos permita resultado y zona nulos.',
-      )
-    } finally {
-      bloqueoEtiquetado.salir()
-      setGuardando(false)
-    }
   }
 
   function abrirEdicionEvento(evento) {
@@ -1391,8 +1451,17 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
   // Sin confirmación: solo la última acción marcada en este dispositivo y sesión.
   async function deshacerUltimaAccion() {
-    if (!esAdmin || !escrituraAutorizada || !accionDeshacible || guardando) return
+    if (!esAdmin || !escrituraAutorizada || !accionDeshacible) return
     const evento = accionDeshacible
+
+    // Todavía en la cola (guardándose o sin guardar): la cola la quita o la borra apenas se confirme.
+    if (evento._cola && cola.cancelar(evento.id)) {
+      setUltimaAccion(null)
+      setError('')
+      setMensaje(`Se deshizo ${etiquetaTipo(evento.tipo)} · ${formatearTiempo(evento.segundo)}.`)
+      return
+    }
+    if (guardando) return
 
     setGuardando(true)
     setError('')
@@ -1691,6 +1760,23 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     {ventanas.modo === 'reproductor' && controlesVideo}
   </>
 
+  // Atajos de teclado: solo en la vista de video, para quien puede etiquetar. Incluye la ventana separada.
+  const ventanaAuxiliar = ventanas.modo && ventanas.nodo ? ventanas.nodo.ownerDocument?.defaultView || null : null
+  const estadoAtajos = useAtajosAnalisis({
+    activo: !cargando && accesoEditor && !bloqueoEscritura && seccion === 'video' && Boolean(partidoActual),
+    mapa: atajosBotonera,
+    principal: typeof window === 'undefined' ? null : window,
+    auxiliar: ventanaAuxiliar,
+    pausar: eligiendoTecla,
+    acciones: {
+      marcar: tocarAccion,
+      alternar: alternarReproduccion,
+      saltar: desplazarVideo,
+      deshacer: deshacerUltimaAccion,
+      ayuda: () => setAyudaAtajos((abierta) => !abierta),
+    },
+  })
+
   if (!cargando && !accesoEditor) return <div className="p-6" role="alert">{error || 'No se pudo confirmar el acceso a Análisis.'}<button type="button" onClick={cargarDatos}>Reintentar verificación</button></div>
   if (cargando) {
     return (
@@ -1705,6 +1791,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       className="min-h-screen space-y-5 p-4 md:p-6"
       style={{ color: A.texto }}
     >
+      <AvisoAccion aviso={avisoAccion} />
       {bloqueoEscritura && <p role="status">{(estadoAutorizacion || estadoPermiso) === 'pendiente_migracion'
         ? 'Análisis en modo consulta: falta activar la función de autorización de la migración pendiente. Crear, guardar, editar y eliminar están bloqueados hasta que el servidor confirme los permisos.'
         : 'Escrituras pausadas: no se pudo confirmar la autorización del servidor o se está revalidando. Se conserva el trabajo abierto y podés consultar el video.'}</p>}
@@ -2318,43 +2405,40 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                         </span>
                       </button>
 
+                      <IndicadorAtajos estado={estadoAtajos} onAyuda={() => setAyudaAtajos((abierta) => !abierta)} />
+
                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-2">
                         {TIPOS_RAPIDOS.map((accion) => {
                           const activa = tipoRapido === accion.nombre
+                          const tecla = atajosBotonera[accion.nombre]
 
                           return (
                             <button
                               key={accion.nombre}
                               type="button"
                               data-tipo-rapido={accion.nombre}
-                              title={etiquetaTipo(accion.nombre)}
-                              disabled={unToque ? capturaBloqueada : guardando}
-                              onClick={() => {
-                                if (unToque) {
-                                  registrarAccionRapida(accion.nombre, null)
-                                  return
-                                }
-                                setTipoRapido(activa ? '' : accion.nombre)
-                                setTipo(accion.nombre)
-                                setResultado((actual) => resultadoAlCambiarSegunCatalogo(catalogo, accion.nombre, actual))
-                                setError('')
-                                setMensaje('')
-                              }}
-                              className="rounded-lg border p-3 text-left transition hover:brightness-125"
+                              title={tecla ? `${etiquetaTipo(accion.nombre)} (tecla ${mostrarTecla(tecla)})` : etiquetaTipo(accion.nombre)}
+                              aria-keyshortcuts={tecla || undefined}
+                              disabled={unToque && capturaBloqueada}
+                              onClick={() => tocarAccion(accion.nombre)}
+                              className={`rounded-lg border p-3 text-left transition hover:brightness-125${iluminado?.tipo === accion.nombre ? ' et-iluminado' : ''}`}
                               style={{
                                 backgroundColor: activa ? A.activo : A.fondo,
                                 borderColor: activa ? accion.color : A.borde,
                                 boxShadow: activa ? `inset 0 0 0 1px ${accion.color}` : 'none',
                               }}
                             >
-                              <span
-                                className="flex h-7 w-7 items-center justify-center rounded-md text-base font-black"
-                                style={{
-                                  backgroundColor: `${accion.color}22`,
-                                  color: textoAnalisis(accion.color),
-                                }}
-                              >
-                                {accion.icono}
+                              <span className="flex items-start justify-between gap-2">
+                                <span
+                                  className="flex h-7 w-7 items-center justify-center rounded-md text-base font-black"
+                                  style={{
+                                    backgroundColor: `${accion.color}22`,
+                                    color: textoAnalisis(accion.color),
+                                  }}
+                                >
+                                  {accion.icono}
+                                </span>
+                                {tecla && <kbd className="et-tecla" aria-hidden="true">{mostrarTecla(tecla)}</kbd>}
                               </span>
                               <span className="mt-2 block truncate text-xs font-bold">
                                 {etiquetaBotonDe(catalogo, accion.nombre)}
@@ -2363,6 +2447,34 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                           )
                         })}
                       </div>
+
+                      {(colaConError.length > 0 || colaRechazadas.length > 0) && (
+                        <div className="et-alerta-cola" role="alert">
+                          {colaConError.length > 0 && (
+                            <span>
+                              {colaConError.length === 1 ? '1 acción sin guardar' : `${colaConError.length} acciones sin guardar`} por la conexión. Se reintenta sola; no cierres Análisis.
+                            </span>
+                          )}
+                          {colaConError.length > 0 && (
+                            <button type="button" className="et-boton" onClick={() => cola.reintentarAhora()}>Reintentar ahora</button>
+                          )}
+                          {colaRechazadas.length > 0 && (
+                            <span>
+                              {colaRechazadas.length === 1 ? '1 acción no se pudo guardar' : `${colaRechazadas.length} acciones no se pudieron guardar`}: {mensajeError(colaRechazadas[0]._error, 'guardar la acción')} Revisalas en la lista de acciones.
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {ayudaAtajos && (
+                        <AyudaAtajos
+                          tipos={TIPOS_RAPIDOS.map((a) => ({ codigo: a.nombre, etiqueta: etiquetaBotonDe(catalogo, a.nombre) }))}
+                          mapa={atajosBotonera}
+                          onCambiar={cambiarAtajos}
+                          onCerrar={() => setAyudaAtajos(false)}
+                          onEligiendo={setEligiendoTecla}
+                        />
+                      )}
 
                       {accionDeshacible && (
                         <button
@@ -2881,6 +2993,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                   </form>
                 )}
 
+                <TramosSinAcciones eventos={eventosPartido} puedeIr={videoListo} onIr={(segundoTramo) => { setSegundoIr(String(segundoTramo)); irAlSegundo(segundoTramo) }} />
+
                 {eventosFiltrados.length === 0 ? (
                   <div
                     className="rounded-lg border p-6 text-center text-sm"
@@ -2904,12 +3018,18 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                       )
 
                       const pendiente = !ev.resultado
+                      // Estado de guardado de una acción que todavía está en la cola.
+                      const enCola = ev._cola
+                      const textoCola = enCola === 'rechazada' ? 'No se pudo guardar'
+                        : enCola === 'error' ? 'Sin guardar · reintentando'
+                          : enCola ? 'Guardando…' : ''
 
                       return (
                         <article
                           key={ev.id}
-                          className="flex flex-wrap items-center gap-3 rounded-lg border p-3"
-                          style={{ backgroundColor: A.fondo, borderColor: A.borde }}
+                          data-guardado={enCola || 'guardada'}
+                          className={`flex flex-wrap items-center gap-3 rounded-lg border p-3${enCola ? ' et-fila-pendiente' : ''}`}
+                          style={{ backgroundColor: A.fondo, borderColor: enCola === 'rechazada' || enCola === 'error' ? 'var(--ui-peligro)' : A.borde }}
                         >
                           <button
                             type="button"
@@ -2958,7 +3078,20 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                             {ev.resultado || 'Pendiente'}
                           </span>
 
-                          {accesoEditor && (
+                          {enCola && (
+                            <span className="et-guardado" data-estado={enCola} title={enCola === 'rechazada' ? mensajeError(ev._error, 'guardar la acción') : undefined}>
+                              {textoCola}
+                            </span>
+                          )}
+
+                          {accesoEditor && enCola === 'rechazada' && (
+                            <button type="button" className="text-xs font-bold" style={{ color: textoAnalisis(AMARILLO) }}
+                              onClick={() => cola.descartar(ev.id)}>
+                              Descartar
+                            </button>
+                          )}
+
+                          {accesoEditor && !enCola && (
                             <div className="flex gap-3">
                               <button
                                 type="button"

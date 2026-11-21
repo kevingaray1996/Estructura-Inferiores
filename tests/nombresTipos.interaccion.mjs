@@ -36,7 +36,8 @@ test('Análisis muestra los nombres configurables y guarda el código', async ()
     // Video: botón corto con el nombre completo al mantener presionado, línea de tiempo y filtros.
     const botonPase = h.tipo('Pase correcto')
     assert.match(botonPase.textContent, /P\+/)
-    assert.equal(botonPase.getAttribute('title'), 'Pase bien')
+    // El título suma la tecla del atajo (etiquetado con teclado, 2026-11-20).
+    assert.equal(botonPase.getAttribute('title'), 'Pase bien (tecla +)')
     assert.match(document.body.textContent, /Pase bien/)
     assert.match(document.body.textContent, /Control de arquera/)
     assert.match(document.body.textContent, /Atajada real/)

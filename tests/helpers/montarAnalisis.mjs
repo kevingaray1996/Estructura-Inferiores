@@ -28,7 +28,8 @@ export async function montar({ tipos, eventos = [] } = {}) {
       update(d){assert.equal(tabla,'analisis_eventos');cambios=d;return q},
       single(){
         if(cambios){actualizaciones.push({id:filtro.id,...cambios});const fila={...datos.analisis_eventos.find(e=>e.id===filtro.id),...cambios};datos.analisis_eventos=datos.analisis_eventos.map(e=>e.id===fila.id?fila:e);return Promise.resolve({data:fila,error:null})}
-        writes.push(registro);return new Promise(resolve=>{estado.resolverInsert=()=>{datos.analisis_eventos.push(registro);resolve({data:registro})}})},
+        // El insert queda esperando: el test decide si se guarda (resolver) o si falla la red (fallar).
+        writes.push(registro);return new Promise(resolve=>{estado.resolverInsert=()=>{datos.analisis_eventos.push(registro);resolve({data:registro})};estado.fallarInsert=(error)=>resolve({data:null,error})})},
       then(resolve,reject){
         if(borrar){borrados.push(filtro.id);datos.analisis_eventos=datos.analisis_eventos.filter(e=>e.id!==filtro.id);return Promise.resolve({error:null}).then(resolve,reject)}
         lecturas[tabla]=(lecturas[tabla]||0)+1;return Promise.resolve({data:structuredClone(datos[tabla] || [])}).then(resolve,reject)}}
@@ -52,6 +53,9 @@ export async function montar({ tipos, eventos = [] } = {}) {
   const h={
     act, dom, datos, writes, borrados, actualizaciones, lecturas, boton,
     resolver:async()=>act(async()=>estado.resolverInsert()),
+    fallar:async(error={message:'TypeError: Failed to fetch'})=>act(async()=>estado.fallarInsert(error)),
+    // Tecla en la ventana principal (los atajos escuchan en window).
+    tecla:async(key,extra={})=>act(()=>{dom.window.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key,bubbles:true,cancelable:true,...extra}))}),
     click:async t=>presionar(boton(t),t),
     // Botón de una acción de la botonera rápida.
     tipo:t=>document.querySelector(`[data-tipo-rapido="${t}"]`),

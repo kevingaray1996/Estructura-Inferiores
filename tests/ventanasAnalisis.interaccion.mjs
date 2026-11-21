@@ -63,12 +63,14 @@ test('Análisis: dos ventanas, un reproductor, comandos confirmados y un guardad
     assert.equal(activo(),original);assert.match(remoto().body.textContent,/Etiquetado rápido/)
     assert.ok(![...document.querySelectorAll('h2')].some(h=>h.textContent==='Etiquetado rápido'))
     await click(remoto(),'Pase +')
-    await act(()=>{const b=boton(remoto(),'Ana Prueba');b.click();b.click()})
+    // Etiquetado sin esperas (2026-11-20): cada toque cuenta; acá un solo toque.
+    await act(()=>{const b=boton(remoto(),'Ana Prueba');b.click()})
     assert.equal(writes.length,1);assert.equal(writes[0].segundo,125);assert.equal(writes[0].partido_id,'p1');assert.equal(writes[0].jugador_id,'j')
     await act(async()=>resolverInsert());assert.match(document.body.textContent,/Acciones registradas \(1\)/)
     await click(remoto(),'▶ Reproducir');assert.equal(activo().state,1)
     await click(main(),'Ⅱ Pausar');assert.equal(activo().state,2);assert.match(remoto().body.textContent,/Reproducir/)
-    await click(remoto(),'+5 s');assert.ok(boton(remoto(),'Ana Prueba').disabled);assert.equal(writes.length,1)
+    // Mientras YouTube confirma el salto, etiquetar sigue disponible (se usa el segundo al que se saltó).
+    await click(remoto(),'+5 s');assert.equal(boton(remoto(),'Ana Prueba').disabled,false);assert.equal(writes.length,1)
     await act(()=>activo().confirmarSalto());await tick();assert.equal(activo().time,130)
     const velocidad=[...remoto().querySelectorAll('select')].find(s=>s.parentElement.textContent.includes('Velocidad'))
     await cambio(velocidad,'2');assert.equal(activo().rate,2)

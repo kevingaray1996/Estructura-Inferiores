@@ -1,0 +1,81 @@
+/* Etiquetado de Análisis: atajos, aviso corto, estado de guardado y tramos sin acciones.
+   Colores solo desde los tokens de apariencia.css. */
+
+.et-tecla {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 1.5rem; height: 1.5rem; padding: 0 .35rem;
+  border: 1px solid var(--ui-borde); border-radius: 6px; background: var(--ui-superficie-alternativa);
+  color: var(--ui-texto); font: 700 .75rem/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* Botón de la botonera que se acaba de usar (clic o tecla). */
+.et-iluminado { animation: et-destello .45s ease-out; }
+@keyframes et-destello {
+  from { box-shadow: 0 0 0 3px var(--ui-acento); background-color: color-mix(in srgb, var(--ui-acento) 30%, transparent); }
+  to { box-shadow: 0 0 0 0 transparent; }
+}
+
+.et-indicador {
+  display: flex; align-items: center; gap: .5rem; margin-bottom: .75rem; font-size: .8125rem; color: var(--ui-texto-secundario);
+}
+.et-indicador-punto { width: .625rem; height: .625rem; border-radius: 50%; background: var(--ui-acento); flex: none; }
+.et-indicador[data-estado='pausados'] .et-indicador-punto { background: var(--ui-borde); }
+.et-indicador[data-estado='pausados'] { color: var(--ui-texto); font-weight: 700; }
+.et-indicador-ayuda {
+  margin-left: auto; min-width: 44px; min-height: 44px; border: 1px solid var(--ui-borde); border-radius: 8px;
+  background: var(--ui-superficie); color: var(--ui-texto); font-weight: 900;
+}
+
+.et-aviso { position: fixed; left: 50%; bottom: 1.25rem; transform: translateX(-50%); z-index: 60; pointer-events: none; }
+.et-aviso-texto {
+  display: inline-block; padding: .5rem .9rem; border-radius: 999px; background: var(--ui-acento); color: var(--ui-texto-sobre-acento);
+  font-weight: 900; font-size: .9375rem; box-shadow: 0 6px 18px rgb(0 0 0 / .25); animation: et-aviso 1.6s ease-out forwards;
+}
+@keyframes et-aviso { 0% { opacity: 0; transform: translateY(6px); } 12%, 75% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+
+/* Estado de guardado en la lista de acciones. */
+.et-guardado { display: inline-flex; align-items: center; gap: .375rem; font-size: .75rem; font-weight: 700; }
+.et-guardado[data-estado='enviando'], .et-guardado[data-estado='pendiente'] { color: var(--ui-texto-secundario); }
+.et-guardado[data-estado='error'], .et-guardado[data-estado='rechazada'] { color: var(--ui-peligro); }
+.et-fila-pendiente { border-style: dashed !important; }
+
+.et-alerta-cola {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; margin-top: .75rem; padding: .625rem .75rem;
+  border: 1px solid var(--ui-peligro); border-radius: 8px; background: var(--ui-superficie); color: var(--ui-texto); font-size: .875rem;
+}
+
+.et-boton {
+  min-height: 44px; padding: .4rem .75rem; border: 1px solid var(--ui-borde); border-radius: 8px;
+  background: var(--ui-superficie); color: var(--ui-texto); font-size: .8125rem; font-weight: 700;
+}
+.et-boton:disabled { opacity: .45; }
+.et-boton[aria-pressed='true'] { border-color: var(--ui-acento); box-shadow: inset 0 0 0 1px var(--ui-acento); }
+
+.et-ayuda {
+  margin-top: .75rem; padding: .875rem; border: 1px solid var(--ui-acento); border-radius: 10px; background: var(--ui-superficie); color: var(--ui-texto);
+}
+.et-ayuda-encabezado { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.et-ayuda-encabezado h3 { margin: 0; font-size: 1rem; font-weight: 900; }
+.et-ayuda-nota, .et-ayuda-estado { margin: .5rem 0; font-size: .8125rem; color: var(--ui-texto-secundario); }
+.et-ayuda-subtitulo { margin: .75rem 0 .25rem; font-size: .875rem; font-weight: 900; }
+.et-ayuda-lista { display: grid; gap: .25rem; margin: .5rem 0; padding: 0; list-style: none; }
+.et-ayuda-fila { display: flex; align-items: center; gap: .75rem; min-height: 2.75rem; }
+.et-ayuda-fila dt, .et-ayuda-fila dd { margin: 0; }
+.et-ayuda-accion { flex: 1; min-width: 0; font-size: .875rem; }
+.et-ayuda kbd {
+  display: inline-flex; min-width: 2rem; justify-content: center; padding: .25rem .4rem; border: 1px solid var(--ui-borde);
+  border-radius: 6px; background: var(--ui-superficie-alternativa); font: 700 .8125rem/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.et-ayuda kbd[data-vacia] { color: var(--ui-texto-secundario); }
+
+.et-tramos { margin-bottom: 1rem; padding: .625rem .75rem; border: 1px solid var(--ui-borde); border-radius: 8px; background: var(--ui-superficie); }
+.et-tramos summary { cursor: pointer; font-weight: 900; min-height: 2.75rem; display: flex; align-items: center; }
+.et-tramos-umbral { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: .5rem 0; font-size: .8125rem; color: var(--ui-texto-secundario); }
+.et-tramos-umbral select { min-height: 44px; border: 1px solid var(--ui-borde); border-radius: 8px; background: var(--ui-superficie-alternativa); color: var(--ui-texto); padding: 0 .5rem; }
+.et-tramos-lista { display: grid; gap: .25rem; margin: 0; padding: 0; list-style: none; }
+.et-tramos-lista li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; font-size: .875rem; }
+.et-tramos-vacio { margin: .25rem 0; font-size: .8125rem; color: var(--ui-texto-secundario); }
+
+@media (prefers-reduced-motion: reduce) {
+  .et-iluminado { animation: none; outline: 3px solid var(--ui-acento); outline-offset: 1px; }
+  .et-aviso-texto { animation: none; }
+}
