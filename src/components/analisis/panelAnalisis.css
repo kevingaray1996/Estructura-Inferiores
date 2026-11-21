@@ -8,7 +8,8 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
 }
-.az-split-barra, .az-split-abajo { grid-column: 1 / -1; }
+/* Video + panel juntos: el video fijo no puede salir de este bloque, así no tapa el mapa de abajo. */
+.az-split-arriba { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; min-width: 0; }
 .az-split-abajo { display: grid; gap: 1.25rem; min-width: 0; }
 
 /* Video */
@@ -98,14 +99,14 @@
 
 /* Compu: video a la izquierda, fijo mientras se recorre el panel; panel con pestañas a la derecha. */
 @media (min-width: 1024px) {
-  .az-split { grid-template-columns: minmax(0, 1.35fr) minmax(360px, 1fr); align-items: start; }
+  .az-split-arriba { grid-template-columns: minmax(0, 1.35fr) minmax(360px, 1fr); align-items: start; }
   .az-split-video {
     position: sticky; top: calc(var(--az-alto-barra) + 1rem);
     padding: 1rem; border: 1px solid var(--ui-compartido-borde); border-radius: .75rem;
     background: var(--analisis-panel);
   }
   /* Con el reproductor en otra ventana, el panel usa todo el ancho. */
-  .az-split[data-modo='reproductor'] { grid-template-columns: minmax(0, 1fr); }
+  .az-split[data-modo='reproductor'] .az-split-arriba { grid-template-columns: minmax(0, 1fr); }
   .az-split[data-modo='reproductor'] .az-split-video { display: none; }
   .az-botonera { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .az-split-abajo { grid-template-columns: minmax(0, 1.35fr) minmax(300px, 1fr); align-items: start; }

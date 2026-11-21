@@ -2192,6 +2192,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
             <div className="az-split" data-modo={ventanas.modo || 'integrado'}>
               <div className="analisis-ventanas az-split-barra">{barraVentanas}</div>
 
+              {/* Video + panel en su propio bloque: el video queda fijo solo mientras se recorre el panel. */}
+              <div className="az-split-arriba">
               <div className="az-split-video">
                 <ZonaVentanaAnalisis tipo="reproductor" ventana={ventanas} encabezado={encabezadoVentana}>
                 <div className="az-video-marco">
@@ -3024,6 +3026,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                   )}
                 </div>
               </section>
+              </div>
 
               <div className="az-split-abajo">
                 <Panel>
