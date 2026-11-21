@@ -60,7 +60,7 @@ test('Cinco vistas internas y editores de pases con datos simulados, sin consult
       assert.match(html, /Rival de prueba/, vista)
       if (vista === 'video') {assert.match(html, /<iframe/); assert.match(html, /abc123def45/); assert.match(html, /Pase/)}
       if (vista === 'explorador') {assert.match(html, /Destinataria/); assert.match(html, /Abrir el video en este momento/)}
-      if (vista === 'mapa') {assert.match(html, /Mapa de acciones/); assert.match(html, /Ataque →/); assert.doesNotMatch(html, /#176344/)}
+      if (vista === 'mapa') {assert.match(html, /ma-titulo-partido/); assert.match(html, /vs Rival de prueba/); assert.match(html, /Ataque →/); assert.match(html, /Capa · /); assert.doesNotMatch(html, /#176344/)}
       if (vista === 'informe') {assert.match(html, /id="informe-imprimible"/); assert.match(html, /@media print/); assert.match(html, /Informe técnico de partido/)}
     }
     const props = {evento, partido: p, autora: 'Ana Prueba', puedeEditar: true, onClose() {}, onVideo() {}, renderCancha: (props) => createElement(mod.CanchaInteractiva, props)}

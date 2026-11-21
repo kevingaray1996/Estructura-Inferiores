@@ -1224,6 +1224,26 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   }, [alcanceMapa, marcasPanel, marcasTodos, partidoId, marcasPartido])
   const jugadorasPorId = useMemo(() => new Map(jugadoras.map((j) => [j.id, j])), [jugadoras])
   const nombreJugadoraPorId = useCallback((id) => (id && jugadorasPorId.has(id) ? nombreJugadora(jugadorasPorId.get(id)) : ''), [jugadorasPorId])
+  // Receptora de un pase para la ficha del mapa (de la tabla de detalles de pases).
+  const receptoraDe = useCallback((evento) => {
+    const detalle = resumenDestinatarias.detalles?.[evento.id]
+    if (!detalle) return ''
+    if (detalle.destinataria_id) {
+      return resumenDestinatarias.nombres?.[detalle.destinataria_id] || nombreJugadoraPorId(detalle.destinataria_id) || 'receptora identificada'
+    }
+    if (detalle.destinataria_estado === 'desconocida') return 'receptora desconocida'
+    if (detalle.destinataria_estado === 'no_observable') return 'no se ve la receptora'
+    return ''
+  }, [resumenDestinatarias.detalles, resumenDestinatarias.nombres, nombreJugadoraPorId])
+  // Título del mapa: «Fecha 12 · vs Rival» cuando se mira un solo partido.
+  const encabezadoMapa = useMemo(() => {
+    const id = alcanceMapa === 'acumulado' ? (filtroMapaPartido === 'todos' ? null : filtroMapaPartido) : partidoId
+    const partido = id ? partidosPorId.get(id) : null
+    if (!partido) return null
+    const calendario = partido.partido_calendario || partidosCalendario.find((p) => p.id === partido.partido_calendario_id)
+    const numero = calendario?.numero_fecha
+    return { antes: numero ? `Fecha ${numero}` : (calendario?.fecha || partido.fecha ? fechaLegible(calendario?.fecha || partido.fecha) : ''), rival: partido.rival || 'Rival sin nombre' }
+  }, [alcanceMapa, filtroMapaPartido, partidoId, partidosPorId, partidosCalendario])
   const estadoPasesMapa = useMemo(() => ({
     cargando: resumenDestinatarias.cargando, error: resumenDestinatarias.error,
     reintentar: () => setRecargaDestinatarias((n) => n + 1),
@@ -3008,7 +3028,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
               <div className="az-split-abajo">
                 <Panel>
                   <MapaAcciones compacto titulo="Mapa del partido" eventos={eventosPartido} partidos={partidosPorId} marcas={marcasPanel}
-                    detallesPases={resumenDestinatarias.detalles} nombreJugadora={nombreJugadoraPorId} etiquetaTipo={etiquetaTipo}
+                    detallesPases={resumenDestinatarias.detalles} nombreJugadora={nombreJugadoraPorId} etiquetaTipo={etiquetaTipo} receptoraDe={receptoraDe}
                     estadoPases={estadoPasesMapa}
                     onVideo={(evento) => { setSegundoIr(String(evento.segundo)); irAlSegundo(evento.segundo) }} />
                 </Panel>
@@ -3074,8 +3094,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
           {seccion === 'mapa' && (
             <Panel>
-              <MapaAcciones titulo="Mapa de acciones" eventos={eventosMapa} partidos={partidosPorId} marcas={marcasMapa}
-                detallesPases={resumenDestinatarias.detalles} nombreJugadora={nombreJugadoraPorId} etiquetaTipo={etiquetaTipo}
+              <MapaAcciones titulo="Mapa de acciones" encabezado={encabezadoMapa} eventos={eventosMapa} partidos={partidosPorId} marcas={marcasMapa}
+                detallesPases={resumenDestinatarias.detalles} nombreJugadora={nombreJugadoraPorId} etiquetaTipo={etiquetaTipo} receptoraDe={receptoraDe}
                 estadoPases={estadoPasesMapa} onVideo={abrirEventoEnVideo} onDestinoPase={(evento) => setPaseDestinoId(evento.id)}
                 masFiltros={<>
                   <div className="ma-segmento" role="group" aria-label="Partidos">

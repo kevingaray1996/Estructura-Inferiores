@@ -1,41 +1,25 @@
-/* Mapa de acciones de Análisis. Colores solo desde los tokens de apariencia.css (--ui-*, --analisis-*, --mapa-*). */
+/* Mapa de acciones de Análisis. Colores solo desde los tokens de apariencia.css (--ui-*, --analisis-*, --mapa-*).
+   Referencia visual: docs/bocetos/Boceto_mapa_analisis.png (letra angosta del club, botones en mayúscula). */
 
 .ma { display: grid; gap: .75rem; min-width: 0; }
 .ma-cabecera { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
 .ma-titulo { min-width: 0; font-size: 1.125rem; font-weight: 800; line-height: 1.2; }
-.ma-cabecera-acciones { display: flex; align-items: center; gap: .25rem; }
-
-.ma-info {
-  width: 44px; height: 44px; border-radius: 999px; border: 1px solid var(--ui-compartido-borde);
-  background: var(--analisis-control); color: var(--ui-compartido-texto);
-  font: 700 1rem/1 Georgia, 'Times New Roman', serif; font-style: italic;
+.ma-titulo-partido {
+  min-width: 0; font: italic 800 clamp(1.75rem, 5vw, 2.75rem)/1 var(--fuente-titulo);
+  text-transform: uppercase; letter-spacing: -.01em; color: var(--ui-compartido-texto);
 }
-.ma-info[aria-expanded='true'] { background: var(--ui-acento); border-color: var(--ui-acento); color: var(--ui-texto-sobre-acento); }
-.ma-ayuda {
-  padding: .75rem 1rem; border: 1px solid var(--ui-compartido-borde); border-radius: .5rem;
-  background: var(--analisis-control); font-size: .8125rem; line-height: 1.5; color: var(--ui-compartido-texto);
-}
-.ma-ayuda ul { display: grid; gap: .25rem; padding-left: 1rem; list-style: disc; }
+.ma-titulo-rival { color: var(--ui-texto-acento); }
 
-/* Filtros */
-.ma-filtros { display: grid; gap: .625rem; }
-.ma-capas { display: flex; gap: .375rem; overflow-x: auto; scrollbar-width: none; margin-inline: -.25rem; padding: .125rem .25rem; }
-.ma-capas::-webkit-scrollbar { display: none; }
+/* Filtros: una fila de botones; en el celular bajan solos. */
+.ma-filtros { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.25rem; }
+.ma-grupo { display: flex; flex-wrap: wrap; gap: .375rem; }
 .ma-chip {
   flex: none; min-height: 40px; padding: 0 .875rem; border: 1px solid var(--ui-compartido-borde); border-radius: 999px;
-  background: var(--analisis-control); color: var(--ui-compartido-texto); font-size: .875rem; font-weight: 700;
+  background: var(--analisis-control); color: var(--ui-compartido-texto);
+  font: 700 .9375rem/1 var(--fuente-titulo); text-transform: uppercase; letter-spacing: .06em;
 }
 .ma-chip[aria-pressed='true'] { background: var(--ui-acento); border-color: var(--ui-acento); color: var(--ui-texto-sobre-acento); }
-.ma-controles { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .5rem .75rem; }
-.ma-control { display: grid; gap: .25rem; }
-.ma-control-etiqueta { font-size: .75rem; font-weight: 700; color: var(--ui-compartido-secundario); }
-.ma-segmento { display: inline-flex; border: 1px solid var(--ui-compartido-borde); border-radius: .5rem; overflow: hidden; }
-.ma-segmento button {
-  min-width: 44px; min-height: 40px; padding: 0 .75rem; font-size: .8125rem; font-weight: 800;
-  background: var(--analisis-control); color: var(--ui-compartido-secundario);
-}
-.ma-segmento button + button { border-left: 1px solid var(--ui-compartido-borde); }
-.ma-segmento button[aria-pressed='true'] { background: var(--ui-acento); color: var(--ui-texto-sobre-acento); }
+@media (hover: hover) { .ma-chip:not([aria-pressed='true']):hover { border-color: var(--ui-compartido-secundario); } }
 
 .ma-interruptor {
   display: inline-flex; align-items: center; gap: .5rem; min-height: 40px; padding: 0 .25rem;
@@ -55,8 +39,15 @@
 .ma-mas { border: 1px solid var(--ui-compartido-borde); border-radius: .5rem; }
 .ma-mas > summary { min-height: 44px; display: flex; align-items: center; padding: 0 .75rem; font-size: .8125rem; font-weight: 800; cursor: pointer; }
 .ma-mas-cuerpo { display: grid; gap: .75rem; padding: 0 .75rem .75rem; }
+.ma-segmento { display: inline-flex; border: 1px solid var(--ui-compartido-borde); border-radius: .5rem; overflow: hidden; }
+.ma-segmento button {
+  min-width: 44px; min-height: 40px; padding: 0 .75rem; font-size: .8125rem; font-weight: 800;
+  background: var(--analisis-control); color: var(--ui-compartido-secundario);
+}
+.ma-segmento button + button { border-left: 1px solid var(--ui-compartido-borde); }
+.ma-segmento button[aria-pressed='true'] { background: var(--ui-acento); color: var(--ui-texto-sobre-acento); }
 
-.ma-chip:focus-visible, .ma-segmento button:focus-visible, .ma-info:focus-visible, .ma-interruptor:focus-visible,
+.ma-chip:focus-visible, .ma-segmento button:focus-visible, .ma-ayuda-boton:focus-visible, .ma-interruptor:focus-visible,
 .ma-boton-texto:focus-visible, .ma-primario:focus-visible, .ma-cerrar:focus-visible, .ma-enlace:focus-visible, .ma-mas > summary:focus-visible {
   outline: 2px solid var(--ui-foco); outline-offset: 2px;
 }
@@ -72,14 +63,34 @@
 .ma-enlace { min-height: 0; padding: 0; text-decoration: underline; }
 
 /* Cuerpo: cancha y resumen (al costado en pantallas anchas, abajo en el celular). */
-.ma-cuerpo { display: grid; gap: 1rem; min-width: 0; }
+.ma-cuerpo { display: grid; gap: 1.25rem; min-width: 0; }
 .ma-principal { display: grid; gap: .5rem; min-width: 0; }
 @media (min-width: 1024px) {
-  .ma:not([data-compacto]) .ma-cuerpo { grid-template-columns: minmax(0, 1fr) 17rem; align-items: start; }
+  .ma:not([data-compacto]) .ma-cuerpo { grid-template-columns: minmax(0, 1fr) 18rem; align-items: start; }
 }
 
-.ma-direccion { display: flex; justify-content: space-between; align-items: baseline; font-size: .75rem; color: var(--ui-compartido-secundario); }
-.ma-direccion strong { font-family: var(--fuente-titulo); font-size: 1rem; letter-spacing: .02em; color: var(--ui-texto-acento); }
+/* «Ataque →» adentro de la cancha, arriba a la derecha. */
+.ma-ataque {
+  position: absolute; z-index: 1; top: .5rem; right: .75rem; pointer-events: none;
+  font: 700 .75rem/1 var(--fuente-titulo); text-transform: uppercase; letter-spacing: .14em; color: var(--mapa-texto); opacity: .75;
+}
+
+/* Pie de la cancha: leyenda a la izquierda, ayuda a la derecha. */
+.ma-pie { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .25rem 1rem; }
+.ma-ayuda-boton {
+  display: inline-flex; align-items: center; gap: .375rem; min-height: 40px; padding: 0 .25rem; margin-left: auto;
+  font-size: .8125rem; color: var(--ui-compartido-secundario); background: none;
+}
+.ma-ayuda-boton[aria-expanded='true'] { color: var(--ui-compartido-texto); }
+.ma-ayuda-icono {
+  display: inline-grid; place-items: center; width: 1rem; height: 1rem; border: 1px solid currentColor; border-radius: 999px;
+  font: italic 700 .6875rem/1 Georgia, 'Times New Roman', serif;
+}
+.ma-ayuda {
+  padding: .75rem 1rem; border: 1px solid var(--ui-compartido-borde); border-radius: .5rem;
+  background: var(--analisis-control); font-size: .8125rem; line-height: 1.5; color: var(--ui-compartido-texto);
+}
+.ma-ayuda ul { display: grid; gap: .25rem; padding-left: 1rem; list-style: disc; }
 
 .ma-lienzo { position: relative; border-radius: .625rem; background: var(--mapa-cesped); }
 .ma-principal[data-media] > * { width: 100%; max-width: 26rem; justify-self: center; }
@@ -122,9 +133,13 @@
 .ma-punta[data-calidad='mal'] { fill: var(--mapa-mal); }
 .ma-origen[data-calidad='bien'] { fill: var(--mapa-bien); }
 .ma-origen[data-calidad='mal'] { fill: var(--mapa-mal); }
-.ma-marca[data-elegida] .ma-flecha { stroke-width: .6; stroke-opacity: 1; }
+/* El pase elegido, en blanco y más grueso (como en el boceto). */
+.ma-flecha[data-calidad='elegida'] { stroke: var(--mapa-seleccion); stroke-width: .6; stroke-opacity: 1; }
+.ma-punta[data-calidad='elegida'], .ma-origen[data-calidad='elegida'] { fill: var(--mapa-seleccion); }
 
+/* Calor: amarillo; en Pérdidas, rojo (dónde perdemos la pelota). */
 .ma-calor { fill: var(--mapa-bien); }
+.ma-calor-capa[data-tono='mal'] .ma-calor { fill: var(--mapa-mal); }
 .ma-tercio { fill: var(--mapa-bien); }
 .ma-tercio-pct { fill: var(--mapa-texto); font: 700 7px var(--fuente-titulo); text-anchor: middle; }
 .ma-tercio-detalle { fill: var(--mapa-texto); font: 600 2.4px var(--fuente-texto); text-anchor: middle; opacity: .85; }
@@ -133,7 +148,7 @@
 /* Ficha al tocar un punto: flotando junto al punto; en el celular, abajo de la cancha. */
 .ma-ficha {
   position: absolute; z-index: 2; left: var(--ma-x); top: var(--ma-y); width: 15rem; max-width: calc(100% - 1rem);
-  padding: .75rem; border: 1px solid var(--ui-compartido-borde); border-radius: .5rem;
+  padding: .75rem .875rem .875rem; border: 1px solid var(--ui-compartido-borde); border-top: 3px solid var(--ui-acento); border-radius: .5rem;
   background: var(--analisis-panel); color: var(--ui-compartido-texto);
   box-shadow: 0 8px 24px color-mix(in srgb, var(--marca-negro, #000) 45%, transparent);
 }
@@ -144,13 +159,16 @@
 }
 .ma-ficha-cabecera { display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: .9375rem; }
 .ma-cerrar { width: 36px; height: 36px; margin: -.375rem -.375rem -.375rem 0; font-size: 1.25rem; color: var(--ui-compartido-secundario); background: none; }
-.ma-ficha-datos { display: grid; gap: .25rem; margin: .5rem 0 .625rem; font-size: .8125rem; }
-.ma-ficha-datos > div { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: .5rem; }
-.ma-ficha-datos dt { color: var(--ui-compartido-secundario); }
-.ma-ficha-datos dd { font-weight: 700; overflow-wrap: anywhere; }
+.ma-ficha-titulo { font: italic 800 1.25rem/1.1 var(--fuente-titulo); text-transform: uppercase; }
+.ma-ficha-quien { margin-top: .25rem; font-size: .875rem; font-weight: 600; overflow-wrap: anywhere; }
+.ma-ficha-detalle {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .375rem; margin: .125rem 0 .625rem;
+  font-size: .8125rem; color: var(--ui-compartido-secundario); font-variant-numeric: tabular-nums;
+}
 .ma-ficha-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: .375rem; }
 .ma-primario {
-  min-height: 40px; padding: 0 .875rem; border-radius: .5rem; font-size: .8125rem; font-weight: 800;
+  min-height: 40px; padding: 0 .875rem; border-radius: .375rem;
+  font: 700 .9375rem/1 var(--fuente-titulo); text-transform: uppercase; letter-spacing: .06em;
   background: var(--ui-acento); color: var(--ui-texto-sobre-acento);
 }
 
@@ -175,27 +193,35 @@
   width: 6rem; height: .5rem; border-radius: 999px;
   background: linear-gradient(90deg, color-mix(in srgb, var(--mapa-bien) 12%, var(--mapa-cesped)), var(--mapa-bien));
 }
+.ma-escala[data-tono='mal'] { background: linear-gradient(90deg, color-mix(in srgb, var(--mapa-mal) 12%, var(--mapa-cesped)), var(--mapa-mal)); }
 
-/* Resumen */
-.ma-resumen {
-  display: grid; gap: .75rem; align-content: start; padding: .875rem; min-width: 0;
-  border: 1px solid var(--ui-compartido-borde); border-radius: .5rem; background: var(--ui-compartido-fondo);
+/* Resumen: sin caja, como columna al costado (abajo en el celular). Número grande con la letra del club. */
+.ma-resumen { display: grid; gap: 1.25rem; align-content: start; min-width: 0; }
+.ma-resumen-capa {
+  font: 700 .875rem/1.2 var(--fuente-titulo); text-transform: uppercase; letter-spacing: .14em; color: var(--ui-compartido-secundario);
 }
-.ma-resumen-titulo { font-size: 1rem; line-height: 1.35; font-variant-numeric: tabular-nums; }
-.ma-resumen-titulo strong { font-weight: 800; }
-.ma-resumen-titulo span { color: var(--ui-compartido-secundario); font-weight: 600; }
-.ma-resumen-extras { display: grid; gap: .375rem; font-size: .8125rem; }
-.ma-resumen-extras > div { display: grid; gap: .0625rem; }
-.ma-resumen-extras dt { font-size: .75rem; color: var(--ui-compartido-secundario); }
-.ma-resumen-extras dd { font-variant-numeric: tabular-nums; color: var(--ui-compartido-secundario); }
-.ma-resumen-extras dd strong { font-size: .9375rem; color: var(--ui-compartido-texto); }
-.ma-top-titulo { margin-bottom: .375rem; font-size: .75rem; font-weight: 700; color: var(--ui-compartido-secundario); }
+.ma-resumen-capa strong { font-weight: 700; color: var(--ui-texto-acento); }
+.ma-resumen-grande {
+  font: italic 800 clamp(3.5rem, 9vw, 5rem)/.9 var(--fuente-titulo); letter-spacing: -.02em;
+  color: var(--ui-texto-acento); font-variant-numeric: tabular-nums;
+}
+.ma-resumen-bajada {
+  margin-top: .5rem; font: 700 .875rem/1.2 var(--fuente-titulo); text-transform: uppercase; letter-spacing: .12em;
+  color: var(--ui-compartido-secundario); font-variant-numeric: tabular-nums;
+}
+.ma-resumen-filas { display: grid; border-top: 1px solid var(--ui-compartido-borde); }
+.ma-resumen-filas > div {
+  display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; padding: .5rem 0;
+  border-bottom: 1px solid var(--ui-compartido-borde); font-size: .875rem;
+}
+.ma-resumen-filas dt { color: var(--ui-compartido-secundario); }
+.ma-resumen-filas dd { font: 700 1.125rem/1 var(--fuente-titulo); color: var(--ui-compartido-texto); font-variant-numeric: tabular-nums; }
+.ma-resumen-filas > div[data-nota] dt, .ma-resumen-filas > div[data-nota] dd { font: 400 .75rem/1.3 var(--fuente-texto); color: var(--ui-compartido-secundario); }
+.ma-top { display: grid; gap: .5rem; }
 .ma-top ol { display: grid; gap: .375rem; }
-.ma-top li { display: grid; grid-template-columns: minmax(0, 1fr) 4rem 1.75rem; align-items: center; gap: .5rem; font-size: .8125rem; }
-.ma-top-nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-.ma-top-barra { height: 4px; border-radius: 999px; background: var(--analisis-activo); overflow: hidden; }
-.ma-top-barra > span { display: block; height: 100%; border-radius: 999px; background: var(--ui-acento); }
-.ma-top-total { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ma-top li { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; font-size: .875rem; }
+.ma-top-nombre { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ma-top-total { font: 700 1.125rem/1 var(--fuente-titulo); color: var(--ui-texto-acento); font-variant-numeric: tabular-nums; }
 
 /* Lista (también es la forma de recorrer las acciones con el teclado) */
 .ma-lista { max-height: 28rem; overflow: auto; border: 1px solid var(--ui-compartido-borde); border-radius: .5rem; }
@@ -208,4 +234,14 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ma-interruptor-riel, .ma-interruptor-riel > span { transition: none; }
+}
+
+/* En el panel del video (compacto) el número grande es más chico. */
+.ma[data-compacto] .ma-resumen-grande { font-size: 3rem; }
+
+/* Celular: botones algo más chicos para que los filtros entren en menos filas (siguen con 36px de alto para el dedo). */
+@media (max-width: 639px) {
+  .ma-filtros { gap: .375rem .75rem; }
+  .ma-grupo { gap: .25rem; }
+  .ma-chip { min-height: 36px; padding: 0 .625rem; font-size: .8125rem; letter-spacing: .04em; }
 }

@@ -202,46 +202,67 @@ function masAcciones(acciones, nombreDe, cuantas = 3) {
     .map(([id, total]) => ({ id, nombre: nombreDe ? nombreDe(id) : String(id), total }))
 }
 
-// Resumen de la capa elegida: título con el número principal, datos extra y las jugadoras con más acciones.
+// Dirección de un pase en metros, atacando a la derecha: 'adelante' | 'atras' | 'lateral'
+// (adelante o atrás si avanza más a lo largo que a lo ancho; si no, lateral).
+export function direccionPase(origen, destino) {
+  if (!origen || !destino) return null
+  const dx = ((destino.x - origen.x) / 100) * LARGO, dy = ((destino.y - origen.y) / 100) * ANCHO
+  if (Math.abs(dx) <= Math.abs(dy)) return 'lateral'
+  return dx > 0 ? 'adelante' : 'atras'
+}
+// Al último tercio: termina en el tercio ofensivo y arranca fuera de él.
+export const alUltimoTercio = (origen, destino) => Boolean(origen && destino && origen.x < 200 / 3 && destino.x >= 200 / 3)
+
+// Resumen de la capa elegida: un número grande con su bajada, filas de detalle y las jugadoras con más acciones.
 export function resumenCapa(acciones, capa, nombreDe) {
   const total = acciones.length
   const juzgadas = acciones.filter((a) => a.calidad !== 'neutro')
-  const pctBien = porcentaje(juzgadas.filter((a) => a.calidad === 'bien').length, juzgadas.length)
-  const enCampoRival = acciones.filter((a) => a.punto && a.punto.x >= 50).length
-  const enCampoPropio = acciones.filter((a) => a.punto && a.punto.x < 50).length
-  const extras = []
-  let titulo, destacado, tituloTop = 'Más acciones'
+  const bien = juzgadas.filter((a) => a.calidad === 'bien').length
+  const conPct = (palabra) => (juzgadas.length
+    ? { grande: `${porcentaje(bien, juzgadas.length)}%`, bajada: `${palabra} · ${bien} de ${juzgadas.length}` }
+    : { grande: String(total), bajada: 'Sin resultado cargado' })
+  const filas = []
+  let titulo, numero, tituloTop = 'Más acciones'
   if (capa === 'pases') {
-    titulo = 'Pases'; destacado = juzgadas.length ? `${pctBien}% correctos` : null
+    titulo = 'Pases'; numero = conPct('Correctos'); tituloTop = 'Más pases'
     const conDestino = acciones.filter((a) => a.destino)
-    const progresivos = conDestino.filter((a) => esProgresivo(a.punto, a.destino))
-    extras.push({ etiqueta: 'Progresivos', valor: `${progresivos.length}`,
-      detalle: `${progresivos.filter((a) => a.calidad === 'bien').length} llegaron` })
-    if (conDestino.length < total) extras.push({ etiqueta: 'Con destino cargado', valor: `${conDestino.length} de ${total}`, detalle: 'solo esos tienen flecha' })
-    tituloTop = 'Más pases'
+    const direcciones = conDestino.map((a) => direccionPase(a.punto, a.destino))
+    filas.push(
+      { etiqueta: 'Progresivos', valor: conDestino.filter((a) => esProgresivo(a.punto, a.destino)).length },
+      { etiqueta: 'Hacia atrás', valor: direcciones.filter((d) => d === 'atras').length },
+      { etiqueta: 'Laterales', valor: direcciones.filter((d) => d === 'lateral').length },
+      { etiqueta: 'Al último tercio', valor: conDestino.filter((a) => alUltimoTercio(a.punto, a.destino)).length },
+    )
+    if (conDestino.length < total) filas.push({ etiqueta: 'Con destino cargado', valor: `${conDestino.length} de ${total}`, nota: true })
   } else if (capa === 'remates') {
-    titulo = 'Remates'
-    const goles = acciones.filter((a) => a.remate === 'gol').length
+    titulo = 'Remates'; tituloTop = 'Más remates'
     const alArco = acciones.filter((a) => ['gol', 'arco'].includes(a.remate)).length
-    destacado = `${alArco} al arco · ${goles} ${goles === 1 ? 'gol' : 'goles'}`
-    extras.push({ etiqueta: 'Afuera o bloqueados', valor: `${acciones.filter((a) => a.remate === 'afuera').length}` })
-    tituloTop = 'Más remates'
+    numero = { grande: String(total), bajada: `Remates · ${alArco} al arco` }
+    filas.push(
+      { etiqueta: 'Goles', valor: acciones.filter((a) => a.remate === 'gol').length },
+      { etiqueta: 'Al arco (con los goles)', valor: alArco },
+      { etiqueta: 'Afuera o bloqueados', valor: acciones.filter((a) => a.remate === 'afuera').length },
+    )
   } else if (capa === 'duelos') {
-    titulo = 'Duelos'; destacado = juzgadas.length ? `${pctBien}% ganados` : null
-    tituloTop = 'Más duelos'
+    titulo = 'Duelos'; numero = conPct('Ganados'); tituloTop = 'Más duelos'
   } else if (capa === 'recuperaciones') {
-    titulo = 'Recuperaciones'; destacado = `${enCampoRival} en campo rival`
-    tituloTop = 'Más recuperaciones'
+    titulo = 'Recuperaciones'; tituloTop = 'Más recuperaciones'
+    numero = { grande: String(total), bajada: 'Recuperaciones' }
+    filas.push(
+      { etiqueta: 'En campo rival', valor: acciones.filter((a) => a.punto && a.punto.x >= 50).length },
+      { etiqueta: 'En el último tercio', valor: acciones.filter((a) => a.tercio === 'Ataque').length },
+    )
   } else if (capa === 'perdidas') {
-    titulo = 'Pérdidas'; destacado = `${enCampoPropio} en nuestro campo`
+    titulo = 'Pérdidas'; tituloTop = 'Más pérdidas'
+    numero = { grande: String(total), bajada: 'Pérdidas' }
+    filas.push({ etiqueta: 'En nuestro campo', valor: acciones.filter((a) => a.punto && a.punto.x < 50).length })
     const peor = porTercio(acciones).reduce((a, b) => (b.total > a.total ? b : a), { total: 0 })
-    if (peor.total) extras.push({ etiqueta: 'Donde más perdemos', valor: NOMBRE_TERCIO[peor.tercio], detalle: `${peor.pct}%` })
-    tituloTop = 'Más pérdidas'
+    if (peor.total) filas.push({ etiqueta: 'Donde más perdemos', valor: `${NOMBRE_TERCIO[peor.tercio]} · ${peor.pct}%` })
   } else {
-    titulo = 'Acciones'; destacado = juzgadas.length ? `${pctBien}% correctas` : null
+    titulo = 'Todas'; numero = conPct('Correctas')
   }
   const sinUbicacion = acciones.filter((a) => !a.punto).length
-  return { titulo, total, destacado, extras, tituloTop, top: masAcciones(acciones, nombreDe), sinUbicacion }
+  return { titulo, total, ...numero, filas, tituloTop, top: masAcciones(acciones, nombreDe), sinUbicacion }
 }
 
 // Avisos por partido: marcas de tiempo o dirección del 1T que faltan.

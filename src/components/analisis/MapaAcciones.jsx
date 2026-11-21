@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 import {
-  CAPAS, NOMBRE_TERCIO, avisosDireccion, calor, filtrarAcciones, opcionesResultado, porTercio, prepararAcciones, resumenCapa,
+  CAPAS, NOMBRE_TERCIO, avisosDireccion, calor, esPaseMapa, esProgresivo, filtrarAcciones, opcionesResultado, porTercio, prepararAcciones, resumenCapa,
 } from '../../utils/analisis/mapaAcciones'
 import './mapaAcciones.css'
 
@@ -22,6 +22,7 @@ const ESTADO = {
 export default function MapaAcciones({
   eventos = [], partidos, marcas, detallesPases = {}, nombreJugadora = () => '', etiquetaTipo = (c) => c,
   onVideo, onDestinoPase, compacto = false, estadoPases = {}, masFiltros = null, titulo = 'Mapa de acciones',
+  encabezado = null, receptoraDe = () => '',
 }) {
   const [capa, setCapa] = useState('todas')
   const [resultado, setResultado] = useState('todas')
@@ -69,47 +70,34 @@ export default function MapaAcciones({
   return (
     <div className="ma" data-compacto={compacto ? 'si' : undefined}>
       <div className="ma-cabecera">
-        <h2 className="ma-titulo">{titulo}</h2>
-        <div className="ma-cabecera-acciones">
-          <button type="button" className="ma-boton-texto" aria-pressed={lista} onClick={() => setLista((v) => !v)}>
-            {lista ? 'Ver la cancha' : `Ver lista (${filtradas.length})`}
-          </button>
-          <button type="button" className="ma-info" aria-expanded={ayuda} aria-controls={`${prefijo}-ayuda`}
-            aria-label="Cómo leer el mapa" title="Cómo leer el mapa" onClick={() => setAyuda((v) => !v)}>i</button>
-        </div>
+        {encabezado?.rival
+          ? (
+            <h2 className="ma-titulo-partido">
+              {encabezado.antes && <>{encabezado.antes} · </>}
+              <span className="ma-titulo-rival">vs {encabezado.rival}</span>
+            </h2>
+          )
+          : <h2 className="ma-titulo">{titulo}</h2>}
+        <button type="button" className="ma-boton-texto" aria-pressed={lista} onClick={() => setLista((v) => !v)}>
+          {lista ? 'Ver la cancha' : `Ver lista (${filtradas.length})`}
+        </button>
       </div>
-      {ayuda && (
-        <div id={`${prefijo}-ayuda`} className="ma-ayuda" role="note">
-          <ul>
-            <li>Siempre atacamos hacia la derecha. El 2T se da vuelta solo.</li>
-            <li>Amarillo: salió bien. Rojo punteado: salió mal. Gris: sin resultado.</li>
-            <li>Tocá un punto para ver quién fue, en qué minuto, y abrir el video.</li>
-            <li>Calor: dónde se juntan más acciones. Zonas: qué parte pasó en cada tercio.</li>
-            <li>Pase progresivo: el que acerca la pelota al arco rival 30 m en campo propio, 15 m si cruza la mitad o 10 m en campo rival.</li>
-          </ul>
-        </div>
-      )}
 
+      {/* Filtros en una fila de botones; en el celular bajan en varias filas. */}
       <div className="ma-filtros">
-        <div className="ma-capas" role="group" aria-label="Capa">
-          {CAPAS.map((c) => (
-            <button key={c.id} type="button" className="ma-chip" aria-pressed={capa === c.id} onClick={() => elegirCapa(c.id)}>{c.nombre}</button>
-          ))}
-        </div>
-        <div className="ma-controles">
-          {opciones.length > 0 && (
-            <Segmento etiqueta="Resultado" opciones={opciones} valor={resultado} cambiar={(v) => { setResultado(v); setSeleccionId(null) }} />
-          )}
-          <Segmento etiqueta="Tiempo" opciones={TIEMPOS} valor={tiempo} cambiar={(v) => { setTiempo(v); setSeleccionId(null) }} />
-          <Segmento etiqueta="Ver como" opciones={MODOS} valor={modo} cambiar={(v) => { setModo(v); setSeleccionId(null) }} />
-          {capa === 'perdidas' && (
-            <button type="button" className="ma-interruptor" role="switch" aria-checked={pasesErrados} onClick={() => setPasesErrados((v) => !v)}>
-              <span className="ma-interruptor-riel" aria-hidden="true"><span /></span>Incluir pases errados
-            </button>
-          )}
-        </div>
-        {masFiltros && <details className="ma-mas"><summary>Más filtros</summary><div className="ma-mas-cuerpo">{masFiltros}</div></details>}
+        <Grupo etiqueta="Capa" opciones={CAPAS.map((c) => [c.id, c.nombre])} valor={capa} cambiar={elegirCapa} />
+        {opciones.length > 0 && (
+          <Grupo etiqueta="Resultado" opciones={opciones} valor={resultado} cambiar={(v) => { setResultado(v); setSeleccionId(null) }} />
+        )}
+        <Grupo etiqueta="Tiempo" opciones={TIEMPOS} valor={tiempo} cambiar={(v) => { setTiempo(v); setSeleccionId(null) }} />
+        <Grupo etiqueta="Ver como" opciones={MODOS} valor={modo} cambiar={(v) => { setModo(v); setSeleccionId(null) }} />
+        {capa === 'perdidas' && (
+          <button type="button" className="ma-interruptor" role="switch" aria-checked={pasesErrados} onClick={() => setPasesErrados((v) => !v)}>
+            <span className="ma-interruptor-riel" aria-hidden="true"><span /></span>Incluir pases errados
+          </button>
+        )}
       </div>
+      {masFiltros && <details className="ma-mas"><summary>Más filtros</summary><div className="ma-mas-cuerpo">{masFiltros}</div></details>}
 
       {avisos.map((aviso) => <p key={aviso} className="ma-aviso" role="status">{aviso}</p>)}
       {capa === 'pases' && estadoPases.cargando && <p className="ma-nota" role="status">Cargando los destinos de los pases…</p>}
@@ -127,11 +115,8 @@ export default function MapaAcciones({
               partidos={partidos} variosPartidos={variosPartidos} />
           ) : (
             <>
-              <div className="ma-direccion" aria-hidden="true">
-                <span>{media ? 'Mitad de cancha' : 'Nuestro arco'}</span>
-                <strong>Ataque →</strong>
-              </div>
               <div className="ma-lienzo" data-media={media ? 'si' : undefined}>
+                <span className="ma-ataque" aria-hidden="true">Ataque →</span>
                 <svg viewBox={`${vista.x} ${vista.y} ${vista.ancho} ${vista.alto}`} className="ma-svg" role="img"
                   aria-label={`Cancha con ${conPunto.length} acciones. Atacamos hacia la derecha.`}
                   onClick={() => setSeleccionId(null)}>
@@ -142,12 +127,15 @@ export default function MapaAcciones({
                     <marker id={`${prefijo}-mal`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="3.6" markerHeight="3.6" orient="auto-start-reverse">
                       <path d="M0 0 L10 5 L0 10 z" className="ma-punta" data-calidad="mal" />
                     </marker>
+                    <marker id={`${prefijo}-elegida`} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+                      <path d="M0 0 L10 5 L0 10 z" className="ma-punta" data-calidad="elegida" />
+                    </marker>
                     <filter id={`${prefijo}-suave`} x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="1.8" /></filter>
                     <clipPath id={`${prefijo}-cancha`}><rect x="0" y="0" width="100" height="64" /></clipPath>
                   </defs>
                   <Cancha />
                   {modo === 'calor' && densidad && (
-                    <g clipPath={`url(#${prefijo}-cancha)`}>
+                    <g clipPath={`url(#${prefijo}-cancha)`} className="ma-calor-capa" data-tono={capa === 'perdidas' ? 'mal' : 'bien'}>
                       <g filter={`url(#${prefijo}-suave)`}>
                         {densidad.celdas.map((c) => (
                           <rect key={`${c.c}-${c.f}`} x={c.c * 4} y={c.f * 4} width="4" height="4" className="ma-calor" style={{ fillOpacity: Math.pow(c.v, 1.6) * 0.9 }} />
@@ -157,14 +145,14 @@ export default function MapaAcciones({
                   )}
                   {modo === 'calor' && <LineasCancha />}
                   {modo === 'zonas' && <Tercios tercios={tercios} conBien={capa !== 'perdidas'} />}
-                  {modo === 'puntos' && conPunto.map((a) => (
+                  {modo === 'puntos' && [...conPunto].sort((a, b) => (a.id === seleccionId) - (b.id === seleccionId)).map((a) => (
                     flechas && a.destino
                       ? <Flecha key={a.id} accion={a} prefijo={prefijo} elegida={a.id === seleccionId} elegir={setSeleccionId} />
                       : <Marca key={a.id} accion={a} elegida={a.id === seleccionId} elegir={setSeleccionId} />
                   ))}
                 </svg>
                 {seleccion && modo === 'puntos' && (
-                  <Ficha accion={seleccion} pos={fichaPos} nombreJugadora={nombreJugadora} etiquetaTipo={etiquetaTipo}
+                  <Ficha accion={seleccion} pos={fichaPos} nombreJugadora={nombreJugadora} etiquetaTipo={etiquetaTipo} receptoraDe={receptoraDe}
                     onVideo={onVideo} onDestinoPase={onDestinoPase} cerrar={() => setSeleccionId(null)}
                     rival={variosPartidos ? partidos?.get?.(seleccion.evento.partido_id)?.rival : null} />
                 )}
@@ -175,8 +163,23 @@ export default function MapaAcciones({
                   </div>
                 )}
               </div>
-              <Leyenda capa={capa} modo={modo} />
+              <div className="ma-pie">
+                <Leyenda capa={capa} modo={modo} />
+                <button type="button" className="ma-ayuda-boton" aria-expanded={ayuda} aria-controls={`${prefijo}-ayuda`}
+                  onClick={() => setAyuda((v) => !v)}><span className="ma-ayuda-icono" aria-hidden="true">i</span>Ayuda</button>
+              </div>
             </>
+          )}
+          {ayuda && (
+            <div id={`${prefijo}-ayuda`} className="ma-ayuda" role="note">
+              <ul>
+                <li>Siempre atacamos hacia la derecha. El 2T se da vuelta solo.</li>
+                <li>Amarillo: salió bien. Rojo punteado: salió mal. Gris: sin resultado.</li>
+                <li>Tocá un punto para ver quién fue, en qué minuto, y abrir el video.</li>
+                <li>Calor: dónde se juntan más acciones. Zonas: qué parte pasó en cada tercio.</li>
+                <li>Pase progresivo: acerca la pelota al arco rival 30 m en campo propio, 15 m si cruza la mitad o 10 m en campo rival.</li>
+              </ul>
+            </div>
           )}
         </div>
         <Resumen resumen={resumen} compacto={compacto} />
@@ -185,15 +188,12 @@ export default function MapaAcciones({
   )
 }
 
-function Segmento({ etiqueta, opciones, valor, cambiar }) {
+function Grupo({ etiqueta, opciones, valor, cambiar }) {
   return (
-    <div className="ma-control">
-      <span className="ma-control-etiqueta">{etiqueta}</span>
-      <div className="ma-segmento" role="group" aria-label={etiqueta}>
-        {opciones.map(([v, texto]) => (
-          <button key={v} type="button" aria-pressed={valor === v} onClick={() => cambiar(v)}>{texto}</button>
-        ))}
-      </div>
+    <div className="ma-grupo" role="group" aria-label={etiqueta}>
+      {opciones.map(([v, texto]) => (
+        <button key={v} type="button" className="ma-chip" aria-pressed={valor === v} onClick={() => cambiar(v)}>{texto}</button>
+      ))}
     </div>
   )
 }
@@ -269,37 +269,42 @@ function Flecha({ accion, prefijo, elegida, elegir }) {
   const bien = accion.calidad === 'bien'
   const tocar = (e) => { e.stopPropagation(); elegir(accion.id) }
   const linea = { x1: o.x, y1: Y(o.y), x2: d.x, y2: Y(d.y) }
+  // La elegida se pinta en blanco y se dibuja encima (con una copia para que quede sobre las demás).
+  const tono = elegida ? 'elegida' : bien ? 'bien' : 'mal'
   return (
     <g className="ma-marca" onClick={tocar} data-elegida={elegida ? 'si' : undefined}>
-      <line {...linea} className="ma-flecha" data-calidad={bien ? 'bien' : 'mal'} markerEnd={`url(#${prefijo}-${bien ? 'bien' : 'mal'})`} />
-      <circle cx={o.x} cy={Y(o.y)} r="0.5" className="ma-origen" data-calidad={bien ? 'bien' : 'mal'} />
-      {elegida && <circle cx={o.x} cy={Y(o.y)} r="1.8" className="ma-anillo" />}
+      <line {...linea} className="ma-flecha" data-calidad={tono} markerEnd={`url(#${prefijo}-${tono})`} />
+      <circle cx={o.x} cy={Y(o.y)} r={elegida ? 0.8 : 0.5} className="ma-origen" data-calidad={tono} />
       <line {...linea} className="ma-toque-linea" />
     </g>
   )
 }
 
-function Ficha({ accion, pos, nombreJugadora, etiquetaTipo, onVideo, onDestinoPase, cerrar, rival }) {
+// Ficha al tocar un punto: quién (en los pases, quién → a quién), cuándo, cómo salió y el botón al video.
+function Ficha({ accion, pos, nombreJugadora, etiquetaTipo, receptoraDe, onVideo, onDestinoPase, cerrar, rival }) {
   const { evento } = accion
   const estado = accion.remate || accion.calidad
-  const esPase = ['Pase correcto', 'Pase incorrecto'].includes(evento.tipo)
+  const esPase = esPaseMapa(evento)
   const lado = pos.izquierda > 50 ? 'izquierda' : 'derecha'
   const arriba = Math.min(78, Math.max(22, pos.arriba))
+  const autora = nombreJugadora(evento.jugador_id) || 'Sin jugadora'
+  const receptora = esPase ? (receptoraDe(evento) || (accion.destino ? 'receptora sin cargar' : 'destino sin cargar')) : ''
+  const resultadoTexto = esPase
+    ? (accion.calidad === 'bien' ? 'Llegó' : 'No llegó')
+    : `${ESTADO[estado]}${evento.resultado && !['Exitoso', 'Fallido'].includes(evento.resultado) && evento.resultado !== ESTADO[estado] ? ` (${evento.resultado})` : ''}`
+  const detalle = [accion.minuto, rival ? `vs ${rival}` : '', resultadoTexto, esPase && esProgresivo(accion.punto, accion.destino) ? 'Progresivo' : '']
+    .filter(Boolean).join(' · ')
   return (
     <div className="ma-ficha" data-lado={lado} role="dialog" aria-label={`Acción: ${etiquetaTipo(evento.tipo)}`}
       style={{ '--ma-x': `${pos.izquierda}%`, '--ma-y': `${arriba}%` }} onClick={(e) => e.stopPropagation()}>
       <div className="ma-ficha-cabecera">
-        <strong>{etiquetaTipo(evento.tipo)}</strong>
+        <strong className="ma-ficha-titulo">{etiquetaTipo(evento.tipo)}</strong>
         <button type="button" className="ma-cerrar" aria-label="Cerrar" onClick={cerrar}>×</button>
       </div>
-      <dl className="ma-ficha-datos">
-        <div><dt>Jugadora</dt><dd>{nombreJugadora(evento.jugador_id) || 'Sin jugadora'}</dd></div>
-        <div><dt>Minuto</dt><dd>{accion.minuto}{rival ? ` (vs ${rival})` : ''}</dd></div>
-        <div><dt>Resultado</dt><dd><span className="ma-estado" data-estado={estado}>{ESTADO[estado]}</span>{evento.resultado && !['Exitoso', 'Fallido'].includes(evento.resultado) && evento.resultado !== ESTADO[estado] ? ` (${evento.resultado})` : ''}</dd></div>
-        {esPase && !accion.destino && <div><dt>Destino</dt><dd>Sin cargar</dd></div>}
-      </dl>
+      <p className="ma-ficha-quien">{autora}{esPase && <> → {receptora}</>}</p>
+      <p className="ma-ficha-detalle"><span className="ma-estado" data-estado={estado} aria-hidden="true" />{detalle}</p>
       <div className="ma-ficha-acciones">
-        {onVideo && <button type="button" className="ma-primario" onClick={() => onVideo(evento)}>Ver en el video</button>}
+        {onVideo && <button type="button" className="ma-primario" onClick={() => onVideo(evento)}><span aria-hidden="true">▶ </span>Ver en el video</button>}
         {esPase && onDestinoPase && <button type="button" className="ma-boton-texto" onClick={() => onDestinoPase(evento)}>Destino del pase</button>}
       </div>
     </div>
@@ -311,7 +316,8 @@ function Leyenda({ capa, modo }) {
   if (modo === 'calor') {
     return (
       <div className="ma-leyenda" aria-label="Leyenda">
-        <span>Menos</span><span className="ma-escala" aria-hidden="true" /><span>Más acciones</span>
+        <span>Menos</span><span className="ma-escala" data-tono={capa === 'perdidas' ? 'mal' : 'bien'} aria-hidden="true" />
+        <span>{capa === 'perdidas' ? 'Más pérdidas' : 'Más acciones'}</span>
       </div>
     )
   }
@@ -341,29 +347,29 @@ function Muestra({ clave }) {
   )
 }
 
+// Resumen de la capa: el número grande (el porcentaje o la cantidad), su bajada, el detalle y quiénes más.
 function Resumen({ resumen, compacto }) {
-  const max = Math.max(1, ...resumen.top.map((t) => t.total))
   return (
-    <aside className="ma-resumen" aria-label="Resumen de la capa">
-      <p className="ma-resumen-titulo">
-        <strong>{resumen.titulo}: {resumen.total}</strong>
-        {resumen.destacado && <span> · {resumen.destacado}</span>}
-      </p>
-      {resumen.extras.length > 0 && (
-        <dl className="ma-resumen-extras">
-          {resumen.extras.map((x) => (
-            <div key={x.etiqueta}><dt>{x.etiqueta}</dt><dd><strong>{x.valor}</strong>{x.detalle ? ` · ${x.detalle}` : ''}</dd></div>
+    <aside className="ma-resumen" aria-label={`Resumen: ${resumen.titulo}`}>
+      <p className="ma-resumen-capa">Capa · <strong>{resumen.titulo}</strong></p>
+      <div>
+        <p className="ma-resumen-grande">{resumen.grande}</p>
+        <p className="ma-resumen-bajada">{resumen.bajada}</p>
+      </div>
+      {resumen.filas.length > 0 && (
+        <dl className="ma-resumen-filas">
+          {resumen.filas.map((f) => (
+            <div key={f.etiqueta} data-nota={f.nota ? 'si' : undefined}><dt>{f.etiqueta}</dt><dd>{f.valor}</dd></div>
           ))}
         </dl>
       )}
       {resumen.top.length > 0 && (
         <div className="ma-top">
-          <p className="ma-top-titulo">{resumen.tituloTop}</p>
+          <p className="ma-resumen-capa">{resumen.tituloTop}</p>
           <ol>
             {resumen.top.slice(0, compacto ? 3 : 5).map((t) => (
               <li key={t.id}>
                 <span className="ma-top-nombre">{t.nombre || 'Sin nombre'}</span>
-                <span className="ma-top-barra" aria-hidden="true"><span style={{ width: `${(t.total / max) * 100}%` }} /></span>
                 <span className="ma-top-total">{t.total}</span>
               </li>
             ))}

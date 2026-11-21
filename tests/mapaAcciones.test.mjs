@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  avisosDireccion, calidad, calor, claseRemate, direccionDe, enCapa, esProgresivo, filtrarAcciones, minutoDe,
+  alUltimoTercio, avisosDireccion, calidad, direccionPase, calor, claseRemate, direccionDe, enCapa, esProgresivo, filtrarAcciones, minutoDe,
   orientar, porTercio, prepararAcciones, resumenCapa,
 } from '../src/utils/analisis/mapaAcciones.js'
 
@@ -91,6 +91,15 @@ test('pase progresivo (Wyscout): 30 m en campo propio, 15 m cruzando, 10 m en ca
   assert.ok(!esProgresivo({ x: 60, y: 50 }, null))
 })
 
+test('dirección del pase y al último tercio', () => {
+  assert.equal(direccionPase({ x: 50, y: 50 }, { x: 60, y: 52 }), 'adelante')
+  assert.equal(direccionPase({ x: 50, y: 50 }, { x: 40, y: 50 }), 'atras')
+  assert.equal(direccionPase({ x: 50, y: 20 }, { x: 52, y: 80 }), 'lateral')
+  assert.equal(direccionPase(null, { x: 1, y: 1 }), null)
+  assert.ok(alUltimoTercio({ x: 60, y: 50 }, { x: 70, y: 50 }))
+  assert.ok(!alUltimoTercio({ x: 70, y: 50 }, { x: 80, y: 50 }))
+})
+
 test('calor, tercios y resumen', () => {
   const mapa = calor([{ x: 10, y: 10 }, { x: 11, y: 10 }, { x: 90, y: 90 }])
   assert.ok(mapa.celdas.length > 0)
@@ -107,12 +116,21 @@ test('calor, tercios y resumen', () => {
   const r = resumenCapa(acciones, 'pases', (id) => id.toUpperCase())
   assert.equal(r.titulo, 'Pases')
   assert.equal(r.total, 3)
-  assert.equal(r.destacado, '67% correctos')
-  assert.equal(r.extras[0].valor, '1') // de x=20 a x=90 ya acomodado: cruza de campo
+  assert.equal(r.grande, '67%')
+  assert.equal(r.bajada, 'Correctos · 2 de 3')
+  const fila = (nombre) => r.filas.find((f) => f.etiqueta === nombre).valor
+  assert.equal(fila('Progresivos'), 1) // de x=20 a x=90 ya acomodado: cruza de campo
+  assert.equal(fila('Al último tercio'), 1)
+  assert.equal(fila('Hacia atrás'), 0)
+  assert.equal(fila('Con destino cargado'), '1 de 3')
   assert.deepEqual(r.top[0], { id: 'ana', nombre: 'ANA', total: 2 })
   const remates = prepararAcciones([
     { id: 4, tipo: 'Remate', resultado: 'Atajada' }, { id: 5, tipo: 'Gol' }, { id: 6, tipo: 'Remate', resultado: 'Fuera' },
   ], {})
-  assert.equal(resumenCapa(remates, 'remates').destacado, '2 al arco · 1 gol')
+  const rr = resumenCapa(remates, 'remates')
+  assert.equal(rr.grande, '3')
+  assert.equal(rr.bajada, 'Remates · 2 al arco')
+  assert.equal(rr.filas[0].valor, 1)
+  assert.equal(resumenCapa([], 'duelos').bajada, 'Sin resultado cargado')
   assert.equal(filtrarAcciones(remates, { capa: 'remates', resultado: 'arco' }).length, 2)
 })
