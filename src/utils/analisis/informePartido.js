@@ -176,11 +176,24 @@ export function numerosPartido(acciones) {
   }
 }
 
-// Promedio de la temporada: los otros partidos analizados del mismo año que tengan acciones.
-export function promedioTemporada(eventos, partidos, actual) {
+// Los otros partidos analizados del mismo año que tienen acciones (candidatos para el promedio).
+export function partidosTemporada(eventos, partidos, actual) {
   const anio = (fechaDe(actual) || '').slice(0, 4)
-  if (!anio) return null
-  const ids = (partidos || []).filter((p) => p.id !== actual.id && (fechaDe(p) || '').startsWith(anio)).map((p) => p.id)
+  if (!anio) return []
+  const conAcciones = new Set((eventos || []).map((e) => e.partido_id))
+  return (partidos || []).filter((p) => p.id !== actual.id && (fechaDe(p) || '').startsWith(anio) && conAcciones.has(p.id)).map((p) => p.id)
+}
+
+// Análisis completo: las 4 marcas de tiempo en orden y ninguna acción sin detallar.
+export function analisisCompleto({ eventos = [], detalles = {}, catalogo, marcas } = {}) {
+  if (!marcas || faltanMarcas(marcas).length || problemasOrden(marcas).length) return false
+  return eventos.every((e) => !faltantesAccion(e, detalles?.[e.id], catalogo).length)
+}
+
+// Promedio de la temporada: solo los partidos de «completos» (ids con el análisis completo).
+// Sin ninguno, null (el PDF no muestra la comparación).
+export function promedioTemporada(eventos, partidos, actual, completos = new Set()) {
+  const ids = partidosTemporada(eventos, partidos, actual).filter((id) => completos.has(id))
   const porPartido = ids.map((id) => (eventos || []).filter((e) => e.partido_id === id)).filter((l) => l.length)
   if (!porPartido.length) return null
   const numeros = porPartido.map(numerosBasicos)

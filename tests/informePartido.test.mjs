@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import { prepararAcciones } from '../src/utils/analisis/mapaAcciones.js'
 import { CATALOGO_POR_DEFECTO as catalogo } from '../src/utils/analisis/catalogoAcciones.js'
 import {
-  accionesPorTramo, avisosInforme, contraPromedio, filasExcel, formacionAcostada, golesInforme, hitosTiempo, informeParaGuardar,
+  accionesPorTramo, analisisCompleto, avisosInforme, contraPromedio, filasExcel, formacionAcostada, golesInforme, hitosTiempo, informeParaGuardar,
   jugadorasInforme, lecturaCuando, lecturaDonde, minutoCorrido, normalizarInforme, numerosBasicos, numerosPartido,
-  posicionAntesSugerida, promedioTemporada, proximoRival, resultadoInforme, textoMinuto, tramoDe, ultimosCinco,
+  partidosTemporada, posicionAntesSugerida, promedioTemporada, proximoRival, resultadoInforme, textoMinuto, tramoDe, ultimosCinco,
 } from '../src/utils/analisis/informePartido.js'
 
 // Video: 1T arranca en 100 s y termina en 2900 s (46'40"); 2T arranca en 3400 s.
@@ -70,13 +70,33 @@ test('números del partido y promedio de la temporada', () => {
     { partido_id: 'c', tipo: 'Pérdida' }, { partido_id: 'c', tipo: 'Pérdida' }, { partido_id: 'c', tipo: 'Pérdida' }, { partido_id: 'c', tipo: 'Pérdida' },
     { partido_id: 'v', tipo: 'Pérdida' },
   ]
-  const promedio = promedioTemporada(todos, partidos, partidos[0])
+  // Candidatos: los del mismo año con acciones (no el del informe ni el del año anterior).
+  assert.deepEqual(partidosTemporada(todos, partidos, partidos[0]), ['b', 'c'])
+  const promedio = promedioTemporada(todos, partidos, partidos[0], new Set(['b', 'c', 'v']))
   assert.equal(promedio.partidos, 2)
   assert.equal(promedio.perdidas, 3)
+  // Solo los completos: con b solo, el promedio es el de b.
+  assert.deepEqual([promedioTemporada(todos, partidos, partidos[0], new Set(['b'])).partidos, promedioTemporada(todos, partidos, partidos[0], new Set(['b'])).perdidas], [1, 2])
+  assert.equal(promedioTemporada(todos, partidos, partidos[0], new Set()), null)
+  assert.equal(promedioTemporada(todos, partidos, partidos[0]), null)
   assert.deepEqual(contraPromedio(5, promedio.perdidas), { signo: 'mas', diferencia: 2 })
   assert.deepEqual(contraPromedio(3, 3), { signo: 'igual', diferencia: 0 })
   assert.equal(contraPromedio(3, null), null)
-  assert.equal(promedioTemporada([], partidos, partidos[0]), null)
+  assert.equal(promedioTemporada([], partidos, partidos[0], new Set(['b'])), null)
+})
+
+test('análisis completo: las 4 marcas en orden y ninguna acción sin detallar', () => {
+  const bien = { id: 'x', tipo: 'Recuperación', jugador_id: 'j', coordenada_x: 40, coordenada_y: 40 }
+  assert.equal(analisisCompleto({ eventos: [bien], catalogo, marcas }), true)
+  assert.equal(analisisCompleto({ eventos: [{ ...bien, jugador_id: null }], catalogo, marcas }), false)
+  assert.equal(analisisCompleto({ eventos: [bien], catalogo, marcas: { ...marcas, fin_partido: null } }), false)
+  assert.equal(analisisCompleto({ eventos: [bien], catalogo, marcas: { ...marcas, inicio_2t: 10 } }), false)
+  assert.equal(analisisCompleto({ eventos: [bien], catalogo, marcas: null }), false)
+  // Un pase necesita receptora y destino (de la tabla de detalles).
+  const pase = { id: 'p1', tipo: 'Pase correcto', jugador_id: 'j', coordenada_x: 40, coordenada_y: 40 }
+  assert.equal(analisisCompleto({ eventos: [pase], catalogo, marcas }), false)
+  const detalles = { p1: { destinataria_estado: 'identificada', destinataria_id: 'k', destino_x: 60, destino_y: 50 } }
+  assert.equal(analisisCompleto({ eventos: [pase], detalles, catalogo, marcas }), true)
 })
 
 test('números con ubicación: siempre atacando a la derecha (1T a la izquierda se da vuelta)', () => {

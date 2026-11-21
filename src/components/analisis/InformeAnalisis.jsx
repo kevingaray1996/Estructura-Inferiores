@@ -4,12 +4,16 @@ import { resumenComunicaciones } from '../../utils/datafem'
 import { mensajeErrorOPropio } from '../../utils/mensajesError'
 import { prepararAcciones } from '../../utils/analisis/mapaAcciones'
 import {
-  accionesPorTramo, avisosInforme, filasExcel, hitosTiempo, informeParaGuardar, lecturaCuando, lecturaDonde,
-  normalizarInforme, posicionAntesSugerida, promedioTemporada,
+  accionesPorTramo, analisisCompleto, avisosInforme, filasExcel, hitosTiempo, informeParaGuardar, lecturaCuando, lecturaDonde,
+  normalizarInforme, partidosTemporada, posicionAntesSugerida, promedioTemporada,
 } from '../../utils/analisis/informePartido'
+import { MARCAS, marcasDe } from '../../utils/analisis/eventosPartido'
+import { cargarResumenDestinatarias } from '../../utils/destinatariasPases'
 import { nombreJugadora } from '../../utils/analisis/formato'
 import './partido.css'
 import './informe.css'
+
+const TIPOS_MARCA = MARCAS.map((m) => m.tipo)
 
 // La columna «informe» de analisis_partidos todavía no existe en la base (falta correr el SQL).
 const faltaColumna = (error) => error?.code === '42703' || error?.code === 'PGRST204' || /informe/.test(error?.message || '') && /column/i.test(error?.message || '')
@@ -82,6 +86,22 @@ export default function InformeAnalisis({
     try { await guardar() } finally { setOcupado('') }
   }
 
+  // Partidos de la temporada con el análisis completo (marcas en orden y ninguna acción sin detallar): solo esos
+  // entran en el promedio. Se leen sus marcas y los detalles de sus pases.
+  async function completosTemporada() {
+    const ids = partidosTemporada(eventosTemporada, partidos, analisis)
+    if (!ids.length) return new Set()
+    const { data, error } = await supabase.from('analisis_partido_eventos').select('partido_id, tipo, segundo')
+      .in('partido_id', ids).in('tipo', TIPOS_MARCA)
+    if (error) throw error
+    const marcasPorPartido = new Map(ids.map((id) => [id, marcasDe((data || []).filter((f) => f.partido_id === id))]))
+    const eventosOtros = eventosTemporada.filter((e) => ids.includes(e.partido_id))
+    const { detalles } = await cargarResumenDestinatarias(supabase, eventosOtros)
+    return new Set(ids.filter((id) => analisisCompleto({
+      eventos: eventosOtros.filter((e) => e.partido_id === id), detalles, catalogo, marcas: marcasPorPartido.get(id),
+    })))
+  }
+
   async function generar(conAvisos = false) {
     if (!conAvisos) {
       const lista = avisosInforme({ eventos: eventosPartido.filter((e) => !e._cola), detalles: detallesPases, catalogo, marcas, partido: analisis })
@@ -91,11 +111,18 @@ export default function InformeAnalisis({
     setOcupado('pdf')
     try {
       await guardar()
-      const [{ generarInformePartidoPDF }] = await Promise.all([import('../../utils/generarInformePartidoPDF')])
+      const [{ generarInformePartidoPDF }, completos] = await Promise.all([
+        import('../../utils/generarInformePartidoPDF'),
+        completosTemporada().catch((e) => {
+          console.error('Promedio de la temporada:', e)
+          setEstado({ tipo: 'error', texto: 'No se pudo revisar qué partidos de la temporada están completos: el PDF sale sin la comparación con el promedio.' })
+          return new Set()
+        }),
+      ])
       await generarInformePartidoPDF({
         analisis, calendario, calendarioLista, acciones, eventosPartido: eventosDelPartido, marcas, citaciones,
         minutos, nombreCortoDe, informe: informeFinal,
-        promedio: promedioTemporada(eventosTemporada, partidos, analisis),
+        promedio: promedioTemporada(eventosTemporada, partidos, analisis, completos),
         lecturaDondeAuto: autoDonde, lecturaCuandoAuto: autoCuando,
       })
     } catch (e) {

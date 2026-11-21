@@ -402,9 +402,10 @@ export async function generarInformePartidoPDF(entrada) {
     L.fuente('BarlowCondensed', 'bold', 13.5)
     L.texto(f.rotulo, x + 24, 233, { color: C.texto, espacio: 2.6 })
     L.fuente('Barlow', 'normal', 15)
-    let cx = x + 24 + L.texto(`${f.bajada} · `, x + 24, 254, { color: C.gris })
+    // Sin promedio (ningún partido completo de la temporada) no hay comparación.
+    let cx = x + 24 + L.texto(f.comp ? `${f.bajada} · ` : f.bajada, x + 24, 254, { color: C.gris })
     if (!f.comp) {
-      L.texto('sin promedio todavía', cx, 254, { color: C.gris })
+      // nada
     } else if (f.comp.signo === 'igual') {
       L.fuente('Barlow', 'semibold', 15)
       L.texto('= promedio', cx, 254, { color: C.texto })
@@ -420,6 +421,10 @@ export async function generarInformePartidoPDF(entrada) {
       L.texto(' vs promedio', cx, 254, { color: C.gris })
     }
   })
+  if (promedio?.partidos) {
+    L.fuente('Barlow', 'normal', 13)
+    L.texto(`Promedio de ${promedio.partidos} ${promedio.partidos === 1 ? 'partido' : 'partidos'} (solo los de la temporada con el análisis completo).`, M, 287, { color: C.gris })
+  }
 
   const claves = informe.claves.filter((c) => c.titulo || c.texto)
   titulo([[claves.length === 3 ? '3 CLAVES ' : 'CLAVES ', false], ['DEL PARTIDO', true]], M, 330)
