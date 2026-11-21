@@ -53,7 +53,7 @@ test('Pestañas Etiquetado / Playlist / Partido: se cambian con clic y con flech
     assert.equal(document.activeElement, pestanas[2])
     assert.equal(h.activo().pending, undefined, 'La flecha en las pestañas no mueve el video')
     assert.match(panel('partido').textContent, /Formación y banco/)
-    assert.match(panel('partido').textContent, /Dirección real del ataque/)
+    assert.match(panel('partido').textContent, /Hacia dónde atacamos en el 1T/)
   } finally {
     await h.cerrar()
   }

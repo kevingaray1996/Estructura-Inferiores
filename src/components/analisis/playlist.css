@@ -92,3 +92,11 @@
 @media (max-width: 1023.98px) {
   .pl-item { scroll-margin-top: calc(var(--az-alto-barra, 57px) + (100vw - 2rem) * 9 / 16 + 1.5rem); }
 }
+
+/* Marcas del partido que faltan y jugadora que no estaba en cancha. */
+.pl-marcas {
+  padding: .5rem .75rem; border-left: 3px solid var(--ui-acento); border-radius: .375rem;
+  background: var(--analisis-seleccion); font-size: .8125rem; line-height: 1.4;
+}
+.pl-marcas .pl-enlace { min-height: 32px; }
+.pl-estado[data-estado='fuera'] { border: 1px solid var(--ui-peligro); color: var(--ui-peligro-texto); }

@@ -6,9 +6,9 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 const { JSDOM } = await import(pathToFileURL(process.env.PIZARRA_DOM_PATH || join(tmpdir(), 'comunicaciones-pizarra-dom/node_modules/jsdom/lib/api.js')).href)
 
-export async function montar({ tipos, eventos = [] } = {}) {
+export async function montar({ tipos, eventos = [], eventosPartido = [], planilla = [] } = {}) {
   const dom = new JSDOM('<!doctype html><html><head><style>body{color:black}</style></head><body><div id="root"></div></body></html>', { url: 'https://comunicaciones.test' })
-  const previos = new Map(), players = [], timers = new Map(), writes = [], borrados = [], actualizaciones = [], lecturas = {}, rpcs = []
+  const previos = new Map(), players = [], timers = new Map(), writes = [], borrados = [], actualizaciones = [], lecturas = {}, rpcs = [], guardados = []
   function global(nombre, valor) { previos.set(nombre, Object.getOwnPropertyDescriptor(globalThis,nombre)); Object.defineProperty(globalThis,nombre,{value:valor,configurable:true,writable:true}) }
   for (const n of ['window','document','HTMLElement','Event','MouseEvent','KeyboardEvent']) global(n,dom.window[n])
   global('IS_REACT_ACT_ENVIRONMENT',true)
@@ -18,11 +18,25 @@ export async function montar({ tipos, eventos = [] } = {}) {
   const partidos=[{id:'p1',rival:'Rival A',fecha:'2026-10-29',categoria_id:'cat',direccion_primer_tiempo:'derecha',partido_calendario_id:'c1',video_url:'https://www.youtube.com/watch?v=abc123def45'}]
   const estado={resolverInsert:null}
   const datos={perfiles:{email:authUser.email,nombre:'Kevin Garay',rol:'coordinacion'},partidos:[],analisis_partidos:partidos,analisis_eventos:structuredClone(eventos),analisis_pases_detalle:[],analisis_tipos_accion:tipos,jugadores:[ana,bea],
+    analisis_partido_eventos:structuredClone(eventosPartido),estadisticas_jugador:structuredClone(planilla),
     citaciones:[{id:'c',jugador_id:'j',dorsal:10,titular:true},{id:'c2',jugador_id:'j2',dorsal:7,titular:false}]}
   global('__analisisSupabase', { rpc:async (nombre,args)=>{
     // Receptora de un pase: se guarda con su revisión.
     if(nombre==='guardar_detalle_pase'){rpcs.push(args);return {data:[{evento_id:args.p_evento_id,destinataria_estado:args.p_destinataria_estado,destinataria_id:args.p_destinataria_id,revision:(args.p_revision_esperada||0)+1}]}}
     assert.equal(nombre,'puede_administrar_analisis');return {data:true}}, auth:{getUser:async()=>({data:{user:authUser}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})},from(tabla){
+    // Eventos del partido y planilla: se guardan al instante y quedan anotados en «guardados».
+    if(tabla==='analisis_partido_eventos'||tabla==='estadisticas_jugador'){
+      let op=null,valores=null;const filtro={}
+      const aplicar=()=>{
+        if(op==='insert'){const fila={id:crypto.randomUUID(),...valores};datos[tabla].push(fila);guardados.push({tabla,op,fila});return fila}
+        if(op==='update'){const ids=filtro.in||[filtro.id];datos[tabla]=datos[tabla].map(f=>ids.includes(f.id)?{...f,...valores}:f);guardados.push({tabla,op,ids,valores});return datos[tabla].find(f=>ids.includes(f.id))}
+        if(op==='delete'){datos[tabla]=datos[tabla].filter(f=>f.id!==filtro.id);guardados.push({tabla,op,id:filtro.id});return null}
+        return structuredClone(datos[tabla])}
+      const s={select(){return s},eq(c,v){filtro[c]=v;return s},in(c,v){filtro.in=v;return s},order(){return s},
+        insert(d){op='insert';valores=d;return s},update(d){op='update';valores=d;return s},delete(){op='delete';return s},
+        single(){return Promise.resolve({data:aplicar(),error:null})},then(ok,ko){return Promise.resolve({data:aplicar(),error:null}).then(ok,ko)}}
+      return s
+    }
     let registro, borrar=false, cambios=null
     const filtro={}
     const q={select(){return q},eq(c,v){filtro[c]=v;return q},in(){return q},order(){return q},range(){return q},limit(){return q},maybeSingle(){return Promise.resolve({data:datos[tabla]})},
@@ -54,7 +68,7 @@ export async function montar({ tipos, eventos = [] } = {}) {
   const boton=t=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes(t))
   const presionar=async(b,t)=>{assert.ok(b,t);assert.equal(b.disabled,false,t);await act(()=>b.click())}
   const h={
-    act, dom, datos, writes, borrados, actualizaciones, lecturas, rpcs, boton,
+    act, dom, datos, writes, borrados, actualizaciones, lecturas, rpcs, guardados, boton,
     resolver:async()=>act(async()=>estado.resolverInsert()),
     fallar:async(error={message:'TypeError: Failed to fetch'})=>act(async()=>estado.fallarInsert(error)),
     // Tecla en la ventana principal (los atajos escuchan en window).

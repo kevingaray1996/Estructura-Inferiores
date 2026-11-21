@@ -6,6 +6,7 @@ import { NOMBRE_FALTA, faltasDetalle } from '../../utils/analisis/playlist'
 import { formatearTiempo, nombreJugadora } from '../../utils/analisis/formato'
 import { referenciaVerificada, zonaEvento } from '../../utils/orientacionAnalisis'
 import { mensajeError } from '../../utils/mensajesError'
+import { minutoReal } from '../../utils/analisis/eventosPartido'
 import './playlist.css'
 
 const nombreConocida = (j) => (j ? nombreJugadora(j) : 'Jugadora guardada')
@@ -13,7 +14,7 @@ const tieneCoordenadas = (e) => e?.coordenada_x != null && e?.coordenada_y != nu
 
 // Lista de acciones del partido para revisar y detallar. Toda la lógica está en usePlaylistAnalisis.
 export default function PlaylistAnalisis({
-  pl, total, catalogo, citaciones, jugadoras, zonas, detalles, cargandoDetalles, errorDetalles, onReintentarDetalles,
+  pl, total, marcas, fueraDeCancha, faltanMarcas = [], onIrAPartido, catalogo, citaciones, jugadoras, zonas, detalles, cargandoDetalles, errorDetalles, onReintentarDetalles,
   puedeEditar, videoListo, onEditarTodo, onEliminar, onDescartar, antesDeLaLista,
 }) {
   const { lista, progreso, filtros, cambiarFiltro, activoId } = pl
@@ -28,6 +29,13 @@ export default function PlaylistAnalisis({
       <div className="pl-barra" role="progressbar" aria-label="Acciones detalladas" aria-valuemin={0} aria-valuemax={progreso.total} aria-valuenow={progreso.detalladas}>
         <span style={{ width: `${porcentaje}%` }} />
       </div>
+
+      {faltanMarcas.length > 0 && total > 0 && (
+        <p className="pl-marcas" role="status">
+          Faltan marcas de tiempo ({faltanMarcas.join(', ').toLowerCase()}): sin ellas no se ve el minuto real.{' '}
+          <button type="button" className="pl-enlace" onClick={onIrAPartido}>Cargarlas en Partido</button>
+        </p>
+      )}
 
       <div className="pl-filtros">
         <label className="pl-campo">
@@ -92,6 +100,8 @@ export default function PlaylistAnalisis({
               jugadoras={jugadoras}
               zonas={zonas}
               detalle={detalles[ev.id]}
+              marcas={marcas}
+              fuera={Boolean(ev.jugador_id && fueraDeCancha?.(ev.jugador_id, ev.segundo))}
               cargandoDetalles={cargandoDetalles}
               puedeEditar={puedeEditar}
               onEditarTodo={onEditarTodo}
@@ -105,7 +115,7 @@ export default function PlaylistAnalisis({
   )
 }
 
-function FilaPlaylist({ ev, activa, pl, catalogo, citaciones, jugadoras, zonas, detalle, cargandoDetalles, puedeEditar, onEditarTodo, onEliminar, onDescartar }) {
+function FilaPlaylist({ ev, activa, pl, marcas, fuera, catalogo, citaciones, jugadoras, zonas, detalle, cargandoDetalles, puedeEditar, onEditarTodo, onEliminar, onDescartar }) {
   const fila = useRef(null)
   // La acción elegida (con clic o con ↑ / ↓) queda a la vista dentro de la lista.
   useEffect(() => { if (activa) fila.current?.scrollIntoView?.({ block: 'nearest' }) }, [activa])
@@ -125,6 +135,9 @@ function FilaPlaylist({ ev, activa, pl, catalogo, citaciones, jugadoras, zonas, 
   const editable = activa && !enCola && puedeEditar
   const ocupada = estadoGuardado === 'guardando'
   const falta = (campo) => (faltas.includes(campo) ? 'si' : undefined)
+  // Minuto real con las marcas («2T 12'»); si no, el tiempo guardado (1T / 2T).
+  const minuto = minutoReal(ev.segundo, marcas)
+  const minutoTexto = minuto ? (minuto.estado === 'juego' ? minuto.texto : minuto.texto.split(' ')[0]) : Number(ev.periodo) === 2 ? '2T' : '1T'
 
   // Receptora: valor del selector a partir del detalle guardado.
   const valorReceptora = !detalle ? 'pendiente'
@@ -145,7 +158,7 @@ function FilaPlaylist({ ev, activa, pl, catalogo, citaciones, jugadoras, zonas, 
           title="Ver en el video desde 3 s antes">
           <span className="pl-tiempo">
             {formatearTiempo(ev.segundo)}
-            <small>{Number(ev.periodo) === 2 ? '2T' : '1T'}</small>
+            <small>{minutoTexto}</small>
           </span>
           <span className="az-boton-icono pl-icono" style={{ '--az-color-accion': apariencia.color, color: apariencia.colorTexto }} aria-hidden="true">
             {apariencia.icono}
@@ -154,6 +167,7 @@ function FilaPlaylist({ ev, activa, pl, catalogo, citaciones, jugadoras, zonas, 
             <span className="pl-tipo">{reglas.etiqueta}</span>
             <span className="pl-sub">{resumen}</span>
           </span>
+          {fuera && <span className="pl-estado" data-estado="fuera" title="Según la formación y los cambios, no estaba en cancha en ese momento">Fuera de cancha</span>}
           {!enCola && (faltas.length
             ? <span className="pl-estado" data-estado="falta">Falta {faltas.map((f) => NOMBRE_FALTA[f].toLowerCase()).join(', ')}</span>
             : <span className="pl-estado" data-estado="ok">Detallada</span>)}

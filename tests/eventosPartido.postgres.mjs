@@ -109,7 +109,7 @@ test('la prueba interna frena la migración si el resto del staff no viera los e
   const db = await crearBase()
   // Misma migración, pero con la regla de ver solo para administradoras.
   const soloAdmin = cambio.replace(
-    /USING \(\(SELECT public\.puede_administrar_analisis\(\)\)\n\s+OR EXISTS \(SELECT 1 FROM public\.analisis_partidos a WHERE a\.id = analisis_partido_eventos\.partido_id\)\);/,
+    /USING \(\(SELECT public\.puede_administrar_analisis\(\)\)\r?\n\s+OR EXISTS \(SELECT 1 FROM public\.analisis_partidos a WHERE a\.id = analisis_partido_eventos\.partido_id\)\);/,
     'USING ((SELECT public.puede_administrar_analisis()));')
   assert.notEqual(soloAdmin, cambio)
   await assert.rejects(db.exec(soloAdmin), /otra cuenta del staff: ve 0 eventos del partido de prueba y tendría que ver 6/)

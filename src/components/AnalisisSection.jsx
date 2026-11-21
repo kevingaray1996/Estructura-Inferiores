@@ -39,6 +39,10 @@ import './analisis/panelAnalisis.css'
 import PlaylistAnalisis from './analisis/PlaylistAnalisis'
 import usePlaylistAnalisis from '../hooks/usePlaylistAnalisis'
 import { clipDe } from '../utils/analisis/playlist'
+import PartidoEventos from './analisis/PartidoEventos'
+import useEventosPartido from '../hooks/useEventosPartido'
+import usePlanillaMinutos from '../hooks/usePlanillaMinutos'
+import { estabaEnCancha, faltanMarcas, minutoReal, minutosSugeridos, periodoPorMarcas, problemasOrden } from '../utils/analisis/eventosPartido'
 
 const CATEGORIA_ID = '438874e7-e59f-460b-bec4-3c0ef5b44016'
 
@@ -1242,6 +1246,54 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     [citaciones],
   )
 
+  // Eventos del partido (marcas de tiempo, cambios, goles y tarjetas) atados al video.
+  const eventosDelPartido = useEventosPartido(partidoActual?.id || null)
+  const marcasPartido = eventosDelPartido.marcas
+  const titularesIds = useMemo(() => titulares.map((c) => c.jugador_id), [titulares])
+  // ¿Estaba en cancha esa jugadora en ese segundo del video? null si no se puede saber.
+  const fueraDeCancha = useCallback(
+    (jugadorId, segundoVideo) => estabaEnCancha(jugadorId, segundoVideo, titularesIds, eventosDelPartido.cambios) === false,
+    [titularesIds, eventosDelPartido.cambios],
+  )
+  const planillaMinutos = usePlanillaMinutos(partidoActual?.partido_calendario_id || null, seccion === 'video' && pestanaPanel === 'partido')
+  const minutosPartido = useMemo(() => {
+    const sugeridos = minutosSugeridos(citaciones.map((c) => c.jugador_id), titularesIds, eventosDelPartido.cambios, marcasPartido)
+    const motivo = !titularesIds.length ? 'No hay titulares en la formación: cargalas en Convocados para calcular los minutos.'
+      : faltanMarcas(marcasPartido).length ? `Para sugerir los minutos faltan marcas: ${faltanMarcas(marcasPartido).join(', ')}.`
+        : problemasOrden(marcasPartido).length ? 'Corregí el orden de las marcas de tiempo para sugerir los minutos.' : ''
+    return { sugeridos, motivo }
+  }, [citaciones, titularesIds, eventosDelPartido.cambios, marcasPartido])
+
+  // Con el inicio del 2T marcado, el 1T / 2T sigue solo al video.
+  const periodoAutomatico = marcasPartido.inicio_2t != null
+  useEffect(() => {
+    if (!periodoAutomatico) return undefined
+    return relojVideo.suscribir(() => {
+      const periodo = periodoPorMarcas(relojVideo.leer(), marcasPartido)
+      if (periodo) setPeriodoActual((actual) => (actual === periodo ? actual : periodo))
+    })
+  }, [periodoAutomatico, marcasPartido, relojVideo])
+
+  function avisarRapido(texto) {
+    setAvisoAccion((anterior) => ({ texto, n: (anterior?.n || 0) + 1 }))
+  }
+
+  async function guardarMinutosPlanilla(lista) {
+    try {
+      const guardadas = await planillaMinutos.guardar(lista)
+      setError('')
+      setMensaje(`Minutos guardados en la planilla del partido (${guardadas} jugadora${guardadas === 1 ? '' : 's'}).`)
+      avisarRapido('Minutos guardados en la planilla')
+    } catch (e) {
+      setError(mensajeErrorOPropio(e, 'guardar los minutos en la planilla'))
+    }
+  }
+
+  // Segundo actual del video para las marcas (o null si el video no está listo).
+  function tomarSegundoVideo() {
+    try { return tiempoCaptura() } catch (e) { setError(mensajeErrorOPropio(e, 'tomar el tiempo del video')); return null }
+  }
+
   const jugadorasVisibles = useMemo(() => {
     const busqueda = busquedaJugadora.trim().toLowerCase()
 
@@ -1255,10 +1307,10 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     })
   }, [citaciones, busquedaJugadora])
 
-  async function cambiarDireccionAtaque(direccionElegida) {
+  async function cambiarDireccionAtaque(direccionElegida, periodoElegido = periodoActual) {
     if (!esAdmin || !escrituraAutorizada || !partidoActual || guardando) return
     const direccion = direccionElegida === 'izquierda' ? 'izquierda' : 'derecha'
-    const nuevaDireccionPrimerTiempo = periodoActual === 1 ? direccion : direccionOpuesta(direccion)
+    const nuevaDireccionPrimerTiempo = periodoElegido === 1 ? direccion : direccionOpuesta(direccion)
     setGuardando(true)
     setError('')
     setMensaje('')
@@ -1271,7 +1323,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
         .single()
       if (updateError) throw updateError
       setPartidos((actuales) => actuales.map((p) => p.id === data.id ? { ...p, ...data } : p))
-      setMensaje(`Dirección del ataque actualizada. ${periodoActual === 1 ? 'El segundo tiempo queda en el sentido contrario.' : 'El primer tiempo queda en el sentido contrario.'}`)
+      setMensaje(`Dirección del ataque actualizada. ${periodoElegido === 1 ? 'El segundo tiempo queda en el sentido contrario.' : 'El primer tiempo queda en el sentido contrario.'}`)
     } catch (e) {
       console.error('No se pudo guardar la dirección del ataque:', e)
       setError(mensajeErrorOPropio(e, 'guardar la dirección del ataque'))
@@ -1339,13 +1391,15 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       return null
     }
 
-    const referenciaCaptura = referenciaNueva(partidoActual, periodoActual)
+    // Con las marcas, el tiempo del partido sale del segundo del video; si no, del 1T / 2T elegido.
+    const periodoCaptura = periodoPorMarcas(tiempo, marcasPartido) ?? periodoActual
+    const referenciaCaptura = referenciaNueva(partidoActual, periodoCaptura)
     const registro = {
       id: crypto.randomUUID(),
       partido_id: partidoId,
       jugador_id: idJugadora,
       segundo: tiempo,
-      periodo: periodoActual,
+      periodo: periodoCaptura,
       ...referenciaCaptura,
       tipo: tipoSeleccionado,
       zona: null,
@@ -1354,7 +1408,10 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     }
     cola.agregar(registro)
     setUltimaAccion({ id: registro.id, partidoId })
-    setAvisoAccion((anterior) => ({ texto: `${etiquetaBotonDe(catalogo, tipoSeleccionado)} · ${formatearTiempo(tiempo)}`, n: (anterior?.n || 0) + 1 }))
+    const minuto = minutoReal(tiempo, marcasPartido)
+    avisarRapido(idJugadora && fueraDeCancha(idJugadora, tiempo)
+      ? `Ojo: ${nombreJugadora(jugadoras.find((j) => j.id === idJugadora))} no estaba en cancha en ese momento`
+      : `${etiquetaBotonDe(catalogo, tipoSeleccionado)} · ${minuto?.estado === 'juego' ? minuto.texto : formatearTiempo(tiempo)}`)
     setError('')
 
     // Conservamos la acción elegida para etiquetar varias jugadoras seguidas.
@@ -1471,6 +1528,9 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     if (updateError) throw updateError
     setEventos((actuales) => actuales.map((ev) => ev.id === data.id ? data : ev))
     setError('')
+    if (cambios.jugador_id && fueraDeCancha(cambios.jugador_id, data.segundo)) {
+      avisarRapido(`Ojo: ${nombreJugadora(jugadoras.find((j) => j.id === cambios.jugador_id))} no estaba en cancha en ese momento`)
+    }
     return data
   }
 
@@ -2206,15 +2266,17 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                   <div className="mb-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <h2 className="az-titulo">Etiquetado rápido</h2>
-                      <div className="az-segmento" role="group" aria-label="Tiempo que estás etiquetando">
+                      <div className="az-segmento" role="group" aria-label="Tiempo que estás etiquetando"
+                        title={periodoAutomatico ? 'Automático: sale de las marcas del partido' : undefined}>
                         {[[1, '1T'], [2, '2T']].map(([valor, texto]) => (
-                          <button key={valor} type="button" aria-pressed={periodoActual === valor} onClick={() => setPeriodoActual(valor)}
+                          <button key={valor} type="button" aria-pressed={periodoActual === valor} disabled={periodoAutomatico} onClick={() => setPeriodoActual(valor)}
                             title={valor === 1 ? 'Primer tiempo' : 'Segundo tiempo'}>
                             {texto}
                           </button>
                         ))}
                       </div>
                     </div>
+                    {periodoAutomatico && <p className="az-nota-corta">El 1T / 2T se toma solo de las marcas del partido.</p>}
                     <p className="mt-2 text-sm" style={{ color: A.secundario }}>
                       {unToque
                         ? 'Tocá una acción y se guarda al instante, sin jugadora. La completás después, en la revisión.'
@@ -2562,6 +2624,10 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                   <PlaylistAnalisis
                     pl={playlist}
                     total={eventosPartido.length}
+                    marcas={marcasPartido}
+                    fueraDeCancha={fueraDeCancha}
+                    faltanMarcas={eventosDelPartido.cargando || eventosDelPartido.error ? [] : faltanMarcas(marcasPartido)}
+                    onIrAPartido={() => setPestanaPanel('partido')}
                     catalogo={catalogo}
                     citaciones={citaciones}
                     jugadoras={jugadoras}
@@ -2755,30 +2821,33 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                   </form>
                 )}
 
-                <TramosSinAcciones eventos={eventosPartido} puedeIr={videoListo} onIr={(segundoTramo) => { setSegundoIr(String(segundoTramo)); irAlSegundo(segundoTramo) }} />
+                <TramosSinAcciones eventos={eventosPartido} marcas={marcasPartido} puedeIr={videoListo} onIr={(segundoTramo) => { setSegundoIr(String(segundoTramo)); irAlSegundo(segundoTramo) }} />
                     </>}
                   />
                 </div>
 
                 <div role="tabpanel" id="az-panel-partido" aria-labelledby="az-pestana-partido" hidden={pestanaPanel !== 'partido'} className="az-panel-cuerpo">
                   <h2 className="az-titulo">Datos del partido</h2>
-                  <div className="mb-4 mt-3 grid gap-3 rounded-xl border p-3 sm:grid-cols-2" style={{ borderColor: A.borde, backgroundColor: A.fondo }}>
-                    <Campo label="Tiempo del partido que estás analizando">
-                      <select className={inputClass} style={inputStyle} value={periodoActual} onChange={(e) => setPeriodoActual(Number(e.target.value))}>
-                        <option value={1}>Primer tiempo</option>
-                        <option value={2}>Segundo tiempo</option>
-                      </select>
-                    </Campo>
-                    <Campo label={`Dirección real del ataque en ${periodoActual === 1 ? 'el primer' : 'el segundo'} tiempo`}>
-                      <select className={inputClass} style={inputStyle} value={direccionAtaqueActual || ''} onChange={(e) => cambiarDireccionAtaque(e.target.value)} disabled={bloqueoEscritura || guardando}>
-                        <option value="" disabled>Configurar dirección</option>
-                        <option value="derecha">Atacamos hacia la derecha →</option>
-                        <option value="izquierda">Atacamos hacia la izquierda ←</option>
-                      </select>
-                    </Campo>
-                    <p className="text-xs sm:col-span-2" style={{ color: A.secundario }}>
-                      La cancha del mapa queda fija. Cada acción guarda hacia dónde atacábamos cuando se marcó; cambiar la dirección no modifica las acciones ya cargadas.
-                    </p>
+                  <div className="mb-4 mt-3">
+                    <PartidoEventos
+                      ev={eventosDelPartido}
+                      puedeEditar={accesoEditor && !bloqueoEscritura}
+                      videoListo={videoListo}
+                      tomarSegundo={tomarSegundoVideo}
+                      irA={(s) => { setSegundoIr(String(s)); irAlSegundo(s) }}
+                      citaciones={citaciones}
+                      titulares={titularesIds}
+                      direccion1T={partidoActual.direccion_primer_tiempo}
+                      onDireccion1T={(direccion) => cambiarDireccionAtaque(direccion, 1)}
+                      avisar={avisarRapido}
+                      alFallar={(e) => setError(mensajeErrorOPropio(e, 'guardar el evento del partido'))}
+                      minutos={{
+                        ...minutosPartido,
+                        vinculado: Boolean(partidoActual.partido_calendario_id),
+                        planilla: planillaMinutos,
+                        onGuardar: guardarMinutosPlanilla,
+                      }}
+                    />
                   </div>
                   {partidoActual.notas && (
                     <div

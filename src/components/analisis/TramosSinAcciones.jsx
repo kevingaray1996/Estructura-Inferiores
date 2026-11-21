@@ -6,9 +6,10 @@ import './etiquetado.css'
 const minutos = (s) => `${Math.round(s / 60)} min`
 
 // Huecos largos sin acciones en un partido ya etiquetado, con «Ir» para revisarlos en el video.
-export default function TramosSinAcciones({ eventos, onIr, puedeIr }) {
+// marcas: inicio y fin de cada tiempo (opcional); con ellas también cuentan los huecos del principio y del final.
+export default function TramosSinAcciones({ eventos, marcas = null, onIr, puedeIr }) {
   const [umbral, setUmbral] = useState(180)
-  const tramos = useMemo(() => tramosSinAcciones(eventos, umbral), [eventos, umbral])
+  const tramos = useMemo(() => tramosSinAcciones(eventos, umbral, marcas), [eventos, umbral, marcas])
   if (!eventos?.length) return null
 
   return (
@@ -21,7 +22,7 @@ export default function TramosSinAcciones({ eventos, onIr, puedeIr }) {
         </select>
       </label>
       {tramos.length === 0 ? (
-        <p className="et-tramos-vacio">No hay huecos de más de {minutos(umbral)} entre acciones.</p>
+        <p className="et-tramos-vacio">No hay huecos de más de {minutos(umbral)} sin acciones.</p>
       ) : (
         <ul className="et-tramos-lista">
           {tramos.map((t) => (

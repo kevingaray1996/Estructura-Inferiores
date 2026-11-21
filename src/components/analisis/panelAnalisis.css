@@ -128,3 +128,5 @@
 @media (hover: none) {
   .az-boton-accion .et-tecla { display: none; }
 }
+
+.az-nota-corta { margin-top: .5rem; font-size: .75rem; color: var(--ui-compartido-secundario); }
