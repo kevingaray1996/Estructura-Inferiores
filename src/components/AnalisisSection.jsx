@@ -16,7 +16,8 @@ import { cargarYouTubeEnVentana, mensajeErrorYouTube } from '../utils/youtubeVen
 import './ventanasAnalisis.css'
 import EncabezadoSeccion from './ui/EncabezadoSeccion'
 import DetalleDestinoPase from './DetalleDestinoPase'
-import FlechasPases from './FlechasPases'
+import MapaAcciones from './analisis/MapaAcciones'
+import useMarcasPartidos from '../hooks/useMarcasPartidos'
 import ExploradorAnalisis from './analisis/ExploradorAnalisis'
 import EstadisticasAnalisis from './analisis/EstadisticasAnalisis'
 import { Boton, Campo, Panel } from './analisis/PiezasAnalisis'
@@ -396,7 +397,6 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   const [partidoId, setPartidoId] = useState('')
   const [partidoCalendarioId, setPartidoCalendarioId] = useState('')
   const [periodoActual, setPeriodoActual] = useState(1)
-  const [filtroMapaPeriodo, setFiltroMapaPeriodo] = useState('todos')
 
   const [alcanceEstadisticas, setAlcanceEstadisticas] = useState('partido')
 
@@ -427,9 +427,6 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   const [alcanceMapa, setAlcanceMapa] = useState('partido')
   const [filtroMapaPartido, setFiltroMapaPartido] = useState('todos')
   const [filtroMapaJugadora, setFiltroMapaJugadora] = useState('todos')
-  const [filtroMapaTipo, setFiltroMapaTipo] = useState('todos')
-  const [filtroMapaResultado, setFiltroMapaResultado] = useState('todos')
-  const [filtroMapaZona, setFiltroMapaZona] = useState('todos')
 
   const [tipoRapido, setTipoRapido] = useState('')
   const [unToque, setUnToque] = useState(leerUnToque)
@@ -1011,54 +1008,14 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   const partidosPorId = useMemo(() => new Map(partidos.map((p) => [p.id, p])), [partidos])
   const zonaDe = useCallback((evento) => zonaEfectivaEvento(evento, partidosPorId.get(evento.partido_id) || null), [partidosPorId])
 
+  // Filtro del mapa: alcance, partido y jugadora (capa, resultado y tiempo los maneja el mapa).
   const eventosMapa = useMemo(() => {
     const base = alcanceMapa === 'acumulado' ? eventos : eventosPartido
     return base.filter((evento) =>
       (alcanceMapa !== 'acumulado' || filtroMapaPartido === 'todos' || evento.partido_id === filtroMapaPartido) &&
-      (filtroMapaJugadora === 'todos' || evento.jugador_id === filtroMapaJugadora) &&
-      (filtroMapaTipo === 'todos' || evento.tipo === filtroMapaTipo) &&
-      (filtroMapaResultado === 'todos' ||
-        (filtroMapaResultado === 'Pendiente' ? !evento.resultado : evento.resultado === filtroMapaResultado)) &&
-      (filtroMapaZona === 'todos' || zonaDe(evento) === filtroMapaZona) &&
-      (filtroMapaPeriodo === 'todos' || Number(evento.periodo || 1) === Number(filtroMapaPeriodo))
+      (filtroMapaJugadora === 'todos' || evento.jugador_id === filtroMapaJugadora)
     )
-  }, [
-    alcanceMapa,
-    eventos,
-    eventosPartido,
-    filtroMapaPartido,
-    filtroMapaJugadora,
-    filtroMapaTipo,
-    filtroMapaResultado,
-    filtroMapaZona,
-    filtroMapaPeriodo,
-    zonaDe,
-  ])
-
-  const eventosMapaOrdenados = useMemo(() => [...eventosMapa].sort((a, b) => {
-    const partidoA = partidos.find((p) => p.id === a.partido_id)
-    const partidoB = partidos.find((p) => p.id === b.partido_id)
-    const fechaA = partidoA?.fecha || partidoA?.created_at || ''
-    const fechaB = partidoB?.fecha || partidoB?.created_at || ''
-    return fechaB.localeCompare(fechaA) || Number(a.segundo || 0) - Number(b.segundo || 0)
-  }), [eventosMapa, partidos])
-
-  const resumenMapa = useMemo(() => {
-    const conUbicacion = eventosMapa.filter((evento) => Boolean(coordenadasEvento(evento)))
-    const exactas = conUbicacion.filter(tieneCoordenadasExactas).length
-    const zonas = ZONAS.map((nombre) => ({
-      nombre,
-      total: eventosMapa.filter((evento) => zonaDe(evento) === nombre).length,
-    }))
-    return {
-      total: eventosMapa.length,
-      conUbicacion: conUbicacion.length,
-      exactas,
-      aproximadas: conUbicacion.length - exactas,
-      sinUbicacion: eventosMapa.length - conUbicacion.length,
-      zonas,
-    }
-  }, [eventosMapa, zonaDe])
+  }, [alcanceMapa, eventos, eventosPartido, filtroMapaPartido, filtroMapaJugadora])
 
   const paseDestinoActual = eventosMapa.find((evento) => evento.id === paseDestinoId && esPase(evento))
 
@@ -1100,7 +1057,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   // Receptoras de los pases del partido, para la Playlist. Se vuelve a leer solo si cambian los pases.
   const pasesDelPartido = useMemo(() => eventosPartido.filter((e) => esPase(e) && !e._cola).map((e) => e.id).join(','), [eventosPartido])
   useEffect(() => {
-    if (seccion !== 'video' || pestanaPanel !== 'playlist' || !pasesDelPartido) return undefined
+    if (seccion !== 'video' || !pasesDelPartido) return undefined
     let cancelado = false
     async function cargar() {
       setResumenDestinatarias((a) => ({ ...a, cargando: true, error: '' }))
@@ -1114,7 +1071,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     }
     cargar()
     return () => { cancelado = true }
-  }, [seccion, pestanaPanel, pasesDelPartido, recargaDestinatarias])
+  }, [seccion, pasesDelPartido, recargaDestinatarias])
 
   const filtrosExplorador = useMemo(() => ({
     partido: filtroExploradorPartido,
@@ -1256,6 +1213,21 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   // Eventos del partido (marcas de tiempo, cambios, goles y tarjetas) atados al video.
   const eventosDelPartido = useEventosPartido(partidoActual?.id || null)
   const marcasPartido = eventosDelPartido.marcas
+  // Marcas para el mapa: las del partido abierto (al día) y, con «Todos los partidos», las de cada análisis.
+  const marcasTodos = useMarcasPartidos(seccion === 'mapa' && alcanceMapa === 'acumulado')
+  const marcasPanel = useMemo(() => new Map(partidoId ? [[partidoId, marcasPartido]] : []), [partidoId, marcasPartido])
+  const marcasMapa = useMemo(() => {
+    if (alcanceMapa !== 'acumulado') return marcasPanel
+    const todas = new Map(marcasTodos)
+    if (partidoId) todas.set(partidoId, marcasPartido)
+    return todas
+  }, [alcanceMapa, marcasPanel, marcasTodos, partidoId, marcasPartido])
+  const jugadorasPorId = useMemo(() => new Map(jugadoras.map((j) => [j.id, j])), [jugadoras])
+  const nombreJugadoraPorId = useCallback((id) => (id && jugadorasPorId.has(id) ? nombreJugadora(jugadorasPorId.get(id)) : ''), [jugadorasPorId])
+  const estadoPasesMapa = useMemo(() => ({
+    cargando: resumenDestinatarias.cargando, error: resumenDestinatarias.error,
+    reintentar: () => setRecargaDestinatarias((n) => n + 1),
+  }), [resumenDestinatarias.cargando, resumenDestinatarias.error])
   const titularesIds = useMemo(() => titulares.map((c) => c.jugador_id), [titulares])
   // ¿Estaba en cancha esa jugadora en ese segundo del video? null si no se puede saber.
   const fueraDeCancha = useCallback(
@@ -2177,7 +2149,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
               ['video', '▶ Video y etiquetas'],
               ['explorador', '⌕ Explorador de acciones'],
               ['estadisticas', '▥ Estadísticas'],
-              ['mapa', '▦ Mapa de zonas'],
+              ['mapa', '▦ Mapa'],
               ['informe', '▤ Informe'],
             ].map(([id, texto]) => (
               <button
@@ -3035,16 +3007,10 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
               <div className="az-split-abajo">
                 <Panel>
-                  <h2 className="text-lg font-bold">Mapa del partido</h2>
-                  <p className="mt-1 text-xs" style={{ color: A.secundario }}>Tocá una acción para verla en el video.</p>
-                  <div className="mt-3">
-                    <CanchaInteractiva
-                      etiquetaTipo={etiquetaTipo}
-                      eventos={eventosPartido}
-                      zonaDe={zonaDe}
-                      onEventClick={(evento) => { setSegundoIr(String(evento.segundo)); irAlSegundo(evento.segundo) }}
-                    />
-                  </div>
+                  <MapaAcciones compacto titulo="Mapa del partido" eventos={eventosPartido} partidos={partidosPorId} marcas={marcasPanel}
+                    detallesPases={resumenDestinatarias.detalles} nombreJugadora={nombreJugadoraPorId} etiquetaTipo={etiquetaTipo}
+                    estadoPases={estadoPasesMapa}
+                    onVideo={(evento) => { setSegundoIr(String(evento.segundo)); irAlSegundo(evento.segundo) }} />
                 </Panel>
                 <Panel>
                   <div className="mb-4 flex items-center justify-between gap-3">
@@ -3108,251 +3074,51 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
           {seccion === 'mapa' && (
             <Panel>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-xl font-black">Mapa táctico interactivo</h2>
-                  <p className="mt-2 max-w-2xl text-sm" style={{ color: A.secundario }}>
-                    Filtrá las acciones del partido o de todos los encuentros. Tocá un punto o una acción para abrir el video en el segundo registrado.
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {[
-                    ['Acciones', resumenMapa.total],
-                    ['Con ubicación', resumenMapa.conUbicacion],
-                    ['Exactas', resumenMapa.exactas],
-                    ['Sin ubicación', resumenMapa.sinUbicacion],
-                  ].map(([label, valor]) => (
-                    <div key={label} className="rounded-lg border px-3 py-2" style={{ borderColor: A.borde, backgroundColor: A.fondo }}>
-                      <p className="text-[10px] uppercase tracking-wide" style={{ color: A.secundario }}>{label}</p>
-                      <p className="text-lg font-black" style={{ color: textoAnalisis(label === 'Exactas' ? AMARILLO : A.texto) }}>{valor}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Alcance del mapa">
-                {[
-                  ['partido', 'Partido seleccionado'],
-                  ['acumulado', 'Todos los partidos'],
-                ].map(([valor, etiqueta]) => (
-                  <button
-                    key={valor}
-                    type="button"
-                    onClick={() => setAlcanceMapa(valor)}
-                    className="rounded-lg border px-4 py-2 text-sm font-bold"
-                    style={{
-                      backgroundColor: alcanceMapa === valor ? 'var(--ui-acento)' : A.fondo,
-                      color: alcanceMapa === valor ? 'var(--ui-texto-sobre-acento)' : A.texto,
-                      borderColor: alcanceMapa === valor ? AMARILLO : A.borde,
-                    }}
-                  >
-                    {etiqueta}
-                  </button>
-                ))}
-                <span className="self-center text-xs" style={{ color: A.secundario }}>
-                  {alcanceMapa === 'partido' ? `Encuentro: ${partidoActual?.rival || 'seleccionado'}` : `${partidos.length} partidos disponibles`}
-                </span>
-              </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                {alcanceMapa === 'acumulado' && (
-                  <Campo label="Partido / rival">
-                    <select className={inputClass} style={inputStyle} value={filtroMapaPartido} onChange={(e) => setFiltroMapaPartido(e.target.value)}>
-                      <option value="todos">Todos los partidos</option>
-                      {partidos.map((partido) => (
-                        <option key={partido.id} value={partido.id}>{partido.rival || 'Rival sin nombre'} · {partido.fecha || 'Sin fecha'}</option>
-                      ))}
-                    </select>
-                  </Campo>
-                )}
-                <Campo label="Tiempo">
-                  <select className={inputClass} style={inputStyle} value={filtroMapaPeriodo} onChange={(e) => setFiltroMapaPeriodo(e.target.value)}>
-                    <option value="todos">Todos los tiempos</option>
-                    <option value="1">Primer tiempo</option>
-                    <option value="2">Segundo tiempo</option>
-                  </select>
-                </Campo>
-                <Campo label="Jugadora">
-                  <select className={inputClass} style={inputStyle} value={filtroMapaJugadora} onChange={(e) => setFiltroMapaJugadora(e.target.value)}>
-                    <option value="todos">Todas las jugadoras</option>
-                    {jugadoras.map((jugadora) => <option key={jugadora.id} value={jugadora.id}>{nombreJugadora(jugadora)}</option>)}
-                  </select>
-                </Campo>
-                <Campo label="Tipo de acción">
-                  <select className={inputClass} style={inputStyle} value={filtroMapaTipo} onChange={(e) => setFiltroMapaTipo(e.target.value)}>
-                    <option value="todos">Todos los tipos</option>
-                    {catalogo.tipos.map((t) => <option key={t.codigo} value={t.codigo}>{t.etiqueta}</option>)}
-                  </select>
-                </Campo>
-                <Campo label="Resultado">
-                  <select className={inputClass} style={inputStyle} value={filtroMapaResultado} onChange={(e) => setFiltroMapaResultado(e.target.value)}>
-                    <option value="todos">Todos los resultados</option>
-                    <option value="Pendiente">Pendiente</option>
-                    {RESULTADOS.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </Campo>
-                <Campo label="Zona de cancha">
-                  <select className={inputClass} style={inputStyle} value={filtroMapaZona} onChange={(e) => setFiltroMapaZona(e.target.value)}>
-                    <option value="todos">Todas las zonas</option>
-                    {ZONAS.map((z) => <option key={z} value={z}>{z}</option>)}
-                  </select>
-                </Campo>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs" style={{ color: A.secundario }}>
-                  {eventosMapa.length} acciones coinciden con los filtros · {resumenMapa.aproximadas} ubicación(es) aproximada(s)
-                </p>
-                <button
-                  type="button"
-                  className="rounded-lg border px-3 py-2 text-xs font-bold"
-                  style={{ borderColor: A.borde, color: A.texto, backgroundColor: A.fondo }}
-                  onClick={() => {
-                    setFiltroMapaPartido('todos')
-                    setFiltroMapaJugadora('todos')
-                    setFiltroMapaTipo('todos')
-                    setFiltroMapaResultado('todos')
-                    setFiltroMapaZona('todos')
-                    setFiltroMapaPeriodo('todos')
-                  }}
-                >
-                  Limpiar filtros
-                </button>
-              </div>
-
-              <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
-                <div className="space-y-3">
-                  <CanchaInteractiva
-                    etiquetaTipo={etiquetaTipo}
-                    eventos={eventosMapa}
-                    zonaDe={zonaDe}
-                    onEventClick={(evento) => esPase(evento) ? setPaseDestinoId(evento.id) : abrirEventoEnVideo(evento)}
-                    capaTrayectorias={!resumenDestinatarias.cargando && !resumenDestinatarias.error && <FlechasPases
-                      eventos={eventosMapa}
-                      detalles={resumenDestinatarias.detalles}
-                      onSelect={(evento) => setPaseDestinoId(evento.id)}
-                      etiquetaTipo={etiquetaTipo}
-                    />}
-                  />
-                  {resumenDestinatarias.cargando && <p role="status" className="text-xs" style={{ color: A.secundario }}>Cargando trayectorias…</p>}
-                  {resumenDestinatarias.error && <p role="alert" className="text-sm text-red-300">
-                    {resumenDestinatarias.error} No se asume que falten destinos.{' '}
-                    <button type="button" className="font-bold underline" onClick={() => setRecargaDestinatarias((n) => n + 1)}>Reintentar</button>
-                  </p>}
-                  <p className="text-xs" style={{ color: A.secundario }}>Flechas verdes: pase correcto · Rojas: pase incorrecto. Tocá un pase para consultar o editar su destino. Las flechas requieren origen y destino exactos.</p>
-                  {paseDestinoActual && <DetalleDestinoPase
-                    key={paseDestinoActual.id}
-                    evento={paseDestinoActual}
-                    etiquetaTipo={etiquetaTipo(paseDestinoActual.tipo)}
-                    partido={partidos.find((p) => p.id === paseDestinoActual.partido_id)}
-                    autora={nombreJugadora(jugadoras.find((j) => j.id === paseDestinoActual.jugador_id))}
-                    puedeEditar={puedeEditarDestinatarias && escrituraAutorizada}
-                    renderCancha={(props) => <CanchaInteractiva {...props} etiquetaTipo={etiquetaTipo} />}
-                    onClose={() => setPaseDestinoId(null)}
-                    onVideo={abrirEventoEnVideo}
-                    onSaved={(detalle) => {
-                      setResumenDestinatarias((actual) => ({ ...actual,
-                        detalles: { ...actual.detalles, [detalle.evento_id]: detalle },
-                      }))
-                      if (resumenDestinatarias.error) setRecargaDestinatarias((n) => n + 1)
-                    }}
-                  />}
-                  <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs" style={{ color: A.secundario }}>
-                    {[
-                      ['#F2C230', 'Remate / centro / gol'],
-                      ['#4ADE80', 'Acción positiva'],
-                      ['#F87171', 'Pérdida / acción negativa'],
-                      ['#60A5FA', 'Duelo / otras acciones'],
-                    ].map(([color, label]) => (
-                      <span key={label} className="flex items-center gap-2">
-                        <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />{label}
-                      </span>
+              <MapaAcciones titulo="Mapa de acciones" eventos={eventosMapa} partidos={partidosPorId} marcas={marcasMapa}
+                detallesPases={resumenDestinatarias.detalles} nombreJugadora={nombreJugadoraPorId} etiquetaTipo={etiquetaTipo}
+                estadoPases={estadoPasesMapa} onVideo={abrirEventoEnVideo} onDestinoPase={(evento) => setPaseDestinoId(evento.id)}
+                masFiltros={<>
+                  <div className="ma-segmento" role="group" aria-label="Partidos">
+                    {[['partido', `Este partido${partidoActual?.rival ? ` (${partidoActual.rival})` : ''}`], ['acumulado', 'Todos los partidos']].map(([valor, etiqueta]) => (
+                      <button key={valor} type="button" aria-pressed={alcanceMapa === valor} onClick={() => setAlcanceMapa(valor)}>{etiqueta}</button>
                     ))}
-                    <span className="flex items-center gap-2"><span className="inline-block h-2.5 w-2.5 rounded-full border-2" style={{ borderColor: '#FFFFFF', backgroundColor: '#64748B', opacity: 0.7 }} />Ubicación aproximada</span>
                   </div>
-                  <p className="text-xs" style={{ color: A.secundario }}>
-                    Los puntos sin coordenadas exactas se ubican en el centro de la zona registrada. Los eventos sin coordenadas ni zona no se dibujan, pero aparecen en el listado y pueden abrirse desde su segundo de video.
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="font-bold">Acciones por zona</h3>
-                    <div className="mt-3 space-y-2">
-                      {resumenMapa.zonas.map((zona) => {
-                        const maximo = Math.max(1, ...resumenMapa.zonas.map((item) => item.total))
-                        const porcentaje = resumenMapa.conUbicacion ? Math.round((zona.total / resumenMapa.conUbicacion) * 100) : 0
-                        return (
-                          <button
-                            key={zona.nombre}
-                            type="button"
-                            onClick={() => setFiltroMapaZona(filtroMapaZona === zona.nombre ? 'todos' : zona.nombre)}
-                            className="w-full rounded-lg border p-2.5 text-left"
-                            style={{ borderColor: filtroMapaZona === zona.nombre ? AMARILLO : A.borde, backgroundColor: filtroMapaZona === zona.nombre ? A.zonaSeleccion : A.fondo }}
-                          >
-                            <div className="mb-2 flex items-center justify-between gap-2 text-xs">
-                              <span>{zona.nombre}</span>
-                              <span className="font-bold" style={{ color: textoAnalisis(AMARILLO) }}>{zona.total} <span className="font-normal" style={{ color: A.secundario }}>({porcentaje}%)</span></span>
-                            </div>
-                            <div className="h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: A.activo }}>
-                              <div className="h-full rounded-full" style={{ width: `${(zona.total / maximo) * 100}%`, backgroundColor: AMARILLO }} />
-                            </div>
-                          </button>
-                        )
-                      })}
-                    </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {alcanceMapa === 'acumulado' && (
+                      <Campo label="Partido / rival">
+                        <select className={inputClass} style={inputStyle} value={filtroMapaPartido} onChange={(e) => setFiltroMapaPartido(e.target.value)}>
+                          <option value="todos">Todos los partidos</option>
+                          {partidos.map((partido) => (
+                            <option key={partido.id} value={partido.id}>{partido.rival || 'Rival sin nombre'} · {partido.fecha || 'Sin fecha'}</option>
+                          ))}
+                        </select>
+                      </Campo>
+                    )}
+                    <Campo label="Jugadora">
+                      <select className={inputClass} style={inputStyle} value={filtroMapaJugadora} onChange={(e) => setFiltroMapaJugadora(e.target.value)}>
+                        <option value="todos">Todas las jugadoras</option>
+                        {jugadoras.map((jugadora) => <option key={jugadora.id} value={jugadora.id}>{nombreJugadora(jugadora)}</option>)}
+                      </select>
+                    </Campo>
                   </div>
-
-                  <div>
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <h3 className="font-bold">Acciones para revisar</h3>
-                      <span className="text-xs" style={{ color: A.secundario }}>{eventosMapaOrdenados.length}</span>
-                    </div>
-                    <div className="max-h-[420px] space-y-2 overflow-y-auto pr-1">
-                      {eventosMapaOrdenados.map((evento) => {
-                        const partido = partidos.find((p) => p.id === evento.partido_id)
-                        const jugadora = jugadoras.find((j) => j.id === evento.jugador_id)
-                        const punto = coordenadasEvento(evento)
-                        const tieneVideo = Boolean(youtubeEmbed(partido?.video_url || videoCalendario(partido?.partido_calendario || partidosCalendario.find((p) => p.id === partido?.partido_calendario_id))))
-                        return (
-                          <div key={evento.id}>
-                          <button
-                            type="button"
-                            onClick={() => abrirEventoEnVideo(evento)}
-                            className="w-full rounded-lg border p-3 text-left transition hover:border-yellow-400"
-                            style={{ borderColor: A.borde, backgroundColor: A.fondo }}
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-bold" title={etiquetaTipo(evento.tipo)}>{etiquetaTipo(evento.tipo)}</p>
-                                <p className="mt-1 truncate text-xs" style={{ color: A.secundario }}>
-                                  {nombreJugadora(jugadora)} · {partido?.rival || 'Rival sin nombre'}
-                                </p>
-                                <p className="mt-1 text-xs" style={{ color: A.secundario }}>
-                                  {zonaDe(evento) || 'Sin zona'} · {evento.resultado || 'Pendiente'} · {punto?.exacta ? 'Exacta' : punto ? 'Aproximada' : 'Sin ubicación'}
-                                </p>
-                              </div>
-                              <span className="shrink-0 rounded-md px-2 py-1 font-mono text-xs font-black" style={{ backgroundColor: A.activo, color: textoAnalisis(AMARILLO) }}>
-                                {formatearTiempo(evento.segundo)}
-                              </span>
-                            </div>
-                            <p className="mt-2 text-[10px]" style={{ color: textoAnalisis(tieneVideo ? AMARILLO : '#F87171') }}>
-                              {tieneVideo ? '▶ Abrir video en esta acción' : 'Video no disponible para este partido'}
-                            </p>
-                          </button>
-                          {esPase(evento) && <button type="button" onClick={() => setPaseDestinoId(evento.id)}
-                            className="mt-1 px-2 py-1 text-xs font-bold text-yellow-300">{puedeEditarDestinatarias ? 'Ver / editar trayectoria' : 'Ver trayectoria'}</button>}
-                          </div>
-                        )
-                      })}
-                      {eventosMapaOrdenados.length === 0 && (
-                        <div className="rounded-lg border p-4 text-sm" style={{ borderColor: A.borde, color: A.secundario }}>
-                          No hay acciones que coincidan con estos filtros.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+                </>} />
+              {paseDestinoActual && <div className="mt-4"><DetalleDestinoPase
+                key={paseDestinoActual.id}
+                evento={paseDestinoActual}
+                etiquetaTipo={etiquetaTipo(paseDestinoActual.tipo)}
+                partido={partidos.find((p) => p.id === paseDestinoActual.partido_id)}
+                autora={nombreJugadora(jugadoras.find((j) => j.id === paseDestinoActual.jugador_id))}
+                puedeEditar={puedeEditarDestinatarias && escrituraAutorizada}
+                renderCancha={(props) => <CanchaInteractiva {...props} etiquetaTipo={etiquetaTipo} />}
+                onClose={() => setPaseDestinoId(null)}
+                onVideo={abrirEventoEnVideo}
+                onSaved={(detalle) => {
+                  setResumenDestinatarias((actual) => ({ ...actual,
+                    detalles: { ...actual.detalles, [detalle.evento_id]: detalle },
+                  }))
+                  if (resumenDestinatarias.error) setRecargaDestinatarias((n) => n + 1)
+                }}
+              /></div>}
             </Panel>
           )}
 

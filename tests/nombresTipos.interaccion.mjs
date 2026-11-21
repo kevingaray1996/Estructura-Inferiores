@@ -84,8 +84,9 @@ test('Análisis muestra los nombres configurables y guarda el código', async ()
     assert.match(document.body.textContent, /Control de arquera: 1/)
     sinCodigo('estadísticas')
 
-    await h.click('▦ Mapa de zonas')
-    assert.ok(textos(selector('Tipo de acción')).includes('Pase bien'))
+    await h.click('▦ Mapa')
+    await h.act(() => [...document.querySelectorAll('button')].find(b => b.textContent.startsWith('Ver lista')).click())
+    assert.match(document.querySelector('.ma-lista').textContent, /Pase bien/)
     assert.match(document.body.textContent, /Control de arquera/)
     sinCodigo('mapa')
 

@@ -245,6 +245,20 @@
   --pizarra-foco: #ffd23f;
   --pizarra-subtitulo-fondo: rgba(11, 11, 10, .78);
   --pizarra-subtitulo-texto: #ffffff;
+
+  /* Mapa de acciones de Análisis: cancha oscura (de noche) para que el amarillo y el rojo se lean bien.
+     Iguales en ambos temas. Amarillo = salió bien; rojo (punteado) = salió mal; gris = neutro o sin resultado.
+     Amarillo y rojo validados para daltonismo sobre el césped (ΔE 16 deutan). */
+  --mapa-cesped: #16201a;
+  --mapa-franja: #19251e;
+  --mapa-linea: rgba(236, 240, 232, .34);
+  --mapa-linea-fuerte: rgba(236, 240, 232, .6);
+  --mapa-texto: #f3f1e8;
+  --mapa-bien: #f4c400;
+  --mapa-mal: #ff5a5a;
+  --mapa-neutro: #a8a69c;
+  --mapa-gol-borde: #ffffff;
+  --mapa-seleccion: #ffffff;
 }
 
 /* Equivalentes claros de los mismos tokens. El tema de pantalla nunca cambia
