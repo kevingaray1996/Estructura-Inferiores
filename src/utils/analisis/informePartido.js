@@ -205,16 +205,18 @@ const DUELOS_PERDIDOS = ['Fallido']
 
 // Filas de la tabla individual: las que jugaron al menos 20'. Titulares primero, después por dorsal.
 // Cada columna marca sus valores destacados (los 3 mejores; en pérdidas, las 2 con más).
-export function jugadorasInforme(acciones, { citaciones = [], minutos = {}, nombreDe } = {}) {
+// Sin minutos (faltan las marcas) entran las que tienen alguna acción, con los minutos vacíos.
+export function jugadorasInforme(acciones, { citaciones = [], minutos = null, nombreDe } = {}) {
+  const conAcciones = new Set(acciones.map((a) => a.evento.jugador_id))
   const filas = citaciones
-    .filter((c) => Number(minutos?.[c.jugador_id]) >= MINUTOS_MINIMOS)
+    .filter((c) => (minutos ? Number(minutos[c.jugador_id]) >= MINUTOS_MINIMOS : conAcciones.has(c.jugador_id)))
     .map((c) => {
       const propias = acciones.filter((a) => a.evento.jugador_id === c.jugador_id).map((a) => a.evento)
       const pases = propias.filter((e) => enCapa(e, 'pases'))
       const duelos = propias.filter((e) => enCapa(e, 'duelos') && [...DUELOS_GANADOS, ...DUELOS_PERDIDOS].includes(e.resultado))
       return {
         id: c.jugador_id, dorsal: c.dorsal ?? null, nombre: nombreDe?.(c.jugador_id) || '', titular: Boolean(c.titular),
-        minutos: Number(minutos[c.jugador_id]),
+        minutos: minutos ? Number(minutos[c.jugador_id]) : null,
         pctPases: porcentaje(pases.filter((e) => e.tipo === 'Pase correcto').length, pases.length),
         perdidas: propias.filter((e) => enCapa(e, 'perdidas')).length,
         recuperaciones: propias.filter((e) => enCapa(e, 'recuperaciones')).length,
@@ -222,9 +224,15 @@ export function jugadorasInforme(acciones, { citaciones = [], minutos = {}, nomb
       }
     })
     .sort((a, b) => Number(b.titular) - Number(a.titular) || (Number(a.dorsal) || 99) - (Number(b.dorsal) || 99) || a.nombre.localeCompare(b.nombre, 'es'))
+  // Las «cuantas» mejores filas. Con empates en el corte entran todas las empatadas, salvo que eso sume más de
+  // una de más: entonces quedan solo las que superan al empate (o, si no hay ninguna, las del valor máximo).
   const destacar = (clave, cuantas) => {
-    const valores = [...new Set(filas.map((f) => f[clave]).filter((v) => v !== null && v > 0))].sort((a, b) => b - a)
-    const corte = valores[Math.min(cuantas, valores.length) - 1]
+    const valores = filas.map((f) => f[clave]).filter((v) => v !== null && v > 0).sort((a, b) => b - a)
+    let corte = valores[Math.min(cuantas, valores.length) - 1]
+    if (corte !== undefined && valores.filter((v) => v >= corte).length > cuantas + 1) {
+      const encima = valores.filter((v) => v > corte)
+      corte = encima.length ? encima[encima.length - 1] : valores[0]
+    }
     for (const f of filas) f[`${clave}Destacado`] = corte !== undefined && f[clave] !== null && f[clave] >= corte
   }
   destacar('pctPases', 3); destacar('recuperaciones', 3); destacar('pctDuelos', 3); destacar('perdidas', 2)
@@ -251,7 +259,7 @@ export function lecturaDonde(acciones) {
   const partes = []
   if (p1.length || p2.length) {
     const cambio = p2.length > p1.length ? `subieron de ${p1.length} a ${p2.length}` : p2.length < p1.length ? `bajaron de ${p1.length} a ${p2.length}` : `se mantuvieron en ${p2.length}`
-    const lugar = carril(p2) && carril(p2) !== carril(p1) ? ` y pasaron a ${carril(p2)}` : carril(p2) ? ` y siguieron por ${carril(p2)}` : ''
+    const lugar = carril(p2) && carril(p2) !== carril(p1) ? ` y pasaron ${carril(p2).replace(/^el /, 'al ')}` : carril(p2) ? ` y siguieron por ${carril(p2)}` : ''
     partes.push(`en el 2T las pérdidas ${cambio}${lugar}`)
   }
   if (r1.length || r2.length) {

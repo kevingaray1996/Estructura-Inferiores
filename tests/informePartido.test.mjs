@@ -123,6 +123,8 @@ test('jugadoras: mínimo 20 minutos, titulares primero y destacados por columna'
   assert.ok(filas[1].perdidasDestacado)
   assert.ok(filas[1].recuperacionesDestacado)
   assert.equal(filas[2].recuperacionesDestacado, false)
+  // Sin minutos: las que tienen acciones (d no tiene ninguna).
+  assert.deepEqual(jugadorasInforme(acciones, { citaciones, minutos: null }).map((f) => [f.id, f.minutos]), [['a', null], ['b', null], ['c', null]])
 })
 
 test('formación: de la cancha parada de Convocados a la cancha acostada atacando a la derecha', () => {
@@ -167,6 +169,18 @@ test('lecturas automáticas', () => {
   const hitos = [{ tipo: 'gol_rival', minuto: { valor: 67, extra: 0, periodo: 2 } }]
   assert.equal(lecturaCuando(tramos, hitos), "Entre el 60' y el 75' tuvimos más acciones malas que buenas (6 contra 3): coincide con un gol rival.")
   assert.equal(lecturaCuando(null, []), '')
+  const cambiaDeCarril = preparar([
+    { tipo: 'Pérdida', coordenada_x: 70, coordenada_y: 50, segundo: enMinuto(1, 5) },
+    { tipo: 'Pérdida', coordenada_x: 30, coordenada_y: 10, segundo: enMinuto(2, 5) },
+  ])
+  assert.match(lecturaDonde(cambiaDeCarril), /se mantuvieron en 1 y pasaron al costado izquierdo/)
+})
+
+test('destacados: con muchos empates no se pinta media tabla', () => {
+  const acciones = preparar(['a', 'b', 'c', 'd', 'e', 'f'].flatMap((id, i) => Array.from({ length: i === 0 ? 9 : 6 }, () => ({ jugador_id: id, tipo: 'Recuperación' }))))
+  const citaciones = ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => ({ jugador_id: id, titular: true }))
+  const filas = jugadorasInforme(acciones, { citaciones, minutos: Object.fromEntries(citaciones.map((c) => [c.jugador_id, 90])) })
+  assert.deepEqual(filas.filter((f) => f.recuperacionesDestacado).map((f) => f.id), ['a'])
 })
 
 test('avisos antes de generar y filas del Excel', () => {
