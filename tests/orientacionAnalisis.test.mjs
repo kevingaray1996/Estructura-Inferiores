@@ -31,19 +31,16 @@ test('La captura es independiente de cambios posteriores del partido; el histori
   assert.equal(zonaEvento({ coordenada_x: 90, coordenada_y: 90 }), null)
   assert.equal(zonaEvento({ ...e, coordenada_x: null, coordenada_y: null, zona: 'Medio centro' }), 'Medio centro')
 })
-test('Integración: mapa, filtros y PDF comparten clasificación, sin inversión de coordenadas guardadas', () => {
+test('Integración: mapa y filtros comparten clasificación, sin inversión de coordenadas guardadas', () => {
   const s = readFileSync('src/components/AnalisisSection.jsx', 'utf8')
   assert.match(s, /zonaEvento as zonaEfectivaEvento/)
   assert.doesNotMatch(s, /function zonaDesdeCoordenadas/)
   assert.match(s, /coordenada_x: coordenadasAccion\?\.x \?\? null/)
   assert.match(s, /coordenada_y: coordenadasAccion\?\.y \?\? null/)
   assert.equal((s.match(/\.\.\.referenciaCaptura,/g) || []).length, 2)
-  const pdf = s.slice(s.indexOf('function CanchaInformePDF'), s.indexOf('function AnalisisSection'))
-  // La zona del informe sale de la misma regla (con el partido, si se lo pasa la pantalla).
-  assert.match(pdf, /zonaDe\(evento\)/)
-  assert.match(pdf, /zonaDe = zonaEfectivaEvento/)
-  assert.match(pdf, /referencia táctica histórica no verificada/)
-  assert.match(pdf, /Cancha visual fija/)
+  // El informe PDF usa los cálculos del mapa (prepararAcciones), no una cancha propia.
+  assert.doesNotMatch(s, /function CanchaInformePDF/)
+  assert.match(readFileSync('src/components/analisis/InformeAnalisis.jsx', 'utf8'), /prepararAcciones\(/)
 })
 test('Migración aditiva: sin backfill ni políticas, referencia inmutable y validación antes del guardado', () => {
   const sql = readFileSync('supabase/migrations/202611020001_orientacion_tactica_analisis.sql', 'utf8')
@@ -55,7 +52,7 @@ test('Migración aditiva: sin backfill ni políticas, referencia inmutable y val
   assert.match(sql, /NEW.zona :=/)
 })
 
-test('Render real de selector e informe PDF conserva puntos y clasifica ambos sentidos sin depender del partido actual', async () => {
+test('Render real del selector conserva puntos y clasifica ambos sentidos sin depender del partido actual', async () => {
   const { crearServidorVitePrueba } = await import('./helpers/servidorVite.mjs')
   const { createElement } = await import('react')
   const { renderToStaticMarkup } = await import('react-dom/server')
@@ -63,10 +60,10 @@ test('Render real de selector e informe PDF conserva puntos y clasifica ambos se
     name: 'orientacion-sintetica', enforce: 'pre',
     resolveId(source) { if (source.endsWith('/supabaseClient')) return '\0orientacion-sin-red' },
     load(id) { if (id === '\0orientacion-sin-red') return "export const supabase = {from() {throw Error('No se permiten consultas reales')}}" },
-    transform(code, id) { if (id.replaceAll('\\', '/').endsWith('/AnalisisSection.jsx')) return code + '\nexport { CanchaInteractiva, CanchaInformePDF };' },
+    transform(code, id) { if (id.replaceAll('\\', '/').endsWith('/AnalisisSection.jsx')) return code + '\nexport { CanchaInteractiva };' },
   }] })
   try {
-    const { CanchaInteractiva, CanchaInformePDF } = await server.ssrLoadModule('/src/components/AnalisisSection.jsx')
+    const { CanchaInteractiva } = await server.ssrLoadModule('/src/components/AnalisisSection.jsx')
     const e = { id: 'sintetico', tipo: 'Recuperación', segundo: 60, coordenada_x: 90, coordenada_y: 90,
       ...referenciaNueva({ direccion_primer_tiempo: 'izquierda' }, 1) }
     const previo = JSON.stringify(e)
@@ -74,12 +71,6 @@ test('Render real de selector e informe PDF conserva puntos y clasifica ambos se
     assert.match(cancha, /<span>ATAQUE<\/span><span>MEDIO<\/span><span>DEFENSA<\/span>/)
     assert.match(cancha, /Defensa izquierda/)
     assert.match(cancha, /cx="90" cy="57.6"/)
-    const historico = { ...e, id: 'historico', sistema_coordenadas: null, direccion_captura: null, periodo_captura: null, zona: 'Ataque derecha' }
-    const pdf = renderToStaticMarkup(createElement(CanchaInformePDF, { eventos: [e, historico], direccionReal: 'derecha' }))
-    assert.match(pdf, /1 acciones con referencia táctica histórica no verificada/)
-    assert.match(pdf, /IZQUIERDA VISUAL/)
-    assert.match(pdf, /Defensa izquierda/)
-    assert.match(pdf, /Ataque derecha/)
     assert.equal(JSON.stringify(e), previo)
   } finally { await server.close() }
 })

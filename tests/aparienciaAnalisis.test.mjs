@@ -44,7 +44,7 @@ test('Cinco vistas internas y editores de pases con datos simulados, sin consult
       const path = id.replaceAll('\\', '/')
       if (path.endsWith('/AnalisisSection.jsx')) {
         code = code.replace('const [cargando, setCargando] = useState(true)', 'const [cargando, setCargando] = useState(false)').replace('const [esAdmin, setEsAdmin] = useState(false)', 'const [esAdmin, setEsAdmin] = useState(true)').replace('const [accesoEditor, setAccesoEditor] = useState(false)', 'const [accesoEditor, setAccesoEditor] = useState(true)').replace("const [partidoId, setPartidoId] = useState('')", "const [partidoId, setPartidoId] = useState('p')").replace('const [partidos, setPartidos] = useState([])', `const [partidos, setPartidos] = useState([${JSON.stringify(p)}])`).replace('const [jugadoras, setJugadoras] = useState([])', `const [jugadoras, setJugadoras] = useState([${JSON.stringify(j)}])`).replace('const [eventos, setEventos] = useState([])', `const [eventos, setEventos] = useState([${JSON.stringify(evento)}])`).replace("const [seccion, setSeccion] = useState('video')", 'const [seccion, setSeccion] = useState(seccionPrueba)')
-        return code + "\nlet seccionPrueba = 'video'; export function cambiarSeccionPrueba(v) {seccionPrueba = v;} export {CanchaInteractiva, CanchaInformePDF};"
+        return code + "\nlet seccionPrueba = 'video'; export function cambiarSeccionPrueba(v) {seccionPrueba = v;} export {CanchaInteractiva};"
       }
       if (path.endsWith('/DetalleDestinatariaPase.jsx')) return code.replace('const [cargando, setCargando] = useState(true)', 'const [cargando, setCargando] = useState(false)').replace('const [datos, setDatos] = useState(null)', `const [datos, setDatos] = useState({opciones: [${JSON.stringify(j)}], aviso: 'Aviso de prueba'})`)
       if (path.endsWith('/DetalleDestinoPase.jsx')) return code.replace('const [cargando, setCargando] = useState(true)', 'const [cargando, setCargando] = useState(false)').replace('const [ficha, setFicha] = useState(null)', "const [ficha, setFicha] = useState({detalle: {destino_x: 80, destino_y: 50, destinataria_estado: 'desconocida'}})")
@@ -61,7 +61,8 @@ test('Cinco vistas internas y editores de pases con datos simulados, sin consult
       if (vista === 'video') {assert.match(html, /<iframe/); assert.match(html, /abc123def45/); assert.match(html, /Pase/)}
       if (vista === 'explorador') {assert.match(html, /Destinataria/); assert.match(html, /Abrir el video en este momento/)}
       if (vista === 'mapa') {assert.match(html, /ma-titulo-partido/); assert.match(html, /vs Rival de prueba/); assert.match(html, /Ataque →/); assert.match(html, /Capa · /); assert.doesNotMatch(html, /#176344/)}
-      if (vista === 'informe') {assert.match(html, /id="informe-imprimible"/); assert.match(html, /@media print/); assert.match(html, /Informe técnico de partido/)}
+      // Informe: el PDF se arma con jsPDF (ya no se imprime la página del navegador).
+      if (vista === 'informe') {assert.match(html, /Informe técnico de partido/); assert.match(html, /Generar PDF/); assert.match(html, /Excel de acciones/); assert.doesNotMatch(html, /@media print|informe-imprimible/)}
     }
     const props = {evento, partido: p, autora: 'Ana Prueba', puedeEditar: true, onClose() {}, onVideo() {}, renderCancha: (props) => createElement(mod.CanchaInteractiva, props)}
     const {default: Destinataria} = await server.ssrLoadModule('/src/components/DetalleDestinatariaPase.jsx')
@@ -77,9 +78,5 @@ test('Cinco vistas internas y editores de pases con datos simulados, sin consult
     assert.match(destino, /#176344/)
     assert.match(destino, /no se clasifica adelante/)
     for (const html of [destinataria, destino]) assert.doesNotMatch(html, /bg-slate-|text-slate-|text-amber-|text-red-/)
-    const pdf = render(mod.CanchaInformePDF, {eventos: [evento]})
-    assert.match(pdf, /#F8FAFC/)
-    assert.match(pdf, /#4ADE80/)
-    assert.doesNotMatch(pdf, /var\(--analisis/)
   } finally {await server.close()}
 })
