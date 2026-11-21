@@ -1,4 +1,4 @@
-import { jsPDF } from 'jspdf'
+import { importarConRecarga } from './cargaDiferida'
 import { supabase } from '../supabaseClient'
 
 const NAVY = [26, 35, 50]
@@ -45,6 +45,8 @@ export async function obtenerEstadisticasCategoria(categoriaId) {
 export async function exportarEstadisticasPDF(categoriaId, categoriaNombre) {
   const filas = await obtenerEstadisticasCategoria(categoriaId)
 
+  // jsPDF se baja recién al exportar (no al abrir Partidos).
+  const { jsPDF } = await importarConRecarga(() => import('jspdf'))
   const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'landscape' })
   const anchoPagina = doc.internal.pageSize.getWidth()
   const margen = 40

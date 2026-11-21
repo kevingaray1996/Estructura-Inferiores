@@ -109,6 +109,8 @@ test('Usuarios Premium: roles/categoría, foto, citación, guardado, errores, ba
   await render()
   assert.ok(document.querySelector('img[src="/foto-sintetica.jpg"]'))
   await click(boton('Exportar backup'))
+  // Etapa B: la herramienta de Excel se baja recién al tocar el botón; se espera a que termine.
+  for (let i = 0; i < 200 && estado.backups !== 1; i++) await act(() => new Promise((r) => setTimeout(r, 25)))
   assert.equal(estado.backups, 1)
   await click(document.querySelector('button[aria-label^="Editar usuario"]'))
   assert.equal(document.querySelectorAll('#usuarios-editor fieldset').length, 3)

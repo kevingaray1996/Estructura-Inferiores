@@ -26,7 +26,7 @@ import { estadoConfig } from './perfil/presentacionPerfil'
 import { calcularSemaforoJugador, SEMAFORO_INFO } from '../utils/semaforoRiesgo'
 import { ultimosDorsales } from '../utils/dorsales'
 import { cargarDatosBienestar } from '../utils/bienestar'
-import { generarBienestarPDF } from '../utils/generarBienestarPDF'
+import { generarBienestarPDF } from '../utils/herramientasDiferidas'
 
 function PerfilJugador({
   jugadorId,

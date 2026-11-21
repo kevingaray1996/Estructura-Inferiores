@@ -1,6 +1,6 @@
 import { PLANTEL as P } from '../appearance/plantel'
 import { useState } from 'react'
-import { generarPerfilPDF } from '../utils/generarPerfilPDF'
+import { generarPerfilPDF } from '../utils/herramientasDiferidas'
 
 const OPCIONES = [
   { clave: 'generales', label: 'Datos generales' },

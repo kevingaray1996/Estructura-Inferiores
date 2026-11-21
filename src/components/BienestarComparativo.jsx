@@ -6,8 +6,8 @@ import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
 import { cargarDatosBienestar } from '../utils/bienestar'
-import { generarBienestarPDF } from '../utils/generarBienestarPDF'
-import { generarBienestarCategoriaPDF } from '../utils/generarBienestarCategoriaPDF'
+import { generarBienestarPDF } from '../utils/herramientasDiferidas'
+import { generarBienestarCategoriaPDF } from '../utils/herramientasDiferidas'
 import { calcularWellnessZScore } from '../utils/semaforoRiesgo'
 
 // Paleta exclusiva de pantalla; informes y escalas conservan sus valores.

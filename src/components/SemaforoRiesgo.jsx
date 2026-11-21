@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { calcularSemaforoJugador, SEMAFORO_INFO } from '../utils/semaforoRiesgo'
-import { generarSemaforoIndividualPDF, generarSemaforoCategoriaPDF } from '../utils/generarSemaforoPDF'
+import { generarSemaforoIndividualPDF, generarSemaforoCategoriaPDF } from '../utils/herramientasDiferidas'
 import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
 
 function SemaforoRiesgo() {

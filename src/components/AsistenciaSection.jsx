@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { obtenerFechaHoy } from '../utils/fecha'
 import { agregarPendiente, contarPendientes, sincronizarPendientes } from '../utils/colaOffline'
-import { generarAsistenciaPDF } from '../utils/generarAsistenciaPDF'
+import { generarAsistenciaPDF } from '../utils/herramientasDiferidas'
 import { puedePlanificar } from '../utils/planificacion'
 
 const ESTADOS = [

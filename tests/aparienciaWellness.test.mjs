@@ -27,7 +27,8 @@ test('Acceso publico comparte el proveedor existente y no fija un tema independi
   const app = readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8')
   const publico = readFileSync(new URL('../src/components/BienestarPublico.jsx', import.meta.url), 'utf8')
   assert.match(main, /<ProveedorApariencia[^>]*><App\s*\/>/)
-  assert.match(app, /return <BienestarPublico/)
+  // Etapa B (carga por partes): el acceso público se baja aparte y se muestra dentro del mismo App/proveedor.
+  assert.match(app, /if \(categoriaBienestarId\) \{\s*return \([\s\S]*?<BienestarPublico categoriaId=\{categoriaBienestarId\} \/>/)
   assert.doesNotMatch(publico, /data-apariencia|matchMedia|localStorage|key=\{.*(?:tema|apariencia)/)
   for (const name of ['FisicoSection', 'CargaWellness', 'BienestarComparativo', 'BienestarPublico', 'CicloComparativo']) {
     const source = readFileSync(new URL(`../src/components/${name}.jsx`, import.meta.url), 'utf8')

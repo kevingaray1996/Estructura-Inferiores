@@ -4,7 +4,7 @@ import { supabase } from '../supabaseClient'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
 import { calcularCargaJugador } from '../utils/semaforoRiesgo'
-import { generarRPEIndividualPDF, generarRPECategoriaPDF } from '../utils/generarRPEPDF'
+import { generarRPEIndividualPDF, generarRPECategoriaPDF } from '../utils/herramientasDiferidas'
 import EstadoVacio from './ui/EstadoVacio'
 import { fechaCorta } from '../utils/formatoFecha'
 

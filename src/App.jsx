@@ -1,41 +1,56 @@
-import PlanificacionSection from './components/PlanificacionSection'
 import { resolverSeccionVisible } from './config/visibilidadSecciones'
 import { puedePlanificar } from './utils/planificacion'
 import useAdministracionAnalisis from './hooks/useAdministracionAnalisis'
 
-import { useCallback, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 import Layout from './components/Layout'
 import Login from './components/Login'
+// Inicio y Hoy vienen en la carga inicial: todos los roles arrancan en Inicio y Hoy es lo siguiente que se abre.
 import InicioSection from './components/InicioSection'
 import HoySection from './components/hoy/HoySection'
 import { puedeVerHoy } from './utils/hoyDatos'
-import CalendarioSection from './components/CalendarioSection'
-import PlantelSection from './components/PlantelSection'
-import MedicosSection from './components/MedicosSection'
-import BienestarComparativo from './components/BienestarComparativo'
-import NutricionSection from './components/NutricionSection'
-import PsicologiaSection from './components/PsicologiaSection'
-import VideoSection from './components/VideoSection'
-import AnalisisSection from './components/AnalisisSection'
-import PartidosSection from './components/PartidosSection'
-import BibliotecaSection from './components/BibliotecaSection'
-import UsuariosSection from './components/UsuariosSection'
-import PaseCategoriaSection from './components/PaseCategoriaSection'
-import BuscadorGlobal from './components/BuscadorGlobal'
-import AsistenciaSection from './components/AsistenciaSection'
-import AvisosSection from './components/avisos/AvisosSection'
-import FisicoSection from './components/FisicoSection'
-import BienestarPublico from './components/BienestarPublico'
 import { destinoSinPerfil } from './utils/derivarJugadora'
-import CaptacionSection from './components/CaptacionSection'
-import RepresentantesSection from './components/RepresentantesSection'
-import PensionesSection from './components/PensionesSection'
-import ConvocatoriasSeleccionSection from './components/ConvocatoriasSeleccionSection'
-import ContratosSection from './components/ContratosSection'
-import EvaluacionesSection from './components/EvaluacionesSection'
-import InformesAutomaticosSection from './components/InformesAutomaticosSection'
 import PantallaCarga from './components/ui/PantallaCarga'
+import ContenedorSeccion from './components/ui/SeccionDiferida'
+import { seccionDiferida } from './utils/cargaDiferida'
+
+// El resto de las secciones se baja recién cuando se abre (src/utils/cargaDiferida.js).
+const PlanificacionSection = seccionDiferida(() => import('./components/PlanificacionSection'))
+const CalendarioSection = seccionDiferida(() => import('./components/CalendarioSection'))
+const PlantelSection = seccionDiferida(() => import('./components/PlantelSection'))
+const MedicosSection = seccionDiferida(() => import('./components/MedicosSection'))
+const BienestarComparativo = seccionDiferida(() => import('./components/BienestarComparativo'))
+const NutricionSection = seccionDiferida(() => import('./components/NutricionSection'))
+const PsicologiaSection = seccionDiferida(() => import('./components/PsicologiaSection'))
+const VideoSection = seccionDiferida(() => import('./components/VideoSection'))
+const AnalisisSection = seccionDiferida(() => import('./components/AnalisisSection'))
+const PartidosSection = seccionDiferida(() => import('./components/PartidosSection'))
+const BibliotecaSection = seccionDiferida(() => import('./components/BibliotecaSection'))
+const UsuariosSection = seccionDiferida(() => import('./components/UsuariosSection'))
+const PaseCategoriaSection = seccionDiferida(() => import('./components/PaseCategoriaSection'))
+const BuscadorGlobal = seccionDiferida(() => import('./components/BuscadorGlobal'))
+const AsistenciaSection = seccionDiferida(() => import('./components/AsistenciaSection'))
+const AvisosSection = seccionDiferida(() => import('./components/avisos/AvisosSection'))
+const FisicoSection = seccionDiferida(() => import('./components/FisicoSection'))
+const BienestarPublico = seccionDiferida(() => import('./components/BienestarPublico'))
+const CaptacionSection = seccionDiferida(() => import('./components/CaptacionSection'))
+const RepresentantesSection = seccionDiferida(() => import('./components/RepresentantesSection'))
+const PensionesSection = seccionDiferida(() => import('./components/PensionesSection'))
+const ConvocatoriasSeleccionSection = seccionDiferida(() => import('./components/ConvocatoriasSeleccionSection'))
+const ContratosSection = seccionDiferida(() => import('./components/ContratosSection'))
+const EvaluacionesSection = seccionDiferida(() => import('./components/EvaluacionesSection'))
+const InformesAutomaticosSection = seccionDiferida(() => import('./components/InformesAutomaticosSection'))
+
+// Nombre que muestra el indicador «Cargando …» mientras se baja cada sección.
+const NOMBRES_SECCION = {
+  inicio: 'Inicio', hoy: 'Hoy', buscar: 'el buscador', calendario: 'Calendario', plantel: 'Plantel', medicos: 'Médicos',
+  bienestar: 'Bienestar', nutricion: 'Nutrición', psicologia: 'Psicología', video: 'Videoanálisis', analisis: 'Análisis',
+  partidos: 'Partidos', entrenamientos: 'Biblioteca', planificacion: 'Entrenamientos', avisos: 'Avisos',
+  asistencia: 'Asistencia', fisico: 'Físico', captacion: 'Captación', representantes: 'Representantes',
+  pensiones: 'Pensión', seleccion: 'Selección', contratos: 'Contratos', evaluaciones: 'Evaluaciones', pases: 'Pases',
+  usuarios: 'Usuarios', informes: 'Informes automáticos',
+}
 
 function App() {
   const [categoriaBienestarId] = useState(
@@ -175,7 +190,13 @@ function App() {
   )
 
   if (categoriaBienestarId) {
-    return <BienestarPublico categoriaId={categoriaBienestarId} />
+    return (
+      <ContenedorSeccion clave="bienestar-publico">
+        <Suspense fallback={<PantallaCarga />}>
+          <BienestarPublico categoriaId={categoriaBienestarId} />
+        </Suspense>
+      </ContenedorSeccion>
+    )
   }
 
   if (sesion === undefined) {
@@ -227,6 +248,7 @@ function App() {
       perfil={perfil}
       puedeAdministrarAnalisis={accesoAnalisis.puedeAbrir}
     >
+      <ContenedorSeccion clave={seccion} nombre={NOMBRES_SECCION[seccion]}>
       {seccion === 'inicio' && (
         <InicioSection perfil={perfil} onCambiarSeccion={setSeccion} onVerBienestar={irABienestarDesdePerfil}
           onVerPlanificacion={(fecha, categoriaId, sesionId) => {
@@ -371,6 +393,7 @@ function App() {
       {seccion === 'informes' && (
         <InformesAutomaticosSection perfil={perfil} />
       )}
+      </ContenedorSeccion>
     </Layout>
   )
 }

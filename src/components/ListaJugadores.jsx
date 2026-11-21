@@ -14,7 +14,7 @@ import { PLANTEL as P, textoPlantel } from '../appearance/plantel'
 
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
-import { generarPlantelPDF } from '../utils/generarPlantelPDF'
+import { generarPlantelPDF } from '../utils/herramientasDiferidas'
 import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
 import { obtenerEstadisticasCategoria } from '../utils/exportarEstadisticas'
 import { ultimosDorsales } from '../utils/dorsales'

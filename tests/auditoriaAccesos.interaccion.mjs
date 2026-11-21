@@ -45,6 +45,9 @@ test('Auditoría 1 y 2: Médico consulta sin Físico/offline; categoría PF, acc
   const click=async el=>{assert.ok(el);assert.equal(el.matches(':disabled'),false);await act(()=>el.dispatchEvent(new dom.window.MouseEvent('click',{bubbles:true})))}
   const seleccionar=async(el,v)=>act(()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLSelectElement.prototype,'value').set.call(el,v);el.dispatchEvent(new dom.window.Event('change',{bubbles:true}))})
   const escribir=async(el,v)=>act(()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(el,v);el.dispatchEvent(new dom.window.Event('input',{bubbles:true}))})
+  // Etapa B: las secciones se bajan al abrirlas; se espera a que termine la carga antes de mirar el contenido.
+  const esperar=async cond=>{for(let i=0;i<200&&!cond();i++)await act(()=>new Promise(r=>setTimeout(r,25)))}
+  const esperarSeccion=()=>esperar(()=>!/Cargando /.test(texto()))
   let clave=0
   const render=async(C,props={})=>act(async()=>{root.render(createElement(C,{...props,key:++clave}));await Promise.resolve()})
   try{
@@ -53,6 +56,7 @@ test('Auditoría 1 y 2: Médico consulta sin Físico/offline; categoría PF, acc
     const ConTema=()=>createElement(ContextoApariencia.Provider,{value:{preferencia:'oscuro',establecerPreferencia(){}}},createElement(App))
     await render(ConTema)
     await click(document.querySelector('button[aria-label="Bienestar"]'))
+    await esperar(()=>/Estado general del plantel/.test(texto()))
     assert.match(texto(),/Estado general del plantel/)
     assert.equal(sincronizaciones,0)
     assert.equal(escrituras.length,0)
@@ -81,6 +85,7 @@ test('Auditoría 1 y 2: Médico consulta sin Físico/offline; categoría PF, acc
       // Menú: "Biblioteca" (antes Entrenamientos) y "Entrenamientos" (antes Planificación semanal).
       assert.equal(!!document.querySelector('nav button[aria-label="Entrenamientos"]'),!!categoria_id)
       await click(document.querySelector('nav button[aria-label="Biblioteca"]'))
+      await esperarSeccion()
       assert.equal(!!boton('▦ Entrenamientos'),!!categoria_id)
     }
     const {default:Asistencia}=await server.ssrLoadModule('/src/components/AsistenciaSection.jsx')

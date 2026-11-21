@@ -3,7 +3,15 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import ProveedorApariencia from './appearance/ProveedorApariencia'
 import PantallaCarga from './components/ui/PantallaCarga'
+import { importarConRecarga, recargarUnaVez } from './utils/cargaDiferida'
 const root = createRoot(document.getElementById('root'))
+
+// Vite avisa con este evento cuando no puede bajar un archivo que una sección necesita (por ejemplo, después de un
+// deploy). Se recarga una sola vez para tomar la versión nueva; si ya se recargó hace poco, el error sigue su curso
+// y la sección muestra el aviso con «Recargar».
+window.addEventListener('vite:preloadError', (evento) => {
+  if (recargarUnaVez()) evento.preventDefault()
+})
 
 function mostrarErrorInicio(sinConfiguracion) {
   root.render(
@@ -28,7 +36,7 @@ if (!import.meta.env.VITE_SUPABASE_URL?.trim() || !import.meta.env.VITE_SUPABASE
   mostrarErrorInicio(true)
 } else {
   root.render(<PantallaCarga />)
-  Promise.all([import('./App.jsx'), import('./supabaseClient')]).then(([{ default: App }, { supabase }]) => {
+  Promise.all([importarConRecarga(() => import('./App.jsx')), importarConRecarga(() => import('./supabaseClient'))]).then(([{ default: App }, { supabase }]) => {
     root.render(<StrictMode><ProveedorApariencia auth={supabase.auth}><App /></ProveedorApariencia></StrictMode>)
   }).catch((error) => {
     console.error('No se pudo cargar la aplicación:', error)
