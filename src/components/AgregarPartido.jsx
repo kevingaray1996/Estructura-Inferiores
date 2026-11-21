@@ -6,6 +6,7 @@ import { sanitizarNombreArchivo } from '../utils/archivos'
 import { comprimirImagen } from '../utils/comprimirImagen'
 import EncabezadoSeccion from './ui/EncabezadoSeccion'
 import EstadoVacio from './ui/EstadoVacio'
+import { mensajeError } from '../utils/mensajesError'
 
 function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) {
   const [equipos, setEquipos] = useState([])
@@ -83,7 +84,7 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
       upsert: false,
     })
     if (error) {
-      alert('Error al subir el escudo: ' + error.message)
+      alert(mensajeError(error, 'subir el escudo'))
       setSubiendoEscudoNuevo(false)
       return
     }
@@ -102,7 +103,7 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
       .single()
     setGuardandoEquipo(false)
     if (error) {
-      alert('Error al crear el equipo: ' + error.message)
+      alert(mensajeError(error, 'crear el equipo'))
       return
     }
     await cargarEquipos()
@@ -143,7 +144,7 @@ function AgregarPartido({ categoriaId, onVolver, onGuardado, partidoIdEditar }) 
 
     setGuardando(false)
     if (error) {
-      setErrorMsg('Error al guardar: ' + error.message)
+      setErrorMsg(mensajeError(error, 'guardar el partido'))
     } else {
       onGuardado()
     }

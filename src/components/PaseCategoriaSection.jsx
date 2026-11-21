@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import EncabezadoSeccion from './ui/EncabezadoSeccion'
 import Boton from './ui/Boton'
+import { mensajeError } from '../utils/mensajesError'
 
 function PaseCategoriaSection() {
   const [categorias, setCategorias] = useState([])
@@ -90,7 +91,7 @@ function PaseCategoriaSection() {
       .in('id', ids)
 
     if (errorUpdate) {
-      setMensaje('Error al actualizar jugadores: ' + errorUpdate.message)
+      setMensaje(mensajeError(errorUpdate, 'pasar a las jugadoras de categoría'))
       setGuardando(false)
       return
     }

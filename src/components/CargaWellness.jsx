@@ -6,6 +6,7 @@ import { obtenerFechaHoy } from '../utils/fecha'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
 import EstadoVacio from './ui/EstadoVacio'
+import { mensajeError } from '../utils/mensajesError'
 
 const CAMPOS = [
   { clave: 'sueno', label: 'Sueño' },
@@ -138,7 +139,7 @@ function CargaWellness() {
         .upsert(filas, { onConflict: 'fecha,jugador_id' })
 
       if (error) {
-        setMensaje('Error al guardar: ' + error.message)
+        setMensaje(mensajeError(error, 'guardar el Wellness'))
         setGuardando(false)
         return
       }

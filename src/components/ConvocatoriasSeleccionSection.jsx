@@ -2,6 +2,8 @@ import { BOTON_GESTION } from '../appearance/gestion'
 import { COLORES } from '../theme'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { mensajeError } from '../utils/mensajesError'
+import { fechaLegible } from '../utils/analisis/formato'
 
 function formatearFecha(fecha) {
   if (!fecha) return null
@@ -132,7 +134,7 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
       : await supabase.from('convocatorias_seleccion').insert(datos)
     setGuardando(false)
     if (error) {
-      setErrorMsg('Error al guardar: ' + error.message)
+      setErrorMsg(mensajeError(error, 'guardar la convocatoria'))
     } else {
       setMostrarForm(false)
       setConvocatoriaEditando(null)
@@ -141,7 +143,9 @@ function ConvocatoriasSeleccionSection({ onVolver }) {
   }
 
   async function handleEliminar(id) {
-    const confirmar = window.confirm('¿Seguro que querés eliminar esta convocatoria?')
+    const c = convocatorias.find((x) => x.id === id)
+    const quien = c?.jugadores ? `${c.jugadores.apellido}, ${c.jugadores.nombre}` : 'la jugadora'
+    const confirmar = window.confirm(`¿Eliminar la convocatoria de ${quien} a ${c?.seleccion || 'la selección'}${c?.fecha_inicio ? ` (desde el ${fechaLegible(c.fecha_inicio)})` : ''}? No se puede deshacer.`)
     if (!confirmar) return
     await supabase.from('convocatorias_seleccion').delete().eq('id', id)
     cargarConvocatorias()

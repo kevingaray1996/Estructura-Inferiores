@@ -23,5 +23,7 @@ test('Usuarios: errores al guardar un perfil con mensajes claros, sin códigos',
     'Ese mail ya pertenece a otro usuario del staff. Buscalo en la lista y editalo.')
   assert.equal(mensajeErrorPerfil({ code: '42501', message: 'permission denied' }),
     'No tenés permiso para guardar este perfil. Revisá tu sesión.')
-  assert.equal(mensajeErrorPerfil({ code: 'XX000', message: 'algo raro' }), 'Error al guardar: algo raro')
+  // Cualquier otro error: mensaje en castellano que dice qué hacer, sin el texto técnico de la base.
+  assert.equal(mensajeErrorPerfil({ code: 'XX000', message: 'algo raro' }),
+    'No se pudo guardar el perfil. Probá de nuevo; si sigue pasando, avisá a coordinación.')
 })

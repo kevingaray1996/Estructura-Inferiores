@@ -40,6 +40,8 @@ test('Usuarios conserva íntegros handlers, payloads, roles y exportación del s
     .replace("\n  const esCoordinacion = perfil?.rol === 'coordinacion'\n  const [pestana, setPestana] = useState('staff')", '')
     // Mensajes de error claros (mail de jugadora o de otro usuario del staff): misma rama, otro texto.
     .replace('setErrorMsg(mensajeErrorPerfil(error))', "setErrorMsg(error.code === '42501' ? 'No tenés permiso para guardar este perfil. Revisá tu sesión.' : 'Error al guardar: ' + error.message)")
+    // Mejoras etapa A (2026-11-20): error de subida de la foto en castellano, misma rama.
+    .replace("setErrorMsg(mensajeError(err, 'subir la foto'))", "setErrorMsg('Error al subir la foto: ' + err.message)")
   assert.equal(handlersAhora, handlersAntes)
   assert.match(actual, /EncabezadoSeccion/)
   assert.match(actual, /EstadoContenido/)

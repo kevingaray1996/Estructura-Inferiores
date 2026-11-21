@@ -2,6 +2,7 @@ import { PLANTEL as P } from '../appearance/plantel'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import EncabezadoSeccion from './ui/EncabezadoSeccion'
+import { mensajeError } from '../utils/mensajesError'
 
 function CargaMasiva({ onVolver, onGuardado }) {
   const [categorias, setCategorias] = useState([])
@@ -101,7 +102,7 @@ function CargaMasiva({ onVolver, onGuardado }) {
     setGuardando(false)
 
     if (error) {
-      setResultado({ ok: false, mensaje: error.message })
+      setResultado({ ok: false, mensaje: mensajeError(error, 'cargar las jugadoras') })
     } else {
       setResultado({ ok: true, cantidad: validas.length })
       setTexto('')

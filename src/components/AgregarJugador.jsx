@@ -5,6 +5,7 @@ import { sanitizarNombreArchivo } from '../utils/archivos'
 import { comprimirImagen } from '../utils/comprimirImagen'
 import EncabezadoSeccion from './ui/EncabezadoSeccion'
 import EstadoVacio from './ui/EstadoVacio'
+import { mensajeError } from '../utils/mensajesError'
 
 const OPCIONES_POSICION = [
   'Arquero',
@@ -152,7 +153,7 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
       upsert: false,
     })
     if (error) {
-      alert('Error al subir la foto: ' + error.message)
+      alert(mensajeError(error, 'subir la foto'))
       setSubiendoFoto(false)
       return
     }
@@ -205,7 +206,7 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
 
     if (error) {
       setGuardando(false)
-      setErrorMsg('Error al guardar: ' + error.message)
+      setErrorMsg(mensajeError(error, 'guardar la jugadora'))
       return
     }
 
@@ -214,7 +215,7 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
     setGuardando(false)
 
     if (errorRepresentante) {
-      setErrorMsg('El jugador se guardó, pero hubo un error con el representante: ' + errorRepresentante)
+      setErrorMsg('La jugadora se guardó, pero el representante no. ' + errorRepresentante)
     } else {
       onGuardado()
     }
@@ -241,7 +242,7 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
         .from('jugador_representantes')
         .update({ fecha_fin: new Date().toISOString().slice(0, 10) })
         .eq('id', asignacionVigenteId)
-      if (error) return error.message
+      if (error) return mensajeError(error, 'cerrar el representante anterior')
     }
 
     if (representanteFinalId) {
@@ -250,7 +251,7 @@ function AgregarJugador({ onVolver, onGuardado, jugadorIdEditar }) {
         representante_id: representanteFinalId,
         fecha_inicio: new Date().toISOString().slice(0, 10),
       })
-      if (error) return error.message
+      if (error) return mensajeError(error, 'asignar el representante')
     }
 
     return null

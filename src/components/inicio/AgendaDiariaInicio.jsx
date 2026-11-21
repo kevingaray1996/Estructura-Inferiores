@@ -4,6 +4,7 @@ import { supabase } from '../../supabaseClient'
 import { cargarSesionesAgenda, normalizarEventos } from '../../utils/calendario'
 import { fechaArgentina, sumarDias, puedePlanificar } from '../../utils/planificacion'
 import { fechaCorta, fechaLarga } from '../../utils/formatoFecha'
+import { mensajeError } from '../../utils/mensajesError'
 
 const TIPOS = { partido: 'Partido', video: 'Video de entrenamiento', planificacion: 'Planificación' }
 function Evento({ evento, abrirCalendario, onVerPlanificacion }) {
@@ -33,7 +34,7 @@ export default function AgendaDiariaInicio({ perfil, partidos, proximoPartido, c
       const errores = [], datos = { planificaciones: [], videos: [] }
       resultados.forEach((r, i) => {
         const error = r.status === 'rejected' ? r.reason : i === 1 ? r.value.error : null
-        if (error) errores.push(i === 0 ? error.message : ['42501', 'PGRST301', 'PGRST302'].includes(error.code) || [401, 403].includes(error.status)
+        if (error) errores.push(i === 0 ? mensajeError(error, 'consultar la planificación de hoy') : ['42501', 'PGRST301', 'PGRST302'].includes(error.code) || [401, 403].includes(error.status)
           ? 'Videos: tu sesión no tiene acceso.' : 'No se pudieron consultar los videos de entrenamiento. Reintentá.')
         else datos[i === 0 ? 'planificaciones' : 'videos'] = i === 0 ? r.value : r.value.data || []
       })

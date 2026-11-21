@@ -10,6 +10,7 @@ import { supabase } from '../supabaseClient'
 import CategoriaFiltro from './CategoriaFiltro'
 import { obtenerFechaHoy } from '../utils/fecha'
 import { fechaCorta } from '../utils/formatoFecha'
+import { mensajeError } from '../utils/mensajesError'
 
 const ESTADO_CONFIG = {
   en_prueba: { label: 'En prueba', color: COLORES.acento, icono: '🕓' },
@@ -118,7 +119,7 @@ function CaptacionSection({ perfil }) {
       .single()
 
     if (errorInsert) {
-      alert('Error al crear el jugador: ' + errorInsert.message)
+      alert(mensajeError(errorInsert, 'dar de alta a la jugadora'))
       return null
     }
 
@@ -156,7 +157,7 @@ function CaptacionSection({ perfil }) {
       const { error } = await supabase.from('candidatos').update(datos).eq('id', candidatoEditando.id)
       if (error) {
         setGuardando(false)
-        setErrorMsg('Error al guardar: ' + error.message)
+        setErrorMsg(mensajeError(error, 'guardar la candidata'))
         return
       }
       candidatoGuardado = { ...candidatoEditando, ...datos }
@@ -164,7 +165,7 @@ function CaptacionSection({ perfil }) {
       const { data, error } = await supabase.from('candidatos').insert(datos).select().single()
       if (error) {
         setGuardando(false)
-        setErrorMsg('Error al guardar: ' + error.message)
+        setErrorMsg(mensajeError(error, 'guardar la candidata'))
         return
       }
       candidatoGuardado = data
@@ -183,7 +184,8 @@ function CaptacionSection({ perfil }) {
   }
 
   async function handleEliminar(candidatoId) {
-    const confirmar = window.confirm('¿Seguro que querés eliminar este candidato?')
+    const c = candidatos.find((x) => x.id === candidatoId)
+    const confirmar = window.confirm(`¿Eliminar a ${c ? `${c.apellido}, ${c.nombre}` : 'esta candidata'} de Captación? No se puede deshacer.`)
     if (!confirmar) return
     await supabase.from('candidatos').delete().eq('id', candidatoId)
     cargar()

@@ -28,6 +28,7 @@ import {
   cargarResumenDestinatarias, esPase,
   nombreDestinataria,
 } from '../utils/destinatariasPases'
+import { mensajeErrorOPropio } from '../utils/mensajesError'
 
 const CATEGORIA_ID = '438874e7-e59f-460b-bec4-3c0ef5b44016'
 
@@ -552,7 +553,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       return true
     } catch (e) {
       if (emitido && comandoRef.current === emitido) { comandoRef.current = null; setComandoPendiente(false) }
-      setError(e.message || 'No se pudo controlar el video.'); return false
+      setError(mensajeErrorOPropio(e, 'controlar el video')); return false
     }
   }, [partidoId, tiempoActivo, relojVideo])
 
@@ -715,7 +716,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       console.error('Error en Análisis:', e)
       setEsAdmin(false)
       setPuedeEditarDestinatarias(false)
-      setError(e.message || 'No se pudieron cargar los datos.')
+      setError(mensajeErrorOPropio(e, 'cargar los datos'))
     } finally {
       setCargando(false)
     }
@@ -1178,7 +1179,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       setMensaje(`Dirección del ataque actualizada. ${periodoActual === 1 ? 'El segundo tiempo queda en el sentido contrario.' : 'El primer tiempo queda en el sentido contrario.'}`)
     } catch (e) {
       console.error('No se pudo guardar la dirección del ataque:', e)
-      setError(e.message || 'No se pudo guardar la dirección del ataque.')
+      setError(mensajeErrorOPropio(e, 'guardar la dirección del ataque'))
     } finally {
       setGuardando(false)
     }
@@ -1213,11 +1214,11 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   function irAlSegundo(valor) { solicitarVideo('salto', Number(valor)) }
   function tomarTiempoActual() {
     try { const tiempo = tiempoActivo(); setSegundo(String(tiempo)); setSegundoIr(String(tiempo)); setError('') }
-    catch (e) { setError(e.message) }
+    catch (e) { setError(mensajeErrorOPropio(e, 'mover el video')) }
   }
   function alternarReproduccion() { solicitarVideo('alternar') }
   function desplazarVideo(delta) {
-    try { solicitarVideo('salto', Math.max(0, tiempoActivo() + delta)) } catch (e) { setError(e.message) }
+    try { solicitarVideo('salto', Math.max(0, tiempoActivo() + delta)) } catch (e) { setError(mensajeErrorOPropio(e, 'mover el video')) }
   }
   function reconectarVideo() {
     try { playerRef.current?.pauseVideo?.() } catch { /* Ventana cerrada. */ }
@@ -1283,7 +1284,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       if (enviado && registroInciertoTrasError(e)) setRegistroIncierto(true)
       console.error('Error al etiquetar acción:', e)
       setError(
-        enviado && registroInciertoTrasError(e) ? 'No se pudo confirmar el guardado. Revisá las acciones y recargá Análisis antes de intentar nuevamente; no se reintentó el envío.' : e.message ||
+        enviado && registroInciertoTrasError(e) ? 'No se pudo confirmar el guardado. Revisá las acciones y recargá Análisis antes de intentar nuevamente; no se reintentó el envío.' : mensajeErrorOPropio(e, 'guardar la acción') ||
         'No se pudo guardar la acción rápida. Verificá que la base de datos permita resultado y zona nulos.',
       )
     } finally {
@@ -1363,7 +1364,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       setMensaje('Acción actualizada correctamente.')
     } catch (e) {
       console.error('Error al editar acción:', e)
-      setError(e.message || 'No se pudo actualizar la acción.')
+      setError(mensajeErrorOPropio(e, 'actualizar la acción'))
     } finally {
       setGuardando(false)
     }
@@ -1372,7 +1373,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   async function eliminarEvento(evento) {
     if (!esAdmin || !escrituraAutorizada) return
 
-    if (!window.confirm('¿Querés eliminar esta acción etiquetada?')) return
+    if (!window.confirm(`¿Eliminar la acción «${etiquetaTipo(evento.tipo)}» del minuto ${formatearTiempo(evento.segundo)}? No se puede deshacer.`)) return
 
     const { error: deleteError } = await supabase
       .from('analisis_eventos')
@@ -1409,7 +1410,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       setMensaje(`Se deshizo ${etiquetaTipo(evento.tipo)} · ${formatearTiempo(evento.segundo)}.`)
     } catch (e) {
       console.error('Error al deshacer acción:', e)
-      setError(e.message || 'No se pudo deshacer la acción.')
+      setError(mensajeErrorOPropio(e, 'deshacer la acción'))
     } finally {
       setGuardando(false)
     }
@@ -1554,7 +1555,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       )
     } catch (e) {
       console.error('Error al guardar análisis:', e)
-      setError(e.message || 'No se pudo guardar el análisis.')
+      setError(mensajeErrorOPropio(e, 'guardar el análisis'))
     } finally {
       setGuardando(false)
     }
@@ -1653,7 +1654,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     } catch (e) {
       if (enviado && registroInciertoTrasError(e)) setRegistroIncierto(true)
       console.error('Error al registrar acción:', e)
-      setError(enviado && registroInciertoTrasError(e) ? 'No se pudo confirmar el guardado. Revisá las acciones y recargá Análisis antes de intentar nuevamente; no se reintentó el envío.' : e.message || 'No se pudo registrar la acción.')
+      setError(enviado && registroInciertoTrasError(e) ? 'No se pudo confirmar el guardado. Revisá las acciones y recargá Análisis antes de intentar nuevamente; no se reintentó el envío.' : mensajeErrorOPropio(e, 'registrar la acción'))
     } finally {
       bloqueoEtiquetado.salir()
       setGuardando(false)

@@ -230,7 +230,9 @@ function MedicosContenido({ perfil, jugadorInicialId, onConsumirJugadorInicial }
   }
 
   async function handleEliminarFicha(fichaId) {
-    const confirmar = window.confirm('¿Seguro que querés eliminar este registro médico?')
+    const f = fichas.find((x) => x.id === fichaId)
+    const quien = jugadorSeleccionado ? ` de ${jugadorSeleccionado.apellido}, ${jugadorSeleccionado.nombre}` : ''
+    const confirmar = window.confirm(`¿Eliminar el registro médico${f?.fecha ? ` del ${fechaLarga(f.fecha)}` : ''}${quien}? No se puede deshacer.`)
     if (!confirmar) return
     await supabase.from('fichas_medicas').delete().eq('id', fichaId)
 

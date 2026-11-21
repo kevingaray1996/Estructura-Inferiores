@@ -11,6 +11,7 @@ import { focoYCamara, opacidades as calcularOpacidades, subtitulo as calcularSub
 import { cargarConvocadas, colorearRival, equipoRival, fotosDeFichas, leerCitaciones, leerDatosPizarra, vincularJugadora } from '../utils/pizarraPlantel'
 import { descargarArchivo, miniaturaPizarra } from '../utils/pizarraExportar'
 import './pizarra.css'
+import { mensajeErrorOPropio } from '../utils/mensajesError'
 
 const UMBRAL_PX = 4, TOQUE_PX = 22
 const RETRATO = '(orientation: portrait) and (max-width: 750px)'
@@ -478,11 +479,11 @@ export default function PizarraTactica({ inicial, soloLectura = false, onGuardar
       const miniatura = await miniaturaPizarra(svgExportar.current || svg.current)
       await onGuardar?.(limpia, miniatura)
       setGuardado(JSON.stringify(limpia))
-    } catch (e) { setError(e.message || 'No se pudo guardar la pizarra.'); } finally { setGuardando(false) }
+    } catch (e) { setError(mensajeErrorOPropio(e, 'guardar la pizarra')); } finally { setGuardando(false) }
   }
   async function importar(e) {
     const file = e.target.files?.[0]; e.target.value = ''; if (!file) return
-    try { if (file.size > 900000) throw Error('Archivo demasiado grande.'); const nuevo = validarPizarra(JSON.parse(await file.text())); if (!window.confirm('¿Reemplazar el diseño actual por el archivo? Podés deshacer.')) return; cambiar(nuevo); setPaso(0); setSeleccion([]) } catch (e) { setError(e.message || 'Archivo inválido.') }
+    try { if (file.size > 900000) throw Error('Archivo demasiado grande.'); const nuevo = validarPizarra(JSON.parse(await file.text())); if (!window.confirm('¿Reemplazar el diseño actual por el archivo? Podés deshacer.')) return; cambiar(nuevo); setPaso(0); setSeleccion([]) } catch (e) { setError(e instanceof SyntaxError || !e?.message ? 'El archivo no es una pizarra válida. Elegí un archivo exportado desde la pizarra.' : e.message) }
   }
   function teclado(e) {
     if (guardando || ['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON', 'SUMMARY'].includes(e.target.tagName)) return

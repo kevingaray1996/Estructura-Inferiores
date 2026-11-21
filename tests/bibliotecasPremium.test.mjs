@@ -15,7 +15,11 @@ test('Bibliotecas Premium conservan escrituras, filtros, reproducción por enlac
   for (const n of ['VideoSection']) {
     // Seguridad Storage (2026-11-13) cambió a propósito la subida: carpeta videos/ y sin reemplazar (upsert: false).
     const p = `src/components/${n}.jsx`, b = leer(p)
+    // Mejoras etapa A (2026-11-20): error de subida en castellano y confirmación que nombra el video.
     const a = antes(p).replace("const nombreArchivo = `${Date.now()}-", "const nombreArchivo = `videos/${Date.now()}-").replace('upsert: true,', 'upsert: false,')
+      .replace("alert('Error al subir la imagen: ' + error.message)", "alert(mensajeError(error, 'subir la imagen'))")
+      .replace("    const confirmar = window.confirm('¿Seguro que querés eliminar este video?')",
+        "    const v = videos.find((x) => x.id === videoId)\n    const titulo = v?.contenido || v?.categorias?.nombre || 'Entrenamiento'\n    const confirmar = window.confirm(`¿Eliminar el video «${titulo}»${v?.fecha ? ` del ${fechaLegible(v.fecha)}` : ''}? No se puede deshacer.`)")
     const inicio = '  function cambiarTipo(t)'
     const fin = '  const videosFiltrados ='
     const bloque = s => s.slice(s.indexOf(inicio), s.lastIndexOf(fin))

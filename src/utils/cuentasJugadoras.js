@@ -1,5 +1,6 @@
 // Cuentas de jugadoras: validación del mail y llamada a la Edge Function `cuentas-jugadoras`.
 // Mismo criterio de mail que la función (supabase/functions/cuentas-jugadoras/index.js).
+import { mensajeError } from './mensajesError.js'
 
 const PATRON_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -31,7 +32,7 @@ export function mensajeErrorPerfil(error) {
       ? 'Ese mail ya pertenece a una jugadora. Usá otro mail para este usuario.'
       : 'Ese mail ya pertenece a otro usuario del staff. Buscalo en la lista y editalo.'
   }
-  return 'Error al guardar: ' + (error?.message || 'sin detalle')
+  return mensajeError(error, 'guardar el perfil')
 }
 
 export function mensajeCuentas(codigo) {

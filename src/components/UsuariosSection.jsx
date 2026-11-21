@@ -11,6 +11,7 @@ import { comprimirImagen } from '../utils/comprimirImagen'
 import PestanasAccesibles from './ui/PestanasAccesibles'
 import CuentasJugadorasPanel from './usuarios/CuentasJugadorasPanel'
 import { mensajeErrorPerfil } from '../utils/cuentasJugadoras'
+import { mensajeError } from '../utils/mensajesError'
 
 const rolLabel = {
   coordinacion: 'Coordinación',
@@ -167,7 +168,7 @@ function UsuariosSection({ perfil }) {
       try {
         fotoUrlFinal = await subirFotoPerfil(fotoArchivo, email.trim().toLowerCase())
       } catch (err) {
-        setErrorMsg('Error al subir la foto: ' + err.message)
+        setErrorMsg(mensajeError(err, 'subir la foto'))
         setGuardando(false)
         return
       }

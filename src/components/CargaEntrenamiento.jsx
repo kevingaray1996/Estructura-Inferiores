@@ -204,7 +204,10 @@ function CargaEntrenamiento() {
   }
 
   async function handleEliminarBloque(id) {
-    const confirmar = window.confirm('¿Eliminar este bloque?')
+    const b = bloques.find((x) => x.id === id)
+    const descripcion = (b?.descripcion || '').trim()
+    const nombre = descripcion ? `«${descripcion.length > 60 ? descripcion.slice(0, 60) + '…' : descripcion}»` : 'sin descripción'
+    const confirmar = window.confirm(`¿Eliminar el bloque ${nombre}${b?.duracion_minutos ? ` (${b.duracion_minutos} min)` : ''}? No se puede deshacer.`)
     if (!confirmar) return
 
     await supabase

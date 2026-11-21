@@ -5,6 +5,7 @@ import { supabase } from '../supabaseClient'
 import CategoriaFiltro from './CategoriaFiltro'
 import { obtenerFechaHoy } from '../utils/fecha'
 import { fechaLarga } from '../utils/formatoFecha'
+import { fechaLegible } from '../utils/analisis/formato'
 
 function iniciales(nombre, apellido) {
   return `${nombre?.[0] || ''}${apellido?.[0] || ''}`.toUpperCase()
@@ -103,7 +104,9 @@ function PsicologiaSection({ jugadorInicialId, onConsumirJugadorInicial }) {
   }
 
   async function handleEliminarFicha(fichaId) {
-    const confirmar = window.confirm('¿Seguro que querés eliminar este registro?')
+    const f = fichas.find((x) => x.id === fichaId)
+    const quien = jugadorSeleccionado ? ` de ${jugadorSeleccionado.apellido}, ${jugadorSeleccionado.nombre}` : ''
+    const confirmar = window.confirm(`¿Eliminar el registro psicológico${f?.fecha ? ` del ${fechaLegible(f.fecha)}` : ''}${quien}? No se puede deshacer.`)
     if (!confirmar) return
     await supabase.from('fichas_psicologicas').delete().eq('id', fichaId)
     cargarFichas(jugadorSeleccionado.id)

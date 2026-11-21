@@ -10,6 +10,8 @@ import EstadoContenido from './ui/EstadoContenido'
 import TarjetaIndicador from './ui/TarjetaIndicador'
 import './audiovisualPremium.css'
 import { fechaCorta } from '../utils/formatoFecha'
+import { mensajeError } from '../utils/mensajesError'
+import { fechaLegible } from '../utils/analisis/formato'
 
 // Solo una vista previa de YouTube; el enlace original, incluidos sus tiempos,
 // sigue siendo el destino de reproducción. Otros proveedores conservan su enlace.
@@ -157,7 +159,7 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
       upsert: false,
     })
     if (error) {
-      alert('Error al subir la imagen: ' + error.message)
+      alert(mensajeError(error, 'subir la imagen'))
       setSubiendoImagenBiblioteca(false)
       return
     }
@@ -231,7 +233,9 @@ function VideoSection({ jugadorInicialId, onConsumirJugadorInicial, onIrABibliot
   async function handleEliminarVideo(e, videoId) {
     e.preventDefault()
     e.stopPropagation()
-    const confirmar = window.confirm('¿Seguro que querés eliminar este video?')
+    const v = videos.find((x) => x.id === videoId)
+    const titulo = v?.contenido || v?.categorias?.nombre || 'Entrenamiento'
+    const confirmar = window.confirm(`¿Eliminar el video «${titulo}»${v?.fecha ? ` del ${fechaLegible(v.fecha)}` : ''}? No se puede deshacer.`)
     if (!confirmar) return
     await supabase.from('videos').delete().eq('id', videoId)
     cargarVideos()

@@ -7,6 +7,7 @@ import { obtenerFechaHoy } from '../utils/fecha'
 import { obtenerJugadoresDeCategoria } from '../utils/jugadoresCategoria'
 import { obtenerCategoriaPrimeraDivision } from '../utils/categoriaPrimera'
 import EstadoVacio from './ui/EstadoVacio'
+import { mensajeError } from '../utils/mensajesError'
 
 // Alias visual: conserva la superficie alternativa original de estos formularios.
 const UI = { ...WELLNESS, tarjetaAlternativa: WELLNESS.filaAlternativa }
@@ -111,7 +112,7 @@ function CargaCMJ() {
         .upsert(filas, { onConflict: 'fecha,jugador_id' })
 
       if (error) {
-        setMensaje('Error al guardar: ' + error.message)
+        setMensaje(mensajeError(error, 'guardar los saltos'))
         setGuardando(false)
         return
       }
@@ -125,7 +126,7 @@ function CargaCMJ() {
         .in('jugador_id', idsABorrar)
 
       if (error) {
-        setMensaje('Error al borrar: ' + error.message)
+        setMensaje(mensajeError(error, 'borrar los saltos vacíos'))
         setGuardando(false)
         return
       }

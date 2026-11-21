@@ -2,6 +2,7 @@ import { BOTON_GESTION } from '../appearance/gestion'
 import { COLORES } from '../theme'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { mensajeError } from '../utils/mensajesError'
 
 const costoLabel = {
   club: 'Club',
@@ -75,7 +76,7 @@ function PensionesSection({ onVolver }) {
       : await supabase.from('pensiones').insert({ nombre })
     setGuardando(false)
     if (error) {
-      setErrorMsg('Error al guardar: ' + error.message)
+      setErrorMsg(mensajeError(error, 'guardar la pensión'))
     } else {
       setMostrarForm(false)
       setPensionEditando(null)
@@ -84,8 +85,9 @@ function PensionesSection({ onVolver }) {
   }
 
   async function handleEliminar(id) {
+    const pension = pensiones.find((x) => x.id === id)
     const confirmar = window.confirm(
-      '¿Seguro que querés eliminar esta pensión? Los jugadores asignados quedan sin pensión.'
+      `¿Eliminar la pensión «${pension?.nombre || 'sin nombre'}»? Las jugadoras asignadas quedan sin pensión.`
     )
     if (!confirmar) return
     await supabase.from('jugadores').update({ pension_id: null, costo_pension: null }).eq('pension_id', id)

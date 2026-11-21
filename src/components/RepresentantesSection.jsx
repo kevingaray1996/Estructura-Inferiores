@@ -2,6 +2,7 @@ import { BOTON_GESTION, textoGestion } from '../appearance/gestion'
 import { COLORES } from '../theme'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { mensajeError } from '../utils/mensajesError'
 
 function formatearFecha(fecha) {
   if (!fecha) return null
@@ -122,7 +123,7 @@ function RepresentantesSection({ onVolver }) {
       : await supabase.from('representantes').insert(datos)
     setGuardando(false)
     if (error) {
-      setErrorMsg('Error al guardar: ' + error.message)
+      setErrorMsg(mensajeError(error, 'guardar el representante'))
     } else {
       setMostrarForm(false)
       setRepresentanteEditando(null)
@@ -131,8 +132,9 @@ function RepresentantesSection({ onVolver }) {
   }
 
   async function handleEliminarRepresentante(id) {
+    const representante = representantes.find((x) => x.id === id)
     const confirmar = window.confirm(
-      '¿Seguro que querés eliminar este representante? También se borran sus vínculos con jugadores.'
+      `¿Eliminar al representante «${representante?.nombre || 'sin nombre'}»? También se borran sus vínculos con jugadoras.`
     )
     if (!confirmar) return
     await supabase.from('representantes').delete().eq('id', id)

@@ -12,6 +12,7 @@ import PizarraEjercicio from './PizarraEjercicio'
 import Vista from './BibliotecaVista'
 import './audiovisualPremium.css'
 import './biblioteca.css'
+import { mensajeError, mensajeErrorOPropio } from '../utils/mensajesError'
 
 // Etapas D + G: Biblioteca de Cancha (ejercicios y jugadas con pizarra) y de Gimnasio (ejercicios con demostración).
 // Reemplaza a la pantalla "Entrenamientos" (que era el alta de la tabla biblioteca). Leen coordinación, técnicos y PF;
@@ -52,7 +53,7 @@ function Editor({ inicial, carpetas, rol, onGuardado, onCancelar }) {
       if (fallo) throw fallo
       const url = supabase.storage.from('Biblioteca').getPublicUrl(nombre).data.publicUrl
       cambiar(campo === 'demo' ? { demo_tipo: 'imagen', demo_url: url } : { imagen_url: url })
-    } catch (e) { setError(`No se pudo subir la imagen: ${e.message || e}`) } finally { setSubiendo(false) }
+    } catch (e) { setError(mensajeError(e, 'subir la imagen')) } finally { setSubiendo(false) }
   }
   async function guardar() {
     if (errores.length || guardando) return
@@ -179,12 +180,12 @@ export default function BibliotecaSection({ perfil, onPlanificar }) {
     const marcado = favoritos.has(e.id)
     setFavoritos(s => { const n = new Set(s); if (marcado) n.delete(e.id); else n.add(e.id); return n })
     const { error } = marcado ? await supabase.from('biblioteca_favoritos').delete().eq('biblioteca_id', e.id) : await supabase.from('biblioteca_favoritos').insert({ biblioteca_id: e.id })
-    if (error) { setAviso(`No se pudo ${marcado ? 'quitar' : 'marcar'} el favorito: ${error.message}`); cargar() }
+    if (error) { setAviso(mensajeError(error, marcado ? 'quitar el favorito' : 'marcar el favorito')); cargar() }
   }
   async function eliminar(e) {
     if (!window.confirm(`¿Eliminar "${e.contenido || 'este ejercicio'}" de la biblioteca? Las sesiones que ya lo usan conservan su copia.`)) return
     const { error } = await supabase.from('biblioteca').delete().eq('id', e.id)
-    if (error) setAviso(`No se pudo eliminar: ${error.message}`); else { setFicha(null); cargar() }
+    if (error) setAviso(mensajeError(error, 'eliminar el ejercicio')); else { setFicha(null); cargar() }
   }
   async function carpetaNueva() {
     const nombre = window.prompt('Nombre de la carpeta nueva')
@@ -193,7 +194,7 @@ export default function BibliotecaSection({ perfil, onPlanificar }) {
     if (problema) { setAviso(problema); return }
     const orden = Math.max(0, ...lista.map(c => c.orden)) + 10
     const { error } = await supabase.from('biblioteca_carpetas').insert({ ambito, nombre: nombre.trim(), orden })
-    if (error) setAviso(`No se pudo crear la carpeta: ${error.message}`); else cargar()
+    if (error) setAviso(mensajeError(error, 'crear la carpeta')); else cargar()
   }
   async function renombrar(c) {
     const nombre = window.prompt('Nuevo nombre', c.nombre)
@@ -201,26 +202,26 @@ export default function BibliotecaSection({ perfil, onPlanificar }) {
     const problema = nombreCarpetaValido(nombre, carpetas, ambito, c.id)
     if (problema) { setAviso(problema); return }
     const { error } = await supabase.from('biblioteca_carpetas').update({ nombre: nombre.trim() }).eq('id', c.id)
-    if (error) setAviso(`No se pudo renombrar: ${error.message}`); else cargar()
+    if (error) setAviso(mensajeError(error, 'renombrar la carpeta')); else cargar()
   }
   async function mover(c, delta) {
     const cambios = reordenar(lista, c.id, delta)
     if (!cambios.length) return
     setOcupado(true)
-    for (const x of cambios) { const { error } = await supabase.from('biblioteca_carpetas').update({ orden: x.orden }).eq('id', x.id); if (error) { setAviso(`No se pudo ordenar: ${error.message}`); break } }
+    for (const x of cambios) { const { error } = await supabase.from('biblioteca_carpetas').update({ orden: x.orden }).eq('id', x.id); if (error) { setAviso(mensajeError(error, 'ordenar las carpetas')); break } }
     setOcupado(false); cargar()
   }
   async function borrar(c) {
     if (c.cantidad) { setAviso(`"${c.nombre}" tiene ${c.cantidad} ejercicio(s): movelos a otra carpeta antes de borrarla.`); return }
     if (!window.confirm(`¿Borrar la carpeta "${c.nombre}"?`)) return
     const { error } = await supabase.from('biblioteca_carpetas').delete().eq('id', c.id)
-    if (error) setAviso(error.code === '23001' || error.code === '23503' ? `"${c.nombre}" todavía tiene ejercicios.` : `No se pudo borrar: ${error.message}`)
+    if (error) setAviso(error.code === '23001' || error.code === '23503' ? `"${c.nombre}" todavía tiene ejercicios.` : mensajeError(error, 'borrar la carpeta'))
     else { if (filtros.carpeta === c.id) filtrar({ carpeta: '' }); cargar() }
   }
   async function setInicial() {
     setOcupado(true); setAviso('')
     try { const n = await cargarSetInicial(supabase, carpetas, ejercicios); setAviso(n ? `Se cargaron ${n} jugadas de ejemplo.` : 'Las jugadas de ejemplo ya estaban.'); cargar() }
-    catch (e) { setAviso(`No se pudieron cargar las jugadas de ejemplo: ${e.message}`) } finally { setOcupado(false) }
+    catch (e) { setAviso(mensajeErrorOPropio(e, 'cargar las jugadas de ejemplo')) } finally { setOcupado(false) }
   }
 
   const opcionesJugadoras = valoresDistintos(delAmbito, e => e.cantidad_jugadores)
@@ -285,7 +286,7 @@ export default function BibliotecaSection({ perfil, onPlanificar }) {
             <button type="button" disabled={ocupado} onClick={setInicial}>{ocupado ? 'Cargando…' : 'Cargar jugadas de ejemplo'}</button></div>}
 
           {estado.cargando && <EstadoContenido estado="cargando" titulo="Cargando biblioteca" />}
-          {!estado.cargando && estado.error && <EstadoContenido estado={estado.error.code === '42501' ? 'denegado' : 'error'} titulo="No se pudo consultar la biblioteca" mensaje={estado.error.message} onReintentar={cargar} />}
+          {!estado.cargando && estado.error && <EstadoContenido estado={estado.error.code === '42501' ? 'denegado' : 'error'} titulo="No se pudo consultar la biblioteca" mensaje={mensajeError(estado.error, 'consultar la biblioteca')} onReintentar={cargar} />}
           {!estado.cargando && !estado.error && visibles.length === 0 && <EstadoContenido estado="vacio"
             titulo={delAmbito.length ? 'Nada para estos filtros' : ambito === 'gimnasio' ? 'Gimnasio todavía está vacío' : 'Todavía no hay ejercicios de cancha'}
             mensaje={delAmbito.length ? 'Probá con otra carpeta o limpiá los filtros.' : editable ? 'Cargá el primero con “+ Nuevo”.' : 'Cuando el cuerpo técnico cargue ejercicios, aparecen acá.'} />}

@@ -8,6 +8,7 @@ import { fechaHora } from '../utils/formatoFecha'
 import EncabezadoSeccion from './ui/EncabezadoSeccion'
 import EstadoVacio from './ui/EstadoVacio'
 import AvisarConvocatoria from './avisos/AvisarConvocatoria'
+import { mensajeError } from '../utils/mensajesError'
 
 function fechaISO(date) {
   const anio = date.getFullYear()
@@ -298,7 +299,7 @@ function ConvocarPartido({ partidoId, categoriaId, onVolver, onIrAFisico, puedeA
     }
     if (errorStats) {
       setGuardando(false)
-      setErrorMsg('Error al guardar estadísticas: ' + errorStats.message)
+      setErrorMsg(mensajeError(errorStats, 'guardar las estadísticas'))
       return
     }
 

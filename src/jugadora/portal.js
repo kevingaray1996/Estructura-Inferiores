@@ -6,10 +6,12 @@ import { supabase } from '../supabaseClient'
 async function llamar(nombre, args) {
   try {
     const { data, error } = await supabase.rpc(nombre, args)
-    if (error) return { data: null, error: { code: error.code === '42501' ? 'cuenta_inactiva' : 'error', mensaje: error.message } }
+    // Solo se muestran los mensajes propios de las funciones (RAISE, código P0001), que ya están en castellano. Los
+    // demás errores técnicos quedan sin mensaje y la pantalla usa su texto de «revisá la conexión».
+    if (error) return { data: null, error: { code: error.code === '42501' ? 'cuenta_inactiva' : 'error', mensaje: error.code === 'P0001' ? error.message : '' } }
     return { data, error: null }
-  } catch (error) {
-    return { data: null, error: { code: 'sin_conexion', mensaje: error?.message || '' } }
+  } catch {
+    return { data: null, error: { code: 'sin_conexion', mensaje: '' } }
   }
 }
 

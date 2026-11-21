@@ -7,6 +7,7 @@ import { ESCUDO_URL } from '../config/club'
 import EncabezadoSeccion from './ui/EncabezadoSeccion'
 import Chips from './ui/Chips'
 import EstadoVacio from './ui/EstadoVacio'
+import { mensajeError } from '../utils/mensajesError'
 
 const AMARILLO = '#F2C230'
 
@@ -581,7 +582,7 @@ function PanelEvaluar({ tipo, perfil, user, jugadores, criterios, evals, onGuard
     setGuardando(false)
 
     if (error) {
-      setMsg('Error al guardar: ' + error.message)
+      setMsg(mensajeError(error, 'guardar la evaluación'))
     } else {
       setMsg('Guardado ✓')
       await onGuardado()
@@ -1046,7 +1047,7 @@ export default function EvaluacionesSection({ perfil }) {
       .order('orden')
 
     if (c.error) {
-      setError('Error al cargar los criterios: ' + c.error.message + ' (¿ya corriste el SQL en Supabase?)')
+      setError(mensajeError(c.error, 'cargar los criterios de evaluación'))
       setCargando(false)
       return
     }

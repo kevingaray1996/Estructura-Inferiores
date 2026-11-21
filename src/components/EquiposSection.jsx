@@ -7,6 +7,7 @@ import { comprimirImagen } from '../utils/comprimirImagen'
 import EncabezadoSeccion from './ui/EncabezadoSeccion'
 import Boton from './ui/Boton'
 import EstadoVacio from './ui/EstadoVacio'
+import { mensajeError } from '../utils/mensajesError'
 
 function EquiposSection({ onVolver }) {
   const [equipos, setEquipos] = useState([])
@@ -79,7 +80,7 @@ function EquiposSection({ onVolver }) {
       upsert: false,
     })
     if (error) {
-      alert('Error al subir el escudo: ' + error.message)
+      alert(mensajeError(error, 'subir el escudo'))
       setSubiendoEscudo(false)
       return
     }
@@ -104,7 +105,7 @@ function EquiposSection({ onVolver }) {
 
     setGuardando(false)
     if (error) {
-      setErrorMsg('Error al guardar: ' + error.message)
+      setErrorMsg(mensajeError(error, 'guardar el equipo'))
     } else {
       setMostrarForm(false)
       setEquipoEditando(null)
@@ -113,8 +114,9 @@ function EquiposSection({ onVolver }) {
   }
 
   async function handleEliminar(id) {
+    const equipo = equipos.find((x) => x.id === id)
     const confirmar = window.confirm(
-      '¿Seguro que querés eliminar este equipo? Los partidos ya cargados contra este rival no se modifican.'
+      `¿Eliminar el equipo «${equipo?.nombre || 'sin nombre'}»? Los partidos ya cargados contra este rival no se modifican.`
     )
     if (!confirmar) return
     await supabase.from('equipos').delete().eq('id', id)

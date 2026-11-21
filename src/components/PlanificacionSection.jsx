@@ -8,6 +8,7 @@ import { puedeEditar } from '../utils/biblioteca'
 import './planificacion.css'
 import BibliotecaVista from './BibliotecaVista'
 import { EditorTarea, SelectorBiblioteca } from './PlanificacionEjercicios'
+import { fechaLegible } from '../utils/analisis/formato'
 
 const fechaTexto = (f) => new Intl.DateTimeFormat('es-AR', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${f}T12:00:00Z`))
 const etiquetas = { objetivo: 'Objetivo', duracion: 'Duración (min)', indicaciones: 'Indicaciones', series: 'Series', repeticiones: 'Repeticiones', materiales: 'Materiales', imagen_url: 'Imagen', link_video: 'Video', pizarra: 'Pizarra animada (publicación explícita)' }
@@ -308,7 +309,7 @@ export default function PlanificacionSection({ perfil, fechaInicial, categoriaIn
           <button type="button" disabled={conflicto} onClick={() => guardar(form.estado === 'publicado' ? 'borrador' : 'publicado')}>{form.estado === 'publicado' ? 'Retirar publicación' : 'Publicar'}</button>
           {onVerAsistencia && <button type="button" onClick={() => { if (puedeSalir()) onVerAsistencia(form.fecha, categoriaId) }}>Ver asistencia real de este día</button>}
           {form.id && <button type="button" disabled={conflicto} onClick={() => {
-            if (!window.confirm('¿Eliminar esta sesión planificada? No se eliminarán registros reales de asistencia ni cargas.')) return
+            if (!window.confirm(`¿Eliminar la sesión planificada${form.fecha ? ` del ${fechaLegible(form.fecha)}` : ''}? No se eliminan los registros reales de asistencia ni de cargas.`)) return
             void operacion(async () => { await eliminarSesion(supabase, form); setForm(null); setSucio(false); setRecarga((n) => n + 1); setMensaje('Sesión planificada eliminada.') })
           }}>Eliminar sesión</button>}
         </div>
