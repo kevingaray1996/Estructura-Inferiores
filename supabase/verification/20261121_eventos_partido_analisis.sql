@@ -14,7 +14,20 @@ BEGIN
   IF (SELECT count(*) FROM pg_policies WHERE schemaname = 'public' AND tablename = 'analisis_partido_eventos') <> 5
      OR NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'analisis_partido_eventos'
                      AND policyname = 'sin_cuentas_jugadoras' AND permissive = 'RESTRICTIVE') THEN
-    RAISE EXCEPTION 'Las reglas de acceso no son las 5 esperadas (4 de administración y la red sin_cuentas_jugadoras).';
+    RAISE EXCEPTION 'Las reglas de acceso no son las 5 esperadas (ver, cargar, editar, borrar y la red sin_cuentas_jugadoras).';
+  END IF;
+  -- Ver: administradoras o quien ve el partido analizado (misma regla que analisis_partidos).
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'analisis_partido_eventos'
+                  AND policyname = 'eventos_partido_lectura' AND cmd = 'SELECT'
+                  AND qual LIKE '%puede_administrar_analisis%' AND qual LIKE '%analisis_partidos%') THEN
+    RAISE EXCEPTION 'La regla para ver no es la esperada (administradoras o quien ve el partido analizado).';
+  END IF;
+  -- Cargar, editar y borrar: solo las administradoras de Análisis.
+  IF (SELECT count(*) FROM pg_policies WHERE schemaname = 'public' AND tablename = 'analisis_partido_eventos'
+       AND policyname IN ('eventos_partido_alta', 'eventos_partido_edicion', 'eventos_partido_baja')
+       AND coalesce(qual, with_check) LIKE '%puede_administrar_analisis%'
+       AND coalesce(qual, '') NOT LIKE '%analisis_partidos%' AND coalesce(with_check, '') NOT LIKE '%analisis_partidos%') <> 3 THEN
+    RAISE EXCEPTION 'Cargar, editar o borrar no están limitados a las cuentas administradoras de Análisis.';
   END IF;
   IF has_table_privilege('anon', 'public.analisis_partido_eventos', 'SELECT')
      OR has_table_privilege('anon', 'public.analisis_partido_eventos', 'INSERT')

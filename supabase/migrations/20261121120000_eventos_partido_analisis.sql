@@ -19,12 +19,17 @@
 --      El orden de las marcas (inicio < fin del 1T < inicio del 2T < fin) lo controla la app, con aviso.
 --   4. Un trigger (analisis_privado.sellar_evento_partido) completa quién lo creó y cuándo se modificó, y no deja
 --      pasar un evento a otro análisis.
---   5. Seguridad igual que las acciones de Análisis: RLS forzada; leer, crear, editar y borrar solo las dos cuentas
---      administradoras de Análisis (puede_administrar_analisis()); la red RESTRICTIVE «sin_cuentas_jugadoras»;
---      anon sin ningún permiso.
+--   5. Seguridad, con los mismos permisos que las acciones de Análisis (ver vs. etiquetar):
+--        - VER: las cuentas administradoras de Análisis y todo el staff que hoy ve ese partido analizado (la misma
+--          regla de analisis_partidos: quien ve alguna de sus acciones, es decir, a alguna de sus jugadoras: DT de la
+--          categoría, preparación física, médicos, coordinación).
+--        - CARGAR, EDITAR Y BORRAR: solo las dos cuentas administradoras de Análisis (puede_administrar_analisis()).
+--        - Cuentas de jugadoras: nada (red RESTRICTIVE «sin_cuentas_jugadoras»). anon: ningún permiso.
+--      RLS forzada.
 --   6. Verifica, con datos de prueba que se deshacen: que una cuenta administradora carga marcas, un cambio, un gol y
 --      una tarjeta; que rechaza una marca repetida y un cambio inválido; que edita y borra; y que otra persona del
---      staff (si hay) no ve ni carga nada. Si algo falla, no se aplica nada.
+--      staff (si hay) ve los eventos del partido solo si ve alguna de sus acciones, y no carga, edita ni borra nada.
+--      Si algo falla, no se aplica nada.
 --
 -- Bloqueos: crea una clave foránea hacia analisis_partidos y jugadores (bloqueo corto). Cada bloqueo espera como
 -- máximo 5 s: si una tabla está ocupada, aborta sin aplicar nada y se vuelve a correr.
@@ -42,6 +47,7 @@ DECLARE
   v_admin_res text := 'sin correr';
   v_otro_res text := 'sin correr';
   v_dup text; v_cambio text; v_tarjeta text; v_rival text; v_mover text;
+  v_tipo text; v_visible uuid; v_esperados integer; v_filas integer;
 BEGIN
   PERFORM set_config('lock_timeout', '5s', true);
   IF current_user <> 'postgres' THEN RAISE EXCEPTION 'Correr como postgres (editor SQL de Supabase).'; END IF;
@@ -69,6 +75,7 @@ BEGIN
   END LOOP;
   PERFORM set_config('request.jwt.claims', '', true);
   IF v_admin IS NULL THEN RAISE EXCEPTION 'No se encontró una cuenta administradora de Análisis para probar. No se tocó nada.'; END IF;
+  SELECT codigo INTO v_tipo FROM public.analisis_tipos_accion ORDER BY orden, codigo LIMIT 1;
   SELECT id INTO v_cat FROM public.categorias ORDER BY id LIMIT 1;
   SELECT id INTO v_j1 FROM public.jugadores ORDER BY id LIMIT 1;
   SELECT id INTO v_j2 FROM public.jugadores ORDER BY id OFFSET 1 LIMIT 1;
@@ -150,8 +157,10 @@ BEGIN
   REVOKE ALL ON TABLE public.analisis_partido_eventos FROM PUBLIC, anon, authenticated;
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.analisis_partido_eventos TO authenticated;
   GRANT ALL ON TABLE public.analisis_partido_eventos TO service_role;
+  -- Ver: igual que analisis_partidos (administradoras, o quien ve ese partido analizado por ver alguna de sus acciones).
   CREATE POLICY eventos_partido_lectura ON public.analisis_partido_eventos AS PERMISSIVE FOR SELECT TO authenticated
-    USING ((SELECT public.puede_administrar_analisis()));
+    USING ((SELECT public.puede_administrar_analisis())
+           OR EXISTS (SELECT 1 FROM public.analisis_partidos a WHERE a.id = analisis_partido_eventos.partido_id));
   CREATE POLICY eventos_partido_alta ON public.analisis_partido_eventos AS PERMISSIVE FOR INSERT TO authenticated
     WITH CHECK ((SELECT public.puede_administrar_analisis()));
   CREATE POLICY eventos_partido_edicion ON public.analisis_partido_eventos AS PERMISSIVE FOR UPDATE TO authenticated
@@ -228,16 +237,40 @@ BEGIN
       WHEN (SELECT count(*) FROM public.analisis_partido_eventos WHERE partido_id = v_partido) <> 6 THEN 'no pudo borrar'
       ELSE 'ok' END;
 
-    -- Otra persona del staff: no ve ni carga nada.
+    -- Otra persona del staff: ve los eventos del partido solo si ve alguna de sus acciones; no carga, edita ni borra.
     IF v_otro IS NOT NULL THEN
+      -- Una jugadora que esa persona ve (si ve alguna), para darle al partido de prueba una acción visible para ella.
       PERFORM set_config('request.jwt.claims', json_build_object('sub', v_otro, 'email', v_otro_email, 'role', 'authenticated')::text, true);
-      SELECT count(*) INTO v_n FROM public.analisis_partido_eventos;
-      BEGIN
-        INSERT INTO public.analisis_partido_eventos (partido_id, tipo, segundo, equipo) VALUES (v_partido, 'gol', 10, 'rival');
-        v_otro_res := 'pudo cargar';
-      EXCEPTION WHEN insufficient_privilege THEN
-        v_otro_res := CASE WHEN v_n = 0 THEN 'ok' ELSE format('ve %s eventos', v_n) END;
-      END;
+      SELECT id INTO v_visible FROM public.jugadores ORDER BY id LIMIT 1;
+      PERFORM set_config('request.jwt.claims', json_build_object('sub', v_admin, 'email', v_admin_email, 'role', 'authenticated')::text, true);
+      SELECT count(*) INTO v_esperados FROM public.analisis_partido_eventos WHERE partido_id = v_partido;
+      IF v_visible IS NOT NULL AND v_tipo IS NOT NULL THEN
+        INSERT INTO public.analisis_eventos (partido_id, jugador_id, tipo, segundo, periodo) VALUES (v_partido, v_visible, v_tipo, 10, 1);
+      ELSE
+        v_esperados := 0;
+      END IF;
+
+      PERFORM set_config('request.jwt.claims', json_build_object('sub', v_otro, 'email', v_otro_email, 'role', 'authenticated')::text, true);
+      SELECT count(*) INTO v_n FROM public.analisis_partido_eventos WHERE partido_id = v_partido;
+      v_otro_res := CASE WHEN v_n <> v_esperados THEN format('ve %s eventos del partido de prueba y tendría que ver %s', v_n, v_esperados) ELSE 'ok' END;
+      IF v_otro_res = 'ok' THEN
+        BEGIN
+          INSERT INTO public.analisis_partido_eventos (partido_id, tipo, segundo, equipo) VALUES (v_partido, 'gol', 10, 'rival');
+          v_otro_res := 'pudo cargar';
+        EXCEPTION WHEN insufficient_privilege THEN NULL;
+        END;
+      END IF;
+      IF v_otro_res = 'ok' THEN
+        UPDATE public.analisis_partido_eventos SET segundo = 1 WHERE partido_id = v_partido;
+        GET DIAGNOSTICS v_filas = ROW_COUNT;
+        IF v_filas > 0 THEN v_otro_res := 'pudo editar'; END IF;
+      END IF;
+      IF v_otro_res = 'ok' THEN
+        DELETE FROM public.analisis_partido_eventos WHERE partido_id = v_partido;
+        GET DIAGNOSTICS v_filas = ROW_COUNT;
+        IF v_filas > 0 THEN v_otro_res := 'pudo borrar'; END IF;
+      END IF;
+      IF v_otro_res = 'ok' THEN v_otro_res := format('ok (ve %s eventos del partido de prueba)', v_n); END IF;
     ELSE
       v_otro_res := 'no hay otra cuenta del staff para probar';
     END IF;
@@ -248,7 +281,7 @@ BEGIN
   PERFORM set_config('request.jwt.claims', '', true);
 
   IF v_admin_res <> 'ok' THEN RAISE EXCEPTION 'Prueba de la cuenta administradora: %. Se deshizo todo.', v_admin_res; END IF;
-  IF v_otro_res NOT IN ('ok', 'no hay otra cuenta del staff para probar') THEN
+  IF v_otro_res NOT LIKE 'ok%' AND v_otro_res <> 'no hay otra cuenta del staff para probar' THEN
     RAISE EXCEPTION 'Prueba de otra cuenta del staff: %. Se deshizo todo.', v_otro_res;
   END IF;
   IF EXISTS (SELECT 1 FROM public.analisis_partidos WHERE id = v_partido) OR EXISTS (SELECT 1 FROM public.analisis_partido_eventos) THEN

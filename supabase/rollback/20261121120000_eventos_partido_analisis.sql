@@ -1,7 +1,9 @@
 -- Reversión de supabase/migrations/20261121120000_eventos_partido_analisis.sql
 --
 -- Borra exactamente lo que creó la migración (anotado en seguridad_privado.respaldo_eventos_partido): la tabla
--- public.analisis_partido_eventos, su trigger y la función analisis_privado.sellar_evento_partido(). No toca nada más.
+-- public.analisis_partido_eventos (con sus reglas de acceso: ver, cargar, editar, borrar y sin_cuentas_jugadoras), su
+-- trigger y la función analisis_privado.sellar_evento_partido(). No toca nada más (ni las reglas de las acciones ni de
+-- los partidos analizados).
 --
 -- Si la tabla ya tiene eventos cargados, NO corre: borraría las marcas, cambios, goles y tarjetas cargados.
 -- Para revertir igual, cambiar v_borrar_datos a true (los eventos se pierden).

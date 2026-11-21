@@ -17,10 +17,12 @@ const cambio = leer('supabase/migrations/20261121120000_eventos_partido_analisis
 const reversion = leer('supabase/rollback/20261121120000_eventos_partido_analisis.sql')
 const verificacion = leer('supabase/verification/20261121_eventos_partido_analisis.sql')
 
-const CAT = '10000000-0000-4000-8000-000000000001'
-// Las dos cuentas administradoras de Análisis del esquema real (puede_administrar_analisis) y una técnica.
-const U = { admin: '00000000-0000-4000-8000-000000000001', admin2: '00000000-0000-4000-8000-000000000002', tec: 'a0000000-0000-4000-8000-000000000002' }
-const MAIL = { admin: 'admin@club.test', admin2: 'admin2@club.test', tec: 'tec@club.test' }
+const CAT = '10000000-0000-4000-8000-000000000001', SUB16 = '10000000-0000-4000-8000-000000000003'
+// Las dos cuentas administradoras de Análisis del esquema real (puede_administrar_analisis), la técnica de la
+// categoría del partido, la técnica de otra categoría y la preparadora física.
+const U = { admin: '00000000-0000-4000-8000-000000000001', admin2: '00000000-0000-4000-8000-000000000002', tec: 'a0000000-0000-4000-8000-000000000002',
+  tec16: 'a0000000-0000-4000-8000-000000000003', pf: 'a0000000-0000-4000-8000-000000000004' }
+const MAIL = { admin: 'admin@club.test', admin2: 'admin2@club.test', tec: 'tec@club.test', tec16: 'tec16@club.test', pf: 'pf@club.test' }
 const J1 = 'b0000000-0000-4000-8000-000000000001', J2 = 'b0000000-0000-4000-8000-000000000002'
 const P = 'c0000000-0000-4000-8000-000000000001'
 
@@ -51,9 +53,11 @@ async function crearBase({ conAdmin = true } = {}) {
       WITH CHECK (bucket_id = 'Biblioteca' AND (
         (name ~ '^(jugadores|escudos|entrenamientos|videos)/[^/]+$' AND public.mi_rol() IN ('coordinacion', 'tecnico'))
         OR (name ~ '^staff/[^/]+$' AND public.mi_rol() = 'coordinacion')));
-    insert into public.categorias (id, nombre, orden, es_reserva) values ('${CAT}','Primera División',1,false);
-    insert into auth.users (id, email) values ${admins} ('${U.tec}', '${MAIL.tec}');
-    insert into public.perfiles (email, nombre, rol, categoria_id) values ${perfiles} ('${MAIL.tec}','Técnica','tecnico','${CAT}');
+    insert into public.categorias (id, nombre, orden, es_reserva) values ('${CAT}','Primera División',1,false), ('${SUB16}','Sub 16',3,false);
+    insert into auth.users (id, email) values ${admins} ('${U.tec}', '${MAIL.tec}'), ('${U.tec16}', '${MAIL.tec16}'), ('${U.pf}', '${MAIL.pf}');
+    insert into public.perfiles (email, nombre, rol, categoria_id) values ${perfiles} ('${MAIL.tec}','Técnica','tecnico','${CAT}'),
+      ('${MAIL.tec16}','Técnica Sub 16','tecnico','${SUB16}'), ('${MAIL.pf}','Preparadora','preparador_fisico',null);
+    insert into public.analisis_tipos_accion (codigo, etiqueta, etiqueta_boton, ubicacion, grupo) values ('Remate','Remate','Remate','opcional','ofensiva');
     insert into public.jugadores (id, nombre, apellido, categoria_id) values ('${J1}','Ana','Alvarez','${CAT}'), ('${J2}','Bea','Benitez','${CAT}');
     insert into public.analisis_partidos (id, categoria_id, rival) values ('${P}', '${CAT}', 'Rival');`)
   await db.exec(etapaC)
@@ -95,8 +99,21 @@ test('se aplica, se prueba sola sin dejar datos y no se aplica dos veces', async
   assert.match(r.at(-1).rows[0].reglas, /sin_cuentas_jugadoras \(RESTRICTIVE, ALL\)/)
   assert.equal(await n(db, 'select count(*) n from public.analisis_partido_eventos'), 0)
   assert.equal(await n(db, `select count(*) n from public.analisis_partidos where rival like 'Prueba de eventos%'`), 0)
+  // La prueba interna corre con otra cuenta del staff (acá, la preparadora física): si no viera los eventos del
+  // partido de prueba o pudiera modificarlos, la migración no se habría aplicado.
   await assert.rejects(db.exec(cambio), /Ya estaba aplicada/)
   await db.exec(verificacion)
+})
+
+test('la prueba interna frena la migración si el resto del staff no viera los eventos', async () => {
+  const db = await crearBase()
+  // Misma migración, pero con la regla de ver solo para administradoras.
+  const soloAdmin = cambio.replace(
+    /USING \(\(SELECT public\.puede_administrar_analisis\(\)\)\n\s+OR EXISTS \(SELECT 1 FROM public\.analisis_partidos a WHERE a\.id = analisis_partido_eventos\.partido_id\)\);/,
+    'USING ((SELECT public.puede_administrar_analisis()));')
+  assert.notEqual(soloAdmin, cambio)
+  await assert.rejects(db.exec(soloAdmin), /otra cuenta del staff: ve 0 eventos del partido de prueba y tendría que ver 6/)
+  assert.equal(await n(db, `select count(*) n from pg_class where relname = 'analisis_partido_eventos'`), 0)
 })
 
 test('sin cuenta administradora para probar, no aplica nada', async () => {
@@ -105,19 +122,27 @@ test('sin cuenta administradora para probar, no aplica nada', async () => {
   assert.equal(await n(db, `select count(*) n from pg_class where relname = 'analisis_partido_eventos'`), 0)
 })
 
-test('quién puede qué: administradora sí; técnica, anon y cuentas de jugadoras no', async () => {
+test('ver como las acciones de Análisis; cargar, editar y borrar solo las administradoras', async () => {
   const db = await crearBase()
   await db.exec(cambio)
   await hacer(db, 'admin', `insert into public.analisis_partido_eventos (partido_id, tipo, segundo) values ($1, 'inicio_1t', 30)`, [P])
-  const fila = (await como(db, 'admin2', `select creado_por, segundo from public.analisis_partido_eventos`)).rows
-  assert.deepEqual(fila, [{ creado_por: U.admin, segundo: 30 }])
-  assert.equal((await como(db, 'tec', `select count(*)::int n from public.analisis_partido_eventos`)).rows[0].n, 0)
-  await assert.rejects(como(db, 'tec', `insert into public.analisis_partido_eventos (partido_id, tipo, segundo) values ($1, 'fin_1t', 30)`, [P]), codigo('42501'))
+  const ver = async (quien) => (await como(db, quien, `select count(*)::int n from public.analisis_partido_eventos`)).rows[0].n
+  assert.deepEqual((await como(db, 'admin2', `select creado_por, segundo from public.analisis_partido_eventos`)).rows, [{ creado_por: U.admin, segundo: 30 }])
+  // Sin acciones etiquetadas, el partido analizado no lo ve el resto del staff, y tampoco sus eventos.
+  for (const quien of ['tec', 'tec16', 'pf']) assert.equal(await ver(quien), 0, quien)
+  // Con una acción de una jugadora de Primera: la ven la técnica de Primera y la preparadora física, no la de Sub 16.
+  await hacer(db, 'admin', `insert into public.analisis_eventos (partido_id, jugador_id, tipo, segundo) values ($1, $2, 'Remate', 10)`, [P, J1])
+  assert.equal(await ver('tec'), 1)
+  assert.equal(await ver('pf'), 1)
+  assert.equal(await ver('tec16'), 0)
+  // Ver no es modificar: nadie del staff fuera de las administradoras carga, edita ni borra.
+  for (const quien of ['tec', 'pf', 'tec16']) {
+    await assert.rejects(como(db, quien, `insert into public.analisis_partido_eventos (partido_id, tipo, segundo) values ($1, 'fin_1t', 30)`, [P]), codigo('42501'), quien)
+    assert.equal((await como(db, quien, `update public.analisis_partido_eventos set segundo = 1`)).affectedRows, 0, quien)
+    assert.equal((await como(db, quien, `delete from public.analisis_partido_eventos`)).affectedRows, 0, quien)
+  }
   await assert.rejects(como(db, null, `select * from public.analisis_partido_eventos`, [], { rol: 'anon' }), codigo('42501'))
-  // La técnica no puede editar ni borrar (no ve la fila: 0 afectadas).
-  assert.equal((await como(db, 'tec', `update public.analisis_partido_eventos set segundo = 1`)).affectedRows, 0)
-  assert.equal((await como(db, 'tec', `delete from public.analisis_partido_eventos`)).affectedRows, 0)
-  // La red de cuentas de jugadoras: si quien llama es una cuenta de jugadora, no ve nada aunque fuera administradora.
+  // Cuentas de jugadoras: la red RESTRICTIVE sigue (no ven nada aunque vieran a la jugadora).
   const politica = (await db.query(`select qual from pg_policies where tablename = 'analisis_partido_eventos' and policyname = 'sin_cuentas_jugadoras' and permissive = 'RESTRICTIVE'`)).rows
   assert.match(politica[0].qual, /es_cuenta_jugadora/)
 })
