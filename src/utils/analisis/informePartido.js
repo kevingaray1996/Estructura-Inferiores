@@ -9,7 +9,9 @@ import { enCapa } from './mapaAcciones.js'
 export const MINUTOS_MINIMOS = 20
 export const TRAMOS = ['0-15\'', '15-30\'', '30-45+\'', '45-60\'', '60-75\'', '75-90+\'']
 
-const porcentaje = (parte, total) => (total ? Math.round((parte / total) * 100) : null)
+// Porcentajes: con menos de 3 acciones no se calculan (null → «—» en el PDF), para no mostrar 0% o 100% engañosos.
+export const MINIMO_PORCENTAJE = 3
+const porcentaje = (parte, total) => (total >= MINIMO_PORCENTAJE ? Math.round((parte / total) * 100) : null)
 const texto = (v, max = 400) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
 const entero = (v) => {
   const n = Number(v)
@@ -297,7 +299,9 @@ export function lecturaCuando(tramos, hitos) {
 
 // ---------- Avisos antes de generar ----------
 
-export function avisosInforme({ eventos = [], detalles = {}, catalogo, marcas, partido } = {}) {
+// calendario: el partido del calendario (resultado cargado); eventosPartido: goles de la pestaña Partido;
+// acciones: las acciones ya acomodadas (para los remates en campo propio).
+export function avisosInforme({ eventos = [], detalles = {}, catalogo, marcas, partido, calendario = null, eventosPartido = [], acciones = [] } = {}) {
   const avisos = []
   const faltan = faltanMarcas(marcas)
   if (faltan.length) avisos.push(`Faltan marcas de tiempo (pestaña Partido): ${faltan.join(', ')}. Sin ellas no hay minutos, barras por tramo ni minutos jugados.`)
@@ -306,7 +310,51 @@ export function avisosInforme({ eventos = [], detalles = {}, catalogo, marcas, p
   if (!['derecha', 'izquierda'].includes(partido?.direccion_primer_tiempo)) avisos.push('Falta la dirección de ataque del 1T (pestaña Partido).')
   const incompletas = eventos.filter((e) => faltantesAccion(e, detalles?.[e.id], catalogo).length).length
   if (incompletas) avisos.push(`${incompletas} ${incompletas === 1 ? 'acción está sin detallar' : 'acciones están sin detallar'} (falta jugadora, ubicación, resultado o receptora).`)
+  avisos.push(...avisosGoles({ calendario, eventosPartido, eventos }))
+  const propios = acciones.filter((a) => a.remate && a.punto && a.punto.x < 50)
+  if (propios.length) {
+    const minutos = propios.slice(0, 5).map((a) => a.minuto).join(', ') + (propios.length > 5 ? ` y ${propios.length - 5} más` : '')
+    avisos.push(`${propios.length === 1 ? 'Un remate quedó' : `${propios.length} remates quedaron`} en campo propio (${minutos}): puede ser un error de ubicación o de la dirección de ataque.`)
+  }
   return avisos
+}
+
+const nuestros = (n) => `${n} ${n === 1 ? 'gol nuestro' : 'goles nuestros'}`
+const delRival = (n) => `${n} ${n === 1 ? 'gol' : 'goles'} del rival`
+// El resultado del calendario contra los goles de la pestaña Partido y los remates marcados como gol.
+export function avisosGoles({ calendario = null, eventosPartido = [], eventos = [] } = {}) {
+  const avisos = []
+  const r = calendario ? calcularResultado(calendario) : null
+  const golesPartido = (eventosPartido || []).filter((e) => e.tipo === 'gol')
+  const propiosPartido = golesPartido.filter((g) => g.equipo === 'propio').length
+  const rivalesPartido = golesPartido.length - propiosPartido
+  const remateGol = (eventos || []).filter((e) => e.tipo === 'Gol' || (e.tipo === 'Remate' && e.resultado === 'Gol')).length
+  if (r) {
+    if (propiosPartido !== r.golesPropios || rivalesPartido !== r.golesRivales) {
+      avisos.push(`El resultado cargado es ${r.golesPropios}-${r.golesRivales}, pero en la pestaña Partido hay ${nuestros(propiosPartido)} y ${delRival(rivalesPartido)}.`)
+    }
+    if (remateGol !== r.golesPropios) avisos.push(`El resultado cargado dice ${nuestros(r.golesPropios)}, pero hay ${remateGol} ${remateGol === 1 ? 'acción marcada' : 'acciones marcadas'} como gol.`)
+  } else if (remateGol !== propiosPartido) {
+    avisos.push(`En la pestaña Partido hay ${nuestros(propiosPartido)}, pero hay ${remateGol} ${remateGol === 1 ? 'acción marcada' : 'acciones marcadas'} como gol.`)
+  }
+  return avisos
+}
+
+// Nombres cortos para el PDF: el apellido; si dos comparten apellido, inicial + apellido («C. Gonzalez»);
+// si también comparten la inicial, nombre y apellido.
+export function nombresCortos(jugadoras) {
+  const lista = (jugadoras || []).filter((j) => j?.id)
+  const clave = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
+  const apellidoDe = (j) => (j.apellido || j.nombre || '').trim()
+  const nombres = new Map()
+  for (const j of lista) {
+    const mismos = lista.filter((o) => clave(apellidoDe(o)) === clave(apellidoDe(j)))
+    const inicial = (j.nombre || '').trim().charAt(0).toUpperCase()
+    if (mismos.length < 2 || !j.apellido) nombres.set(j.id, apellidoDe(j))
+    else if (mismos.filter((o) => (o.nombre || '').trim().charAt(0).toUpperCase() === inicial).length < 2 && inicial) nombres.set(j.id, `${inicial}. ${j.apellido.trim()}`)
+    else nombres.set(j.id, `${(j.nombre || '').trim()} ${j.apellido.trim()}`.trim())
+  }
+  return nombres
 }
 
 // ---------- Formación (de Convocados: cancha parada, nuestro arco abajo) ----------

@@ -398,7 +398,8 @@ export async function generarInformePartidoPDF(entrada) {
     const x = M + i * 343
     L.rect(x, 131, 5, 132, f.color)
     L.fuente('BarlowCondensed', 'extrabolditalic', 80)
-    L.texto(f.valor, x + 22, 207, { color: f.color === C.negro ? C.texto : f.color })
+    // «—» en gris: menos de 3 pases, sin porcentaje.
+    L.texto(f.valor, x + 22, 207, { color: f.valor === '—' ? C.grisClaro : f.color === C.negro ? C.texto : f.color })
     L.fuente('BarlowCondensed', 'bold', 13.5)
     L.texto(f.rotulo, x + 24, 233, { color: C.texto, espacio: 2.6 })
     L.fuente('Barlow', 'normal', 15)
@@ -585,14 +586,14 @@ export async function generarInformePartidoPDF(entrada) {
         L.rect(x, medio - 4, 136, 8, C.grisPista, { radio: 4 })
         if (valor) L.rect(x, medio - 4, Math.max(8, (valor / maximos[clave]) * 136), 8, f[`${clave}Destacado`] ? fuerte : suave, { radio: 4 })
         L.fuente('BarlowCondensed', 'bold', Math.min(18, alto * 0.47))
-        L.texto(valor === null ? '—' : String(valor), x + 146, medio + 6, { color: C.texto })
+        L.texto(valor === null ? '—' : String(valor), x + 146, medio + 6, { color: valor === null ? C.grisClaro : C.texto })
       }
       L.linea(M, y + alto, DER, y + alto, C.linea, 1)
     })
     L.fuente('Barlow', 'normal', 14)
     L.texto(minutos
-      ? 'Color fuerte = valor destacado (bueno en amarillo, a corregir en rojo). Mínimo 20 minutos para aparecer.'
-      : 'Color fuerte = valor destacado (bueno en amarillo, a corregir en rojo). Faltan las marcas de tiempo: aparecen todas las jugadoras con acciones, sin minutos.',
+      ? 'Color fuerte = valor destacado (bueno en amarillo, a corregir en rojo). «—» = menos de 3 acciones para el porcentaje. Mínimo 20 minutos para aparecer.'
+      : 'Color fuerte = valor destacado. «—» = menos de 3 acciones para el porcentaje. Faltan las marcas: aparecen todas las jugadoras con acciones, sin minutos.',
     M, 215 + filas.length * alto + 26, { color: C.gris })
   } else {
     L.fuente('Barlow', 'normal', 16)

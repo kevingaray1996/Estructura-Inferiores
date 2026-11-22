@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { prepararAcciones } from '../src/utils/analisis/mapaAcciones.js'
 import { CATALOGO_POR_DEFECTO as catalogo } from '../src/utils/analisis/catalogoAcciones.js'
 import {
-  accionesPorTramo, analisisCompleto, avisosInforme, contraPromedio, filasExcel, formacionAcostada, golesInforme, hitosTiempo, informeParaGuardar,
+  accionesPorTramo, analisisCompleto, avisosGoles, avisosInforme, nombresCortos, contraPromedio, filasExcel, formacionAcostada, golesInforme, hitosTiempo, informeParaGuardar,
   jugadorasInforme, lecturaCuando, lecturaDonde, minutoCorrido, normalizarInforme, numerosBasicos, numerosPartido,
   partidosTemporada, posicionAntesSugerida, promedioTemporada, proximoRival, resultadoInforme, textoMinuto, tramoDe, ultimosCinco,
 } from '../src/utils/analisis/informePartido.js'
@@ -129,7 +129,8 @@ test('últimos 5 (con el partido) y próximo rival', () => {
 test('jugadoras: mínimo 20 minutos, titulares primero y destacados por columna', () => {
   const ev = (jugador_id, tipo, resultado) => ({ jugador_id, tipo, resultado })
   const acciones = preparar([
-    ev('a', 'Pase correcto'), ev('a', 'Pase incorrecto'), ev('a', 'Duelo ofensivo', 'Exitoso'), ev('a', 'Duelo defensivo', 'Neutro'),
+    ev('a', 'Pase correcto'), ev('a', 'Pase incorrecto'), ev('a', 'Pase correcto'), ev('a', 'Pase incorrecto'),
+    ev('a', 'Duelo ofensivo', 'Exitoso'), ev('a', 'Duelo defensivo', 'Exitoso'), ev('a', 'Duelo aéreo', 'Exitoso'), ev('a', 'Duelo defensivo', 'Neutro'),
     ev('b', 'Pérdida'), ev('b', 'Pérdida'), ev('b', 'Recuperación'),
     ev('c', 'Pase correcto'),
   ])
@@ -138,8 +139,11 @@ test('jugadoras: mínimo 20 minutos, titulares primero y destacados por columna'
   const filas = jugadorasInforme(acciones, { citaciones, minutos: { a: 90, b: 58, c: 20, d: 12 }, nombreDe: (id) => id.toUpperCase() })
   assert.deepEqual(filas.map((f) => f.id), ['a', 'b', 'c'])
   const a = filas[0]
-  assert.deepEqual([a.pctPases, a.pctDuelos, a.perdidas], [50, 100, 1]) // el duelo neutro no cuenta
+  assert.deepEqual([a.pctPases, a.pctDuelos, a.perdidas], [50, 100, 2]) // el duelo neutro no cuenta
   assert.equal(filas[1].pctPases, null)
+  // Con menos de 3 acciones no hay porcentaje (c tiene un solo pase: ni 100% ni 0%).
+  assert.equal(filas[2].pctPases, null)
+  assert.equal(numerosBasicos([{ tipo: 'Pase correcto' }, { tipo: 'Pase correcto' }]).pctPases, null)
   assert.ok(filas[1].perdidasDestacado)
   assert.ok(filas[1].recuperacionesDestacado)
   assert.equal(filas[2].recuperacionesDestacado, false)
@@ -212,4 +216,38 @@ test('avisos antes de generar y filas del Excel', () => {
   const [fila] = filasExcel(preparar([{ tipo: 'Pérdida', coordenada_x: 80, coordenada_y: 50, segundo: enMinuto(1, 5) }]), { nombreDe: () => 'Vera' })
   assert.equal(fila.Minuto, "1T 5'")
   assert.equal(fila['X (ataque →)'], 20)
+})
+
+test('avisos de goles: resultado contra la pestaña Partido y contra las acciones marcadas como gol', () => {
+  const calendario = { goles_local: 2, goles_visitante: 1, local_visitante: 'visitante' } // nosotros 1, rival 2
+  const golPropio = { tipo: 'gol', equipo: 'propio' }, golRival = { tipo: 'gol', equipo: 'rival' }
+  // Todo coincide: 1 nuestro y 2 del rival en Partido, un remate con resultado Gol.
+  assert.deepEqual(avisosGoles({ calendario, eventosPartido: [golPropio, golRival, golRival], eventos: [{ tipo: 'Remate', resultado: 'Gol' }] }), [])
+  // Falta un gol rival en Partido y hay dos acciones de gol (un remate y una acción Gol).
+  const avisos = avisosGoles({ calendario, eventosPartido: [golPropio, golRival], eventos: [{ tipo: 'Remate', resultado: 'Gol' }, { tipo: 'Gol' }, { tipo: 'Remate', resultado: 'Atajada' }] })
+  assert.deepEqual(avisos, [
+    'El resultado cargado es 1-2, pero en la pestaña Partido hay 1 gol nuestro y 1 gol del rival.',
+    'El resultado cargado dice 1 gol nuestro, pero hay 2 acciones marcadas como gol.',
+  ])
+  // Sin resultado en el calendario: se comparan los goles de Partido con las acciones.
+  assert.deepEqual(avisosGoles({ calendario: {}, eventosPartido: [golPropio, golPropio], eventos: [{ tipo: 'Gol' }] }),
+    ['En la pestaña Partido hay 2 goles nuestros, pero hay 1 acción marcada como gol.'])
+  assert.deepEqual(avisosGoles({}), [])
+})
+
+test('aviso de remates en campo propio, con su minuto', () => {
+  const acciones = preparar([
+    { tipo: 'Remate', resultado: 'Fuera', coordenada_x: 80, coordenada_y: 50, segundo: enMinuto(1, 12) }, // 1T a la izquierda: campo propio
+    { tipo: 'Remate', resultado: 'Fuera', coordenada_x: 20, coordenada_y: 50, segundo: enMinuto(1, 13) }, // campo rival
+  ])
+  const avisos = avisosInforme({ eventos: [], catalogo, marcas, partido, acciones })
+  assert.deepEqual(avisos, ["Un remate quedó en campo propio (1T 12'): puede ser un error de ubicación o de la dirección de ataque."])
+})
+
+test('nombres cortos: apellido; con apellido repetido, inicial + apellido', () => {
+  const n = nombresCortos([
+    { id: 'a', nombre: 'Camila', apellido: 'Gonzalez' }, { id: 'b', nombre: 'Sofía', apellido: 'González' },
+    { id: 'c', nombre: 'Carla', apellido: 'Paz' }, { id: 'd', nombre: 'Clara', apellido: 'Paz' }, { id: 'e', nombre: 'Ana', apellido: 'Vera' },
+  ])
+  assert.deepEqual(Object.fromEntries(n), { a: 'C. Gonzalez', b: 'S. González', c: 'Carla Paz', d: 'Clara Paz', e: 'Vera' })
 })

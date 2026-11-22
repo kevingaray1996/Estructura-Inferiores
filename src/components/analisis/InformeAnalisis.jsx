@@ -5,7 +5,7 @@ import { mensajeErrorOPropio } from '../../utils/mensajesError'
 import { prepararAcciones } from '../../utils/analisis/mapaAcciones'
 import {
   accionesPorTramo, analisisCompleto, avisosInforme, filasExcel, hitosTiempo, informeParaGuardar, lecturaCuando, lecturaDonde,
-  normalizarInforme, partidosTemporada, posicionAntesSugerida, promedioTemporada,
+  nombresCortos, normalizarInforme, partidosTemporada, posicionAntesSugerida, promedioTemporada,
 } from '../../utils/analisis/informePartido'
 import { MARCAS, marcasDe } from '../../utils/analisis/eventosPartido'
 import { cargarResumenDestinatarias } from '../../utils/destinatariasPases'
@@ -41,10 +41,16 @@ export default function InformeAnalisis({
   const antesSugerida = useMemo(() => posicionAntesSugerida(partidos, analisis), [partidos, analisis])
   const despuesSugerida = tablaDatafem?.posicion ? Number(tablaDatafem.posicion) : null
 
-  const nombreCortoDe = useMemo(() => (id) => {
-    const j = id ? jugadorasPorId.get(id) : null
-    return j ? (j.apellido || nombreJugadora(j)) : ''
-  }, [jugadorasPorId])
+  // Apellido; si dos convocadas comparten apellido, inicial + apellido («C. Gonzalez»).
+  const nombreCortoDe = useMemo(() => {
+    const cortos = nombresCortos(citaciones.map((c) => c.jugadora).filter(Boolean))
+    return (id) => {
+      if (!id) return ''
+      if (cortos.has(id)) return cortos.get(id)
+      const j = jugadorasPorId.get(id)
+      return j ? (j.apellido || nombreJugadora(j)) : ''
+    }
+  }, [citaciones, jugadorasPorId])
 
   const partidosMapa = useMemo(() => new Map([[analisis.id, analisis]]), [analisis])
   const acciones = useMemo(() => prepararAcciones(eventosPartido.filter((e) => !e._cola), {
@@ -104,7 +110,8 @@ export default function InformeAnalisis({
 
   async function generar(conAvisos = false) {
     if (!conAvisos) {
-      const lista = avisosInforme({ eventos: eventosPartido.filter((e) => !e._cola), detalles: detallesPases, catalogo, marcas, partido: analisis })
+      const lista = avisosInforme({ eventos: eventosPartido.filter((e) => !e._cola), detalles: detallesPases, catalogo, marcas, partido: analisis,
+        calendario, eventosPartido: eventosDelPartido, acciones })
       if (lista.length) { setAvisos(lista); return }
     }
     setAvisos(null)
