@@ -187,3 +187,34 @@ test('revisión: goles rivales ya cargados dentro de la tolerancia (22\' y 24\')
   assert.deepEqual(i['gol-rival--1-obs'].ops, [{ op: 'actualizar_evento', id: 'g2', cambios: { observaciones: 'Nueve, Goleadora Local · De cabeza' } }])
   assert.match(i['gol-rival--0-obs'].titulo, /^Gol 21': autora Nueve, Goleadora Local/)
 })
+
+test('revisión: observaciones del rival sin duplicar, sin cortar la nota y por palabras enteras', () => {
+  const nota190 = 'x'.repeat(190)
+  const nota170 = 'y'.repeat(170)
+  const comet = leerComet(cometSintetico({ rojas: [[0, "80'", '6 SEIS, CAPITANA LOCAL', 'Juego brusco']] }))
+  const roja = (observaciones) => ({ id: 't1', tipo: 'tarjeta', equipo: 'rival', tarjeta: 'roja', segundo: enMinuto(80), observaciones })
+  const gol = (id, m, observaciones) => ({ id, tipo: 'gol', equipo: 'rival', segundo: enMinuto(m), observaciones })
+  const obsDe = (i, id) => i[id]?.ops?.[0]?.cambios?.observaciones
+
+  // Tarjeta rival sin nombre en COMET: la segunda importación no repite el motivo.
+  const sinNombre = structuredClone(comet)
+  sinNombre.tarjetas.find((t) => t.equipo === 'local').nombre = ''
+  assert.equal(porId(revisar({ comet: sinNombre, eventos: [roja('Juego brusco')] }))['tarjeta-rival-roja-0-obs'], undefined)
+
+  // Nota larga: nunca se corta. Si no entra el motivo, va solo el nombre; si tampoco entra, no se propone.
+  let i = porId(revisar({ comet, eventos: [roja(nota170)] }))
+  assert.equal(obsDe(i, 'tarjeta-rival-roja-0-obs'), `Seis, Capitana Local · ${nota170}`)
+  i = porId(revisar({ comet, eventos: [gol('g1', 21, nota190), gol('g2', 23, null)] }))
+  assert.equal(i['gol-rival--0-obs'], undefined)
+  assert.equal(obsDe(i, 'gol-rival--1-obs'), 'Nueve, Goleadora Local')
+
+  // Palabras enteras: «Nueves» no es «Nueve»; el nombre primero sí cuenta; sin coma, todas las palabras en cualquier orden.
+  i = porId(revisar({ comet, eventos: [gol('g1', 21, 'Nueves de cabeza'), gol('g2', 23, 'Goleadora Nueve')] }))
+  assert.equal(obsDe(i, 'gol-rival--0-obs'), 'Nueve, Goleadora Local · Nueves de cabeza')
+  assert.equal(i['gol-rival--1-obs'], undefined)
+  const sinComa = structuredClone(comet)
+  sinComa.goles.filter((g) => g.equipo === 'local').forEach((g) => { g.nombre = 'NUEVE GOLEADORA' })
+  i = porId(revisar({ comet: sinComa, eventos: [gol('g1', 21, 'Goleadora Nueve'), gol('g2', 23, 'Goleadora')] }))
+  assert.equal(i['gol-rival--0-obs'], undefined)
+  assert.equal(obsDe(i, 'gol-rival--1-obs'), 'Nueve Goleadora · Goleadora')
+})

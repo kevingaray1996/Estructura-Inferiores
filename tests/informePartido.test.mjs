@@ -271,3 +271,28 @@ test('avisos de tiempos: acciones con zona sin punto, fuera de las marcas y tram
   assert.match(avisos[2], /Sin acciones en el tramo 75-90\+'\. La última acción del partido es del 2T 21' · video 80:00\./)
   assert.deepEqual(avisosTiempos([], m), [])
 })
+
+test('avisos de tiempos: sin dirección no pide marcar el punto, las neutras no llenan tramos, orden de video y marcas desordenadas', async () => {
+  const { avisosTiempos } = await import('../src/utils/analisis/informePartido.js')
+  const { prepararAcciones } = await import('../src/utils/analisis/mapaAcciones.js')
+  const m = { inicio_1t: 0, fin_1t: 2700, inicio_2t: 3600, fin_partido: 6300 }
+  const ev = (id, segundo, extra = {}) => ({ id, partido_id: 'p', tipo: 'Pérdida', segundo, periodo: segundo >= 3600 ? 2 : 1, coordenada_x: 40, coordenada_y: 40, zona: 'Medio centro', ...extra })
+  const preparar = (eventos, partido) => prepararAcciones(eventos, { partidos: new Map([['p', { id: 'p', ...partido }]]), marcas: new Map([['p', m]]) })
+  // Sin la dirección del 1T: tienen el punto, así que no se pide marcarlo.
+  const sinDir = preparar([ev('a', 100), ev('b', 1000), ev('c', 2000), ev('d', 3700), ev('e', 4700), ev('f', 5700)], {})
+  assert.ok(sinDir.every((a) => a.sinDireccion))
+  assert.ok(!avisosTiempos(sinDir, m).some((a) => /punto exacto/.test(a)))
+  // Entre el 60' y el 75' solo hay una neutra: el tramo sale vacío, igual que la barra.
+  const con = preparar([ev('a', 100), ev('b', 1000), ev('c', 2000), ev('d', 3700), ev('e', 4300), ev('n', 4800, { tipo: 'Otro' }), ev('f', 5700),
+    ev('z2', 6600), ev('z1', 6400)], { direccion_primer_tiempo: 'derecha' })
+  const avisos = avisosTiempos(con, m)
+  assert.ok(avisos.some((a) => /Sin acciones en el tramo 60-75'/.test(a)), avisos.join('\n'))
+  assert.ok(avisos.some((a) => /2 después del final \(video 106:40…110:00\)/.test(a)), avisos.join('\n'))
+  // Marcas fuera de orden: solo ese aviso (en avisosInforme), nada de tramos ni fuera de tiempo.
+  assert.deepEqual(avisosTiempos(con, { ...m, fin_1t: -10 }), [])
+})
+
+test('goles rivales: la autora es lo de antes del primer « · »', () => {
+  const goles = golesInforme([{ tipo: 'gol', equipo: 'rival', segundo: 600, observaciones: 'Nueve, Goleadora · error de la arquera' }], marcas, () => '')
+  assert.equal(goles[0].texto, 'Rival · Nueve, Goleadora')
+})

@@ -26,6 +26,28 @@ export function nombreRival(nombreComet) {
 }
 const palabras = (t) => normalizarNombre(t).replace(/[^A-Z ]/g, ' ').split(/\s+/).filter((p) => p.length > 1)
 
+// ¿La nota de la usuaria ya nombra a la jugadora de COMET? Se comparan palabras enteras («PAZ» no está en «Pazos»):
+// con coma, todas las del apellido; sin coma, todas las del nombre, en cualquier orden. Sin nombre en COMET, si la
+// nota ya tiene el texto completo (por ejemplo, el motivo de la tarjeta).
+function yaNombrada(mias, nombreComet, obs) {
+  if (normalizarNombre(mias).includes(normalizarNombre(obs))) return true
+  const enNota = new Set(palabras(mias))
+  const n = normalizarNombre(nombreComet)
+  const buscadas = palabras(n.includes(',') ? n.split(',')[0] : n)
+  return buscadas.length > 0 && buscadas.every((p) => enNota.has(p))
+}
+
+// Lo de COMET va adelante de la nota de la usuaria, sin pasar de 200 letras. La nota nunca se corta: si no entra
+// todo, se prueba solo con el nombre (sin el motivo); si tampoco entra, null (no se propone).
+const MAX_OBSERVACIONES = 200
+function juntarObservaciones(obs, soloNombre, mias) {
+  if (!mias) return obs
+  for (const delante of [obs, soloNombre]) {
+    if (delante && delante.length + 3 + mias.length <= MAX_OBSERVACIONES) return `${delante} · ${mias}`
+  }
+  return null
+}
+
 // ---------- Nombres de COMET → jugadoras ----------
 
 // Nombres de nuestras jugadoras en COMET (alineación y eventos), sin repetir: [{ nombre (normalizado), dorsal }].
@@ -179,11 +201,11 @@ export function revisarComet({ comet, eventos = [], marcas, idDe = () => null, c
         })
       }
       // Rival: COMET completa la autora (y el motivo de la tarjeta) aunque el gol ya estuviera cargado, si lo mío no
-      // la tiene. Si había otra nota, se conserva después del nombre.
+      // la tiene. Si había otra nota, se conserva entera después del nombre.
       const mias = String(m.observaciones || '').trim()
-      const apellido = normalizarNombre(c.nombre).split(',')[0].trim()
-      if (g.eq === 'rival' && obs && !(apellido && normalizarNombre(mias).includes(apellido))) {
-        const nuevas = (mias ? `${obs} · ${mias}` : obs).slice(0, 200)
+      const nuevas = g.eq === 'rival' && obs && !yaNombrada(mias, c.nombre, obs)
+        ? juntarObservaciones(obs, nombreRival(c.nombre), mias) : null
+      if (nuevas) {
         agregar({
           id: `${id}-obs`, grupo: 'completar', tema: g.tema,
           titulo: `${nombreTema} ${textoMinutoComet(c.minuto)}: ${g.tema === 'gol' ? 'autora' : 'jugadora'} ${obs}`,

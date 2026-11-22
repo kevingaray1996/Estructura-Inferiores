@@ -108,7 +108,8 @@ export function golesInforme(eventosPartido, marcas, nombreDe) {
     .sort((a, b) => Number(a.segundo) - Number(b.segundo))
     .map((g) => {
       const propio = g.equipo === 'propio'
-      const autora = propio ? (nombreDe?.(g.jugador_id) || '') : texto(g.observaciones, 40)
+      // Rival: la autora es lo que va antes del primer « · » (después puede venir una nota del cuerpo técnico).
+      const autora = propio ? (nombreDe?.(g.jugador_id) || '') : texto(String(g.observaciones ?? '').split(' · ')[0], 40)
       return {
         propio, minuto: minutoCorrido(g.segundo, marcas),
         texto: propio ? (autora || 'Gol propio') : (autora ? `Rival · ${autora}` : 'Rival'),
@@ -329,27 +330,30 @@ export function avisosInforme({ eventos = [], detalles = {}, catalogo, marcas, p
 }
 
 // Lo que hace que un mapa o un tramo salga vacío aunque haya acciones:
-//   - acciones con zona pero sin el punto exacto (los mapas de calor necesitan el punto);
+//   - acciones con zona pero sin el punto exacto (los mapas de calor necesitan el punto). Las que tienen el punto
+//     pero no se pueden acomodar por falta de la dirección de ataque ya tienen su propio aviso;
 //   - acciones fuera del tiempo de juego según las marcas (antes del inicio, entretiempo, después del final);
-//   - tramos de 15' sin ninguna acción, con el minuto de la última.
+//   - tramos de 15' sin acciones buenas ni malas (las mismas que cuentan las barras), con el minuto de la última.
+// Lo de los tiempos necesita el inicio de los dos tiempos (como las barras) y las marcas en orden.
 export function avisosTiempos(acciones = [], marcas = null) {
   const avisos = []
   for (const periodo of [1, 2]) {
-    const soloZona = acciones.filter((a) => a.periodo === periodo && !a.punto && a.zona)
+    const soloZona = acciones.filter((a) => a.periodo === periodo && !a.punto && !a.sinDireccion && a.zona)
     if (soloZona.length) {
       avisos.push(`En el ${periodo}T, ${soloZona.length === 1 ? '1 acción tiene' : `${soloZona.length} acciones tienen`} zona pero no el punto exacto en la cancha: no ${soloZona.length === 1 ? 'aparece' : 'aparecen'} en los mapas (por ejemplo ${soloZona.slice(0, 3).map(conVideo).join(', ')}). Marcá el punto en la Playlist.`)
     }
   }
-  if (!marcas || faltanMarcas(marcas).length) return avisos
+  if (!marcas || marcas.inicio_1t == null || marcas.inicio_2t == null || problemasOrden(marcas).length) return avisos
   const fuera = { antes: [], entretiempo: [], despues: [] }
   for (const a of acciones) {
     const real = minutoReal(a.evento?.segundo, marcas)
     if (real && fuera[real.estado]) fuera[real.estado].push(a)
   }
+  for (const k of Object.keys(fuera)) fuera[k].sort((a, b) => Number(a.evento.segundo) - Number(b.evento.segundo))
   const partes = [['antes', 'antes del inicio'], ['entretiempo', 'en el entretiempo'], ['despues', 'después del final']]
     .filter(([k]) => fuera[k].length).map(([k, texto]) => `${fuera[k].length} ${texto} (video ${formatearTiempo(fuera[k][0].evento.segundo)}${fuera[k].length > 1 ? `…${formatearTiempo(fuera[k].at(-1).evento.segundo)}` : ''})`)
   if (partes.length) avisos.push(`Hay acciones fuera del tiempo de juego según las marcas: ${partes.join(', ')}. No entran en los tramos de 15'; revisá las marcas de tiempo.`)
-  const enJuego = acciones.filter((a) => minutoReal(a.evento?.segundo, marcas)?.estado === 'juego')
+  const enJuego = acciones.filter((a) => a.calidad !== 'neutro' && minutoReal(a.evento?.segundo, marcas)?.estado === 'juego')
   if (enJuego.length) {
     const porTramo = TRAMOS.map(() => 0)
     for (const a of enJuego) porTramo[tramoDe(minutoCorrido(a.evento.segundo, marcas))] += 1
