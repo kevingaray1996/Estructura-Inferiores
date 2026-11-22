@@ -12,8 +12,24 @@ export const TECLAS_FIJAS = [
   { tecla: '?', accion: 'Mostrar los atajos' },
   { tecla: '↑ / ↓', accion: 'En Playlist: acción anterior / siguiente (el video la acompaña)' },
   { tecla: 'Números', accion: 'En Playlist: dorsal de la jugadora de la acción elegida' },
+  { tecla: 'G', accion: 'Gol nuestro (marcador y acción de gol)' },
+  { tecla: 'Shift + G', accion: 'Gol rival' },
+  { tecla: 'Y', accion: 'Tarjeta' },
+  { tecla: 'X', accion: 'Cambio' },
 ]
-const RESERVADAS = new Set([' ', '?', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'enter', 'escape', 'tab'])
+// Teclas del marcador: fijas, no se pueden dar a una acción de la botonera.
+export const TECLAS_MARCADOR = Object.freeze(['g', 'y', 'x'])
+const RESERVADAS = new Set([' ', '?', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'enter', 'escape', 'tab', ...TECLAS_MARCADOR])
+
+// Botón del marcador de una tecla: 'gol' | 'gol_rival' | 'tarjeta' | 'cambio', o null. Shift + G es el gol rival.
+export function botonMarcadorDeTecla(evento) {
+  if (!evento || evento.ctrlKey || evento.metaKey || evento.altKey) return null
+  const tecla = String(evento.key || '').toLowerCase()
+  if (tecla === 'g') return evento.shiftKey ? 'gol_rival' : 'gol'
+  if (tecla === 'y') return 'tarjeta'
+  if (tecla === 'x') return 'cambio'
+  return null
+}
 
 export const ATAJOS_POR_DEFECTO = Object.freeze({
   'Pase correcto': '+',
@@ -27,7 +43,6 @@ export const ATAJOS_POR_DEFECTO = Object.freeze({
   'Duelo aéreo': 'a',
   'Atajada': 'k',
   'Salida de arquera': 's',
-  'Gol': 'g',
   'Falta cometida': 'f',
   'Falta recibida': 'n',
   'Intercepción': 'i',
@@ -65,6 +80,7 @@ export function escribiendoEnCampo(elemento) {
 export function validarAtajo(tecla, accion, mapa) {
   const t = String(tecla || '').toLowerCase()
   if (!t || t.length !== 1) return { ok: false, motivo: 'Elegí una sola tecla (una letra, un número o un signo).' }
+  if (TECLAS_MARCADOR.includes(t)) return { ok: false, motivo: 'G, Y y X son del marcador (gol, tarjeta y cambio).' }
   if (RESERVADAS.has(t)) return { ok: false, motivo: 'Esa tecla ya se usa para controlar el video o la ayuda.' }
   const ocupada = Object.entries(mapa).find(([otra, valor]) => otra !== accion && valor === t)
   if (ocupada) return { ok: false, motivo: `Esa tecla ya es de «${ocupada[0]}». Cambiala ahí primero.`, ocupadaPor: ocupada[0] }
@@ -88,6 +104,20 @@ export function leerAtajos(almacen = almacenDeLaVentana()) {
     return mapa
   } catch {
     return { ...ATAJOS_POR_DEFECTO }
+  }
+}
+
+// Acciones que tenían guardada una tecla del marcador (G, Y o X) y la perdieron. «Gol» no cuenta: ahora es el botón
+// del marcador. Sirve para avisar que les pongan otra tecla.
+export function accionesSinTeclaPorMarcador(almacen = almacenDeLaVentana()) {
+  try {
+    const guardado = JSON.parse(almacen?.getItem(CLAVE_ATAJOS) || 'null')
+    if (!guardado || typeof guardado !== 'object') return []
+    return Object.entries(guardado)
+      .filter(([accion, tecla]) => accion !== 'Gol' && typeof tecla === 'string' && TECLAS_MARCADOR.includes(tecla.toLowerCase()))
+      .map(([accion]) => accion)
+  } catch {
+    return []
   }
 }
 

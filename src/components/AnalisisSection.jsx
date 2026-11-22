@@ -32,7 +32,7 @@ import {
 import { mensajeError, mensajeErrorOPropio } from '../utils/mensajesError'
 import useColaEtiquetado from '../hooks/useColaEtiquetado'
 import useAtajosAnalisis from '../hooks/useAtajosAnalisis'
-import { guardarAtajos, leerAtajos, mostrarTecla } from '../utils/analisis/atajos'
+import { accionesSinTeclaPorMarcador, guardarAtajos, leerAtajos, mostrarTecla } from '../utils/analisis/atajos'
 import { AvisoAccion, AyudaAtajos, IndicadorAtajos } from './analisis/AtajosEtiquetado'
 import TramosSinAcciones from './analisis/TramosSinAcciones'
 import { atajosDeBotonera, tiposBotonera } from '../utils/analisis/botonera'
@@ -44,7 +44,10 @@ import PartidoEventos from './analisis/PartidoEventos'
 import InformeAnalisis from './analisis/InformeAnalisis'
 import useEventosPartido from '../hooks/useEventosPartido'
 import usePlanillaMinutos from '../hooks/usePlanillaMinutos'
-import { estabaEnCancha, faltanMarcas, minutoReal, minutosSugeridos, periodoPorMarcas, problemasOrden } from '../utils/analisis/eventosPartido'
+import { MARCAS, enCancha as enCanchaEn, estabaEnCancha, faltanMarcas, minutoReal, minutosSugeridos, periodoPorMarcas, problemasOrden } from '../utils/analisis/eventosPartido'
+import { tiemposDe } from '../utils/analisis/marcador'
+import MarcadorVideo from './analisis/MarcadorVideo'
+import { BotonesGol, CartelMarcador, FilaTarjetaCambio } from './analisis/MarcadorBotonera'
 
 const CATEGORIA_ID = '438874e7-e59f-460b-bec4-3c0ef5b44016'
 
@@ -426,6 +429,11 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   // Atajos de teclado (se guardan en esta computadora), aviso corto y botón iluminado.
   const [atajos, setAtajos] = useState(leerAtajos)
   const cambiarAtajos = useCallback((nuevo) => { setAtajos(nuevo); guardarAtajos(nuevo) }, [])
+  // Acciones que tenían G, Y o X (ahora del marcador) y quedaron sin tecla: se avisa una vez.
+  const [sinTeclaPorMarcador, setSinTeclaPorMarcador] = useState(accionesSinTeclaPorMarcador)
+  // Cartel de Gol / Tarjeta / Cambio: { tipo, segundo, referencia, reanudar }. El video queda en pausa mientras está abierto.
+  const [cartelMarcador, setCartelMarcador] = useState(null)
+  const [guardandoMarcador, setGuardandoMarcador] = useState(false)
   // La botonera sale del catálogo configurable (analisis_tipos_accion): tipos visibles, en su orden.
   const botonera = useMemo(() => tiposBotonera(catalogo), [catalogo])
   // Solo las acciones de la botonera tienen tecla.
@@ -1109,9 +1117,120 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     })
   }, [periodoAutomatico, marcasPartido, relojVideo])
 
-  function avisarRapido(texto) {
-    setAvisoAccion((anterior) => ({ texto, n: (anterior?.n || 0) + 1 }))
+  // detalle: el tiempo del video, que se muestra chiquito al lado.
+  function avisarRapido(texto, detalle = '') {
+    setAvisoAccion((anterior) => ({ texto, detalle, n: (anterior?.n || 0) + 1 }))
   }
+
+  // ---------- Marcador: Gol, Gol rival, Tarjeta y Cambio (botonera y teclas G, Shift + G, Y, X) ----------
+
+  // Toma el segundo actual del video. Gol rival se guarda al instante; los demás abren un cartel con el video en pausa.
+  function abrirMarcador(boton) {
+    if (!esAdmin || !escrituraAutorizada || !partidoActual || cartelMarcador || guardandoMarcador) return
+    if (capturaBloqueada || !playerRef.current) { setError('Esperá a que el video esté conectado para cargar goles, tarjetas o cambios.'); return }
+    if (eventosDelPartido.error || eventosDelPartido.cargando) {
+      setError(eventosDelPartido.error || 'Todavía se están leyendo los eventos del partido. Probá de nuevo en un momento.'); return
+    }
+    let segundoVideo
+    try { segundoVideo = tiempoCaptura() } catch (e) { setError(mensajeErrorOPropio(e, 'tomar el tiempo del video')); return }
+    if (boton === 'gol_rival') { guardarGolRival(segundoVideo); return }
+    const periodoGol = periodoPorMarcas(segundoVideo, marcasPartido) ?? periodoActual
+    let referencia = null
+    if (boton === 'gol') {
+      try { referencia = referenciaNueva(partidoActual, periodoGol) } catch (e) { setError(mensajeErrorOPropio(e, 'cargar el gol')); return }
+    }
+    let reanudar = false
+    try { reanudar = playerRef.current.getPlayerState?.() === 1 } catch { /* Sin lectura: no se reanuda solo. */ }
+    if (reanudar) solicitarVideo('pausa')
+    setTipoRapido('')
+    setPestanaPanel('etiquetado')
+    setError('')
+    setCartelMarcador({ tipo: boton, segundo: segundoVideo, referencia, reanudar, periodo: periodoGol })
+  }
+
+  function cerrarMarcador(reanudar) {
+    setCartelMarcador(null)
+    if (reanudar) solicitarVideo('reproducir')
+  }
+
+  async function guardarGolRival(segundoVideo) {
+    setGuardandoMarcador(true)
+    try {
+      await eventosDelPartido.guardar({ tipo: 'gol', segundo: segundoVideo, equipo: 'rival' })
+      const t = tiemposDe(segundoVideo, marcasPartido)
+      avisarRapido(`⚽ Gol rival · ${t.partido || t.video}`, t.partido ? t.video : '')
+      setError('')
+    } catch (e) {
+      setError(mensajeErrorOPropio(e, 'guardar el gol rival'))
+    } finally {
+      setGuardandoMarcador(false)
+    }
+  }
+
+  // Gol nuestro: el gol del marcador y la acción «Gol» de la jugadora (con el punto, si se marcó), juntos.
+  async function guardarMarcador(datos) {
+    const c = cartelMarcador
+    if (!c || guardandoMarcador) return
+    setGuardandoMarcador(true)
+    const t = tiemposDe(c.segundo, marcasPartido)
+    const cuando = t.partido || t.video
+    const detalle = t.partido ? t.video : ''
+    try {
+      if (c.tipo === 'cambio') {
+        await eventosDelPartido.guardar({ tipo: 'cambio', segundo: c.segundo, jugadora_sale: datos.sale, jugadora_entra: datos.entra })
+        avisarRapido(`Cambio · ${cuando}`, detalle)
+      } else if (c.tipo === 'tarjeta') {
+        await eventosDelPartido.guardar({
+          tipo: 'tarjeta', segundo: c.segundo, equipo: datos.equipo, tarjeta: datos.tarjeta,
+          jugador_id: datos.equipo === 'propio' && datos.jugadorId ? datos.jugadorId : null,
+        })
+        avisarRapido(`Tarjeta ${datos.tarjeta} · ${cuando}`, detalle)
+      } else {
+        await eventosDelPartido.guardar({ tipo: 'gol', segundo: c.segundo, equipo: 'propio', jugador_id: datos.jugadorId || null })
+        cola.agregar({
+          id: crypto.randomUUID(),
+          partido_id: partidoId,
+          jugador_id: datos.jugadorId || null,
+          segundo: c.segundo,
+          periodo: c.periodo,
+          ...c.referencia,
+          tipo: 'Gol',
+          zona: datos.punto?.zona ?? null,
+          resultado: resultadoImplicito('Gol', catalogo),
+          observaciones: null,
+          coordenada_x: datos.punto?.x ?? null,
+          coordenada_y: datos.punto?.y ?? null,
+        })
+        avisarRapido(`⚽ Gol · ${cuando}`, detalle)
+      }
+      setError('')
+      cerrarMarcador(c.reanudar)
+    } catch (e) {
+      setError(mensajeErrorOPropio(e, c.tipo === 'cambio' ? 'guardar el cambio' : c.tipo === 'tarjeta' ? 'guardar la tarjeta' : 'guardar el gol'))
+    } finally {
+      setGuardandoMarcador(false)
+    }
+  }
+
+  // «Marcar el inicio acá» desde el marcador del video.
+  async function marcarDesdeMarcador(tipoMarca) {
+    const s = tomarSegundoVideo()
+    if (s == null) return
+    try {
+      await eventosDelPartido.guardar({ tipo: tipoMarca, segundo: s })
+      const nombre = MARCAS.find((m) => m.tipo === tipoMarca)?.nombre || 'Marca'
+      avisarRapido(`${nombre} marcado`, formatearTiempo(s))
+      setError('')
+    } catch (e) {
+      setError(mensajeErrorOPropio(e, 'guardar la marca'))
+    }
+  }
+
+  // Quiénes estaban en cancha en el segundo del cartel (null si no hay titulares cargadas).
+  const enCanchaCartel = useMemo(
+    () => (cartelMarcador && titularesIds.length ? enCanchaEn(cartelMarcador.segundo, titularesIds, eventosDelPartido.cambios) : null),
+    [cartelMarcador, titularesIds, eventosDelPartido.cambios],
+  )
 
   async function guardarMinutosPlanilla(lista) {
     try {
@@ -1246,7 +1365,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     const minuto = minutoReal(tiempo, marcasPartido)
     avisarRapido(idJugadora && fueraDeCancha(idJugadora, tiempo)
       ? `Ojo: ${nombreJugadora(jugadoras.find((j) => j.id === idJugadora))} no estaba en cancha en ese momento`
-      : `${etiquetaBotonDe(catalogo, tipoSeleccionado)} · ${minuto?.estado === 'juego' ? minuto.texto : formatearTiempo(tiempo)}`)
+      : `${etiquetaBotonDe(catalogo, tipoSeleccionado)} · ${minuto?.estado === 'juego' ? minuto.texto : formatearTiempo(tiempo)}`,
+    minuto?.estado === 'juego' ? formatearTiempo(tiempo) : '')
     setError('')
 
     // Conservamos la acción elegida para etiquetar varias jugadoras seguidas.
@@ -1712,9 +1832,11 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     mapa: atajosBotonera,
     principal: typeof window === 'undefined' ? null : window,
     auxiliar: ventanaAuxiliar,
-    pausar: eligiendoTecla,
+    // Con el cartel de gol / tarjeta / cambio abierto, las teclas no marcan otras acciones.
+    pausar: eligiendoTecla || Boolean(cartelMarcador),
     acciones: {
       marcar: tocarAccion,
+      marcador: abrirMarcador,
       alternar: alternarReproduccion,
       saltar: desplazarVideo,
       deshacer: deshacerUltimaAccion,
@@ -2030,7 +2152,11 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                 <ZonaVentanaAnalisis tipo="reproductor" ventana={ventanas} encabezado={encabezadoVentana}>
                 <div className="az-video-marco">
                   {videoActual ? (
-                    <div className="aspect-video overflow-hidden rounded-lg bg-black">
+                    <div className="mv-contenedor aspect-video overflow-hidden rounded-lg bg-black">
+                      <MarcadorVideo reloj={relojVideo} marcas={marcasPartido} eventos={eventosDelPartido.eventos}
+                        rival={partidoCalendarioActual?.rival || partidoActual.rival}
+                        puedeMarcar={accesoEditor && !bloqueoEscritura && videoListo && !eventosDelPartido.cargando && !eventosDelPartido.error}
+                        onMarcar={marcarDesdeMarcador} />
                       <iframe
                         key={`${partidoActual.id}-${videoActual}-${destinoReproductor}-${revisionReproductor}`}
                         ref={iframeRef}
@@ -2178,7 +2304,22 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                             </button>
                           )
                         })}
+                        <BotonesGol onBoton={abrirMarcador} deshabilitado={capturaBloqueada || guardandoMarcador} activo={cartelMarcador?.tipo} />
                       </div>
+                      <FilaTarjetaCambio onBoton={abrirMarcador} deshabilitado={capturaBloqueada || guardandoMarcador} activo={cartelMarcador?.tipo} />
+
+                      {cartelMarcador && (
+                        <CartelMarcador key={`${cartelMarcador.tipo}-${cartelMarcador.segundo}`} cartel={cartelMarcador} marcas={marcasPartido}
+                          citaciones={citaciones} enCancha={enCanchaCartel} partido={partidoActual} periodo={cartelMarcador.periodo}
+                          guardando={guardandoMarcador} onGuardar={guardarMarcador} onCancelar={() => cerrarMarcador(cartelMarcador.reanudar)} />
+                      )}
+
+                      {sinTeclaPorMarcador.length > 0 && (
+                        <p className="et-alerta-cola" role="status">
+                          <span>G, Y y X ahora son del marcador (gol, tarjeta y cambio): {sinTeclaPorMarcador.map((a) => `«${etiquetaTipo(a)}»`).join(', ')} {sinTeclaPorMarcador.length === 1 ? 'quedó' : 'quedaron'} sin tecla. Ponele otra con «?».</span>
+                          <button type="button" className="et-boton" onClick={() => { guardarAtajos(atajos); setSinTeclaPorMarcador([]) }}>Entendido</button>
+                        </p>
+                      )}
 
                       {(colaConError.length > 0 || colaRechazadas.length > 0) && (
                         <div className="et-alerta-cola" role="alert">

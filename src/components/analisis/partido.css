@@ -78,3 +78,7 @@
   .pa-marca { grid-template-columns: minmax(0, 1fr) 6rem auto 7rem; }
   .pa-marca-extra { grid-column: auto; }
 }
+
+/* Momento: minuto del partido grande y, chiquito, el tiempo del video */
+.pa-doble { display: inline-flex; align-items: baseline; gap: .375rem; }
+.pa-doble small { font-size: .6875rem; font-weight: 600; color: var(--ui-compartido-secundario); }

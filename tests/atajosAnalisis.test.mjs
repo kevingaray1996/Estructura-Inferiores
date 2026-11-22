@@ -1,7 +1,7 @@
 // Atajos de teclado y tramos sin acciones de Análisis: lógica pura, sin pantalla.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { ATAJOS_POR_DEFECTO, CLAVE_ATAJOS, accionDeTecla, escribiendoEnCampo, guardarAtajos, leerAtajos, mostrarTecla, teclaDeEvento, validarAtajo } from '../src/utils/analisis/atajos.js'
+import { ATAJOS_POR_DEFECTO, CLAVE_ATAJOS, TECLAS_MARCADOR, accionDeTecla, accionesSinTeclaPorMarcador, botonMarcadorDeTecla, escribiendoEnCampo, guardarAtajos, leerAtajos, mostrarTecla, teclaDeEvento, validarAtajo } from '../src/utils/analisis/atajos.js'
 import { tramosSinAcciones } from '../src/utils/analisis/tramos.js'
 
 const almacen = () => { const d = new Map(); return { getItem: (k) => d.get(k) ?? null, setItem: (k, v) => d.set(k, v) } }
@@ -11,7 +11,8 @@ test('teclas por defecto: + y − para los pases, una tecla distinta por acción
   assert.equal(ATAJOS_POR_DEFECTO['Pase incorrecto'], '-')
   const teclas = Object.values(ATAJOS_POR_DEFECTO)
   assert.equal(new Set(teclas).size, teclas.length)
-  for (const t of teclas) assert.ok(![' ', '?'].includes(t))
+  for (const t of teclas) assert.ok(![' ', '?', ...TECLAS_MARCADOR].includes(t))
+  assert.equal(ATAJOS_POR_DEFECTO.Gol, undefined, 'El gol lo carga el botón del marcador (G)')
   assert.equal(accionDeTecla(ATAJOS_POR_DEFECTO, '+'), 'Pase correcto')
   assert.equal(mostrarTecla('-'), '−')
   assert.equal(mostrarTecla('p'), 'P')
@@ -36,7 +37,8 @@ test('escribiendoEnCampo: textos, selectores y editables escriben; botones y cas
 })
 
 test('validarAtajo: una sola tecla, no reservada y no usada por otra acción', () => {
-  assert.deepEqual(validarAtajo('x', 'Pérdida', ATAJOS_POR_DEFECTO), { ok: true })
+  assert.deepEqual(validarAtajo('w', 'Pérdida', ATAJOS_POR_DEFECTO), { ok: true })
+  for (const t of ['g', 'y', 'x']) assert.match(validarAtajo(t, 'Pérdida', ATAJOS_POR_DEFECTO).motivo, /marcador/)
   assert.equal(validarAtajo('p', 'Pérdida', ATAJOS_POR_DEFECTO).ok, true, 'La misma tecla que ya tiene')
   const ocupada = validarAtajo('+', 'Pérdida', ATAJOS_POR_DEFECTO)
   assert.equal(ocupada.ok, false); assert.equal(ocupada.ocupadaPor, 'Pase correcto')
@@ -48,10 +50,10 @@ test('validarAtajo: una sola tecla, no reservada y no usada por otra acción', (
 test('leer y guardar en esta computadora; datos rotos vuelven a los de por defecto', () => {
   const a = almacen()
   assert.deepEqual(leerAtajos(a), ATAJOS_POR_DEFECTO)
-  assert.equal(guardarAtajos({ ...ATAJOS_POR_DEFECTO, Pérdida: 'x' }, a), true)
-  assert.equal(leerAtajos(a).Pérdida, 'x')
-  a.setItem(CLAVE_ATAJOS, JSON.stringify({ Gol: 'g', Remate: 'g', Centro: ' ', Despeje: 'ee' }))
-  assert.deepEqual(leerAtajos(a), { Gol: 'g' }, 'Descarta duplicadas, reservadas y de más de una letra')
+  assert.equal(guardarAtajos({ ...ATAJOS_POR_DEFECTO, Pérdida: 'w' }, a), true)
+  assert.equal(leerAtajos(a).Pérdida, 'w')
+  a.setItem(CLAVE_ATAJOS, JSON.stringify({ Pérdida: 'q', Remate: 'q', Centro: ' ', Despeje: 'ee', Gol: 'g' }))
+  assert.deepEqual(leerAtajos(a), { Pérdida: 'q' }, 'Descarta duplicadas, reservadas (también G, Y, X) y de más de una letra')
   a.setItem(CLAVE_ATAJOS, '{roto')
   assert.deepEqual(leerAtajos(a), ATAJOS_POR_DEFECTO)
   assert.deepEqual(leerAtajos({ getItem() { throw Error('bloqueado') } }), ATAJOS_POR_DEFECTO)
@@ -68,4 +70,23 @@ test('tramos sin acciones: huecos largos dentro de cada tiempo, no entre tiempos
   ])
   assert.deepEqual(tramosSinAcciones(eventos, 600), [{ periodo: 2, desde: 2800, hasta: 3500, duracion: 700 }])
   assert.deepEqual(tramosSinAcciones([], 180), [])
+})
+
+test('marcador: G gol nuestro, Shift + G gol rival, Y tarjeta, X cambio', () => {
+  assert.equal(botonMarcadorDeTecla({ key: 'g' }), 'gol')
+  assert.equal(botonMarcadorDeTecla({ key: 'G', shiftKey: true }), 'gol_rival')
+  assert.equal(botonMarcadorDeTecla({ key: 'y' }), 'tarjeta')
+  assert.equal(botonMarcadorDeTecla({ key: 'X' }), 'cambio')
+  assert.equal(botonMarcadorDeTecla({ key: 'g', ctrlKey: true }), null)
+  assert.equal(botonMarcadorDeTecla({ key: 'p' }), null)
+})
+
+test('acciones que tenían G, Y o X guardadas: se avisan (menos «Gol», que ahora es el botón del marcador)', () => {
+  const a = almacen()
+  assert.deepEqual(accionesSinTeclaPorMarcador(a), [])
+  a.setItem(CLAVE_ATAJOS, JSON.stringify({ Gol: 'g', Pérdida: 'Y', Centro: 'x', Remate: 't' }))
+  assert.deepEqual(accionesSinTeclaPorMarcador(a), ['Pérdida', 'Centro'])
+  assert.deepEqual(leerAtajos(a), { Remate: 't' })
+  a.setItem(CLAVE_ATAJOS, '{roto')
+  assert.deepEqual(accionesSinTeclaPorMarcador(a), [])
 })

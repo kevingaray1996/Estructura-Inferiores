@@ -157,9 +157,10 @@ function FilaPlaylist({ ev, activa, pl, partido, marcas, fuera, catalogo, citaci
       <article data-guardado={enCola || 'guardada'} data-activa={activa ? 'si' : undefined} className={`pl-fila${enCola ? ' et-fila-pendiente' : ''}`}>
         <button type="button" className="pl-fila-resumen" aria-current={activa ? 'true' : undefined} onClick={() => pl.elegir(ev.id)}
           title="Ver en el video desde 3 s antes">
+          {/* Primero el minuto del partido; chiquito, el tiempo del video. Sin marcas, el video va primero. */}
           <span className="pl-tiempo">
-            {formatearTiempo(ev.segundo)}
-            <small>{minutoTexto}</small>
+            {minuto?.estado === 'juego' ? minuto.texto : formatearTiempo(ev.segundo)}
+            <small>{minuto?.estado === 'juego' ? formatearTiempo(ev.segundo) : minutoTexto}</small>
           </span>
           <span className="az-boton-icono pl-icono" style={{ '--az-color-accion': apariencia.color, color: apariencia.colorTexto }} aria-hidden="true">
             {apariencia.icono}

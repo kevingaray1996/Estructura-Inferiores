@@ -17,8 +17,9 @@ test('la botonera sale del catálogo: solo visibles y en el orden de la tabla', 
   assert.equal(tipos[0].colorTexto, 'var(--plantel-peligro)')
 })
 
-test('sin tabla, la botonera por defecto tiene los 16 botones de siempre', () => {
-  assert.equal(tiposBotonera(CATALOGO_POR_DEFECTO).length, CATALOGO_BASE.length)
+test('sin tabla, la botonera por defecto tiene los botones de siempre menos «Gol» (lo carga el botón del marcador)', () => {
+  assert.equal(tiposBotonera(CATALOGO_POR_DEFECTO).length, CATALOGO_BASE.length - 1)
+  assert.ok(!tiposBotonera(CATALOGO_POR_DEFECTO).some((t) => t.nombre === 'Gol'))
   assert.equal(tiposBotonera(CATALOGO_POR_DEFECTO)[0].corto, 'Pase +')
 })
 

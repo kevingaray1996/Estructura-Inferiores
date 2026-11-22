@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { accionDeTecla, escribiendoEnCampo, teclaDeEvento } from '../utils/analisis/atajos'
+import { accionDeTecla, botonMarcadorDeTecla, escribiendoEnCampo, teclaDeEvento } from '../utils/analisis/atajos'
 
 const esIframe = (elemento) => String(elemento?.tagName || '').toUpperCase() === 'IFRAME'
 
@@ -9,7 +9,7 @@ const esIframe = (elemento) => String(elemento?.tagName || '').toUpperCase() ===
 // entra al iframe, se lo devuelve a la página enseguida (el clic en el video ya llegó a YouTube). Si no se puede
 // (por ejemplo, el foco está en otra aplicación), el estado pasa a «pausados» hasta volver a la página.
 //
-// acciones: { marcar(tipo), alternar(), saltar(delta), deshacer(), ayuda(), interceptar?(evento) }. Se leen siempre las
+// acciones: { marcar(tipo), alternar(), saltar(delta), deshacer(), ayuda(), interceptar?(evento), marcador?(boton) }. Se leen siempre las
 // últimas. interceptar va primero (por ejemplo, la Playlist con ↑ / ↓ y el dorsal); si devuelve true, la tecla ya se usó.
 // pausar: true mientras se está eligiendo una tecla nueva en el editor de atajos.
 export default function useAtajosAnalisis({ activo, mapa, principal, auxiliar = null, acciones, pausar = false }) {
@@ -50,6 +50,9 @@ export default function useAtajosAnalisis({ activo, mapa, principal, auxiliar = 
           evento.preventDefault(); a.saltar(evento.key === 'ArrowLeft' ? -5 : 5); return
         }
         if (evento.key === '?') { evento.preventDefault(); a.ayuda(); return }
+        // G / Shift + G / Y / X: botones del marcador (gol nuestro, gol rival, tarjeta, cambio).
+        const boton = botonMarcadorDeTecla(evento)
+        if (boton && a.marcador) { evento.preventDefault(); a.marcador(boton); return }
         const tecla = teclaDeEvento(evento)
         const tipo = tecla && accionDeTecla(m, tecla)
         if (tipo) { evento.preventDefault(); a.marcar(tipo) }

@@ -16,10 +16,13 @@ export function colorTextoDe(token) {
   return TEXTO_POR_TOKEN[token] || TEXTO_POR_TOKEN.acento
 }
 
+// La acción «Gol» no tiene botón propio: la carga el botón «⚽ Gol» del marcador, junto con el gol del resultado.
+export const CODIGO_GOL = 'Gol'
+
 // Botones de la botonera: { nombre (código), corto, icono, color, colorTexto }.
 export function tiposBotonera(catalogo) {
   return (catalogo?.tipos || [])
-    .filter((t) => t.visible)
+    .filter((t) => t.visible && t.codigo !== CODIGO_GOL)
     .map((t) => ({
       nombre: t.codigo,
       corto: t.etiqueta_boton,

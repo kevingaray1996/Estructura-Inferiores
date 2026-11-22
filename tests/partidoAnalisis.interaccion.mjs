@@ -113,7 +113,7 @@ test('Cambios y goles: se cargan con el tiempo del video', async () => {
     await h.act(async () => { botonEn(seccionCambios, 'Agregar cambio').click(); await esperar() })
     assert.deepEqual({ ...h.guardados.at(-1).fila, id: undefined },
       { id: undefined, tipo: 'cambio', segundo: 5400, jugadora_sale: 'j', jugadora_entra: 'j2', partido_id: 'p1' })
-    assert.match(seccionCambios.textContent, /2T 31' · 90:00/)
+    assert.match(seccionCambios.textContent, /2T 31'90:00/)
     assert.match(seccionCambios.textContent, /Sale 10 · Ana Prueba · Entra 7 · Bea Ensayo/)
 
     const seccionGoles = document.getElementById('pa-goles-titulo').closest('section')
@@ -126,7 +126,7 @@ test('Cambios y goles: se cargan con el tiempo del video', async () => {
     await h.act(async () => { botonEn(seccionGoles, 'Agregar gol').click(); await esperar() })
     const gol = h.guardados.at(-1).fila
     assert.deepEqual([gol.tipo, gol.segundo, gol.equipo, gol.jugador_id, gol.tarjeta], ['gol', 1200, 'rival', null, null])
-    assert.match(seccionGoles.textContent, /1T 21' · 20:00Gol · Rival/)
+    assert.match(seccionGoles.textContent, /1T 21'20:00Gol · Rival/)
   } finally {
     await h.cerrar()
   }

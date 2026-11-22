@@ -259,6 +259,18 @@
   --mapa-neutro: #a8a69c;
   --mapa-gol-borde: #ffffff;
   --mapa-seleccion: #ffffff;
+
+  /* Marcador de transmisión sobre el video de Análisis. Va encima de la imagen del partido: igual en ambos temas.
+     Negro del club, resultado en amarillo y reloj en gris oscuro. */
+  --marcador-fondo: var(--marca-negro);
+  --marcador-texto: #ffffff;
+  --marcador-resultado-fondo: var(--marca-amarillo);
+  --marcador-resultado-texto: var(--marca-negro);
+  --marcador-reloj-fondo: #26261f;
+  --marcador-reloj-texto: #ffffff;
+  --marcador-secundario: #c9c6b8;
+  --marcador-rival-fondo: #3a3a32;
+  --marcador-sombra: rgba(0, 0, 0, .45);
 }
 
 /* Equivalentes claros de los mismos tokens. El tema de pantalla nunca cambia

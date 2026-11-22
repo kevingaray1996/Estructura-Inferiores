@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { MARCAS, estabaEnCancha, faltanMarcas, leerTiempo, minutoReal, problemasOrden } from '../../utils/analisis/eventosPartido'
+import { MARCAS, estabaEnCancha, faltanMarcas, leerTiempo, problemasOrden } from '../../utils/analisis/eventosPartido'
+import { leerTiempoPartido, textoTiempos, tiemposDe } from '../../utils/analisis/marcador'
 import { formatearTiempo, nombreJugadora } from '../../utils/analisis/formato'
 import './partido.css'
 
-// «2T 12' · 58:40» (o solo el tiempo del video si faltan marcas).
+// «2T 12' (video 58:40)» (o solo el tiempo del video si faltan marcas). Para avisos de texto.
 export function tiempoConMinuto(segundo, marcas) {
-  const minuto = minutoReal(segundo, marcas)
-  return minuto ? `${minuto.texto} · ${formatearTiempo(segundo)}` : formatearTiempo(segundo)
+  return textoTiempos(segundo, marcas)
 }
 
 const etiquetaConvocada = (c) => `${c.dorsal ?? '—'} · ${nombreJugadora(c.jugadora)}`
@@ -126,18 +126,32 @@ function FilaMarca({ nombre, segundo, bloqueado, videoListo, onIr, onMarcarAhora
   )
 }
 
-// Campo de tiempo con «Tomar del video».
-function CampoTiempo({ id, valor, onCambiar, videoListo, tomarSegundo, bloqueado }) {
+// Un momento del partido en las listas: el minuto del partido grande y, chiquito, el tiempo del video.
+export function TiempoDoble({ segundo, marcas }) {
+  const t = tiemposDe(segundo, marcas)
+  if (!t.partido) return <span className="pa-doble">{t.video}</span>
+  return <span className="pa-doble">{t.partido}<small>{t.video}</small></span>
+}
+
+// Campo de tiempo con «Tomar del video». Acepta el minuto del partido («67'», «2T 22'», «45+2'») o el tiempo del
+// video (mm:ss) y muestra a qué momento corresponde.
+function CampoTiempo({ id, valor, onCambiar, videoListo, tomarSegundo, bloqueado, marcas }) {
+  const leido = valor.trim() ? leerTiempoPartido(valor, marcas) : null
   return (
     <div className="pa-campo">
-      <label htmlFor={id}>Tiempo del video</label>
+      <label htmlFor={id}>Minuto del partido o tiempo del video</label>
       <div className="pa-tiempo">
-        <input id={id} inputMode="numeric" placeholder="mm:ss" value={valor} disabled={bloqueado} onChange={(e) => onCambiar(e.target.value)} />
+        <input id={id} placeholder="67' · 2T 22' · mm:ss" value={valor} disabled={bloqueado} autoComplete="off"
+          aria-describedby={`${id}-ayuda`} onChange={(e) => onCambiar(e.target.value)} />
         <button type="button" className="pa-boton" disabled={bloqueado || !videoListo}
           onClick={() => { const s = tomarSegundo(); if (s != null) onCambiar(formatearTiempo(s)) }}>
           Tomar del video
         </button>
       </div>
+      <small id={`${id}-ayuda`} className="pa-nota" aria-live="polite">
+        {!leido ? "Escribí el minuto del partido (67', 2T 22' o 45+2') o el tiempo del video (mm:ss)."
+          : leido.error ? leido.error : `= ${textoTiempos(leido.segundo, marcas)}`}
+      </small>
     </div>
   )
 }
@@ -149,10 +163,11 @@ function Cambios({ ev, citaciones, titulares, nombre, bloqueado, videoListo, tom
   const [error, setError] = useState('')
 
   async function agregar() {
-    const s = leerTiempo(tiempo)
+    const leido = leerTiempoPartido(tiempo, ev.marcas)
+    const s = leido.error ? null : leido.segundo
     if (!sale || !entra) { setError('Elegí quién sale y quién entra.'); return }
     if (sale === entra) { setError('Sale y entra tienen que ser jugadoras distintas.'); return }
-    if (s == null) { setError('Marcá el tiempo del video (Tomar del video o mm:ss).'); return }
+    if (s == null) { setError(tiempo.trim() ? leido.error : "Marcá el momento: Tomar del video, el minuto del partido (67') o mm:ss."); return }
     setError('')
     if (estabaEnCancha(sale, s, titulares, ev.cambios) === false) avisar(`Ojo: ${nombre(sale)} no estaba en cancha en ese momento.`)
     if (await guardar({ tipo: 'cambio', segundo: s, jugadora_sale: sale, jugadora_entra: entra }, `Cambio guardado: ${tiempoConMinuto(s, ev.marcas)}`)) {
@@ -168,7 +183,7 @@ function Cambios({ ev, citaciones, titulares, nombre, bloqueado, videoListo, tom
         <ul className="pa-lista">
           {ev.cambios.map((c) => (
             <li key={c.id}>
-              <button type="button" className="pa-cuando" disabled={!videoListo} onClick={() => irA(Number(c.segundo))}>{tiempoConMinuto(c.segundo, ev.marcas)}</button>
+              <button type="button" className="pa-cuando" disabled={!videoListo} onClick={() => irA(Number(c.segundo))}><TiempoDoble segundo={c.segundo} marcas={ev.marcas} /></button>
               <span className="pa-texto">Sale {nombre(c.jugadora_sale)} · Entra {nombre(c.jugadora_entra)}</span>
               <button type="button" className="pa-enlace" data-peligro="si" disabled={bloqueado} onClick={() => borrar(c, 'este cambio')}>Borrar</button>
             </li>
@@ -190,7 +205,7 @@ function Cambios({ ev, citaciones, titulares, nombre, bloqueado, videoListo, tom
             {citaciones.filter((c) => c.jugador_id !== sale).map((c) => <option key={c.jugador_id} value={c.jugador_id}>{etiquetaConvocada(c)}</option>)}
           </select>
         </div>
-        <CampoTiempo id="pa-cambio-tiempo" valor={tiempo} onCambiar={setTiempo} videoListo={videoListo} tomarSegundo={tomarSegundo} bloqueado={bloqueado} />
+        <CampoTiempo id="pa-cambio-tiempo" valor={tiempo} onCambiar={setTiempo} videoListo={videoListo} tomarSegundo={tomarSegundo} bloqueado={bloqueado} marcas={ev.marcas} />
         <button type="button" className="pa-boton" data-principal="si" disabled={bloqueado} onClick={agregar}>Agregar cambio</button>
         {error && <p className="pa-error" role="alert">{error}</p>}
       </div>
@@ -213,8 +228,9 @@ function GolesTarjetas({ ev, citaciones, nombre, bloqueado, videoListo, tomarSeg
   }
 
   async function agregar() {
-    const s = leerTiempo(tiempo)
-    if (s == null) { setError('Marcá el tiempo del video (Tomar del video o mm:ss).'); return }
+    const leido = leerTiempoPartido(tiempo, ev.marcas)
+    const s = leido.error ? null : leido.segundo
+    if (s == null) { setError(tiempo.trim() ? leido.error : "Marcá el momento: Tomar del video, el minuto del partido (67') o mm:ss."); return }
     setError('')
     const evento = {
       tipo, segundo: s, equipo,
@@ -231,7 +247,7 @@ function GolesTarjetas({ ev, citaciones, nombre, bloqueado, videoListo, tomarSeg
         <ul className="pa-lista">
           {lista.map((e) => (
             <li key={e.id}>
-              <button type="button" className="pa-cuando" disabled={!videoListo} onClick={() => irA(Number(e.segundo))}>{tiempoConMinuto(e.segundo, ev.marcas)}</button>
+              <button type="button" className="pa-cuando" disabled={!videoListo} onClick={() => irA(Number(e.segundo))}><TiempoDoble segundo={e.segundo} marcas={ev.marcas} /></button>
               <span className="pa-texto">{describir(e)}</span>
               <button type="button" className="pa-enlace" data-peligro="si" disabled={bloqueado} onClick={() => borrar(e, e.tipo === 'gol' ? 'este gol' : 'esta tarjeta')}>Borrar</button>
             </li>
@@ -262,7 +278,7 @@ function GolesTarjetas({ ev, citaciones, nombre, bloqueado, videoListo, tomarSeg
             </select>
           </div>
         )}
-        <CampoTiempo id="pa-gol-tiempo" valor={tiempo} onCambiar={setTiempo} videoListo={videoListo} tomarSegundo={tomarSegundo} bloqueado={bloqueado} />
+        <CampoTiempo id="pa-gol-tiempo" valor={tiempo} onCambiar={setTiempo} videoListo={videoListo} tomarSegundo={tomarSegundo} bloqueado={bloqueado} marcas={ev.marcas} />
         <button type="button" className="pa-boton" data-principal="si" disabled={bloqueado} onClick={agregar}>
           {tipo === 'gol' ? 'Agregar gol' : 'Agregar tarjeta'}
         </button>

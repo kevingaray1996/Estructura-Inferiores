@@ -5,6 +5,10 @@ import { calcularResultado } from '../estadisticasEquipo.js'
 import { faltantesAccion } from './completitud.js'
 import { faltanMarcas, minutoReal, problemasOrden } from './eventosPartido.js'
 import { enCapa } from './mapaAcciones.js'
+import { formatearTiempo } from './formato.js'
+
+// «2T 22' · video 58:40»: el minuto del partido primero y el tiempo del video al lado (si no estaba ya).
+const conVideo = (a) => (!a.minuto || a.minuto.includes('video') ? a.minuto : `${a.minuto} · video ${formatearTiempo(a.evento?.segundo)}`)
 
 export const MINUTOS_MINIMOS = 20
 export const TRAMOS = ['0-15\'', '15-30\'', '30-45+\'', '45-60\'', '60-75\'', '75-90+\'']
@@ -219,7 +223,7 @@ const DUELOS_GANADOS = ['Exitoso']
 const DUELOS_PERDIDOS = ['Fallido']
 
 // Filas de la tabla individual: las que jugaron al menos 20'. Titulares primero, después por dorsal.
-// Cada columna marca sus valores destacados (los 3 mejores; en pérdidas, las 2 con más).
+// Cada columna marca sus valores destacados (los 3 mejores; en pérdidas, las que superan el promedio del equipo).
 // Sin minutos (faltan las marcas) entran las que tienen alguna acción, con los minutos vacíos.
 export function jugadorasInforme(acciones, { citaciones = [], minutos = null, nombreDe } = {}) {
   const conAcciones = new Set(acciones.map((a) => a.evento.jugador_id))
@@ -250,7 +254,11 @@ export function jugadorasInforme(acciones, { citaciones = [], minutos = null, no
     }
     for (const f of filas) f[`${clave}Destacado`] = corte !== undefined && f[clave] !== null && f[clave] >= corte
   }
-  destacar('pctPases', 3); destacar('recuperaciones', 3); destacar('pctDuelos', 3); destacar('perdidas', 2)
+  destacar('pctPases', 3); destacar('recuperaciones', 3); destacar('pctDuelos', 3)
+  // Pérdidas (en rojo): solo las que pierden más que el promedio del equipo. Si todas empatan, ninguna.
+  const perdidas = filas.map((f) => f.perdidas)
+  const promedio = perdidas.length ? perdidas.reduce((s, v) => s + v, 0) / perdidas.length : 0
+  for (const f of filas) f.perdidasDestacado = f.perdidas > promedio
   return filas
 }
 
@@ -313,7 +321,7 @@ export function avisosInforme({ eventos = [], detalles = {}, catalogo, marcas, p
   avisos.push(...avisosGoles({ calendario, eventosPartido, eventos }))
   const propios = acciones.filter((a) => a.remate && a.punto && a.punto.x < 50)
   if (propios.length) {
-    const minutos = propios.slice(0, 5).map((a) => a.minuto).join(', ') + (propios.length > 5 ? ` y ${propios.length - 5} más` : '')
+    const minutos = propios.slice(0, 5).map(conVideo).join(', ') + (propios.length > 5 ? ` y ${propios.length - 5} más` : '')
     avisos.push(`${propios.length === 1 ? 'Un remate quedó' : `${propios.length} remates quedaron`} en campo propio (${minutos}): puede ser un error de ubicación o de la dirección de ataque.`)
   }
   return avisos
@@ -370,7 +378,7 @@ export function formacionAcostada(citaciones) {
 
 export function filasExcel(acciones, { nombreDe, etiquetaTipo } = {}) {
   return acciones.map((a) => ({
-    Minuto: a.minuto, Tiempo: `${a.periodo}T`, Acción: etiquetaTipo ? etiquetaTipo(a.evento.tipo) : a.evento.tipo,
+    Minuto: a.minuto, Video: formatearTiempo(a.evento.segundo), Tiempo: `${a.periodo}T`, Acción: etiquetaTipo ? etiquetaTipo(a.evento.tipo) : a.evento.tipo,
     Jugadora: nombreDe?.(a.evento.jugador_id) || '', Resultado: a.evento.resultado || '',
     Zona: a.zona || '', 'X (ataque →)': a.punto ? Math.round(a.punto.x) : '', 'Y': a.punto ? Math.round(a.punto.y) : '',
     Observaciones: a.evento.observaciones || '',

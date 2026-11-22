@@ -592,8 +592,8 @@ export async function generarInformePartidoPDF(entrada) {
     })
     L.fuente('Barlow', 'normal', 14)
     L.texto(minutos
-      ? 'Color fuerte = valor destacado (bueno en amarillo, a corregir en rojo). «—» = menos de 3 acciones para el porcentaje. Mínimo 20 minutos para aparecer.'
-      : 'Color fuerte = valor destacado. «—» = menos de 3 acciones para el porcentaje. Faltan las marcas: aparecen todas las jugadoras con acciones, sin minutos.',
+      ? 'Color fuerte = valor destacado (en amarillo, los mejores; en rojo, más pérdidas que el promedio del equipo). «—» = menos de 3 acciones para el porcentaje. Mínimo 20 minutos para aparecer.'
+      : 'Color fuerte = valor destacado (en rojo, más pérdidas que el promedio del equipo). «—» = menos de 3 acciones para el porcentaje. Faltan las marcas: aparecen todas las jugadoras con acciones, sin minutos.',
     M, 215 + filas.length * alto + 26, { color: C.gris })
   } else {
     L.fuente('Barlow', 'normal', 16)

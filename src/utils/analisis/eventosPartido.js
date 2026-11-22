@@ -38,7 +38,14 @@ export function periodoPorMarcas(segundo, marcas) {
   return Number(segundo) >= marcas.inicio_2t ? 2 : 1
 }
 
-// Minuto real («1T 12'», «2T 3'») de un segundo del video. El primer minuto de cada tiempo es el 1'.
+// Duración reglamentaria de cada tiempo. Por ahora la misma para todas las categorías.
+export const MINUTOS_POR_TIEMPO = 45
+
+// «12'» o, en el descuento, «45+2'» (el minuto 47 del tiempo).
+export const textoMinutoDelTiempo = (minuto) => (minuto > MINUTOS_POR_TIEMPO
+  ? `${MINUTOS_POR_TIEMPO}+${minuto - MINUTOS_POR_TIEMPO}'` : `${minuto}'`)
+
+// Minuto real («1T 12'», «2T 3'», «1T 45+2'») de un segundo del video. El primer minuto de cada tiempo es el 1'.
 // estado: 'juego' | 'antes' | 'entretiempo' | 'despues'. null si faltan las marcas necesarias.
 export function minutoReal(segundo, marcas) {
   const s = Number(segundo)
@@ -46,13 +53,13 @@ export function minutoReal(segundo, marcas) {
   const minuto = (desde) => Math.floor((s - desde) / 60) + 1
   if (marcas.inicio_2t != null && s >= marcas.inicio_2t) {
     if (marcas.fin_partido != null && s > marcas.fin_partido) return { estado: 'despues', periodo: 2, texto: 'Después del final' }
-    return { estado: 'juego', periodo: 2, minuto: minuto(marcas.inicio_2t), texto: `2T ${minuto(marcas.inicio_2t)}'` }
+    return { estado: 'juego', periodo: 2, minuto: minuto(marcas.inicio_2t), texto: `2T ${textoMinutoDelTiempo(minuto(marcas.inicio_2t))}` }
   }
   if (marcas.inicio_1t == null) return null
   if (s < marcas.inicio_1t) return { estado: 'antes', periodo: 1, texto: 'Antes del inicio' }
   // Después del fin del 1T y antes del inicio del 2T (o sin el inicio del 2T todavía).
   if (marcas.fin_1t != null && s > marcas.fin_1t) return { estado: 'entretiempo', periodo: 1, texto: 'Entretiempo' }
-  return { estado: 'juego', periodo: 1, minuto: minuto(marcas.inicio_1t), texto: `1T ${minuto(marcas.inicio_1t)}'` }
+  return { estado: 'juego', periodo: 1, minuto: minuto(marcas.inicio_1t), texto: `1T ${textoMinutoDelTiempo(minuto(marcas.inicio_1t))}` }
 }
 
 // Cambios en orden de video.

@@ -19,7 +19,7 @@ export function IndicadorAtajos({ estado, onAyuda }) {
 export function AvisoAccion({ aviso }) {
   return (
     <div className="et-aviso" role="status" aria-live="polite" aria-atomic="true">
-      {aviso && <span key={aviso.n} className="et-aviso-texto">{aviso.texto}</span>}
+      {aviso && <span key={aviso.n} className="et-aviso-texto">{aviso.texto}{aviso.detalle && <small className="et-aviso-detalle"> · video {aviso.detalle}</small>}</span>}
     </div>
   )
 }

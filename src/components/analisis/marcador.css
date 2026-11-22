@@ -1,0 +1,94 @@
+/* Marcador de transmisión sobre el video (opción A: barra compacta arriba a la izquierda). */
+.mv-contenedor { position: relative; }
+.mv {
+  position: absolute; top: .625rem; left: .625rem; z-index: 2;
+  display: grid; justify-items: start; gap: .375rem;
+  pointer-events: none; /* El video se sigue tocando por debajo; solo el botón recibe clics. */
+}
+.mv-barra {
+  display: inline-flex; align-items: stretch; overflow: hidden;
+  border-radius: .25rem; box-shadow: 0 2px 10px var(--marcador-sombra);
+  font-family: var(--fuente-titulo); font-weight: 700; font-size: 1rem; line-height: 1; letter-spacing: .02em;
+  text-transform: uppercase; white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.mv-barra > span { display: inline-flex; align-items: center; gap: .375rem; padding: .375rem .5rem; }
+.mv-equipo { background: var(--marcador-fondo); color: var(--marcador-texto); }
+.mv-escudo { width: 1.25rem; height: 1.25rem; object-fit: contain; flex: none; }
+.mv-escudo-rival {
+  display: inline-grid; place-items: center; border-radius: 999px;
+  background: var(--marcador-rival-fondo); color: var(--marcador-texto); font-size: .75rem;
+}
+.mv-barra > .mv-resultado {
+  background: var(--marcador-resultado-fondo); color: var(--marcador-resultado-texto);
+  font-size: 1.125rem; padding-inline: .625rem;
+}
+.mv-guion { padding-inline: .125rem; }
+.mv-reloj { background: var(--marcador-reloj-fondo); color: var(--marcador-reloj-texto); }
+.mv-periodo { color: var(--marcador-resultado-fondo); }
+.mv[data-estado='juego'] .mv-periodo { margin-right: .125rem; }
+.mv[data-estado='sin_inicio'] .mv-periodo,
+.mv[data-estado='previa'] .mv-periodo,
+.mv[data-estado='entretiempo'] .mv-periodo,
+.mv[data-estado='final'] .mv-periodo { color: var(--marcador-secundario); text-transform: none; letter-spacing: 0; }
+.mv-tiempo { min-width: 2.75rem; }
+.mv-marcar {
+  pointer-events: auto; min-height: 36px; padding: 0 .75rem; border: 0; border-radius: .25rem;
+  background: var(--marcador-resultado-fondo); color: var(--marcador-resultado-texto);
+  font-family: var(--fuente-texto); font-weight: 600; font-size: .8125rem; line-height: 1; box-shadow: 0 2px 10px var(--marcador-sombra); cursor: pointer;
+}
+.mv-marcar:focus-visible { outline: 2px solid var(--marcador-texto); outline-offset: 2px; }
+
+/* Celular: más chico, sin escudos. */
+@media (max-width: 640px) {
+  .mv { top: .375rem; left: .375rem; gap: .25rem; }
+  .mv-barra { font-size: .75rem; }
+  .mv-barra > span { padding: .25rem .375rem; gap: .25rem; }
+  .mv-barra > .mv-resultado { font-size: .8125rem; padding-inline: .375rem; }
+  .mv-escudo { display: none; }
+  .mv-tiempo { min-width: 2.25rem; }
+  .mv-marcar { min-height: 32px; font-size: .75rem; padding: 0 .5rem; }
+}
+
+/* Botones del marcador en la botonera: «⚽ Gol» y «⚽ Gol rival» en la grilla; Tarjeta y Cambio en una fila aparte. */
+.mb-boton-gol { --az-color-accion: var(--ui-acento); }
+.mb-boton-gol[data-marcador='gol_rival'] { --az-color-accion: var(--ui-peligro); }
+.mb-fila { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; margin-top: .5rem; }
+.mb-boton {
+  display: flex; align-items: center; gap: .5rem; min-height: 48px; padding: 0 .75rem;
+  border: 1px solid var(--ui-compartido-borde); border-radius: .5rem; background: var(--ui-compartido-fondo);
+  color: var(--ui-compartido-texto); font-weight: 800; font-size: .875rem; text-align: left;
+}
+.mb-boton .et-tecla { margin-left: auto; }
+.mb-boton:disabled { opacity: .45; cursor: not-allowed; }
+.mb-boton[data-activa] { border-color: var(--ui-acento); box-shadow: inset 0 0 0 1px var(--ui-acento); }
+.mb-boton:focus-visible, .mb-jugadora:focus-visible, .mb-cartel:focus-visible { outline: 2px solid var(--ui-foco); outline-offset: 2px; }
+@media (hover: hover) { .mb-boton:not(:disabled):hover { border-color: var(--ui-acento); } }
+.mb-boton-icono { width: 1.5rem; text-align: center; }
+.mb-boton[data-marcador='tarjeta'] .mb-boton-icono { color: var(--ui-texto-acento); }
+
+/* Cartel de Gol / Tarjeta / Cambio */
+.mb-cartel {
+  display: grid; gap: .75rem; margin-top: .75rem; padding: .875rem;
+  border: 1px solid var(--ui-acento); border-radius: .5rem; background: var(--ui-compartido-fondo);
+}
+.mb-cartel-cabecera { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem; }
+.mb-cartel-cabecera h3 { margin: 0; font-size: 1rem; font-weight: 800; }
+.mb-cuando { font: 800 .8125rem/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--ui-texto-acento); }
+.mb-nota { margin: 0; font-size: .75rem; color: var(--ui-compartido-secundario); }
+.mb-campo { display: grid; gap: .375rem; min-width: 0; margin: 0; padding: 0; border: 0; }
+.mb-campo legend, .mb-rotulo { padding: 0; margin-bottom: .375rem; font-size: .8125rem; font-weight: 800; }
+.mb-opcional { font-weight: 500; color: var(--ui-compartido-secundario); }
+.mb-jugadoras { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: .375rem; max-height: 15rem; overflow-y: auto; }
+.mb-jugadora {
+  display: flex; align-items: center; gap: .5rem; min-height: 44px; min-width: 0; padding: .25rem .5rem;
+  border: 1px solid var(--ui-compartido-borde); border-radius: .5rem; background: var(--ui-control-fondo);
+  color: var(--ui-compartido-texto); font-size: .8125rem; font-weight: 700; text-align: left;
+}
+.mb-jugadora[aria-pressed='true'] { border-color: var(--ui-acento); background: var(--analisis-seleccion); box-shadow: inset 0 0 0 1px var(--ui-acento); }
+.mb-jugadora[data-fuera] { opacity: .6; }
+.mb-dorsal {
+  display: inline-grid; place-items: center; flex: none; width: 1.75rem; height: 1.75rem; border-radius: 999px;
+  background: var(--ui-acento); color: var(--ui-texto-sobre-acento); font-size: .75rem; font-weight: 900;
+}
+.mb-nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mb-acciones { display: flex; flex-wrap: wrap; gap: .5rem; }

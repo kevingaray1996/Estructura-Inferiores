@@ -241,7 +241,7 @@ test('aviso de remates en campo propio, con su minuto', () => {
     { tipo: 'Remate', resultado: 'Fuera', coordenada_x: 20, coordenada_y: 50, segundo: enMinuto(1, 13) }, // campo rival
   ])
   const avisos = avisosInforme({ eventos: [], catalogo, marcas, partido, acciones })
-  assert.deepEqual(avisos, ["Un remate quedó en campo propio (1T 12'): puede ser un error de ubicación o de la dirección de ataque."])
+  assert.deepEqual(avisos, ["Un remate quedó en campo propio (1T 12' · video 13:10): puede ser un error de ubicación o de la dirección de ataque."])
 })
 
 test('nombres cortos: apellido; con apellido repetido, inicial + apellido', () => {
