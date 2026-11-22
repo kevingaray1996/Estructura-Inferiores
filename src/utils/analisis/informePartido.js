@@ -324,6 +324,41 @@ export function avisosInforme({ eventos = [], detalles = {}, catalogo, marcas, p
     const minutos = propios.slice(0, 5).map(conVideo).join(', ') + (propios.length > 5 ? ` y ${propios.length - 5} más` : '')
     avisos.push(`${propios.length === 1 ? 'Un remate quedó' : `${propios.length} remates quedaron`} en campo propio (${minutos}): puede ser un error de ubicación o de la dirección de ataque.`)
   }
+  avisos.push(...avisosTiempos(acciones, marcas))
+  return avisos
+}
+
+// Lo que hace que un mapa o un tramo salga vacío aunque haya acciones:
+//   - acciones con zona pero sin el punto exacto (los mapas de calor necesitan el punto);
+//   - acciones fuera del tiempo de juego según las marcas (antes del inicio, entretiempo, después del final);
+//   - tramos de 15' sin ninguna acción, con el minuto de la última.
+export function avisosTiempos(acciones = [], marcas = null) {
+  const avisos = []
+  for (const periodo of [1, 2]) {
+    const soloZona = acciones.filter((a) => a.periodo === periodo && !a.punto && a.zona)
+    if (soloZona.length) {
+      avisos.push(`En el ${periodo}T, ${soloZona.length === 1 ? '1 acción tiene' : `${soloZona.length} acciones tienen`} zona pero no el punto exacto en la cancha: no ${soloZona.length === 1 ? 'aparece' : 'aparecen'} en los mapas (por ejemplo ${soloZona.slice(0, 3).map(conVideo).join(', ')}). Marcá el punto en la Playlist.`)
+    }
+  }
+  if (!marcas || faltanMarcas(marcas).length) return avisos
+  const fuera = { antes: [], entretiempo: [], despues: [] }
+  for (const a of acciones) {
+    const real = minutoReal(a.evento?.segundo, marcas)
+    if (real && fuera[real.estado]) fuera[real.estado].push(a)
+  }
+  const partes = [['antes', 'antes del inicio'], ['entretiempo', 'en el entretiempo'], ['despues', 'después del final']]
+    .filter(([k]) => fuera[k].length).map(([k, texto]) => `${fuera[k].length} ${texto} (video ${formatearTiempo(fuera[k][0].evento.segundo)}${fuera[k].length > 1 ? `…${formatearTiempo(fuera[k].at(-1).evento.segundo)}` : ''})`)
+  if (partes.length) avisos.push(`Hay acciones fuera del tiempo de juego según las marcas: ${partes.join(', ')}. No entran en los tramos de 15'; revisá las marcas de tiempo.`)
+  const enJuego = acciones.filter((a) => minutoReal(a.evento?.segundo, marcas)?.estado === 'juego')
+  if (enJuego.length) {
+    const porTramo = TRAMOS.map(() => 0)
+    for (const a of enJuego) porTramo[tramoDe(minutoCorrido(a.evento.segundo, marcas))] += 1
+    const vacios = TRAMOS.filter((_, i) => !porTramo[i])
+    if (vacios.length) {
+      const ultima = enJuego.reduce((u, a) => (Number(a.evento.segundo) > Number(u.evento.segundo) ? a : u))
+      avisos.push(`Sin acciones en ${vacios.length === 1 ? 'el tramo' : 'los tramos'} ${vacios.join(', ')}. La última acción del partido es del ${conVideo(ultima)}.`)
+    }
+  }
   return avisos
 }
 

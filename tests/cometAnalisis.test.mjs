@@ -121,7 +121,7 @@ test('revisión sin nada cargado: todo va a «Se va a completar»', () => {
 test('revisión: lo cargado igual coincide; minutos con más de 2\' o goles de más no coinciden', () => {
   const eventos = [
     { id: 'g1', tipo: 'gol', equipo: 'propio', segundo: enMinuto(31), jugador_id: ANA },
-    { id: 'g2', tipo: 'gol', equipo: 'rival', segundo: enMinuto(21), observaciones: 'Ya anotada' },
+    { id: 'g2', tipo: 'gol', equipo: 'rival', segundo: enMinuto(21), observaciones: 'Nueve, Goleadora' },
     { id: 'g3', tipo: 'gol', equipo: 'rival', segundo: enMinuto(27), observaciones: null },
     { id: 'g4', tipo: 'gol', equipo: 'rival', segundo: enMinuto(80), observaciones: null },
     { id: 't1', tipo: 'tarjeta', equipo: 'propio', tarjeta: 'amarilla', segundo: 3600 + 48 * 60 + 10, jugador_id: null },
@@ -135,7 +135,7 @@ test('revisión: lo cargado igual coincide; minutos con más de 2\' o goles de m
   assert.deepEqual(i['gol-rival--1-minuto'].ops, [{ op: 'actualizar_evento', id: 'g3', cambios: { segundo: 22 * 60 } }])
   assert.equal(i['gol-rival--1-minuto'].segundoMio, enMinuto(27))
   assert.equal(i['gol-rival--1-obs'].grupo, 'completar', 'La autora del rival se completa si falta')
-  assert.equal(i['gol-rival--0-obs'], undefined, 'Si ya tiene observaciones, no se toca')
+  assert.equal(i['gol-rival--0-obs'], undefined, 'Si ya tiene la autora, no se toca')
   assert.equal(i['gol-rival--sobra-0'].grupo, 'distinto')
   assert.deepEqual(i['gol-rival--sobra-0'].ops, [{ op: 'borrar_evento', id: 'g4' }])
   assert.equal(i['tarjeta-propio-amarilla-0-jugadora'].grupo, 'completar')
@@ -172,4 +172,18 @@ test('revisión: segunda importación; las partes iguales coinciden y el calenda
   assert.equal(i['cal-resultado'].grupo, 'distinto')
   assert.ok(r.avisos.some((a) => /jugamos de local y COMET dice visitante/.test(a)))
   assert.ok(r.avisos.some((a) => /no es la de COMET/.test(a)))
+})
+
+test('revisión: goles rivales ya cargados dentro de la tolerancia (22\' y 24\'): COMET completa la autora igual', () => {
+  const eventos = [
+    { id: 'g1', tipo: 'gol', equipo: 'rival', segundo: enMinuto(22), observaciones: null },
+    { id: 'g2', tipo: 'gol', equipo: 'rival', segundo: enMinuto(24), observaciones: 'De cabeza' },
+  ]
+  const i = porId(revisar({ eventos }))
+  assert.equal(i['gol-rival--0-minuto'].grupo, 'coincide')
+  assert.equal(i['gol-rival--1-minuto'].grupo, 'coincide')
+  assert.equal(i['gol-rival--0-obs'].grupo, 'completar')
+  assert.deepEqual(i['gol-rival--0-obs'].ops, [{ op: 'actualizar_evento', id: 'g1', cambios: { observaciones: 'Nueve, Goleadora Local' } }])
+  assert.deepEqual(i['gol-rival--1-obs'].ops, [{ op: 'actualizar_evento', id: 'g2', cambios: { observaciones: 'Nueve, Goleadora Local · De cabeza' } }])
+  assert.match(i['gol-rival--0-obs'].titulo, /^Gol 21': autora Nueve, Goleadora Local/)
 })

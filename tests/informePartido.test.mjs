@@ -241,7 +241,7 @@ test('aviso de remates en campo propio, con su minuto', () => {
     { tipo: 'Remate', resultado: 'Fuera', coordenada_x: 20, coordenada_y: 50, segundo: enMinuto(1, 13) }, // campo rival
   ])
   const avisos = avisosInforme({ eventos: [], catalogo, marcas, partido, acciones })
-  assert.deepEqual(avisos, ["Un remate quedó en campo propio (1T 12' · video 13:10): puede ser un error de ubicación o de la dirección de ataque."])
+  assert.equal(avisos[0], "Un remate quedó en campo propio (1T 12' · video 13:10): puede ser un error de ubicación o de la dirección de ataque.")
 })
 
 test('nombres cortos: apellido; con apellido repetido, inicial + apellido', () => {
@@ -250,4 +250,24 @@ test('nombres cortos: apellido; con apellido repetido, inicial + apellido', () =
     { id: 'c', nombre: 'Carla', apellido: 'Paz' }, { id: 'd', nombre: 'Clara', apellido: 'Paz' }, { id: 'e', nombre: 'Ana', apellido: 'Vera' },
   ])
   assert.deepEqual(Object.fromEntries(n), { a: 'C. Gonzalez', b: 'S. González', c: 'Carla Paz', d: 'Clara Paz', e: 'Vera' })
+})
+
+test('avisos de tiempos: acciones con zona sin punto, fuera de las marcas y tramos vacíos con la última acción', async () => {
+  const { avisosTiempos } = await import('../src/utils/analisis/informePartido.js')
+  const { prepararAcciones } = await import('../src/utils/analisis/mapaAcciones.js')
+  const m = { inicio_1t: 0, fin_1t: 2700, inicio_2t: 3600, fin_partido: 6300 }
+  const partido = { id: 'p', direccion_primer_tiempo: 'derecha' }
+  const ev = (id, segundo, extra = {}) => ({ id, partido_id: 'p', tipo: 'Pérdida', segundo, periodo: 1, coordenada_x: 40, coordenada_y: 40, ...extra })
+  const acciones = prepararAcciones([
+    ev('a', 100), ev('b', 1000), ev('c', 2000),
+    ev('d', 3700, { coordenada_x: null, coordenada_y: null, zona: 'Medio centro' }),
+    ev('e', 4800, { coordenada_x: null, coordenada_y: null, zona: 'Ataque izquierda' }),
+    ev('f', 3000), ev('g', 6500),
+  ], { partidos: new Map([['p', partido]]), marcas: new Map([['p', m]]) })
+  const avisos = avisosTiempos(acciones, m)
+  assert.equal(avisos.length, 3)
+  assert.match(avisos[0], /^En el 2T, 2 acciones tienen zona pero no el punto exacto en la cancha: no aparecen en los mapas \(por ejemplo 2T 2' · video 61:40, 2T 21' · video 80:00\)/)
+  assert.match(avisos[1], /1 en el entretiempo \(video 50:00\), 1 después del final \(video 108:20\)/)
+  assert.match(avisos[2], /Sin acciones en el tramo 75-90\+'\. La última acción del partido es del 2T 21' · video 80:00\./)
+  assert.deepEqual(avisosTiempos([], m), [])
 })

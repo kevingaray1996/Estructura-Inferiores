@@ -178,11 +178,17 @@ export function revisarComet({ comet, eventos = [], marcas, idDe = () => null, c
           ops: [{ op: 'actualizar_evento', id: m.id, cambios: { jugador_id: autoraId } }],
         })
       }
-      if (g.eq === 'rival' && obs && !String(m.observaciones || '').trim()) {
+      // Rival: COMET completa la autora (y el motivo de la tarjeta) aunque el gol ya estuviera cargado, si lo mío no
+      // la tiene. Si había otra nota, se conserva después del nombre.
+      const mias = String(m.observaciones || '').trim()
+      const apellido = normalizarNombre(c.nombre).split(',')[0].trim()
+      if (g.eq === 'rival' && obs && !(apellido && normalizarNombre(mias).includes(apellido))) {
+        const nuevas = (mias ? `${obs} · ${mias}` : obs).slice(0, 200)
         agregar({
-          id: `${id}-obs`, grupo: 'completar', tema: g.tema, titulo: `${nombreTema} ${textoMinutoComet(c.minuto)}: ${obs}`,
-          comet: obs, mio: null, segundoMio: Number(m.segundo),
-          ops: [{ op: 'actualizar_evento', id: m.id, cambios: { observaciones: obs } }],
+          id: `${id}-obs`, grupo: 'completar', tema: g.tema,
+          titulo: `${nombreTema} ${textoMinutoComet(c.minuto)}: ${g.tema === 'gol' ? 'autora' : 'jugadora'} ${obs}`,
+          comet: obs, mio: mias || null, segundoMio: Number(m.segundo),
+          ops: [{ op: 'actualizar_evento', id: m.id, cambios: { observaciones: nuevas } }],
         })
       }
     })
