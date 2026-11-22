@@ -21,7 +21,9 @@ export function faltasDetalle(evento, detalle, catalogo, partido = null) {
   const faltan = []
   if (!evento.jugador_id) faltan.push('jugadora')
   if (reglas.es_pase && (!detalle || detalle.destinataria_estado === 'pendiente')) faltan.push('receptora')
-  if (reglas.ubicacion === 'obligatoria' && !zonaEvento(evento, partido)) faltan.push('zona')
+  // El gol siempre pide la zona en la Playlist (lo carga COMET o el botón del marcador sin ubicación), aunque en el
+  // catálogo sea opcional. No cambia los cálculos del informe.
+  if ((reglas.ubicacion === 'obligatoria' || evento.tipo === 'Gol') && !zonaEvento(evento, partido)) faltan.push('zona')
   if (reglas.resultados.length > 0 && !evento.resultado) faltan.push('resultado')
   return faltan
 }

@@ -1,0 +1,41 @@
+/* Importar COMET: asociación de jugadoras y revisión (Se va a completar / No coincide / Coincide). */
+.cm-cabecera { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; }
+.cm-botones { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.cm-elegir { display: inline-flex; align-items: center; cursor: pointer; }
+.cm-elegir[aria-disabled] { opacity: .45; cursor: not-allowed; }
+.cm-elegir:focus-within { outline: 2px solid var(--ui-foco); outline-offset: 2px; }
+.cm-paso { display: grid; gap: .75rem; margin-top: .75rem; }
+.cm-resumen { margin: 0; font-weight: 800; font-size: .875rem; }
+.cm-avisos {
+  margin: 0; padding: .625rem .75rem .625rem 1.75rem; border: 1px solid var(--ui-compartido-borde); border-radius: .5rem;
+  background: var(--analisis-seleccion); font-size: .8125rem; display: grid; gap: .25rem;
+}
+.cm-nombres { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.cm-nombres li { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: .25rem .5rem; align-items: center; }
+.cm-nombres select { grid-column: 2; min-height: 44px; min-width: 0; }
+.cm-nombre-comet { font-size: .875rem; font-weight: 700; }
+.cm-dorsal {
+  grid-row: span 2; display: inline-grid; place-items: center; width: 2rem; height: 2rem; border-radius: 999px;
+  background: var(--ui-acento); color: var(--ui-texto-sobre-acento); font-size: .75rem; font-weight: 900;
+}
+.cm-grupo { display: grid; gap: .5rem; }
+.cm-grupo h4, .cm-grupo summary { margin: 0; font-size: .875rem; font-weight: 800; cursor: default; }
+.cm-grupo summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.cm-grupo[data-grupo='distinto'] h4 { color: var(--ui-texto-acento); }
+.cm-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: .375rem; }
+.cm-item {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .375rem .75rem; padding: .5rem .625rem;
+  border: 1px solid var(--ui-compartido-borde); border-radius: .5rem; background: var(--ui-compartido-fondo); font-size: .8125rem;
+}
+.cm-item[data-grupo='distinto'] { display: grid; border-color: var(--ui-acento); }
+.cm-item[data-grupo='coincide'] { color: var(--ui-compartido-secundario); }
+.cm-item-titulo { margin: 0; font-weight: 800; }
+.cm-tilde { display: flex; align-items: center; gap: .5rem; min-height: 44px; flex: 1 1 14rem; font-weight: 600; }
+.cm-tilde input { width: 1.125rem; height: 1.125rem; flex: none; accent-color: var(--ui-acento); }
+.cm-bloqueado { font-size: .75rem; color: var(--ui-peligro-texto); }
+.cm-comparacion { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: .375rem; margin: 0; }
+.cm-comparacion div { padding: .375rem .5rem; border-radius: .375rem; background: var(--ui-control-fondo); }
+.cm-comparacion dt { font-size: .6875rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--ui-compartido-secundario); }
+.cm-comparacion dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.cm-decision { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.cm-acciones { display: flex; flex-wrap: wrap; gap: .5rem; }

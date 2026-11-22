@@ -10,6 +10,7 @@ import {
 import { MARCAS, marcasDe } from '../../utils/analisis/eventosPartido'
 import { cargarResumenDestinatarias } from '../../utils/destinatariasPases'
 import { nombreJugadora } from '../../utils/analisis/formato'
+import { nombreLegible } from '../../utils/analisis/cometRevision'
 import './partido.css'
 import './informe.css'
 
@@ -23,7 +24,14 @@ export default function InformeAnalisis({
   analisis, calendario, calendarioLista, partidos, eventosTemporada, eventosPartido, eventosDelPartido, marcas,
   citaciones, minutos, jugadorasPorId, catalogo, etiquetaTipo, detallesPases, puedeEditar, onGuardado,
 }) {
-  const guardado = useMemo(() => normalizarInforme(analisis?.informe), [analisis?.informe])
+  // Si la árbitra no se cargó a mano, sale de COMET (si se importó).
+  const informeGuardado = analisis?.informe
+  const arbitraComet = analisis?.comet?.arbitra?.nombre || ''
+  const guardado = useMemo(() => {
+    const n = normalizarInforme(informeGuardado)
+    if (!n.arbitra && arbitraComet) n.arbitra = nombreLegible(arbitraComet).slice(0, 80)
+    return n
+  }, [informeGuardado, arbitraComet])
   const [form, setForm] = useState(guardado)
   const [estado, setEstado] = useState({ tipo: '', texto: '' })
   const [ocupado, setOcupado] = useState('')

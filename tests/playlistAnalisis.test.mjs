@@ -23,6 +23,9 @@ test('pendiente de detallar: jugadora, receptora en pases, zona y resultado si e
   assert.deepEqual(faltasDetalle(ev('c', 'Pérdida', { jugador_id: null, zona: null }), undefined, C), ['jugadora', 'zona'])
   // Atajada: zona opcional y sin resultado.
   assert.deepEqual(faltasDetalle(ev('d', 'Atajada', { zona: null }), undefined, C), [])
+  // Gol: aunque en el catálogo la ubicación sea opcional, sin zona queda pendiente (para marcar desde dónde fue).
+  assert.deepEqual(faltasDetalle(ev('e', 'Gol', { zona: null }), undefined, C), ['zona'])
+  assert.deepEqual(faltasDetalle(ev('e', 'Gol'), undefined, C), [])
 })
 
 test('progreso, filtro de pendientes y por tipo', () => {

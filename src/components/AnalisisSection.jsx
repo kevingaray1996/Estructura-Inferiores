@@ -41,6 +41,7 @@ import PlaylistAnalisis from './analisis/PlaylistAnalisis'
 import usePlaylistAnalisis from '../hooks/usePlaylistAnalisis'
 import { clipDe } from '../utils/analisis/playlist'
 import PartidoEventos from './analisis/PartidoEventos'
+import ImportarComet from './analisis/ImportarComet'
 import InformeAnalisis from './analisis/InformeAnalisis'
 import useEventosPartido from '../hooks/useEventosPartido'
 import usePlanillaMinutos from '../hooks/usePlanillaMinutos'
@@ -1210,6 +1211,27 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     } finally {
       setGuardandoMarcador(false)
     }
+  }
+
+  // Acción «Gol» de una jugadora, sin ubicación (la usa la importación de COMET): queda pendiente en la Playlist para
+  // marcar desde dónde fue. Lanza un error si falta la dirección de ataque del partido.
+  function crearAccionGol({ segundo: segundoGol, jugador_id: jugadoraGol }) {
+    if (!partidoActual) throw new Error('No hay un partido abierto.')
+    const periodoGol = periodoPorMarcas(segundoGol, marcasPartido) ?? 1
+    cola.agregar({
+      id: crypto.randomUUID(),
+      partido_id: partidoActual.id,
+      jugador_id: jugadoraGol || null,
+      segundo: segundoGol,
+      periodo: periodoGol,
+      ...referenciaNueva(partidoActual, periodoGol),
+      tipo: 'Gol',
+      zona: null,
+      resultado: resultadoImplicito('Gol', catalogo),
+      observaciones: null,
+      coordenada_x: null,
+      coordenada_y: null,
+    })
   }
 
   // «Marcar el inicio acá» desde el marcador del video.
@@ -2804,6 +2826,24 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                 <div role="tabpanel" id="az-panel-partido" aria-labelledby="az-pestana-partido" hidden={pestanaPanel !== 'partido'} className="az-panel-cuerpo">
                   <h2 className="az-titulo">Datos del partido</h2>
                   <div className="mb-4 mt-3">
+                    <ImportarComet
+                      key={partidoActual.id}
+                      analisis={partidoActual}
+                      calendario={partidoCalendarioActual || null}
+                      ev={eventosDelPartido}
+                      citaciones={citaciones}
+                      jugadoras={jugadoras}
+                      puedeEditar={accesoEditor && !bloqueoEscritura && !eventosDelPartido.cargando && !eventosDelPartido.error}
+                      videoListo={videoListo}
+                      irA={(s) => { setSegundoIr(String(s)); irAlSegundo(s) }}
+                      avisar={avisarRapido}
+                      onAccionGol={crearAccionGol}
+                      onAnalisis={(fila) => setPartidos((lista) => lista.map((p) => (p.id === fila.id ? { ...p, ...fila } : p)))}
+                      onCalendario={(fila) => {
+                        setPartidosCalendario((lista) => lista.map((p) => (p.id === fila.id ? { ...p, ...fila } : p)))
+                        setPartidos((lista) => lista.map((p) => (p.partido_calendario?.id === fila.id ? { ...p, partido_calendario: { ...p.partido_calendario, ...fila } } : p)))
+                      }}
+                    />
                     <PartidoEventos
                       ev={eventosDelPartido}
                       puedeEditar={accesoEditor && !bloqueoEscritura}
