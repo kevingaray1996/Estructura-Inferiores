@@ -37,6 +37,23 @@ function yaNombrada(mias, nombreComet, obs) {
   return buscadas.length > 0 && buscadas.every((p) => enNota.has(p))
 }
 
+// Igualdad de contenido sin importar el orden de los campos: la base (jsonb) los guarda en otro orden que el PDF.
+// Los campos vacíos (null o sin escribir) cuentan como iguales.
+function mismoValor(a, b) {
+  const ordenado = (v) => {
+    if (Array.isArray(v)) return v.map(ordenado)
+    if (v && typeof v === 'object') {
+      return Object.fromEntries(Object.keys(v).filter((k) => v[k] != null).sort().map((k) => [k, ordenado(v[k])]))
+    }
+    return v
+  }
+  return JSON.stringify(ordenado(a)) === JSON.stringify(ordenado(b))
+}
+
+// «CIUDAD DE SAN VICENTE (SAN VICENTE)» = «Ciudad de San Vicente»: sin mayúsculas, tildes, espacios de más ni lo
+// que va entre paréntesis.
+const estadioNormalizado = (t) => normalizarNombre(String(t ?? '').replace(/\([^)]*\)/g, ' '))
+
 // Lo de COMET va adelante de la nota de la usuaria, sin pasar de 200 letras. La nota nunca se corta: si no entra
 // todo, se prueba solo con el nombre (sin el motivo); si tampoco entra, null (no se propone).
 const MAX_OBSERVACIONES = 200
@@ -294,7 +311,7 @@ export function revisarComet({ comet, eventos = [], marcas, idDe = () => null, c
     const viejo = anterior?.partes?.[parte]
     const texto = resumen(nuevo)
     if (!texto) continue
-    const igual = viejo !== undefined && JSON.stringify(viejo) === JSON.stringify(nuevo)
+    const igual = viejo !== undefined && mismoValor(viejo, nuevo)
     agregar({
       id: `parte-${parte}`, grupo: viejo === undefined ? 'completar' : igual ? 'coincide' : 'distinto', tema: 'comet',
       titulo: viejo === undefined || igual ? `${titulo}: ${texto}` : `${titulo}: cambió desde la importación anterior`,
@@ -307,7 +324,7 @@ export function revisarComet({ comet, eventos = [], marcas, idDe = () => null, c
     avisos.push('Este análisis no está vinculado a un partido del calendario: no se completan estadio, hora ni resultado.')
   } else {
     const campos = [
-      ['lugar', 'Estadio', comet.estadio, calendario.lugar, (a, b) => normalizarNombre(a) === normalizarNombre(b)],
+      ['lugar', 'Estadio', comet.estadio, calendario.lugar, (a, b) => estadioNormalizado(a) === estadioNormalizado(b)],
       ['hora', 'Hora', comet.hora, calendario.hora ? String(calendario.hora).slice(0, 5) : '', (a, b) => a === b],
       ['numero_fecha', 'Número de fecha', comet.numero_fecha, calendario.numero_fecha,
         (a, b) => normalizarNombre(a).replace(/^FECHA\s*/, '') === normalizarNombre(b).replace(/^FECHA\s*/, '')],

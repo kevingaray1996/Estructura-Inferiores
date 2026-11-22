@@ -218,3 +218,39 @@ test('revisión: observaciones del rival sin duplicar, sin cortar la nota y por 
   assert.equal(i['gol-rival--0-obs'], undefined)
   assert.equal(obsDe(i, 'gol-rival--1-obs'), 'Nueve Goleadora · Goleadora')
 })
+
+// La base (jsonb) devuelve los campos en otro orden: se imita dando vuelta las claves de cada objeto.
+const comoLaBase = (v) => (Array.isArray(v) ? v.map(comoLaBase)
+  : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).reverse().map((k) => [k, comoLaBase(v[k])])) : v)
+
+test('revisión: segunda importación con lo guardado en otro orden; asistentes, alineación y cambios del rival coinciden', () => {
+  const comet = leerComet(cometSintetico({ cuarta: ': SOSA, NORA' }))
+  const primera = revisar({ comet })
+  const anterior = comoLaBase(JSON.parse(JSON.stringify(cometParaGuardar(comet, operacionesElegidas(primera.items, new Set(primera.items.map((x) => x.id))), null))))
+  const i = porId(revisar({ comet, anterior }))
+  for (const parte of ['oficiales', 'alineacion_rival', 'cambios_rival']) {
+    assert.equal(i[`parte-${parte}`].grupo, 'coincide', parte)
+    assert.doesNotMatch(i[`parte-${parte}`].titulo, /cambió/, parte)
+  }
+  // Si de verdad cambió algo, sigue sin coincidir.
+  const otra = structuredClone(comet)
+  otra.oficiales.asistente1 = { nombre: 'OTRA, ASISTENTE', localidad: '' }
+  assert.equal(porId(revisar({ comet: otra, anterior }))['parte-oficiales'].grupo, 'distinto')
+})
+
+test('revisión: el estadio coincide sin mayúsculas, tildes, espacios de más ni lo que va entre paréntesis', () => {
+  const cal = (lugar) => porId(revisar({ calendario: { id: 'c1', lugar, hora: null, numero_fecha: null, goles_local: null, goles_visitante: null, local_visitante: 'visitante', fecha: '2026-04-19' } }))['cal-lugar'].grupo
+  assert.equal(cal('Cancha de Prueba'), 'coincide') // COMET: «CANCHA DE PRUEBA (LOCALIDAD)»
+  assert.equal(cal('  cánchá  de prueba (otra cosa) '), 'coincide')
+  assert.equal(cal('Otra cancha'), 'distinto')
+})
+
+test('revisión: después de aceptar todo, la segunda importación no vuelve a proponer goles, tarjetas ni cambios', () => {
+  const comet = leerComet(cometSintetico({ rojas: [[0, "80'", '6 SEIS, CAPITANA LOCAL', 'Juego brusco']] }))
+  const primera = revisar({ comet })
+  const ops = operacionesElegidas(primera.items, new Set(primera.items.map((x) => x.id)))
+  const eventos = ops.filter((o) => o.op === 'insertar_evento').map((o, n) => ({ id: `e${n}`, ...o.evento }))
+  const segunda = revisar({ comet, eventos, anterior: comoLaBase(JSON.parse(JSON.stringify(cometParaGuardar(comet, ops, null)))) })
+  const pendientes = segunda.items.filter((x) => ['gol', 'tarjeta', 'cambio'].includes(x.tema) && x.grupo !== 'coincide')
+  assert.deepEqual(pendientes.map((x) => `${x.id}: ${x.titulo}`), [])
+})
