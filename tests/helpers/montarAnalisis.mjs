@@ -62,6 +62,8 @@ export async function montar({ tipos, eventos = [], eventosPartido = [], planill
     destroy(){this.alive=false;this.iframe.remove()}
   }
   dom.window.YT={Player,PlayerState:{PLAYING:1}}
+  // jsdom no calcula diseño ni tiene scrollIntoView (la Playlist lo usa al abrir «Editar todo»).
+  dom.window.HTMLElement.prototype.scrollIntoView=function(){}
   dom.window.setInterval=fn=>{const id=Symbol();timers.set(id,fn);return id};dom.window.clearInterval=id=>timers.delete(id)
   const server=await createServer({server:{middlewareMode:true,hmr:false},appType:'custom',plugins:[{name:'captura-backend-simulado',enforce:'pre',resolveId(s){if(s.endsWith('/supabaseClient'))return '\0captura-mock'},load(id){if(id==='\0captura-mock')return 'export const supabase=globalThis.__analisisSupabase;'}}]})
   const root=createRoot(document.getElementById('root'))

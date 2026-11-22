@@ -39,9 +39,9 @@ test('Análisis: Pase +/− en vivo guarda una vez, con el segundo y el período
     assert.deepEqual([writes[2].tipo,writes[2].jugador_id,writes[2].segundo,writes[2].resultado],['Pase incorrecto','j',322,'Fallido'])
     await h.resolver();h.registradas(3)
 
-    // Segundo tiempo: período y dirección de captura cambian, el segundo sigue siendo el del video.
-    const periodo=[...document.querySelectorAll('select')].find(s=>s.parentElement.textContent.includes('Tiempo del partido'))
-    await h.cambio(periodo,'2')
+    // Segundo tiempo (botón 2T de Etiquetado): período y dirección de captura cambian, el segundo sigue siendo el del video.
+    await h.click('2T')
+    assert.equal(h.boton('2T').getAttribute('aria-pressed'),'true')
     h.activo().time=2945.3
     await h.marcar('Pase correcto')
     await h.etiquetar('Bea Ensayo')
@@ -122,9 +122,14 @@ const accionesPrevias = [
 ]
 const formularioEdicion = () => [...document.querySelectorAll('form')].find(f => f.textContent.includes('Editar acción'))
 const selectorResultado = form => [...form.querySelectorAll('select')].find(s => s.parentElement.textContent.startsWith('Resultado'))
+// La edición completa se abre desde la Playlist: se elige la fila y se toca «Editar todo».
 async function editar(h, indice) {
-  const botones = [...document.querySelectorAll('button')].filter(b => b.textContent.trim() === 'Editar')
-  await h.act(() => botones[indice].click())
+  await h.act(() => document.getElementById('az-pestana-playlist').click())
+  const filas = () => [...document.getElementById('az-panel-playlist').querySelectorAll('article')]
+  await h.act(() => filas()[indice].querySelector('.pl-fila-resumen').click())
+  const boton = [...filas()[indice].querySelectorAll('button')].find(b => b.textContent.trim() === 'Editar todo')
+  assert.ok(boton, 'Editar todo en la fila elegida')
+  await h.act(() => boton.click())
   const form = formularioEdicion(); assert.ok(form, 'formulario de edición')
   return form
 }

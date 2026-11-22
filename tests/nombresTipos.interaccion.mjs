@@ -41,9 +41,10 @@ test('Análisis muestra los nombres configurables y guarda el código', async ()
     assert.match(document.body.textContent, /Pase bien/)
     assert.match(document.body.textContent, /Control de arquera/)
     assert.match(document.body.textContent, /Atajada real/)
-    const filtroLinea = [...document.querySelectorAll('select')].find(s => s.options[0]?.textContent === 'Todas las acciones')
-    assert.ok(textos(filtroLinea).includes('Control de arquera'))
-    assert.ok(textos(filtroLinea).includes('Gol'), 'Los filtros incluyen los tipos ocultos')
+    // Filtro por acción de la Playlist (pestaña del panel): incluye los tipos nuevos y los ocultos.
+    const filtroPlaylist = [...document.querySelectorAll('#az-panel-playlist .pl-filtros label')].find(l => l.textContent.startsWith('Acción')).querySelector('select')
+    assert.ok(textos(filtroPlaylist).includes('Control de arquera'))
+    assert.ok(textos(filtroPlaylist).includes('Gol'), 'Los filtros incluyen los tipos ocultos')
     const manual = selector('Acción')
     assert.ok(textos(manual).includes('Control de arquera'))
     assert.ok(!textos(manual).includes('Gol'), 'El formulario manual solo ofrece tipos visibles')
@@ -61,8 +62,11 @@ test('Análisis muestra los nombres configurables y guarda el código', async ()
     sinCodigo('video tras capturar')
 
     // Edición: el valor es el código y el texto, el nombre; un tipo oculto se conserva si es el actual.
-    const editar = [...document.querySelectorAll('button')].filter(b => b.textContent.trim() === 'Editar')
-    await h.act(() => editar.at(-1).click())
+    // Se abre desde la Playlist: se elige la fila de la atajada y «Editar todo».
+    await h.act(() => document.getElementById('az-pestana-playlist').click())
+    const filaAtajada = () => [...document.querySelectorAll('#az-panel-playlist article')].find(a => a.textContent.includes('Atajada real'))
+    await h.act(() => filaAtajada().querySelector('.pl-fila-resumen').click())
+    await h.act(() => [...filaAtajada().querySelectorAll('button')].find(b => b.textContent.trim() === 'Editar todo').click())
     const formEdicion = [...document.querySelectorAll('form')].find(f => f.textContent.includes('Editar acción'))
     const tipoEdicion = [...formEdicion.querySelectorAll('select')][0]
     assert.equal(tipoEdicion.value, 'Atajada')
@@ -90,9 +94,9 @@ test('Análisis muestra los nombres configurables y guarda el código', async ()
     assert.match(document.body.textContent, /Control de arquera/)
     sinCodigo('mapa')
 
+    // Informe: ya no lista acciones en pantalla (van al PDF y al Excel, con el nombre); tampoco muestra códigos.
     await h.click('▤ Informe')
-    assert.match(document.body.textContent, /Pase bien/)
-    assert.match(document.body.textContent, /Atajada real/)
+    assert.match(document.body.textContent, /Generar PDF/)
     sinCodigo('informe')
   } finally {
     await h.cerrar()
