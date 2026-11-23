@@ -6,6 +6,13 @@ const CAMPOS = {
   estadisticas: 'id,jugador_id,partido_id,minutos_jugados,titular,goles,asistencias,tarjetas_amarillas,tarjetas_rojas',
 }
 const denegado = e => ['42501', 'PGRST301', 'PGRST302'].includes(e?.code) || [401, 403].includes(e?.status)
+// Columna que todavía no existe en la base (SQL de Análisis sin correr): se lee sin ella.
+const faltaColumna = e => ['42703', 'PGRST204'].includes(e?.code)
+async function conColumnaOpcional(conColumna, sinColumna) {
+  try { return await conColumna() } catch (e) { if (faltaColumna(e)) return sinColumna(); throw e }
+}
+// Saca una columna auxiliar de cada fila (los cálculos reciben las mismas columnas de siempre).
+const sin = (filas, columna) => filas.map(fila => { const copia = { ...fila }; delete copia[columna]; return copia })
 export async function leerPaginas(consulta) {
   const filas = []
   for (let desde = 0; ; desde += 500) {
@@ -42,12 +49,22 @@ export async function leerDatosRendimiento(cliente, categoriaId) {
   }
   await Promise.all([
     fuente('partidos', () => leerPaginas(() => cliente.from('partidos').select(CAMPOS.partidos).eq('categoria_id', categoriaId))),
-    fuente('analisis', () => leerPaginas(() => cliente.from('analisis_partidos').select(CAMPOS.analisis).eq('categoria_id', categoriaId))),
+    // Los partidos de scouting (no juega Comunicaciones) no cuentan en las estadísticas del club.
+    fuente('analisis', () => conColumnaOpcional(
+      async () => (await leerPaginas(() => cliente.from('analisis_partidos').select(`${CAMPOS.analisis},tipo_partido`).eq('categoria_id', categoriaId)))
+        .filter(a => a.tipo_partido !== 'scouting').map(a => sin([a], 'tipo_partido')[0]),
+      () => leerPaginas(() => cliente.from('analisis_partidos').select(CAMPOS.analisis).eq('categoria_id', categoriaId)),
+    )),
   ])
   await Promise.all([
     resultado.partidos !== null ? fuente('estadisticas', () => leerPorIds(cliente, 'estadisticas_jugador', CAMPOS.estadisticas, 'partido_id', resultado.partidos.map(p => p.id))) :
       Promise.resolve(resultado.fuentes.estadisticas = { estado: 'no_disponible' }),
-    resultado.analisis !== null ? fuente('eventos', () => leerPorIds(cliente, 'analisis_eventos', CAMPOS.eventos, 'partido_id', resultado.analisis.map(a => a.id))) :
+    // Las acciones colectivas (momentos con fin, sin jugadora) no son eventos individuales: no se cuentan.
+    resultado.analisis !== null ? fuente('eventos', () => conColumnaOpcional(
+      async () => (await leerPorIds(cliente, 'analisis_eventos', `${CAMPOS.eventos},segundo_fin`, 'partido_id', resultado.analisis.map(a => a.id)))
+        .filter(e => e.segundo_fin === null || e.segundo_fin === undefined).map(e => sin([e], 'segundo_fin')[0]),
+      () => leerPorIds(cliente, 'analisis_eventos', CAMPOS.eventos, 'partido_id', resultado.analisis.map(a => a.id)),
+    )) :
       Promise.resolve(resultado.fuentes.eventos = { estado: 'no_disponible' }),
   ])
   return resultado

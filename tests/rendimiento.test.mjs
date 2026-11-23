@@ -109,3 +109,30 @@ test('Lector aislado: paginación, campos mínimos, RLS denegada y ausencia conf
   assert.equal(error.partidos, null); assert.equal(error.fuentes.partidos.estado, 'denegado')
   assert.equal(error.estadisticas, null)
 })
+
+test('Lector: los partidos de scouting y las acciones colectivas no cuentan; sin las columnas nuevas lee como antes', async () => {
+  const crear = (conColumnas) => ({ from(tabla) {
+    const filtros = []; let campos = ''; let pagina = [0, 499]
+    const q = { select(c) { campos = c; return q }, eq(k, v) { filtros.push([k, v]); return q }, in(k, v) { filtros.push([k, v]); return q },
+      order() { return q }, range(a, b) { pagina = [a, b]; return q },
+      then(ok, mal) {
+        if (!conColumnas && /tipo_partido|segundo_fin/.test(campos)) return Promise.resolve({ data: null, error: { code: '42703' } }).then(ok, mal)
+        const datos = {
+          partidos: [{ id: 'p1', categoria_id: 'cat' }],
+          analisis_partidos: [{ id: 'a1', partido_calendario_id: 'p1', categoria_id: 'cat', tipo_partido: 'propio' }, { id: 'a2', partido_calendario_id: null, categoria_id: 'cat', tipo_partido: 'scouting' }],
+          analisis_eventos: [{ id: 'e1', partido_id: 'a1', segundo_fin: null }, { id: 'e2', partido_id: 'a1', segundo_fin: 40 }, { id: 'e3', partido_id: 'a2', segundo_fin: 50 }],
+          estadisticas_jugador: [],
+        }[tabla]
+        const filtrados = datos.filter(r => filtros.every(([k, v]) => Array.isArray(v) ? v.includes(r[k]) : r[k] === v))
+        return Promise.resolve({ data: filtrados.slice(pagina[0], pagina[1] + 1), error: null }).then(ok, mal)
+      } }
+    return q
+  } })
+  const r = await leerDatosRendimiento(crear(true), 'cat')
+  assert.deepEqual(r.analisis.map(a => a.id), ['a1'])
+  assert.deepEqual(r.eventos.map(e => e.id), ['e1'])
+  assert.ok(r.analisis.every(a => !('tipo_partido' in a)) && r.eventos.every(e => !('segundo_fin' in e)))
+  const viejo = await leerDatosRendimiento(crear(false), 'cat')
+  assert.equal(viejo.fuentes.analisis.estado, 'disponible')
+  assert.equal(viejo.analisis.length, 2)
+})
