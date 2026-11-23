@@ -24,6 +24,17 @@ export function clasificarResultado({ data, error } = {}, id) {
   return 'red'
 }
 
+// Resumen para el indicador discreto: 'guardando' | 'guardado' | 'error', con un texto corto.
+export function resumenCola(items = []) {
+  const vivos = items.filter((i) => !i.cancelada)
+  const contar = (...estados) => vivos.filter((i) => estados.includes(i.estado)).length
+  const rechazadas = contar('rechazada'), conError = contar('error'), enCurso = contar('pendiente', 'enviando')
+  if (rechazadas) return { estado: 'error', texto: rechazadas === 1 ? '1 acción rechazada' : `${rechazadas} acciones rechazadas` }
+  if (conError) return { estado: 'error', texto: conError === 1 ? '1 sin guardar · reintentando' : `${conError} sin guardar · reintentando` }
+  if (enCurso) return { estado: 'guardando', texto: enCurso === 1 ? 'Guardando…' : `Guardando ${enCurso}…` }
+  return { estado: 'guardado', texto: 'Todo guardado' }
+}
+
 function leerAlmacen(almacen) {
   try {
     const lista = JSON.parse(almacen?.getItem(CLAVE_COLA) || '[]')
@@ -48,7 +59,9 @@ export function crearColaEtiquetado({
 
   function publicar() {
     snapshot = items.slice()
-    try { almacen?.setItem(CLAVE_COLA, JSON.stringify(items.filter((i) => i.estado !== 'rechazada').map((i) => i.registro))) } catch { /* Sin respaldo local. */ }
+    // También se respaldan las rechazadas: solo se olvidan cuando el usuario las descarta. Al recargar se intentan
+    // una vez más (un permiso que falló un momento no hace perder la acción).
+    try { almacen?.setItem(CLAVE_COLA, JSON.stringify(items.filter((i) => !i.cancelada).map((i) => i.registro))) } catch { /* Sin respaldo local. */ }
     oyentes.forEach((fn) => fn())
   }
 

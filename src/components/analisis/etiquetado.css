@@ -39,6 +39,19 @@
 .et-guardado[data-estado='error'], .et-guardado[data-estado='rechazada'] { color: var(--ui-peligro); }
 .et-fila-pendiente { border-style: dashed !important; }
 
+/* Indicador discreto del guardado de fondo, al lado de las pestañas: guardando / guardado / error. */
+.et-estado-cola {
+  display: inline-flex; align-items: center; gap: .375rem; margin: .375rem 0 0; font-size: .75rem; font-weight: 700;
+  color: var(--ui-texto-secundario);
+}
+.et-estado-cola-punto { width: .5rem; height: .5rem; border-radius: 50%; background: var(--ui-borde); flex: none; }
+.et-estado-cola[data-estado='guardando'] .et-estado-cola-punto { background: var(--ui-acento); animation: et-latido 1s ease-in-out infinite; }
+.et-estado-cola[data-estado='guardado'] .et-estado-cola-punto { background: var(--ui-exito); }
+.et-estado-cola[data-estado='error'] { color: var(--ui-peligro); }
+.et-estado-cola[data-estado='error'] .et-estado-cola-punto { background: var(--ui-peligro); }
+@keyframes et-latido { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .et-estado-cola-punto { animation: none !important; } }
+
 .et-alerta-cola {
   display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; margin-top: .75rem; padding: .625rem .75rem;
   border: 1px solid var(--ui-peligro); border-radius: 8px; background: var(--ui-superficie); color: var(--ui-texto); font-size: .875rem;

@@ -2,7 +2,7 @@
 // rechazos de la base, deshace y sobrevive a una recarga. Sin red ni base: todo simulado.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { crearColaEtiquetado, clasificarResultado, CLAVE_COLA, ESPERAS_MS } from '../src/utils/analisis/colaEtiquetado.js'
+import { crearColaEtiquetado, clasificarResultado, resumenCola, CLAVE_COLA, ESPERAS_MS } from '../src/utils/analisis/colaEtiquetado.js'
 
 const registro = (id, segundo = 10) => ({ id, partido_id: 'p1', segundo, tipo: 'Pase correcto' })
 const esperar = () => new Promise((r) => setTimeout(r, 0))
@@ -135,4 +135,37 @@ test('almacén roto o ilegible: la cola funciona igual, sin respaldo', async () 
   assert.equal(cola.getSnapshot().length, 0)
   const basura = { getItem: () => '{no es json', setItem() {} }
   assert.deepEqual(crearColaEtiquetado({ enviar: b.enviar, borrar: b.borrar, almacen: basura }).getSnapshot(), [])
+})
+
+test('una rechazada sigue respaldada hasta descartarla y al recargar se intenta otra vez', async () => {
+  const a = almacen(), b = base()
+  const cola = crearColaEtiquetado({ enviar: b.enviar, borrar: b.borrar, almacen: a })
+  cola.agregar(registro('a'))
+  b.envios[0].fallar({ code: '42501', message: 'permiso' }); await esperar()
+  assert.deepEqual(a.leer().map((r) => r.id), ['a'], 'No se olvida por un rechazo')
+  cola.detener()
+  const b2 = base(), confirmadas = []
+  const otra = crearColaEtiquetado({ enviar: b2.enviar, borrar: b2.borrar, almacen: a, alConfirmar: (f) => confirmadas.push(f.id) })
+  otra.iniciar()
+  b2.envios[0].ok(); await esperar()
+  assert.deepEqual(confirmadas, ['a'])
+  assert.deepEqual(a.leer(), [])
+  // Descartar sí la olvida.
+  const a3 = almacen(), b3 = base()
+  const tercera = crearColaEtiquetado({ enviar: b3.enviar, borrar: b3.borrar, almacen: a3 })
+  tercera.agregar(registro('z'))
+  b3.envios[0].fallar({ code: '23514' }); await esperar()
+  tercera.descartar('z')
+  assert.deepEqual(a3.leer(), [])
+})
+
+test('resumen para el indicador: guardando, guardado y error', () => {
+  const item = (estado, extra = {}) => ({ id: estado, estado, cancelada: false, ...extra })
+  assert.deepEqual(resumenCola([]), { estado: 'guardado', texto: 'Todo guardado' })
+  assert.equal(resumenCola([item('pendiente')]).texto, 'Guardando…')
+  assert.equal(resumenCola([item('pendiente'), item('enviando')]).texto, 'Guardando 2…')
+  assert.equal(resumenCola([item('enviando'), item('error')]).estado, 'error')
+  assert.match(resumenCola([item('error')]).texto, /reintentando/)
+  assert.match(resumenCola([item('rechazada')]).texto, /rechazada/)
+  assert.equal(resumenCola([item('pendiente', { cancelada: true })]).estado, 'guardado')
 })
