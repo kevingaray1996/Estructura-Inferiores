@@ -42,6 +42,22 @@ export const CATALOGO_BASE = Object.freeze([
   tipo('Despeje', 'Despeje', '⇧', 'info', 'obligatoria', CON_RESULTADO, null, 'defensiva', 16),
 ])
 
+// Márgenes del clip por defecto (los mismos que carga la migración de la etapa 2).
+const MARGENES_BASE = {
+  'Pase correcto': [4, 2], 'Pase incorrecto': [4, 2], 'Pérdida': [5, 5], 'Remate': [6, 3],
+  'Falta cometida': [3, 8], 'Falta recibida': [3, 8], 'Gol': [15, 5],
+}
+export function margenesBase(codigo, colectiva = false) {
+  if (colectiva) return { antes: 2, despues: 2 }
+  const [antes, despues] = MARGENES_BASE[codigo] || [4, 3]
+  return { antes, despues }
+}
+function margenValido(valor, porDefecto) {
+  if (valor === null || valor === undefined || valor === '') return porDefecto
+  const n = Number(valor)
+  return Number.isFinite(n) && n >= 0 && n <= 60 ? Math.round(n) : porDefecto
+}
+
 function normalizar(fila) {
   const resultadoValido = (r) => RESULTADOS_VALIDOS.includes(r)
   const implicito = resultadoValido(fila.resultado_implicito) ? fila.resultado_implicito : null
@@ -49,7 +65,11 @@ function normalizar(fila) {
   const colectiva = fila.botonera === 'colectiva'
   const gruposValidos = colectiva ? GRUPOS_COLECTIVOS : GRUPOS
   const duracion = Number(fila.duracion_defecto)
+  const base = margenesBase(String(fila.codigo), colectiva)
   return {
+    // Clip (etapa 2): segundos antes y después de la acción. Sin las columnas (antes de la migración), los de base.
+    margen_antes: margenValido(fila.margen_antes, base.antes),
+    margen_despues: margenValido(fila.margen_despues, base.despues),
     botonera: colectiva ? 'colectiva' : 'individual',
     duracion_defecto: colectiva ? (Number.isFinite(duracion) && duracion >= 1 ? Math.round(duracion) : 10) : null,
     espejo: colectiva && fila.espejo ? String(fila.espejo) : null,
