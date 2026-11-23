@@ -20,15 +20,18 @@ export function colorTextoDe(token) {
 export const CODIGO_GOL = 'Gol'
 
 // Botones de la botonera: { nombre (código), corto, icono, color, colorTexto }.
-export function tiposBotonera(catalogo) {
+// botonera: 'individual' (la de siempre) o 'colectiva' (etapa 1). Un tipo nunca está en las dos.
+export function tiposBotonera(catalogo, botonera = 'individual') {
   return (catalogo?.tipos || [])
-    .filter((t) => t.visible && t.codigo !== CODIGO_GOL)
+    .filter((t) => t.visible && t.codigo !== CODIGO_GOL && (t.botonera || 'individual') === botonera)
     .map((t) => ({
       nombre: t.codigo,
       corto: t.etiqueta_boton,
       icono: t.icono || '•',
       color: colorDe(t.color),
       colorTexto: colorTextoDe(t.color),
+      grupo: t.grupo,
+      duracion: t.duracion_defecto,
     }))
 }
 

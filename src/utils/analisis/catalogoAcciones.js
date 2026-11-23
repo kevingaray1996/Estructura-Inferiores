@@ -4,6 +4,8 @@
 
 export const RESULTADOS_VALIDOS = ['Exitoso', 'Fallido', 'Neutro', 'Gol', 'Atajada', 'Fuera', 'Bloqueado']
 export const GRUPOS = ['ofensiva', 'defensiva', 'arquera', 'pelota_parada', 'otras']
+// Botonera colectiva (etapa 1): momentos que duran, sin jugadora.
+export const GRUPOS_COLECTIVOS = ['con_pelota', 'sin_pelota', 'pelota_parada', 'charla']
 
 // Solo tokens del tema: nunca un color suelto.
 const COLORES = {
@@ -43,7 +45,14 @@ export const CATALOGO_BASE = Object.freeze([
 function normalizar(fila) {
   const resultadoValido = (r) => RESULTADOS_VALIDOS.includes(r)
   const implicito = resultadoValido(fila.resultado_implicito) ? fila.resultado_implicito : null
+  // Sin la columna (antes de la etapa 1) todo es de la botonera individual.
+  const colectiva = fila.botonera === 'colectiva'
+  const gruposValidos = colectiva ? GRUPOS_COLECTIVOS : GRUPOS
+  const duracion = Number(fila.duracion_defecto)
   return {
+    botonera: colectiva ? 'colectiva' : 'individual',
+    duracion_defecto: colectiva ? (Number.isFinite(duracion) && duracion >= 1 ? Math.round(duracion) : 10) : null,
+    espejo: colectiva && fila.espejo ? String(fila.espejo) : null,
     codigo: String(fila.codigo),
     etiqueta: fila.etiqueta?.trim() || String(fila.codigo),
     etiqueta_boton: fila.etiqueta_boton?.trim() || fila.etiqueta?.trim() || String(fila.codigo),
@@ -53,7 +62,7 @@ function normalizar(fila) {
     resultados: implicito ? [] : (Array.isArray(fila.resultados) ? fila.resultados.filter(resultadoValido) : []),
     resultado_implicito: implicito,
     es_pase: fila.es_pase === true,
-    grupo: GRUPOS.includes(fila.grupo) ? fila.grupo : 'otras',
+    grupo: gruposValidos.includes(fila.grupo) ? fila.grupo : (colectiva ? 'charla' : 'otras'),
     orden: Number.isFinite(Number(fila.orden)) ? Number(fila.orden) : 0,
     visible: fila.visible !== false,
     atajo: /^[a-y]$/.test(fila.atajo || '') ? fila.atajo : null,
