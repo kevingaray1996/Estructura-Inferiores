@@ -975,6 +975,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
   // Zona de cada acción con su partido: las viejas con punto y sin zona la calculan con la dirección del 1T del partido.
   const partidosPorId = useMemo(() => new Map(partidos.map((p) => [p.id, p])), [partidos])
+  // Estadísticas, explorador, mapa acumulado e informe cuentan solo partidos propios (no los de scouting).
+  const partidosPropios = useMemo(() => partidos.filter((p) => !esScouting(p)), [partidos])
 
   // Filtro del mapa: alcance, partido y jugadora (capa, resultado y tiempo los maneja el mapa).
   const eventosMapa = useMemo(() => {
@@ -2356,8 +2358,9 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                     })}
                   </p>
                   <p className="mt-2 text-xs" style={{ color: textoAnalisis(AMARILLO) }}>
-                    {eventos.filter((e) => e.partido_id === partido.id).length}{' '}
-                    acciones
+                    {esScouting(partido)
+                      ? `${momentos.filter((m) => m.partido_id === partido.id).length} momentos`
+                      : `${eventos.filter((e) => e.partido_id === partido.id).length} acciones`}
                   </p>
                 </button>
               )
@@ -2394,7 +2397,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
               ['explorador', '⌕ Explorador de acciones'],
               ['estadisticas', '▥ Estadísticas'],
               ['mapa', '▦ Mapa'],
-              ['informe', '▤ Informe'],
+              // El informe de partido es de Comunicaciones: en scouting no aplica.
+              ...(scouting ? [] : [['informe', '▤ Informe']]),
             ].map(([id, texto]) => (
               <button
                 key={id}
@@ -3119,7 +3123,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                   </form>
                 )}
 
-                <TramosSinAcciones eventos={eventosPartido} marcas={marcasPartido} puedeIr={videoListo} onIr={(segundoTramo) => { setSegundoIr(String(segundoTramo)); irAlSegundo(segundoTramo) }} />
+                {!scouting && <TramosSinAcciones eventos={eventosPartido} marcas={marcasPartido} puedeIr={videoListo} onIr={(segundoTramo) => { setSegundoIr(String(segundoTramo)); irAlSegundo(segundoTramo) }} />}
                     </>}
                   />
                 </div>
@@ -3386,7 +3390,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
           )}
 
           {seccion === 'explorador' && (
-            <ExploradorAnalisis eventos={eventos} partidos={partidos} jugadoras={jugadoras}
+            <ExploradorAnalisis eventos={eventos} partidos={partidosPropios} jugadoras={jugadoras}
               catalogo={catalogoExplorador} catalogoAcciones={catalogo} filtros={filtrosExplorador} cambiarFiltro={cambiarFiltroExplorador}
               resumenDestinatarias={resumenDestinatarias} onReintentarDestinatarias={() => setRecargaDestinatarias((n) => n + 1)}
               puedeEditarDestinatarias={puedeEditarDestinatarias} escrituraAutorizada={escrituraAutorizada}
@@ -3406,7 +3410,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
           {seccion === 'estadisticas' && (
             <EstadisticasAnalisis alcance={alcanceEstadisticas} cambiarAlcance={setAlcanceEstadisticas} catalogoAcciones={catalogo}
-              partidoActual={partidoActual} partidos={partidos} eventos={eventos} eventosPartido={eventosPartido} jugadoras={jugadoras} />
+              partidoActual={partidoActual} partidos={partidosPropios} eventos={eventos} eventosPartido={eventosPartido} jugadoras={jugadoras} />
           )}
 
           {seccion === 'mapa' && (
@@ -3425,7 +3429,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                       <Campo label="Partido / rival">
                         <select className={inputClass} style={inputStyle} value={filtroMapaPartido} onChange={(e) => setFiltroMapaPartido(e.target.value)}>
                           <option value="todos">Todos los partidos</option>
-                          {partidos.map((partido) => (
+                          {partidosPropios.map((partido) => (
                             <option key={partido.id} value={partido.id}>{partido.rival || 'Rival sin nombre'} · {partido.fecha || 'Sin fecha'}</option>
                           ))}
                         </select>
@@ -3459,14 +3463,14 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
             </Panel>
           )}
 
-          {seccion === 'informe' && (
+          {seccion === 'informe' && !scouting && (
             <Panel>
               <InformeAnalisis
                 key={partidoActual.id}
                 analisis={partidoActual}
                 calendario={partidoActual.partido_calendario || partidosCalendario.find((p) => p.id === partidoActual.partido_calendario_id) || null}
                 calendarioLista={partidosCalendario}
-                partidos={partidos}
+                partidos={partidosPropios}
                 eventosTemporada={eventos}
                 eventosPartido={eventosPartido}
                 eventosDelPartido={eventosDelPartido.eventos}
