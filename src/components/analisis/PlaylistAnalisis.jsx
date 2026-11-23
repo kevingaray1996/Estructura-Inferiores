@@ -15,7 +15,7 @@ const nombreConocida = (j) => (j ? nombreJugadora(j) : 'Jugadora guardada')
 // Lista de acciones del partido para revisar y detallar. Toda la lógica está en usePlaylistAnalisis.
 export default function PlaylistAnalisis({
   pl, total, partido, marcas, fueraDeCancha, faltanMarcas = [], onIrAPartido, catalogo, citaciones, jugadoras, detalles, cargandoDetalles, errorDetalles, onReintentarDetalles,
-  puedeEditar, videoListo, onEditarTodo, onEliminar, onDescartar, antesDeLaLista,
+  puedeEditar, videoListo, onEditarTodo, onEliminar, onDescartar, antesDeLaLista, onAgregarAPlaylist = null,
 }) {
   const { lista, progreso, filtros, cambiarFiltro, activoId } = pl
   const porcentaje = progreso.total ? Math.round((progreso.detalladas / progreso.total) * 100) : 0
@@ -105,6 +105,7 @@ export default function PlaylistAnalisis({
               cargandoDetalles={cargandoDetalles}
               puedeEditar={puedeEditar}
               onEditarTodo={onEditarTodo}
+              onAgregarAPlaylist={onAgregarAPlaylist}
               onEliminar={onEliminar}
               onDescartar={onDescartar}
             />
@@ -115,7 +116,7 @@ export default function PlaylistAnalisis({
   )
 }
 
-function FilaPlaylist({ ev, activa, pl, partido, marcas, fuera, catalogo, citaciones, jugadoras, detalle, cargandoDetalles, puedeEditar, onEditarTodo, onEliminar, onDescartar }) {
+function FilaPlaylist({ ev, activa, pl, partido, marcas, fuera, catalogo, citaciones, jugadoras, detalle, cargandoDetalles, puedeEditar, onEditarTodo, onEliminar, onDescartar, onAgregarAPlaylist }) {
   const fila = useRef(null)
   // La acción elegida (con clic o con ↑ / ↓) queda a la vista dentro de la lista.
   useEffect(() => { if (activa) fila.current?.scrollIntoView?.({ block: 'nearest' }) }, [activa])
@@ -236,6 +237,7 @@ function FilaPlaylist({ ev, activa, pl, partido, marcas, fuera, catalogo, citaci
               <span className="pl-guardado" role="status" data-error={estadoGuardado && estadoGuardado !== 'guardando' ? 'si' : undefined}>
                 {estadoGuardado === 'guardando' ? 'Guardando…' : estadoGuardado || ''}
               </span>
+              {onAgregarAPlaylist && !enCola && <button type="button" className="pl-enlace" onClick={() => onAgregarAPlaylist(ev)}>+ Agregar a playlist</button>}
               <button type="button" className="pl-enlace" onClick={() => onEditarTodo(ev)}>Editar todo</button>
               <button type="button" className="pl-enlace" data-peligro="si" onClick={() => onEliminar(ev)}>Eliminar</button>
             </div>

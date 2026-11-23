@@ -340,7 +340,7 @@ export function avisosTiempos(acciones = [], marcas = null) {
   for (const periodo of [1, 2]) {
     const soloZona = acciones.filter((a) => a.periodo === periodo && !a.punto && !a.sinDireccion && a.zona)
     if (soloZona.length) {
-      avisos.push(`En el ${periodo}T, ${soloZona.length === 1 ? '1 acción tiene' : `${soloZona.length} acciones tienen`} zona pero no el punto exacto en la cancha: no ${soloZona.length === 1 ? 'aparece' : 'aparecen'} en los mapas (por ejemplo ${soloZona.slice(0, 3).map(conVideo).join(', ')}). Marcá el punto en la Playlist.`)
+      avisos.push(`En el ${periodo}T, ${soloZona.length === 1 ? '1 acción tiene' : `${soloZona.length} acciones tienen`} zona pero no el punto exacto en la cancha: no ${soloZona.length === 1 ? 'aparece' : 'aparecen'} en los mapas (por ejemplo ${soloZona.slice(0, 3).map(conVideo).join(', ')}). Marcá el punto en Acciones.`)
     }
   }
   if (!marcas || marcas.inicio_1t == null || marcas.inicio_2t == null || problemasOrden(marcas).length) return avisos

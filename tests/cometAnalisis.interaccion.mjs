@@ -50,7 +50,7 @@ test('Importar COMET: asocia jugadoras la primera vez, revisa y guarda solo lo c
     // Paso 2: revisión. Todo se completa (no había nada cargado); el resultado y la árbitra también.
     const completar = seccion().querySelector('[data-grupo="completar"]')
     assert.match(completar.textContent, /Se va a completar/)
-    assert.match(completar.textContent, /Gol 30' · Ana Prueba \(y su acción Gol, para ubicarla en la Playlist\)/)
+    assert.match(completar.textContent, /Gol 30' · Ana Prueba \(y su acción Gol, para ubicarla en Acciones\)/)
     assert.match(completar.textContent, /Gol 21' · Nueve, Goleadora Local \(rival\)/)
     assert.match(completar.textContent, /Tarjeta amarilla 90\+4' · Bea Ensayo · Conducta antideportiva/)
     assert.match(completar.textContent, /Cambio 62' · sale Ana Prueba, entra Bea Ensayo/)
@@ -70,7 +70,7 @@ test('Importar COMET: asocia jugadoras la primera vez, revisa y guarda solo lo c
     // El gol nuestro también crea la acción «Gol» de la jugadora, sin ubicación (pendiente en la Playlist).
     const accionGol = h.writes.filter((w) => w.tipo === 'Gol')
     assert.deepEqual(accionGol.map((w) => [w.jugador_id, w.segundo, w.periodo, w.zona, w.coordenada_x, w.coordenada_y]), [['j', 29 * 60, 1, null, null, null]])
-    assert.match(seccion().textContent, /El gol nuestro quedó en la Playlist para marcar desde dónde fue/)
+    assert.match(seccion().textContent, /El gol nuestro quedó en Acciones para marcar desde dónde fue/)
     await h.resolver()
     const analisis = h.guardados.find((g) => g.tabla === 'analisis_partidos' && g.op === 'update')
     assert.equal(analisis.valores.comet_pdf, 'p1/comet.pdf')

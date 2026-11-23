@@ -2,14 +2,19 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../supabaseClient'
 import { validarScouting } from '../../utils/analisis/colectiva'
 import { youtubeEmbed } from '../../utils/analisis/formato'
+import SelectorEquipo from './SelectorEquipo'
 import './colectiva.css'
 
 // Alta o edición de un partido de scouting (el rival contra otro club). No se vincula al calendario: no cuenta en
 // las estadísticas del club, en la convocatoria ni en los minutos.
-export default function FormularioScouting({ inicial, categoriaPorDefecto, guardando, onGuardar, onCancelar, inputClass, inputStyle }) {
+// Etapa 2: local y visitante se eligen del listado de equipos (se guarda la referencia y el nombre). Un scouting viejo
+// con texto libre se ve igual y no cambia hasta que se elija el equipo y se guarde.
+export default function FormularioScouting({ inicial, categoriaPorDefecto, guardando, onGuardar, onCancelar, inputClass, inputStyle, equipos = [], onAgregarEquipo = null }) {
   const [datos, setDatos] = useState(() => ({
     local: inicial?.equipo_local || '',
     visitante: inicial?.equipo_visitante || '',
+    localId: inicial?.equipo_local_id || null,
+    visitanteId: inicial?.equipo_visitante_id || null,
     analizado: inicial?.equipo_analizado === 'visitante' ? 'visitante' : 'local',
     fecha: inicial?.fecha || '',
     videoUrl: inicial?.video_url || '',
@@ -31,8 +36,12 @@ export default function FormularioScouting({ inicial, categoriaPorDefecto, guard
     e.preventDefault()
     const r = validarScouting(datos, (url) => Boolean(youtubeEmbed(url)))
     if (!r.ok) { setAviso(r.motivo); return }
+    if (!datos.localId || !datos.visitanteId) {
+      // Un scouting nuevo siempre elige del listado; uno viejo con texto libre puede guardarse igual.
+      if (!inicial) { setAviso('Elegí el equipo local y el visitante del listado.'); return }
+    }
     setAviso('')
-    onGuardar({ ...r.registro, notas: datos.notas.trim() || null })
+    onGuardar({ ...r.registro, notas: datos.notas.trim() || null, equipo_local_id: datos.localId, equipo_visitante_id: datos.visitanteId })
   }
 
   const campo = (texto, control) => (
@@ -42,8 +51,12 @@ export default function FormularioScouting({ inicial, categoriaPorDefecto, guard
   return (
     <form onSubmit={enviar} className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
-        {campo('Equipo local', <input className={inputClass} style={inputStyle} value={datos.local} onChange={cambiar('local')} maxLength={60} required />)}
-        {campo('Equipo visitante', <input className={inputClass} style={inputStyle} value={datos.visitante} onChange={cambiar('visitante')} maxLength={60} required />)}
+        <SelectorEquipo etiqueta="Equipo local" equipos={equipos} valor={datos.localId} excluir={datos.visitanteId}
+          textoLibre={datos.localId ? '' : datos.local} onAgregar={onAgregarEquipo}
+          onElegir={(e) => setDatos((d) => ({ ...d, localId: e.id, local: e.nombre }))} />
+        <SelectorEquipo etiqueta="Equipo visitante" equipos={equipos} valor={datos.visitanteId} excluir={datos.localId}
+          textoLibre={datos.visitanteId ? '' : datos.visitante} onAgregar={onAgregarEquipo}
+          onElegir={(e) => setDatos((d) => ({ ...d, visitanteId: e.id, visitante: e.nombre }))} />
       </div>
       <fieldset>
         <legend className="mb-1 text-sm font-bold">Equipo analizado (la botonera colectiva marca desde este equipo)</legend>

@@ -13,6 +13,7 @@ import { crearBloqueoEtiquetado, leerTiempoActivo, registroInciertoTrasError } f
 import { crearRelojVideo, useTiempoVideo } from '../utils/relojVideo'
 import { leerPaginas } from '../utils/rendimiento/lecturas'
 import { cargarYouTubeEnVentana, mensajeErrorYouTube } from '../utils/youtubeVentana'
+import { cargarYouTubeAPI } from '../utils/analisis/youtubeApi'
 import './ventanasAnalisis.css'
 import EncabezadoSeccion from './ui/EncabezadoSeccion'
 import DetalleDestinoPase from './DetalleDestinoPase'
@@ -56,6 +57,15 @@ import LineaTiempo from './analisis/LineaTiempo'
 import ClipSeleccionado from './analisis/ClipSeleccionado'
 import FormularioScouting from './analisis/FormularioScouting'
 import useGrabacionColectiva from '../hooks/useGrabacionColectiva'
+import useEquiposAnalisis from '../hooks/useEquiposAnalisis'
+import usePlaylists from '../hooks/usePlaylists'
+import PlaylistsSection from './analisis/PlaylistsSection'
+import ReproductorPlaylist from './analisis/ReproductorPlaylist'
+import AgregarAPlaylist from './analisis/AgregarAPlaylist'
+import TableroClips, { TableroPorEquipo } from './analisis/TableroClips'
+import { crearClip } from '../utils/analisis/clips'
+import { equiposConAnalisis, filtrarPorEquipo } from '../utils/analisis/equipos'
+import { prepararParaReproducir } from '../utils/analisis/reproductorPlaylist'
 import {
   equiposDelAnalisis, esMomento, esScouting, filtrarAnalisis, guardarAtajosColectiva, leerAtajosColectiva,
   momentosDesde, separarAcciones,
@@ -89,7 +99,7 @@ const inputStyle = ESTILO_CAMPO
 const catalogoExplorador = { resultados: RESULTADOS, zonas: ZONAS }
 
 // Pestañas del panel derecho de la vista de video.
-const PESTANAS_PANEL = [['etiquetado', 'Etiquetado'], ['playlist', 'Playlist'], ['partido', 'Partido']]
+const PESTANAS_PANEL = [['etiquetado', 'Etiquetado'], ['playlist', 'Acciones'], ['partido', 'Partido']]
 
 // Al cambiar de tipo se conserva el resultado si sigue siendo válido para el
 // tipo nuevo según el catálogo; si no, se preselecciona su primera opción.
@@ -235,51 +245,6 @@ function CanchaInteractiva({ eventos = [], coordenadas, direccion = null, intera
   )
 }
 
-
-let youtubeApiPromise = null
-
-function cargarYouTubeAPI() {
-  if (typeof window === 'undefined') {
-    return Promise.reject(new Error('YouTube solo puede iniciarse en el navegador.'))
-  }
-
-  if (window.YT?.Player) return Promise.resolve(window.YT)
-  if (youtubeApiPromise) return youtubeApiPromise
-
-  youtubeApiPromise = new Promise((resolve, reject) => {
-    const callbackAnterior = window.onYouTubeIframeAPIReady
-
-    window.onYouTubeIframeAPIReady = () => {
-      if (typeof callbackAnterior === 'function') callbackAnterior()
-
-      if (window.YT?.Player) {
-        resolve(window.YT)
-      } else {
-        youtubeApiPromise = null
-        reject(new Error('YouTube no pudo inicializar el reproductor.'))
-      }
-    }
-
-    let script = document.querySelector(
-      'script[src="https://www.youtube.com/iframe_api"]',
-    )
-
-    if (!script) {
-      script = document.createElement('script')
-      script.src = 'https://www.youtube.com/iframe_api'
-      script.async = true
-
-      script.onerror = () => {
-        youtubeApiPromise = null
-        reject(new Error('No se pudo cargar la API de YouTube.'))
-      }
-
-      document.head.appendChild(script)
-    }
-  })
-
-  return youtubeApiPromise
-}
 
 // modoConsulta: cuerpo técnico (y coordinación sin permiso de edición). Ve video, Playlist, mapa, estadísticas e
 // informe; no ve la botonera ni nada que guarde. La base (RLS) igual rechaza cualquier escritura.
@@ -482,8 +447,13 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   const [vistaMomentos, setVistaMomentos] = useState('analizado')
   const [momentoElegidoId, setMomentoElegidoId] = useState(null)
   // Biblioteca: filtro de análisis (propios / scouting) y búsqueda por rival.
-  const [filtroBiblioteca, setFiltroBiblioteca] = useState({ tipo: 'todos', rival: '' })
-  const partidosFiltrados = useMemo(() => filtrarAnalisis(partidos, filtroBiblioteca), [partidos, filtroBiblioteca])
+  // Etapa 2: equipo del listado (scouting donde jugó de local o visitante y nuestros partidos contra él).
+  const equiposApi = useEquiposAnalisis()
+  const [filtroBiblioteca, setFiltroBiblioteca] = useState({ tipo: 'todos', rival: '', equipo: '' })
+  const partidosFiltrados = useMemo(
+    () => filtrarPorEquipo(filtrarAnalisis(partidos, filtroBiblioteca), filtroBiblioteca.equipo || null, equiposApi.equipos),
+    [partidos, filtroBiblioteca, equiposApi.equipos],
+  )
   // Nuevo análisis: partido propio (del calendario) o de scouting.
   const [tipoNuevoAnalisis, setTipoNuevoAnalisis] = useState('propio')
   // Partido propio: desde qué equipo marca la botonera colectiva (Comunicaciones o el rival).
@@ -638,7 +608,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
           numero_fecha, video_partido_completo, video_resumen,
           video_analisis_propio, video_analisis_rival, video_pelota_parada,
           video_gps, video_charla_dt, video_arenga, video_resumen_vigilancias,
-          link, formacion, escudo_url, goles_local, goles_visitante, penales_favor, penales_contra
+          link, formacion, escudo_url, goles_local, goles_visitante, penales_favor, penales_contra, equipo_id
         `)
         .eq('categoria_id', CATEGORIA_ID)
         .order('fecha', { ascending: false })
@@ -1150,6 +1120,46 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     return todas
   }, [alcanceMapa, marcasPanel, marcasTodos, partidoId, marcasPartido])
   const jugadorasPorId = useMemo(() => new Map(jugadoras.map((j) => [j.id, j])), [jugadoras])
+  // ---------- Etapa 2: playlists, reproductor y tablero clickeable ----------
+  const puedeEditarPlaylists = esAdmin && !bloqueoEscritura && !modoConsulta
+  const [reproduccion, setReproduccion] = useState(null)
+  const [agregarClip, setAgregarClip] = useState(null)
+  const playlistsApi = usePlaylists(!cargando && (seccion === 'playlists' || Boolean(agregarClip) || Boolean(reproduccion)))
+  const marcasAnalisis = useMarcasPartidos(seccion === 'playlists' || seccion === 'estadisticas' || Boolean(reproduccion))
+  const marcasPorPartido = useMemo(() => {
+    const todas = new Map(marcasAnalisis)
+    if (partidoId) todas.set(partidoId, marcasPartido)
+    return todas
+  }, [marcasAnalisis, partidoId, marcasPartido])
+  const abrirReproductor = useCallback(({ titulo, clips, indice = 0 }) => {
+    setReproduccion({
+      titulo, indice,
+      clips: prepararParaReproducir(clips, { analisisPorId: partidosPorId, equipos: equiposApi.equipos, etiqueta: (t) => etiquetaDe(catalogo, t), marcasPorPartido }),
+    })
+  }, [partidosPorId, equiposApi.equipos, catalogo, marcasPorPartido])
+  // Números de Estadísticas (filas de acciones) → clips → playlist temporal.
+  const abrirEventos = useCallback((titulo, lista) => {
+    const clips = (lista || []).map((e) => crearClip(e, {
+      analisis: partidosPorId.get(e.partido_id), catalogo, equipos: equiposApi.equipos, marcas: marcasPorPartido.get(e.partido_id) || null,
+    })).filter(Boolean)
+    abrirReproductor({ titulo, clips })
+  }, [partidosPorId, catalogo, equiposApi.equipos, marcasPorPartido, abrirReproductor])
+  // «Agregar a playlist» de una acción, de un momento o de su espejo (los que todavía se están guardando, no).
+  const pedirAgregarAPlaylist = useCallback((accion) => {
+    if (!accion || accion._cola) return
+    const espejo = Boolean(accion.origen)
+    const original = espejo ? todasLasAcciones.find((e) => e.id === accion.origenId) : accion
+    if (!original) return
+    const clip = crearClip(original, { analisis: partidoActual, catalogo, equipos: equiposApi.equipos, marcas: marcasPartido, espejo })
+    if (clip) setAgregarClip({ clip, titulo: `${etiquetaDe(catalogo, clip.tipo)} · ${formatearTiempo(clip.segundo)}` })
+  }, [todasLasAcciones, partidoActual, catalogo, equiposApi.equipos, marcasPartido])
+  const accionesPropias = useMemo(() => {
+    const ids = new Set(partidosPropios.map((p) => p.id))
+    return todasLasAcciones.filter((e) => ids.has(e.partido_id))
+  }, [todasLasAcciones, partidosPropios])
+  const accionesDelPartido = useMemo(() => todasLasAcciones.filter((e) => e.partido_id === partidoId), [todasLasAcciones, partidoId])
+  const analisisDelPartido = useMemo(() => (partidoActual ? [partidoActual] : []), [partidoActual])
+
   const nombreJugadoraPorId = useCallback((id) => (id && jugadorasPorId.has(id) ? nombreJugadora(jugadorasPorId.get(id)) : ''), [jugadorasPorId])
   // Receptora de un pase para la ficha del mapa (de la tabla de detalles de pases).
   const receptoraDe = useCallback((evento) => {
@@ -1873,10 +1883,18 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     setError('')
     setMensaje('')
     try {
+      const escribir = (datos) => (editandoId
+        ? supabase.from('analisis_partidos').update(datos).eq('id', editandoId).select().single()
+        : supabase.from('analisis_partidos').insert(datos).select().single())
       const fila = { ...registro, creado_por: usuario?.email || null }
-      const respuesta = editandoId
-        ? await supabase.from('analisis_partidos').update(fila).eq('id', editandoId).select().single()
-        : await supabase.from('analisis_partidos').insert(fila).select().single()
+      let respuesta = await escribir(fila)
+      // Sin la migración de la etapa 2 no existen las columnas de equipo: se guarda solo el nombre.
+      if (respuesta.error?.code === 'PGRST204' || respuesta.error?.code === '42703') {
+        const sinEquipos = { ...fila }
+        delete sinEquipos.equipo_local_id
+        delete sinEquipos.equipo_visitante_id
+        respuesta = await escribir(sinEquipos)
+      }
       if (respuesta.error) throw respuesta.error
       const estabaEditando = Boolean(editandoId)
       limpiarFormulario()
@@ -2074,7 +2092,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       style={{ color: A.texto }}
     >
       <AvisoAccion aviso={avisoAccion} />
-      {modoConsulta && <p role="status" className="text-sm" style={{ color: A.secundario }}>Modo consulta: podés ver el video, la Playlist, el mapa, las estadísticas y el informe. Etiquetar y editar acciones es solo de coordinación.</p>}
+      {modoConsulta && <p role="status" className="text-sm" style={{ color: A.secundario }}>Modo consulta: podés ver el video, las Acciones, las playlists, el mapa, las estadísticas y el informe. Etiquetar y editar acciones es solo de coordinación.</p>}
       {bloqueoEscritura && !modoConsulta && <p role="status">{(estadoAutorizacion || estadoPermiso) === 'pendiente_migracion'
         ? 'Análisis en modo consulta: falta activar la función de autorización de la migración pendiente. Crear, guardar, editar y eliminar están bloqueados hasta que el servidor confirme los permisos.'
         : 'Escrituras pausadas: no se pudo confirmar la autorización del servidor o se está revalidando. Se conserva el trabajo abierto y podés consultar el video.'}</p>}
@@ -2161,6 +2179,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
               onCancelar={() => { limpiarFormulario(); setMostrarFormulario(false) }}
               inputClass={inputClass}
               inputStyle={inputStyle}
+              equipos={equiposApi.equipos}
+              onAgregarEquipo={esAdmin && escrituraAutorizada ? equiposApi.agregar : null}
             />
           ) : <>
           <p className="mb-4 text-sm" style={{ color: A.secundario }}>
@@ -2306,6 +2326,16 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
               value={filtroBiblioteca.rival}
               onChange={(e) => setFiltroBiblioteca((f) => ({ ...f, rival: e.target.value }))}
             />
+            <select
+              className={inputClass}
+              style={inputStyle}
+              aria-label="Filtrar por equipo"
+              value={filtroBiblioteca.equipo}
+              onChange={(e) => setFiltroBiblioteca((f) => ({ ...f, equipo: e.target.value }))}
+            >
+              <option value="">Todos los equipos</option>
+              {equiposConAnalisis(partidos, equiposApi.equipos).map((o) => <option key={o.clave} value={o.clave}>{o.nombre}</option>)}
+            </select>
           </div>
         )}
 
@@ -2397,6 +2427,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
               ['explorador', '⌕ Explorador de acciones'],
               ['estadisticas', '▥ Estadísticas'],
               ['mapa', '▦ Mapa'],
+              ['playlists', '▶ Playlists'],
               // El informe de partido es de Comunicaciones: en scouting no aplica.
               ...(scouting ? [] : [['informe', '▤ Informe']]),
             ].map(([id, texto]) => (
@@ -2521,6 +2552,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                     onReproducir={reproducirMomento}
                     onBorrar={async (m) => { await eliminarEvento(m); setMomentoElegidoId(null) }}
                     onCerrar={() => setMomentoElegidoId(null)}
+                    onAgregarAPlaylist={puedeEditarPlaylists ? pedirAgregarAPlaylist : null}
                   />
                 </div>
 
@@ -2945,6 +2977,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                     }}
                     onEliminar={eliminarEvento}
                     onDescartar={(id) => cola.descartar(id)}
+                    onAgregarAPlaylist={puedeEditarPlaylists ? pedirAgregarAPlaylist : null}
                     antesDeLaLista={<>
                 {mostrarEdicionEvento && (
                   <form
@@ -3408,9 +3441,34 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
             />
           )}
 
-          {seccion === 'estadisticas' && (
-            <EstadisticasAnalisis alcance={alcanceEstadisticas} cambiarAlcance={setAlcanceEstadisticas} catalogoAcciones={catalogo}
-              partidoActual={partidoActual} partidos={partidosPropios} eventos={eventos} eventosPartido={eventosPartido} jugadoras={jugadoras} />
+          {seccion === 'estadisticas' && (scouting ? (
+            <Panel>
+              <h2 className="text-xl font-black">Estadísticas del scouting</h2>
+              <p className="mt-1 text-sm" style={{ color: A.secundario }}>Un scouting no cuenta en las estadísticas del club: acá se ve solo lo colectivo de cada equipo.</p>
+              <TableroClips scouting analisis={analisisDelPartido} acciones={accionesDelPartido} catalogo={catalogo} equipos={equiposApi.equipos}
+                jugadoras={jugadoras} marcasPorPartido={marcasPorPartido} onAbrir={(titulo, clips) => abrirReproductor({ titulo, clips })} />
+            </Panel>
+          ) : (
+            <>
+              <EstadisticasAnalisis alcance={alcanceEstadisticas} cambiarAlcance={setAlcanceEstadisticas} catalogoAcciones={catalogo}
+                partidoActual={partidoActual} partidos={partidosPropios} eventos={eventos} eventosPartido={eventosPartido} jugadoras={jugadoras}
+                onAbrirEventos={abrirEventos} />
+              <Panel>
+                <h2 className="text-xl font-black">Tablero clickeable · {alcanceEstadisticas === 'acumulado' ? 'todos los partidos' : 'este partido'}</h2>
+                <TableroClips analisis={alcanceEstadisticas === 'acumulado' ? partidosPropios : analisisDelPartido}
+                  acciones={alcanceEstadisticas === 'acumulado' ? accionesPropias : accionesDelPartido}
+                  catalogo={catalogo} equipos={equiposApi.equipos} jugadoras={jugadoras} marcasPorPartido={marcasPorPartido}
+                  onAbrir={(titulo, clips) => abrirReproductor({ titulo, clips })} />
+                <TableroPorEquipo analisis={partidos} acciones={todasLasAcciones} catalogo={catalogo} equipos={equiposApi.equipos}
+                  marcasPorPartido={marcasPorPartido} onAbrir={(titulo, clips) => abrirReproductor({ titulo, clips })} />
+              </Panel>
+            </>
+          ))}
+
+          {seccion === 'playlists' && (
+            <PlaylistsSection api={playlistsApi} equipos={equiposApi.equipos} analisis={partidos} acciones={todasLasAcciones}
+              catalogo={catalogo} jugadoras={jugadoras} categoriaPorDefecto={partidoActual?.categoria_id || CATEGORIA_ID}
+              puedeEditar={puedeEditarPlaylists} marcasPorPartido={marcasPorPartido} onReproducir={abrirReproductor} />
           )}
 
           {seccion === 'mapa' && (
@@ -3487,6 +3545,23 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
             </Panel>
           )}
         </>
+      )}
+
+      {reproduccion && (
+        <ReproductorPlaylist key={reproduccion.titulo + reproduccion.clips.length} titulo={reproduccion.titulo} clips={reproduccion.clips}
+          indiceInicial={reproduccion.indice} onCerrar={() => setReproduccion(null)}
+          onGuardar={puedeEditarPlaylists ? (nombre) => playlistsApi.crear({
+            nombre, categoriaId: partidoActual?.categoria_id || CATEGORIA_ID, filtro: null, clips: reproduccion.clips,
+          }) : null} />
+      )}
+
+      {agregarClip && (
+        <div className="ap-flotante">
+          <AgregarAPlaylist titulo={agregarClip.titulo} playlists={playlistsApi.playlists} aviso={playlistsApi.estado.aviso}
+            onAgregar={(playlist) => playlistsApi.sumarClips(playlist.id, [agregarClip.clip])}
+            onNueva={(nombre) => playlistsApi.crear({ nombre, categoriaId: partidoActual?.categoria_id || CATEGORIA_ID, filtro: null, clips: [agregarClip.clip] })}
+            onCerrar={() => setAgregarClip(null)} />
+        </div>
       )}
 
       <footer

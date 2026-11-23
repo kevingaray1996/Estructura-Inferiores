@@ -3,7 +3,7 @@ import { formatearTiempo } from '../../utils/analisis/formato'
 import './colectiva.css'
 
 // Momento colectivo elegido en la línea de tiempo: qué eventos individuales caen adentro y acciones rápidas.
-export default function ClipSeleccionado({ momento, individuales, etiquetaDe, dorsalDe, minutoDe, equipo, puedeBorrar, onReproducir, onBorrar, onCerrar }) {
+export default function ClipSeleccionado({ momento, individuales, etiquetaDe, dorsalDe, minutoDe, equipo, puedeBorrar, onReproducir, onBorrar, onCerrar, onAgregarAPlaylist = null }) {
   if (!momento) return null
   const adentro = eventosEnClip(momento, individuales)
   const fin = Number(momento.segundo_fin ?? momento.segundo)
@@ -23,6 +23,12 @@ export default function ClipSeleccionado({ momento, individuales, etiquetaDe, do
       </p>
       <div className="clip-acciones">
         <button type="button" className="et-boton" onClick={() => onReproducir(momento)}>▶ Reproducir</button>
+        {onAgregarAPlaylist && !momento._cola && (
+          <button type="button" className="et-boton" onClick={() => onAgregarAPlaylist(momento)}>+ Agregar a playlist</button>
+        )}
+        {onAgregarAPlaylist && !momento._cola && (
+          <button type="button" className="et-boton" onClick={() => onAgregarAPlaylist(momento)}>+ Agregar a playlist</button>
+        )}
         {puedeBorrar && !momento._cola && !momento.origen && (
           <button type="button" className="et-boton" onClick={() => onBorrar(momento)}>Borrar</button>
         )}

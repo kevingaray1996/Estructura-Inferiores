@@ -1,6 +1,8 @@
 // Reproductor de playlists (etapa 2): decide qué hacer con el reproductor de YouTube. Lógica pura, sin React ni
 // YouTube, para poder probar el paso de un clip a otro aunque sean de partidos (videos) distintos.
-import { youtubeEmbed } from './formato.js'
+import { videoCalendario, youtubeEmbed } from './formato.js'
+import { minutoReal } from './eventosPartido.js'
+import { nombreDeClave, tituloPartido } from './equipos.js'
 
 export const VELOCIDADES = Object.freeze([0.5, 1, 2])
 
@@ -71,4 +73,21 @@ export function rotuloClip({ indice, total, etiqueta, partido, minuto }) {
 export function minutoDelClip(clip, textoReal) {
   if (textoReal) return textoReal
   return `${clip.periodo === 2 ? '2T' : '1T'} ${Math.floor(clip.segundo / 60)}'`
+}
+
+// Clips listos para el reproductor: video de YouTube de su partido, nombre de la acción, partido, minuto y de qué
+// equipo es (en scouting juegan dos equipos que no son Comunicaciones).
+export function prepararParaReproducir(clips, { analisisPorId, equipos, etiqueta = (t) => t, marcasPorPartido = null }) {
+  return (clips || []).map((clip) => {
+    const a = analisisPorId.get(clip.partidoId)
+    const real = minutoReal(clip.segundo, marcasPorPartido?.get?.(clip.partidoId) || null)
+    return {
+      ...clip,
+      videoId: videoIdDe(a?.video_url || videoCalendario(a?.partido_calendario)),
+      etiqueta: etiqueta(clip.tipo),
+      partido: tituloPartido(a, equipos),
+      minuto: minutoDelClip(clip, real?.estado === 'juego' ? real.texto : null),
+      equipoNombre: nombreDeClave(clip.equipo, equipos),
+    }
+  })
 }

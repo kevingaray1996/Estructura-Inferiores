@@ -158,7 +158,7 @@ export default function ImportarComet({
     if (fallas.length) {
       setError(`Se guardó una parte, pero no todo: ${fallas.join(' ')} Volvé a importar el PDF para ver qué falta.`)
     } else {
-      setResultado(`COMET importado: ${ops.filter((o) => o.op !== 'parte').length} cambios aplicados y el PDF guardado como respaldo.${goles ? ` ${goles === 1 ? 'El gol nuestro quedó' : `Los ${goles} goles nuestros quedaron`} en la Playlist para marcar desde dónde fue.` : ''}`)
+      setResultado(`COMET importado: ${ops.filter((o) => o.op !== 'parte').length} cambios aplicados y el PDF guardado como respaldo.${goles ? ` ${goles === 1 ? 'El gol nuestro quedó' : `Los ${goles} goles nuestros quedaron`} en Acciones para marcar desde dónde fue.` : ''}`)
       avisar?.('COMET importado')
     }
   }

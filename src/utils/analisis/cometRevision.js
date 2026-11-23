@@ -178,7 +178,7 @@ export function revisarComet({ comet, eventos = [], marcas, idDe = () => null, c
       const obs = g.eq === 'rival' ? [nombreRival(c.nombre), g.tema === 'tarjeta' ? c.motivo : ''].filter(Boolean).join(' · ').slice(0, 200) : null
       const descripcion = `${nombreTema} ${textoMinutoComet(c.minuto)} · ${quien(c.equipo, c.nombre)}${c.motivo ? ` · ${c.motivo}` : ''}`
       // Al agregar un gol nuestro también se crea su acción «Gol» (sin ubicación), para completarla en la Playlist.
-      const nota = g.tema === 'gol' && g.eq === 'propio' ? ' (y su acción Gol, para ubicarla en la Playlist)' : ''
+      const nota = g.tema === 'gol' && g.eq === 'propio' ? ' (y su acción Gol, para ubicarla en Acciones)' : ''
       if (!m) {
         agregar({
           id, grupo: 'completar', tema: g.tema, titulo: descripcion + nota, comet: descripcion, mio: null,

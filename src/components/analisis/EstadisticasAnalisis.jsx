@@ -4,9 +4,14 @@ import { AMARILLO } from '../../utils/analisis/estilos'
 import { datosEncuentro, nombreJugadora } from '../../utils/analisis/formato'
 import { etiquetaDe } from '../../utils/analisis/catalogoAcciones'
 import { Panel } from './PiezasAnalisis'
+import './playlists.css'
+
+const POSITIVOS = ['Exitoso', 'Gol', 'Atajada']
+const NEGATIVOS = ['Fallido', 'Fuera', 'Bloqueado']
 
 // El alcance vive en AnalisisSection para que se conserve al cambiar de pestaña.
-export default function EstadisticasAnalisis({ alcance, cambiarAlcance, catalogoAcciones, partidoActual, partidos, eventos, eventosPartido, jugadoras }) {
+// onAbrirEventos(titulo, acciones): cada número abre sus clips (etapa 2). Sin él, los números no se tocan.
+export default function EstadisticasAnalisis({ alcance, cambiarAlcance, catalogoAcciones, partidoActual, partidos, eventos, eventosPartido, jugadoras, onAbrirEventos = null }) {
   const eventosEstadisticos = useMemo(
     () => alcance === 'acumulado' ? eventos : eventosPartido,
     [alcance, eventos, eventosPartido],
@@ -131,24 +136,29 @@ export default function EstadisticasAnalisis({ alcance, cambiarAlcance, catalogo
 
       <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         {[
-          ['Acciones totales', eventosEstadisticos.length],
-          ['Efectivas', resumenEfectividad.exitosas],
-          ['No efectivas', resumenEfectividad.fallidas],
-          ['Efectividad', resumenEfectividad.evaluadas ? `${resumenEfectividad.porcentaje}%` : '—'],
-          ['Neutras', resumenEfectividad.neutros],
-          ['Pendientes', resumenEfectividad.pendientes],
-        ].map(([label, valor]) => (
-          <div
-            key={label}
-            className="rounded-lg border p-4"
-            style={{ backgroundColor: A.fondo, borderColor: A.borde }}
-          >
-            <p className="min-h-10 text-sm" style={{ color: A.secundario }}>{label}</p>
-            <p className="mt-2 text-3xl font-black" style={{ color: textoAnalisis(AMARILLO) }}>
-              {valor}
-            </p>
-          </div>
-        ))}
+          ['Acciones totales', eventosEstadisticos.length, eventosEstadisticos],
+          ['Efectivas', resumenEfectividad.exitosas, eventosEstadisticos.filter((e) => POSITIVOS.includes(e.resultado))],
+          ['No efectivas', resumenEfectividad.fallidas, eventosEstadisticos.filter((e) => NEGATIVOS.includes(e.resultado))],
+          ['Efectividad', resumenEfectividad.evaluadas ? `${resumenEfectividad.porcentaje}%` : '—', null],
+          ['Neutras', resumenEfectividad.neutros, eventosEstadisticos.filter((e) => e.resultado === 'Neutro')],
+          ['Pendientes', resumenEfectividad.pendientes, eventosEstadisticos.filter((e) => !e.resultado)],
+        ].map(([label, valor, lista]) => {
+          const contenido = (
+            <>
+              <p className="min-h-10 text-sm" style={{ color: A.secundario }}>{label}</p>
+              <p className="mt-2 text-3xl font-black" style={{ color: textoAnalisis(AMARILLO) }}>
+                {valor}
+              </p>
+            </>
+          )
+          return onAbrirEventos && lista ? (
+            <button key={label} type="button" className="tb-numero rounded-lg border p-4 text-left" disabled={!lista.length}
+              style={{ backgroundColor: A.fondo, borderColor: A.borde }} aria-label={`${label}: ${valor}. Ver los clips`}
+              onClick={() => onAbrirEventos(label, lista)}>{contenido}</button>
+          ) : (
+            <div key={label} className="rounded-lg border p-4" style={{ backgroundColor: A.fondo, borderColor: A.borde }}>{contenido}</div>
+          )
+        })}
       </div>
 
       <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 rounded-lg border p-3 text-sm" style={{ backgroundColor: A.fondo, borderColor: A.borde }}>
@@ -174,7 +184,10 @@ export default function EstadisticasAnalisis({ alcance, cambiarAlcance, catalogo
                 <div key={nombre}>
                   <div className="mb-1 flex justify-between gap-3 text-sm">
                     <span className="min-w-0 break-words">{etiquetaDe(catalogoAcciones, nombre)}</span>
-                    <span className="font-bold">{datos.total}</span>
+                    {onAbrirEventos ? (
+                      <button type="button" className="tb-numero-texto font-bold" aria-label={`${etiquetaDe(catalogoAcciones, nombre)}: ${datos.total}. Ver los clips`}
+                        onClick={() => onAbrirEventos(etiquetaDe(catalogoAcciones, nombre), eventosEstadisticos.filter((e) => e.tipo === nombre))}>{datos.total}</button>
+                    ) : <span className="font-bold">{datos.total}</span>}
                   </div>
                   <div
                     className="h-2 overflow-hidden rounded-full"
@@ -232,7 +245,10 @@ export default function EstadisticasAnalisis({ alcance, cambiarAlcance, catalogo
                     style={{ borderColor: A.borde }}
                   >
                     <td className="p-2 font-bold">{j.nombre}</td>
-                    <td className="p-2">{j.total}</td>
+                    <td className="p-2">{onAbrirEventos ? (
+                      <button type="button" className="tb-numero-texto" aria-label={`Acciones de ${j.nombre}: ${j.total}. Ver los clips`}
+                        onClick={() => onAbrirEventos(`Acciones · ${j.nombre}`, eventosEstadisticos.filter((e) => e.jugador_id === j.id))}>{j.total}</button>
+                    ) : j.total}</td>
                     <td className="p-2 text-emerald-300">{eventosEstadisticos.filter((e) => e.jugador_id === j.id && ['Exitoso', 'Gol', 'Atajada'].includes(e.resultado)).length}</td>
                     <td className="p-2 text-red-300">{eventosEstadisticos.filter((e) => e.jugador_id === j.id && ['Fallido', 'Fuera', 'Bloqueado'].includes(e.resultado)).length}</td>
                     <td className="p-2">{eventosEstadisticos.filter((e) => e.jugador_id === j.id && e.resultado === 'Neutro').length}</td>
