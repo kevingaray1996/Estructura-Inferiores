@@ -16,6 +16,8 @@
 --   c) public.analisis_partidos (análisis): tipo_partido ('propio' por defecto | 'scouting'), equipo_local,
 --      equipo_visitante y equipo_analizado ('propio' por defecto | 'rival' | 'local' | 'visitante'). Un scouting no
 --      se vincula al calendario: no cuenta en convocatorias, minutos ni estadísticas del club.
+--      En un scouting solo se aceptan acciones de la botonera colectiva (lo controla el trigger de las acciones), y un
+--      análisis con acciones individuales no se puede pasar a scouting (trigger analisis_privado.validar_tipo_partido).
 --   d) Permisos: NO cambian. Escribir solo puede_administrar_analisis(); leer, las reglas de la etapa 0
 --      (puede_consultar_analisis()). Nada para anon ni para cuentas de jugadoras.
 --
@@ -99,7 +101,8 @@ BEGIN
     ('columnas', 'public.analisis_tipos_accion', 'botonera, duracion_defecto, espejo'),
     ('columnas', 'public.analisis_partidos', 'tipo_partido, equipo_local, equipo_visitante, equipo_analizado'),
     ('funcion', 'analisis_privado.validar_tipo_colectivo()', NULL),
-    ('funcion', 'analisis_privado.validar_forma_accion()', NULL);
+    ('funcion', 'analisis_privado.validar_forma_accion()', NULL),
+    ('funcion', 'analisis_privado.validar_tipo_partido()', NULL);
 
   -- 3) Catálogo: columnas y reglas.
   ALTER TABLE public.analisis_tipos_accion ADD COLUMN botonera text NOT NULL DEFAULT 'individual';
@@ -179,14 +182,20 @@ BEGIN
       IF NEW.jugador_id IS NOT NULL OR NEW.segundo_fin IS NULL THEN
         RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'Una acción colectiva va sin jugadora y con inicio y fin.';
       END IF;
-    ELSIF NEW.segundo_fin IS NOT NULL THEN
-      RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'Una acción individual es de un instante: va sin fin.';
+    ELSE
+      IF NEW.segundo_fin IS NOT NULL THEN
+        RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'Una acción individual es de un instante: va sin fin.';
+      END IF;
+      -- Scouting (no juega Comunicaciones): solo la botonera colectiva.
+      IF EXISTS (SELECT 1 FROM public.analisis_partidos p WHERE p.id = NEW.partido_id AND p.tipo_partido = 'scouting') THEN
+        RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'En un partido de scouting solo se cargan acciones de la botonera colectiva.';
+      END IF;
     END IF;
     RETURN NEW;
   END
   $f$;
   REVOKE ALL ON FUNCTION analisis_privado.validar_forma_accion() FROM PUBLIC, anon, authenticated, service_role;
-  CREATE TRIGGER validar_forma_accion BEFORE INSERT OR UPDATE OF tipo, jugador_id, segundo_fin ON public.analisis_eventos
+  CREATE TRIGGER validar_forma_accion BEFORE INSERT OR UPDATE OF tipo, jugador_id, segundo_fin, partido_id ON public.analisis_eventos
     FOR EACH ROW EXECUTE FUNCTION analisis_privado.validar_forma_accion();
 
   -- 6) Análisis: propio o scouting y equipo analizado.
@@ -203,6 +212,21 @@ BEGIN
     ELSE equipo_analizado IN ('local', 'visitante') AND equipo_local IS NOT NULL AND equipo_visitante IS NOT NULL
          AND partido_calendario_id IS NULL END);
   COMMENT ON COLUMN public.analisis_partidos.tipo_partido IS 'propio (juega Comunicaciones) o scouting (rival contra otro club; no cuenta en estadísticas, convocatoria ni minutos).';
+  -- Un análisis con acciones individuales no pasa a scouting (quedarían acciones que el scouting no acepta).
+  CREATE FUNCTION analisis_privado.validar_tipo_partido() RETURNS trigger
+    LANGUAGE plpgsql SET search_path TO '' AS $f$
+  BEGIN
+    IF NEW.tipo_partido = 'scouting' AND EXISTS (
+         SELECT 1 FROM public.analisis_eventos e JOIN public.analisis_tipos_accion t ON t.codigo = e.tipo
+          WHERE e.partido_id = NEW.id AND t.botonera <> 'colectiva') THEN
+      RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'Este análisis tiene acciones individuales: no se puede pasar a scouting.';
+    END IF;
+    RETURN NEW;
+  END
+  $f$;
+  REVOKE ALL ON FUNCTION analisis_privado.validar_tipo_partido() FROM PUBLIC, anon, authenticated, service_role;
+  CREATE TRIGGER validar_tipo_partido BEFORE UPDATE OF tipo_partido ON public.analisis_partidos
+    FOR EACH ROW EXECUTE FUNCTION analisis_privado.validar_tipo_partido();
   COMMENT ON COLUMN public.analisis_partidos.equipo_analizado IS 'Desde qué equipo se marca la botonera colectiva: propio | rival (propios), local | visitante (scouting).';
 
   -- 7) Verificación.

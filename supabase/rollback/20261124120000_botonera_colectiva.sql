@@ -42,6 +42,8 @@ BEGIN
   DROP FUNCTION IF EXISTS analisis_privado.validar_forma_accion();
   DROP TRIGGER IF EXISTS validar_tipo_colectivo ON public.analisis_tipos_accion;
   DROP FUNCTION IF EXISTS analisis_privado.validar_tipo_colectivo();
+  DROP TRIGGER IF EXISTS validar_tipo_partido ON public.analisis_partidos;
+  DROP FUNCTION IF EXISTS analisis_privado.validar_tipo_partido();
 
   UPDATE public.analisis_tipos_accion SET espejo = NULL WHERE espejo IS NOT NULL;
   DELETE FROM public.analisis_tipos_accion WHERE botonera = 'colectiva';

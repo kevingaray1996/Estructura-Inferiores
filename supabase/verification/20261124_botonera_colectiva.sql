@@ -14,8 +14,9 @@ BEGIN
     RAISE EXCEPTION 'Faltan columnas nuevas (botonera, duracion_defecto, espejo, tipo_partido, equipo_local, equipo_visitante, equipo_analizado).';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'validar_forma_accion' AND tgrelid = 'public.analisis_eventos'::regclass)
-     OR NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'validar_tipo_colectivo' AND tgrelid = 'public.analisis_tipos_accion'::regclass) THEN
-    RAISE EXCEPTION 'Faltan los triggers validar_forma_accion o validar_tipo_colectivo.';
+     OR NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'validar_tipo_colectivo' AND tgrelid = 'public.analisis_tipos_accion'::regclass)
+     OR NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'validar_tipo_partido' AND tgrelid = 'public.analisis_partidos'::regclass) THEN
+    RAISE EXCEPTION 'Faltan los triggers validar_forma_accion, validar_tipo_colectivo o validar_tipo_partido.';
   END IF;
   IF (SELECT count(*) FROM public.analisis_tipos_accion WHERE botonera = 'colectiva') < 13 THEN
     RAISE EXCEPTION 'Faltan botones colectivos.';
@@ -32,6 +33,11 @@ BEGIN
   IF EXISTS (SELECT 1 FROM public.analisis_partidos WHERE tipo_partido = 'scouting' AND partido_calendario_id IS NOT NULL) THEN
     RAISE EXCEPTION 'Hay análisis de scouting vinculados al calendario.';
   END IF;
+  SELECT string_agg(DISTINCT p.id::text, ', ') INTO v_mal FROM public.analisis_partidos p
+    JOIN public.analisis_eventos e ON e.partido_id = p.id
+    JOIN public.analisis_tipos_accion t ON t.codigo = e.tipo
+   WHERE p.tipo_partido = 'scouting' AND t.botonera <> 'colectiva';
+  IF v_mal IS NOT NULL THEN RAISE EXCEPTION 'Análisis de scouting con acciones individuales: %.', v_mal; END IF;
   SELECT string_agg(tablename || '.' || policyname, ', ' ORDER BY tablename, policyname) INTO v_escritura
     FROM pg_policies
    WHERE schemaname = 'public'

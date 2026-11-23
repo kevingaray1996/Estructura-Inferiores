@@ -159,6 +159,32 @@ test('scouting: sin calendario, con los dos equipos y equipo analizado local o v
   await assert.rejects(ins(['otra', 'A', 'B', 'local', null]), codigo('23514'))
 })
 
+test('scouting: solo acciones de la botonera colectiva; un análisis con acciones individuales no pasa a scouting', async () => {
+  const db = await crearBase()
+  await db.exec(cambio)
+  const S = 'c0000000-0000-4000-8000-000000000009'
+  await db.query(`insert into public.analisis_partidos (id, categoria_id, rival, tipo_partido, equipo_local, equipo_visitante, equipo_analizado)
+    values ($1, $2, 'Estrella del Sur', 'scouting', 'Estrella del Sur', 'Otro Club', 'local')`, [S, CAT])
+  const enScouting = (tipo, jugador, inicio, fin) => db.query(`insert into public.analisis_eventos (partido_id, jugador_id, segundo, segundo_fin, tipo) values ($1, $2, $3, $4, $5)`, [S, jugador, inicio, fin, tipo])
+  await enScouting('Salida', null, 10, 25)
+  await assert.rejects(enScouting('Remate', J1, 30, null), /solo se cargan acciones de la botonera colectiva/)
+  await assert.rejects(enScouting('Remate', null, 30, null), /solo se cargan acciones de la botonera colectiva/)
+  // Mover una acción individual a un scouting tampoco.
+  await assert.rejects(db.query(`update public.analisis_eventos set partido_id = $1 where tipo = 'Remate'`, [S]), /solo se cargan acciones de la botonera colectiva/)
+  // El propio (con un Remate) no pasa a scouting; uno sin acciones individuales sí.
+  await assert.rejects(db.query(`update public.analisis_partidos set tipo_partido = 'scouting', equipo_local = 'A', equipo_visitante = 'B', equipo_analizado = 'local' where id = $1`, [P]),
+    /tiene acciones individuales/)
+  const vacio = 'c0000000-0000-4000-8000-000000000008'
+  await db.query(`insert into public.analisis_partidos (id, categoria_id, rival) values ($1, $2, 'Vacío')`, [vacio, CAT])
+  await db.query(`update public.analisis_partidos set tipo_partido = 'scouting', equipo_local = 'A', equipo_visitante = 'B', equipo_analizado = 'local' where id = $1`, [vacio])
+  await db.exec(verificacion)
+  // La verificación detecta una acción individual metida en un scouting (por ejemplo, sin el trigger).
+  await db.exec(`alter table public.analisis_eventos disable trigger validar_forma_accion`)
+  await enScouting('Remate', null, 40, null)
+  await db.exec(`alter table public.analisis_eventos enable trigger validar_forma_accion`)
+  await assert.rejects(db.exec(verificacion), /scouting con acciones individuales/)
+})
+
 test('no aplica nada si hay acciones con segundo_fin o botones con el mismo código', async () => {
   const conFin = await crearBase({ antes: `update public.analisis_eventos set segundo_fin = 40` })
   await assert.rejects(conFin.exec(cambio), /acciones con segundo_fin cargado/)
