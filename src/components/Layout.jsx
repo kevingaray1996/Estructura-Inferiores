@@ -129,10 +129,10 @@ function agruparSecciones(secciones) {
 }
 
 // El indicador recibido controla navegación; las escrituras se autorizan aparte en RLS/RPC.
-function Layout({ seccionActiva, onCambiarSeccion, perfil, children, puedeAdministrarAnalisis = false }) {
+function Layout({ seccionActiva, onCambiarSeccion, perfil, children, puedeAdministrarAnalisis = false, puedeConsultarAnalisis = false }) {
   const secciones = filtrarSeccionesVisibles(seccionesParaRol(perfil?.rol), 'id')
     .filter(s => s.id !== 'planificacion' || puedePlanificar(perfil))
-    .filter(s => s.id !== 'analisis' || puedeAdministrarAnalisis && perfil?.rol === 'coordinacion')
+    .filter(s => s.id !== 'analisis' || (puedeAdministrarAnalisis && perfil?.rol === 'coordinacion') || puedeConsultarAnalisis)
   const grupos = agruparSecciones(secciones)
 
   const subtitulo =

@@ -35,6 +35,7 @@ import useAtajosAnalisis from '../hooks/useAtajosAnalisis'
 import { accionesSinTeclaPorMarcador, guardarAtajos, leerAtajos, mostrarTecla } from '../utils/analisis/atajos'
 import { AvisoAccion, AyudaAtajos, IndicadorAtajos } from './analisis/AtajosEtiquetado'
 import TramosSinAcciones from './analisis/TramosSinAcciones'
+import EstadoGuardado from './analisis/EstadoGuardado'
 import { atajosDeBotonera, tiposBotonera } from '../utils/analisis/botonera'
 import './analisis/panelAnalisis.css'
 import PlaylistAnalisis from './analisis/PlaylistAnalisis'
@@ -270,7 +271,9 @@ function cargarYouTubeAPI() {
   return youtubeApiPromise
 }
 
-export default function AnalisisSection({ escrituraAutorizada = true, estadoAutorizacion }) {
+// modoConsulta: cuerpo técnico (y coordinación sin permiso de edición). Ve video, Playlist, mapa, estadísticas e
+// informe; no ve la botonera ni nada que guarde. La base (RLS) igual rechaza cualquier escritura.
+export default function AnalisisSection({ escrituraAutorizada = true, estadoAutorizacion, modoConsulta = false }) {
   const [usuario, setUsuario] = useState(null)
   const [esAdmin, setEsAdmin] = useState(false)
   const [accesoEditor, setAccesoEditor] = useState(false)
@@ -425,6 +428,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       ? actuales
       : [...actuales, fila].sort((a, b) => Number(a.segundo) - Number(b.segundo))),
     alFallarBorrado: (fila, e) => setError(`${mensajeError(e, 'deshacer la acción')} La acción ${etiquetaDe(catalogo, fila.tipo)} · ${formatearTiempo(fila.segundo)} sigue guardada.`),
+    activa: !modoConsulta,
   })
 
   // Atajos de teclado (se guardan en esta computadora), aviso corto y botón iluminado.
@@ -440,10 +444,11 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   // Solo las acciones de la botonera tienen tecla.
   const atajosBotonera = useMemo(() => atajosDeBotonera(atajos, botonera), [atajos, botonera])
   // Pestaña del panel derecho (Etiquetado / Playlist / Partido).
-  const [pestanaPanel, setPestanaPanel] = useState('etiquetado')
+  const [pestanaPanel, setPestanaPanel] = useState(modoConsulta ? 'playlist' : 'etiquetado')
+  const pestanasPanel = modoConsulta ? PESTANAS_PANEL.filter(([id]) => id !== 'etiquetado') : PESTANAS_PANEL
   // Flechas, Inicio y Fin mueven entre pestañas. Se frena el evento para que ← / → no muevan el video.
   const moverPestana = useCallback((evento) => {
-    const ids = PESTANAS_PANEL.map(([id]) => id)
+    const ids = [...evento.currentTarget.querySelectorAll('[role="tab"]')].map((b) => b.id.replace('az-pestana-', ''))
     const actual = ids.indexOf(evento.target?.id?.replace('az-pestana-', ''))
     if (actual < 0) return
     const destino = { ArrowRight: actual + 1, ArrowLeft: actual - 1, Home: 0, End: ids.length - 1 }[evento.key]
@@ -551,21 +556,30 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
       setUsuario(perfil || null)
 
-      if (!esCuentaAdministradoraAnalisis(authUser.id) || perfil?.rol !== 'coordinacion') {
+      let admin = false
+      if (modoConsulta) {
+        // Solo ver: la base decide qué análisis y acciones devuelve (puede_consultar_analisis).
+        if (!['coordinacion', 'tecnico'].includes(perfil?.rol)) {
+          setAccesoEditor(false)
+          throw new Error('No tenés autorización para ver Análisis.')
+        }
+        setEstadoPermiso('consulta')
+        setAccesoEditor(true)
+      } else if (!esCuentaAdministradoraAnalisis(authUser.id) || perfil?.rol !== 'coordinacion') {
         setAccesoEditor(false)
         throw new Error('No tenés autorización para abrir el módulo Análisis.')
-      }
-      let admin = false
-      try {
-        admin = await consultarAdministracionAnalisis(supabase)
-        setEstadoPermiso(admin ? 'permitido' : 'denegado')
-        setAccesoEditor(Boolean(admin))
-        if (!admin) throw Object.assign(new Error('No tenés autorización para administrar Análisis.'), { denegacionExplicita: true })
-      } catch (errorPermiso) {
-        if (errorPermiso.denegacionExplicita) throw errorPermiso
-        // Permite consultar la interfaz a las cuentas verificadas, nunca guardar sin RPC.
-        setEstadoPermiso(faltaRpcAdministracionAnalisis(errorPermiso) ? 'pendiente_migracion' : 'error')
-        setAccesoEditor(true)
+      } else {
+        try {
+          admin = await consultarAdministracionAnalisis(supabase)
+          setEstadoPermiso(admin ? 'permitido' : 'denegado')
+          setAccesoEditor(Boolean(admin))
+          if (!admin) throw Object.assign(new Error('No tenés autorización para administrar Análisis.'), { denegacionExplicita: true })
+        } catch (errorPermiso) {
+          if (errorPermiso.denegacionExplicita) throw errorPermiso
+          // Permite consultar la interfaz a las cuentas verificadas, nunca guardar sin RPC.
+          setEstadoPermiso(faltaRpcAdministracionAnalisis(errorPermiso) ? 'pendiente_migracion' : 'error')
+          setAccesoEditor(true)
+        }
       }
 
       setEsAdmin(Boolean(admin))
@@ -675,7 +689,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     } finally {
       setCargando(false)
     }
-  }, [])
+  }, [modoConsulta])
 
   useEffect(() => {
     cargarDatos()
@@ -1882,7 +1896,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       style={{ color: A.texto }}
     >
       <AvisoAccion aviso={avisoAccion} />
-      {bloqueoEscritura && <p role="status">{(estadoAutorizacion || estadoPermiso) === 'pendiente_migracion'
+      {modoConsulta && <p role="status" className="text-sm" style={{ color: A.secundario }}>Modo consulta: podés ver el video, la Playlist, el mapa, las estadísticas y el informe. Etiquetar y editar acciones es solo de coordinación.</p>}
+      {bloqueoEscritura && !modoConsulta && <p role="status">{(estadoAutorizacion || estadoPermiso) === 'pendiente_migracion'
         ? 'Análisis en modo consulta: falta activar la función de autorización de la migración pendiente. Crear, guardar, editar y eliminar están bloqueados hasta que el servidor confirme los permisos.'
         : 'Escrituras pausadas: no se pudo confirmar la autorización del servidor o se está revalidando. Se conserva el trabajo abierto y podés consultar el video.'}</p>}
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -1896,7 +1911,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
             ↻ Actualizar
           </Boton>
 
-          {accesoEditor && (
+          {accesoEditor && !modoConsulta && (
             <Boton
               onClick={() => {
                 if (mostrarFormulario) {
@@ -1945,7 +1960,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
         </div>
       )}
 
-      {mostrarFormulario && accesoEditor && (
+      {mostrarFormulario && accesoEditor && !modoConsulta && (
         <Panel>
           <h2 className="mb-2 text-lg font-bold">
             {editandoId ? 'Editar análisis' : 'Vincular análisis a un partido'}
@@ -2117,7 +2132,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
           </div>
         )}
 
-        {accesoEditor && partidoActual && (
+        {accesoEditor && !modoConsulta && partidoActual && (
           <div className="mt-4 flex flex-wrap gap-3 border-t pt-3" style={{ borderColor: A.borde }}>
             <button
               type="button"
@@ -2198,9 +2213,9 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                       <span className="text-4xl">▶</span>
                       <p className="mt-3 font-bold">No hay video disponible</p>
                       <p className="mt-1 text-sm" style={{ color: A.secundario }}>
-                        Agregá un enlace de YouTube desde los datos del análisis.
+                        {modoConsulta ? 'Coordinación todavía no cargó el enlace de YouTube.' : 'Agregá un enlace de YouTube desde los datos del análisis.'}
                       </p>
-                      {accesoEditor && (
+                      {accesoEditor && !modoConsulta && (
                         <div className="mt-4">
                           <Boton disabled={bloqueoEscritura} onClick={() => editarPartido(partidoActual)}>
                             Agregar video
@@ -2222,7 +2237,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
               <section className="az-panel" aria-label="Herramientas del análisis">
                 <div role="tablist" aria-label="Herramientas del análisis" className="az-pestanas" onKeyDown={moverPestana}>
-                  {PESTANAS_PANEL.map(([id, texto]) => (
+                  {pestanasPanel.map(([id, texto]) => (
                     <button
                       key={id}
                       type="button"
@@ -2239,6 +2254,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                     </button>
                   ))}
                 </div>
+                {!modoConsulta && <EstadoGuardado items={colaItems} />}
 
                 <div role="tabpanel" id="az-panel-etiquetado" aria-labelledby="az-pestana-etiquetado" hidden={pestanaPanel !== 'etiquetado'} className="az-panel-cuerpo">
                   {ventanas.modo === 'botonera' && <p className="az-nota">La botonera está abierta en la otra ventana.</p>}
@@ -2265,9 +2281,9 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                     </p>
                   </div>
 
-                  {!accesoEditor ? (
+                  {!accesoEditor || modoConsulta ? (
                     <p className="text-sm" style={{ color: A.secundario }}>
-                      Solo el administrador puede registrar acciones.
+                      Solo coordinación puede registrar acciones.
                     </p>
                   ) : (
                     <>
@@ -2826,7 +2842,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                 <div role="tabpanel" id="az-panel-partido" aria-labelledby="az-pestana-partido" hidden={pestanaPanel !== 'partido'} className="az-panel-cuerpo">
                   <h2 className="az-titulo">Datos del partido</h2>
                   <div className="mb-4 mt-3">
-                    <ImportarComet
+                    {!modoConsulta && <ImportarComet
                       key={partidoActual.id}
                       analisis={partidoActual}
                       calendario={partidoCalendarioActual || null}
@@ -2843,7 +2859,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                         setPartidosCalendario((lista) => lista.map((p) => (p.id === fila.id ? { ...p, ...fila } : p)))
                         setPartidos((lista) => lista.map((p) => (p.partido_calendario?.id === fila.id ? { ...p, partido_calendario: { ...p.partido_calendario, ...fila } } : p)))
                       }}
-                    />
+                    />}
                     <PartidoEventos
                       ev={eventosDelPartido}
                       puedeEditar={accesoEditor && !bloqueoEscritura}

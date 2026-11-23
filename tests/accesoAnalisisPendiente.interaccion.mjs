@@ -21,7 +21,7 @@ test('Análisis: Kevin/Gastón ven acceso y editor sin RPC; cero escrituras, otr
  const useAcceso=(await vite.ssrLoadModule('/src/hooks/useAdministracionAnalisis.js')).default
  const Layout=(await vite.ssrLoadModule('/src/components/Layout.jsx')).default
  const Analisis=(await vite.ssrLoadModule('/src/components/AnalisisSection.jsx')).default
- function Ejemplo(){acceso=useAcceso({user:{id},access_token:'sintetico'},rol);return h(Layout,{perfil:{rol,nombre:'Cuenta ficticia'},seccionActiva:'analisis',onCambiarSeccion(){},puedeAdministrarAnalisis:acceso.puedeAbrir},acceso.puedeAbrir?h(Analisis,{key:id,escrituraAutorizada:acceso.puedeEscribir,estadoAutorizacion:acceso.estado}):h('p',null,'Acceso restringido'))}
+ function Ejemplo(){acceso=useAcceso({user:{id},access_token:'sintetico'},rol);return h(Layout,{perfil:{rol,nombre:'Cuenta ficticia'},seccionActiva:'analisis',onCambiarSeccion(){},puedeAdministrarAnalisis:acceso.puedeAbrir,puedeConsultarAnalisis:acceso.puedeConsultar},acceso.puedeAbrir?h(Analisis,{key:id,escrituraAutorizada:acceso.puedeEscribir,estadoAutorizacion:acceso.estado}):acceso.puedeConsultar?h(Analisis,{key:'consulta-'+id,modoConsulta:true,escrituraAutorizada:false}):h('p',null,'Acceso restringido'))}
  let version=0
  const montar=()=>act(async()=>{root.render(h(Apariencia,null,h(Ejemplo,{key:++version})));await new Promise(r=>setTimeout(r,20))})
  for(const cuenta of ['f7562d52-a16a-48b5-95a0-efbcc70080d3','b2c65c50-8772-45a4-b2e0-c0e53c66253b']){
@@ -40,8 +40,12 @@ test('Análisis: Kevin/Gastón ven acceso y editor sin RPC; cero escrituras, otr
  rpcError={code:'42883'};await montar();assert.equal(acceso.puedeAbrir,true);assert.equal(acceso.estado,'pendiente_migracion');assert.equal(acceso.puedeEscribir,false)
  rpcError={message:'sin conexión'};await montar();assert.equal(acceso.puedeAbrir,true);assert.equal(acceso.puedeEscribir,false);assert.match(document.body.textContent,/Escrituras pausadas/)
  rpcError=null;rpcValor=false;await montar();assert.equal(acceso.puedeAbrir,false);assert.doesNotMatch(document.body.textContent,/Nuevo análisis/)
- rpcError={code:'PGRST202'};id='otra-cuenta-coordinacion';await montar();assert.equal(acceso.puedeAbrir,false)
- id='f7562d52-a16a-48b5-95a0-efbcc70080d3';rol='tecnico';await montar();assert.equal(acceso.puedeAbrir,false)
+ rpcError={code:'PGRST202'};id='otra-cuenta-coordinacion';await montar();assert.equal(acceso.puedeAbrir,false);assert.equal(acceso.puedeConsultar,true)
+ id='f7562d52-a16a-48b5-95a0-efbcc70080d3';rol='tecnico';await montar();assert.equal(acceso.puedeAbrir,false);assert.equal(acceso.puedeConsultar,true)
+ // Cuerpo técnico: entra a Análisis en modo consulta, sin botonera ni nada que guarde.
+ assert.ok(document.querySelector('nav button[aria-label="Análisis"]'));assert.match(document.body.textContent,/Modo consulta/);assert.match(document.body.textContent,/Rival sintético/)
+ assert.doesNotMatch(document.body.textContent,/Nuevo análisis|Eliminar análisis|Escrituras pausadas/)
+ rol='medico';await montar();assert.equal(acceso.puedeAbrir,false);assert.equal(acceso.puedeConsultar,false);assert.match(document.body.textContent,/Acceso restringido/)
  rol='coordinacion';rpcError=null;rpcValor=true;await montar();assert.equal(acceso.puedeAbrir,true);assert.equal(acceso.puedeEscribir,true);assert.match(document.body.textContent,/Gestión habilitada/)
  assert.equal(escrituras,0)
  const app=readFileSync('src/App.jsx','utf8');assert.match(app,/puedeAdministrarAnalisis=\{accesoAnalisis.puedeAbrir\}/);assert.match(app,/<AnalisisSection key=\{usuarioIdSesion\}/)

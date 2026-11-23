@@ -247,6 +247,7 @@ function App() {
       onCambiarSeccion={setSeccion}
       perfil={perfil}
       puedeAdministrarAnalisis={accesoAnalisis.puedeAbrir}
+      puedeConsultarAnalisis={accesoAnalisis.puedeConsultar}
     >
       <ContenedorSeccion clave={seccion} nombre={NOMBRES_SECCION[seccion]}>
       {seccion === 'inicio' && (
@@ -334,7 +335,7 @@ function App() {
       )}
 
       {/* Módulo independiente de análisis de partidos */}
-      {seccion === 'analisis' && (accesoAnalisis.puedeAbrir ? <AnalisisSection key={usuarioIdSesion} escrituraAutorizada={accesoAnalisis.puedeEscribir} estadoAutorizacion={accesoAnalisis.estado} /> : <div className="p-6" role="alert">El módulo Análisis está reservado a las dos cuentas administradoras autorizadas. Los resultados se consultan desde el perfil individual.<button type="button" onClick={() => setSeccion('inicio')}>Volver a Inicio</button></div>)}
+      {seccion === 'analisis' && (accesoAnalisis.puedeAbrir ? <AnalisisSection key={usuarioIdSesion} escrituraAutorizada={accesoAnalisis.puedeEscribir} estadoAutorizacion={accesoAnalisis.estado} /> : accesoAnalisis.puedeConsultar ? <AnalisisSection key={`consulta-${usuarioIdSesion}`} modoConsulta escrituraAutorizada={false} /> : <div className="p-6" role="alert">Análisis es para coordinación y el cuerpo técnico. Los resultados también se ven en el perfil individual.<button type="button" onClick={() => setSeccion('inicio')}>Volver a Inicio</button></div>)}
 
       {seccion === 'partidos' && (
         <PartidosSection

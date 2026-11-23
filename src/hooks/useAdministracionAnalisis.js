@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { consultarAdministracionAnalisis, esCuentaAdministradoraAnalisis, faltaRpcAdministracionAnalisis } from '../utils/permisosAnalisis'
 
+// Ven Análisis sin editar. Lo que ve cada cuenta lo decide RLS (puede_consultar_analisis en la base).
+const ROLES_CONSULTA = ['coordinacion', 'tecnico']
+
 export default function useAdministracionAnalisis(sesion, rol) {
   const usuarioId = sesion?.user?.id
   const token = sesion?.access_token
@@ -31,6 +34,7 @@ export default function useAdministracionAnalisis(sesion, rol) {
   const candidato = Boolean(esCuentaAdministradoraAnalisis(usuarioId) && rol === 'coordinacion')
   const denegadoActual = mismaIdentidad && lectura.token === token && lectura.estado === 'denegado'
   return {
+    puedeConsultar: Boolean(usuarioId) && ROLES_CONSULTA.includes(rol),
     puedeAbrir: candidato && !denegadoActual,
     puedeMontar: mismaIdentidad && (lectura.estado === 'permitido' || lectura.conservar),
     puedeEscribir: mismaIdentidad && lectura.token === token && lectura.estado === 'permitido',
