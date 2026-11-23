@@ -31,6 +31,7 @@ import {
 } from '../utils/destinatariasPases'
 import { mensajeError, mensajeErrorOPropio } from '../utils/mensajesError'
 import useColaEtiquetado from '../hooks/useColaEtiquetado'
+import { esActualizacion } from '../utils/analisis/colaEtiquetado'
 import useAtajosAnalisis from '../hooks/useAtajosAnalisis'
 import { accionesSinTeclaPorMarcador, guardarAtajos, leerAtajos, mostrarTecla } from '../utils/analisis/atajos'
 import { AvisoAccion, AyudaAtajos, IndicadorAtajos } from './analisis/AtajosEtiquetado'
@@ -441,9 +442,12 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   const { cola, items: colaItems } = useColaEtiquetado({
     enviar: (registro) => supabase.from('analisis_eventos').insert(registro).select().single(),
     borrar: (id) => supabase.from('analisis_eventos').delete().eq('id', id),
+    // Fin de un momento colectivo al cerrarlo (se guardó al abrirse con un fin provisorio).
+    actualizar: (id, cambios) => supabase.from('analisis_eventos').update(cambios).eq('id', id).select('id').single(),
     alConfirmar: (fila) => setEventos((actuales) => actuales.some((e) => e.id === fila.id)
       ? actuales
       : [...actuales, fila].sort((a, b) => Number(a.segundo) - Number(b.segundo))),
+    alActualizar: (id, cambios) => setEventos((actuales) => actuales.map((e) => (e.id === id ? { ...e, ...cambios } : e))),
     alFallarBorrado: (fila, e) => setError(`${mensajeError(e, 'deshacer la acción')} La acción ${etiquetaDe(catalogo, fila.tipo)} · ${formatearTiempo(fila.segundo)} sigue guardada.`),
     activa: !modoConsulta,
   })
@@ -946,7 +950,9 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   // Acciones de la cola que todavía no están confirmadas: se muestran al instante, marcadas con su estado.
   const pendientesCola = useMemo(() => {
     const confirmadas = new Set(todasLasAcciones.map((e) => e.id))
-    return colaItems.filter((i) => !i.cancelada && !confirmadas.has(i.id)).map((i) => ({ ...i.registro, _cola: i.estado, _error: i.error }))
+    // Las actualizaciones (fin de un momento) no son acciones nuevas: no se listan.
+    return colaItems.filter((i) => !i.cancelada && !confirmadas.has(i.id) && !esActualizacion(i.registro))
+      .map((i) => ({ ...i.registro, _cola: i.estado, _error: i.error }))
   }, [colaItems, todasLasAcciones])
 
   const eventosPartido = useMemo(
@@ -1494,9 +1500,18 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     }
     cola.agregar(registro)
     setUltimaAccion({ id: registro.id, partidoId: idPartido })
-    avisarRapido(`${etiquetaBotonDe(catalogo, tipo)} · ${segundo_fin - segundo} s`, `${formatearTiempo(segundo)} a ${formatearTiempo(segundo_fin)}`)
+    avisarRapido(`${etiquetaBotonDe(catalogo, tipo)} · grabando`, formatearTiempo(segundo))
     setError('')
     return registro
+  }
+
+  // Cierre de un momento: corrige el fin provisorio (se ve al instante; se guarda por la cola, con reintento).
+  function actualizarFinMomento(id, segundo_fin) {
+    if (!esAdmin || !escrituraAutorizada) return
+    setEventos((lista) => lista.map((e) => (e.id === id ? { ...e, segundo_fin } : e)))
+    cola.actualizar(id, { segundo_fin })
+    const momento = todasLasAcciones.find((e) => e.id === id) || colaItems.find((i) => i.id === id)?.registro
+    if (momento) avisarRapido(`${etiquetaBotonDe(catalogo, momento.tipo)} · ${segundo_fin - momento.segundo} s`, `${formatearTiempo(momento.segundo)} a ${formatearTiempo(segundo_fin)}`)
   }
 
   // Mueve el inicio y el fin de un momento (línea de tiempo). Se ve al instante; si la base no lo acepta, vuelve atrás.
@@ -1642,6 +1657,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     if (!esAdmin || !escrituraAutorizada) return
 
     if (!window.confirm(`¿Eliminar la acción «${etiquetaTipo(evento.tipo)}» del minuto ${formatearTiempo(evento.segundo)}? No se puede deshacer.`)) return
+    grabacionColectiva.olvidar(evento.id)
 
     const { error: deleteError } = await supabase
       .from('analisis_eventos')
@@ -1661,6 +1677,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   async function deshacerUltimaAccion() {
     if (!esAdmin || !escrituraAutorizada || !accionDeshacible) return
     const evento = accionDeshacible
+    // Si era un momento colectivo todavía abierto, deja de grabarse.
+    grabacionColectiva.olvidar(evento.id)
 
     // Todavía en la cola (guardándose o sin guardar): la cola la quita o la borra apenas se confirme.
     if (evento._cola && cola.cancelar(evento.id)) {
@@ -2007,12 +2025,12 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     catalogo,
     partidoId,
     activa: !modoConsulta,
-    guardar: registrarMomento,
-    puedeAbrir: () => {
-      if (!capturaBloqueada) return true
-      setError('Esperá a que el video esté conectado antes de etiquetar.')
-      return false
+    // Se guarda apenas se abre (fin provisorio) y se corrige el fin al cerrarlo.
+    registrar: (momento) => {
+      if (capturaBloqueada) { setError('Esperá a que el video esté conectado antes de etiquetar.'); return null }
+      return registrarMomento(momento)?.id || null
     },
+    actualizarFin: actualizarFinMomento,
   })
   const estadoAtajos = useAtajosAnalisis({
     activo: !cargando && accesoEditor && !bloqueoEscritura && seccion === 'video' && Boolean(partidoActual),

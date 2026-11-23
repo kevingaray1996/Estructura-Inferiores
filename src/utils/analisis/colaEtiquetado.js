@@ -9,6 +9,10 @@
 //
 // Las acciones pendientes se respaldan en el navegador (localStorage): si se cierra o recarga la página, se envían
 // al volver a abrir Análisis.
+//
+// Actualizaciones (etapa 1, momentos colectivos: se guardan al abrirse con un fin provisorio y al cerrarse se corrige
+// el fin): actualizar(id, cambios). Si el alta todavía no salió, el cambio se suma al alta (un solo envío). Si ya
+// salió, queda en la cola como un envío más, que nunca se manda antes de que el alta esté confirmada.
 
 export const CLAVE_COLA = 'analisis_cola_etiquetado_v1'
 export const ESPERAS_MS = [1000, 3000, 8000, 15000, 30000]
@@ -20,7 +24,8 @@ export function clasificarResultado({ data, error } = {}, id) {
   if (!error) return data?.id === id ? 'ok' : 'red'
   const codigo = String(error.code || '')
   if (codigo === '23505') return 'duplicado'
-  if (ES_CODIGO_SQL.test(codigo) || codigo === '42501' || Number(error.status) === 403) return 'rechazo'
+  // PGRST116: la fila no está (por ejemplo, se borró): reintentar no sirve.
+  if (ES_CODIGO_SQL.test(codigo) || codigo === '42501' || codigo === 'PGRST116' || Number(error.status) === 403) return 'rechazo'
   return 'red'
 }
 
@@ -38,18 +43,25 @@ export function resumenCola(items = []) {
 function leerAlmacen(almacen) {
   try {
     const lista = JSON.parse(almacen?.getItem(CLAVE_COLA) || '[]')
-    return Array.isArray(lista) ? lista.filter((r) => r && typeof r.id === 'string' && r.partido_id) : []
+    return Array.isArray(lista)
+      ? lista.filter((r) => r && typeof r.id === 'string' && (esActualizacion(r) ? typeof r.objetivo === 'string' && r.cambios : r.partido_id))
+      : []
   } catch {
     return []
   }
 }
 
+export const esActualizacion = (registro) => registro?._op === 'actualizar'
+
 // enviar(registro) → Promise<{ data, error }> (insert … select().single()).
 // borrar(id) → Promise<{ error }> (para deshacer una acción que ya se estaba enviando).
-// Opcionales: almacen (localStorage), programar/cancelar (timers), alConfirmar(fila), alFallarBorrado(fila, error).
+// actualizar(id, cambios) → Promise<{ data, error }> (update … eq(id).select('id').single()).
+// Opcionales: almacen (localStorage), programar/cancelar (timers), alConfirmar(fila), alFallarBorrado(fila, error),
+// alActualizar(id, cambios).
 export function crearColaEtiquetado({
-  enviar, borrar, almacen = null, programar = (fn, ms) => setTimeout(fn, ms), cancelar = (t) => clearTimeout(t),
-  alConfirmar = () => {}, alFallarBorrado = () => {},
+  enviar, borrar, actualizar = async () => ({ data: null, error: { code: 'SIN_ACTUALIZAR' } }), almacen = null,
+  programar = (fn, ms) => setTimeout(fn, ms), cancelar = (t) => clearTimeout(t),
+  alConfirmar = () => {}, alFallarBorrado = () => {}, alActualizar = () => {},
 } = {}) {
   // Orden de llegada. estado: 'pendiente' | 'enviando' | 'error' (se reintenta) | 'rechazada' (no se reintenta).
   let items = leerAlmacen(almacen).map((registro) => ({ id: registro.id, registro, estado: 'pendiente', intentos: 0, error: null, cancelada: false }))
@@ -79,21 +91,30 @@ export function crearColaEtiquetado({
     temporizador = programar(() => { temporizador = null; reintentarAhora() }, espera)
   }
 
+  // Lista para enviar: pendiente, y si es una actualización, con su alta ya confirmada (fuera de la cola).
+  const lista = (i) => i.estado === 'pendiente' && !(esActualizacion(i.registro) && items.some((j) => j.id === i.registro.objetivo))
+
   async function procesar() {
     if (enviando || detenida) return
-    const siguiente = items.find((i) => i.estado === 'pendiente')
+    const siguiente = items.find(lista)
     if (!siguiente) return
     enviando = true
     cambiar(siguiente.id, { estado: 'enviando' }); publicar()
+    const esAct = esActualizacion(siguiente.registro)
     let resultado
     try {
-      resultado = await enviar(siguiente.registro)
+      resultado = esAct
+        ? await actualizar(siguiente.registro.objetivo, siguiente.registro.cambios)
+        : await enviar(siguiente.registro)
     } catch (error) {
       resultado = { data: null, error }
     }
-    const tipo = clasificarResultado(resultado, siguiente.id)
+    const tipo = clasificarResultado(resultado, esAct ? siguiente.registro.objetivo : siguiente.id)
     const actual = items.find((i) => i.id === siguiente.id)
-    if (tipo === 'ok' || tipo === 'duplicado') {
+    if (esAct && tipo === 'ok') {
+      quitar(siguiente.id)
+      alActualizar(siguiente.registro.objetivo, siguiente.registro.cambios)
+    } else if (tipo === 'ok' || (!esAct && tipo === 'duplicado')) {
       quitar(siguiente.id)
       const fila = tipo === 'ok' ? resultado.data : siguiente.registro
       if (actual?.cancelada) {
@@ -135,12 +156,38 @@ export function crearColaEtiquetado({
     procesar()
   }
 
+  // Actualizaciones que esperan a una acción que se va de la cola sin guardarse: no tienen a quién actualizar.
+  const quitarActualizacionesDe = (objetivo) => {
+    items = items.filter((i) => !(esActualizacion(i.registro) && i.registro.objetivo === objetivo && i.estado !== 'enviando'))
+  }
+
+  // Cambia campos de una acción ya agregada (por ejemplo, el fin de un momento colectivo al cerrarlo).
+  function actualizarAccion(objetivo, cambios) {
+    const alta = items.find((i) => i.id === objetivo && !i.cancelada)
+    if (alta && alta.estado !== 'enviando') {
+      // El alta todavía no salió: el cambio viaja con ella.
+      cambiar(objetivo, { registro: { ...alta.registro, ...cambios } })
+      publicar()
+      return true
+    }
+    const previa = items.find((i) => esActualizacion(i.registro) && i.registro.objetivo === objetivo && ['pendiente', 'error'].includes(i.estado))
+    if (previa) {
+      cambiar(previa.id, { registro: { ...previa.registro, cambios: { ...previa.registro.cambios, ...cambios } } })
+    } else {
+      const registro = { id: `${objetivo}:actualizar:${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, _op: 'actualizar', objetivo, cambios: { ...cambios } }
+      items = [...items, { id: registro.id, registro, estado: 'pendiente', intentos: 0, error: null, cancelada: false }]
+    }
+    publicar()
+    procesar()
+    return true
+  }
+
   // Deshacer una acción que todavía no está confirmada. true si la cola se hace cargo.
   function cancelarAccion(id) {
     const item = items.find((i) => i.id === id)
     if (!item) return false
     if (item.estado === 'enviando') cambiar(id, { cancelada: true })
-    else quitar(id)
+    else { quitar(id); quitarActualizacionesDe(id) }
     publicar()
     return true
   }
@@ -149,11 +196,11 @@ export function crearColaEtiquetado({
   function descartar(id) {
     const item = items.find((i) => i.id === id)
     if (!item || item.estado !== 'rechazada') return false
-    quitar(id); publicar(); return true
+    quitar(id); quitarActualizacionesDe(id); publicar(); return true
   }
 
   return {
-    agregar, reintentarAhora, cancelar: cancelarAccion, descartar,
+    agregar, actualizar: actualizarAccion, reintentarAhora, cancelar: cancelarAccion, descartar,
     iniciar() { detenida = false; procesar() },
     detener() { detenida = true; if (temporizador) { cancelar(temporizador); temporizador = null } },
     getSnapshot: () => snapshot,

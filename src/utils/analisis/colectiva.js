@@ -191,7 +191,14 @@ export function cerrarGrabacion(grabacion, segundoActual) {
   const actual = Math.floor(Number(segundoActual))
   const fin = Number.isFinite(actual) && actual > grabacion.inicio ? actual : grabacion.inicio + grabacion.duracion
   const momento = { tipo: grabacion.tipo, segundo: grabacion.inicio, segundo_fin: fin }
-  return grabacion.partidoId ? { ...momento, partidoId: grabacion.partidoId } : momento
+  if (grabacion.partidoId) momento.partidoId = grabacion.partidoId
+  if (grabacion.id) momento.id = grabacion.id
+  return momento
+}
+
+// Fin provisorio con el que se guarda un momento apenas se abre (cumple la regla de la base: fin ≥ inicio).
+export function finProvisorio(grabacion) {
+  return grabacion.inicio + grabacion.duracion
 }
 
 // Los botones de Charla (Error defensivo, Acción destacada) se superponen: no cierran la fase abierta ni la fase los

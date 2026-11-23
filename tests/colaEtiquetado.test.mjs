@@ -169,3 +169,70 @@ test('resumen para el indicador: guardando, guardado y error', () => {
   assert.match(resumenCola([item('rechazada')]).texto, /rechazada/)
   assert.equal(resumenCola([item('pendiente', { cancelada: true })]).estado, 'guardado')
 })
+
+// Etapa 1: un momento colectivo se guarda al abrirse (fin provisorio) y al cerrarse se corrige el fin.
+function baseConActualizar() {
+  const b = base(), actualizaciones = []
+  b.actualizaciones = actualizaciones
+  b.actualizar = (id, cambios) => new Promise((resolve) => actualizaciones.push({ id, cambios, ok: () => resolve({ data: { id }, error: null }), fallar: (error) => resolve({ data: null, error }) }))
+  return b
+}
+
+test('actualizar: si el alta todavía no salió, el fin viaja con ella (un solo envío)', async () => {
+  const b = baseConActualizar(), a = almacen()
+  const cola = crearColaEtiquetado({ enviar: b.enviar, borrar: b.borrar, actualizar: b.actualizar, almacen: a })
+  cola.detener()
+  cola.agregar({ ...registro('m', 100), segundo_fin: 115 })
+  cola.actualizar('m', { segundo_fin: 106 })
+  assert.equal(a.leer()[0].segundo_fin, 106, 'El respaldo ya tiene el fin corregido')
+  cola.iniciar()
+  assert.equal(b.envios[0].r.segundo_fin, 106)
+  b.envios[0].ok(); await esperar()
+  assert.equal(b.actualizaciones.length, 0)
+  assert.deepEqual(a.leer(), [])
+})
+
+test('actualizar: con el alta en viaje o con error de red, espera a que esté confirmada; nunca se adelanta', async () => {
+  const b = baseConActualizar(), t = timers(), actualizadas = []
+  const cola = crearColaEtiquetado({ enviar: b.enviar, borrar: b.borrar, actualizar: b.actualizar, programar: t.programar, cancelar: t.cancelar, alActualizar: (id, c) => actualizadas.push([id, c.segundo_fin]) })
+  cola.agregar({ ...registro('m', 100), segundo_fin: 115 })
+  cola.actualizar('m', { segundo_fin: 104 })
+  cola.actualizar('m', { segundo_fin: 106 })
+  assert.equal(b.actualizaciones.length, 0, 'El alta todavía no se confirmó')
+  b.envios[0].fallar({ message: 'Failed to fetch' }); await esperar()
+  assert.equal(b.actualizaciones.length, 0, 'Con el alta en error, la actualización espera')
+  t.correr(); await esperar()
+  b.envios[1].ok(); await esperar()
+  assert.equal(b.actualizaciones.length, 1, 'Dos cierres seguidos se juntan en un solo envío')
+  assert.deepEqual([b.actualizaciones[0].id, b.actualizaciones[0].cambios], ['m', { segundo_fin: 106 }])
+  b.actualizaciones[0].ok(); await esperar()
+  assert.deepEqual(actualizadas, [['m', 106]])
+  assert.equal(cola.getSnapshot().length, 0)
+})
+
+test('actualizar: se reintenta si falla la red, sobrevive a una recarga y se descarta con su alta', async () => {
+  const b = baseConActualizar(), t = timers(), a = almacen()
+  const cola = crearColaEtiquetado({ enviar: b.enviar, borrar: b.borrar, actualizar: b.actualizar, programar: t.programar, cancelar: t.cancelar, almacen: a })
+  cola.agregar({ ...registro('m', 100), segundo_fin: 115 })
+  b.envios[0].ok(); await esperar()
+  cola.actualizar('m', { segundo_fin: 108 })
+  b.actualizaciones[0].fallar({ message: 'Failed to fetch' }); await esperar()
+  assert.equal(cola.getSnapshot()[0].estado, 'error')
+  cola.detener()
+  // «Recarga»: la actualización pendiente sigue en el respaldo y se manda al volver.
+  const b2 = baseConActualizar()
+  const otra = crearColaEtiquetado({ enviar: b2.enviar, borrar: b2.borrar, actualizar: b2.actualizar, almacen: a })
+  otra.iniciar()
+  assert.deepEqual([b2.actualizaciones[0].id, b2.actualizaciones[0].cambios], ['m', { segundo_fin: 108 }])
+  b2.actualizaciones[0].ok(); await esperar()
+  assert.deepEqual(a.leer(), [])
+  // La fila ya no está (se borró): rechazo, no reintento eterno.
+  assert.equal(clasificarResultado({ error: { code: 'PGRST116' } }, 'm'), 'rechazo')
+  // Deshacer un alta que no salió se lleva sus actualizaciones.
+  const b3 = baseConActualizar()
+  const tercera = crearColaEtiquetado({ enviar: b3.enviar, borrar: b3.borrar, actualizar: b3.actualizar })
+  tercera.agregar(registro('x', 5)); tercera.agregar({ ...registro('y', 6), segundo_fin: 20 })
+  tercera.actualizar('y', { segundo_fin: 9 })
+  tercera.cancelar('y')
+  assert.deepEqual(tercera.getSnapshot().map((i) => i.id), ['x'])
+})

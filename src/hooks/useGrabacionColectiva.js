@@ -1,74 +1,77 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { cerrarGrabacion, cerrarUltima, cerrarVencidas, tocarColectiva } from '../utils/analisis/colectiva'
+import { cerrarGrabacion, cerrarUltima, cerrarVencidas, finProvisorio, tocarColectiva } from '../utils/analisis/colectiva'
 
 // Momentos colectivos abiertos («Grabando…»): como mucho una fase y uno de Charla a la vez (Charla se superpone).
-// Se respaldan en el navegador para no perderlos si se recarga la página.
-const CLAVE = 'analisis_grabacion_colectiva_v1'
-
-const valida = (g) => g && typeof g.tipo === 'string' && Number.isFinite(g.inicio) && Number.isFinite(g.duracion) && g.partidoId
-function leer() {
-  try {
-    const guardado = JSON.parse(window.localStorage.getItem(CLAVE) || 'null')
-    // Formato viejo: un solo momento abierto.
-    const lista = Array.isArray(guardado) ? guardado : guardado ? [guardado] : []
-    return lista.filter(valida)
-  } catch { return [] }
-}
-function persistir(lista) {
-  try { if (lista.length) window.localStorage.setItem(CLAVE, JSON.stringify(lista)); else window.localStorage.removeItem(CLAVE) } catch { /* Sin respaldo. */ }
-}
-
-// tocar(tipo): abre el momento en el segundo actual; si ya está abierto, lo cierra. Una fase nueva cierra la fase
-// abierta en este segundo; un botón de Charla no cierra la fase (y una fase no cierra la Charla).
-// cerrar(): Enter, cierra el último abierto. cerrarTodas(): al cambiar a la botonera individual.
-// Si nadie lo cierra, cada uno se cierra solo al llegar a su duración por defecto.
-// guardar({ tipo, segundo, segundo_fin, partidoId }) recibe cada momento cerrado.
-// puedeAbrir(): false si todavía no se puede marcar (video sin conectar, sin permiso…).
-export default function useGrabacionColectiva({ reloj, catalogo, partidoId, activa, guardar, puedeAbrir = () => true }) {
-  const [abiertas, setAbiertas] = useState(() => (activa ? leer() : []))
+//
+// Guardado: cada momento se guarda APENAS se abre, con un fin provisorio (inicio + duración por defecto), por la
+// misma cola de siempre (al instante, de fondo y con reintento). Al cerrarlo se corrige el fin. Si la página se
+// recarga con un momento abierto, queda guardado con su fin provisorio (que se ajusta después en la línea de tiempo).
+//
+// registrar({ tipo, segundo, segundo_fin, partidoId }) → id del momento guardado (o null si no se pudo: sin video,
+//   sin permiso…). actualizarFin(id, segundo_fin) corrige el fin al cerrar.
+// tocar(tipo): abre; si ya está abierto, lo cierra. Una fase nueva cierra la fase abierta en este segundo; un botón
+// de Charla no cierra la fase (y una fase no cierra la Charla). cerrar(): Enter, cierra el último abierto.
+// cerrarTodas(): al pasar a la botonera individual. olvidar(id): el momento se deshizo o se borró.
+export default function useGrabacionColectiva({ reloj, catalogo, partidoId, activa, registrar, actualizarFin }) {
+  const [abiertas, setAbiertas] = useState([])
   const actual = useRef(abiertas)
-  const ultimas = useRef({ guardar, catalogo, puedeAbrir })
-  useLayoutEffect(() => { ultimas.current = { guardar, catalogo, puedeAbrir } })
+  const ultimas = useRef({ registrar, actualizarFin, catalogo })
+  useLayoutEffect(() => { ultimas.current = { registrar, actualizarFin, catalogo } })
 
-  const aplicar = useCallback(({ abiertas: nuevas, cerradas }) => {
-    actual.current = nuevas
-    setAbiertas(nuevas)
-    persistir(nuevas)
-    for (const momento of cerradas) ultimas.current.guardar(momento)
+  const fijar = useCallback((lista) => { actual.current = lista; setAbiertas(lista) }, [])
+
+  // Cierra: solo se manda el fin si es distinto del provisorio con el que ya está guardado.
+  const confirmarCierres = useCallback((cerradas, antes) => {
+    for (const c of cerradas) {
+      const original = antes.find((g) => g.id === c.id)
+      if (c.id && original && c.segundo_fin !== finProvisorio(original)) ultimas.current.actualizarFin(c.id, c.segundo_fin)
+    }
   }, [])
 
   const tocar = useCallback((tipo) => {
     if (!activa) return
-    const resultado = tocarColectiva(actual.current, tipo, reloj.leer(), ultimas.current.catalogo)
-    let nuevas = resultado.abiertas.map((g) => (g.partidoId ? g : { ...g, partidoId }))
-    // El que se acaba de abrir es el último de la lista: si todavía no se puede marcar, no se abre.
-    if (resultado.abierto && !ultimas.current.puedeAbrir()) nuevas = nuevas.slice(0, -1)
-    aplicar({ abiertas: nuevas, cerradas: resultado.cerradas })
-  }, [activa, reloj, partidoId, aplicar])
+    const antes = actual.current
+    const resultado = tocarColectiva(antes, tipo, reloj.leer(), ultimas.current.catalogo)
+    // Primero el cierre del anterior (en la cola va antes que el alta del nuevo).
+    confirmarCierres(resultado.cerradas, antes)
+    let nuevas = resultado.abiertas
+    if (resultado.abierto) {
+      // El que se acaba de abrir es el último: se guarda ya, con su fin provisorio.
+      const nueva = { ...nuevas[nuevas.length - 1], partidoId }
+      const id = ultimas.current.registrar({ tipo: nueva.tipo, segundo: nueva.inicio, segundo_fin: finProvisorio(nueva), partidoId })
+      nuevas = id ? [...nuevas.slice(0, -1), { ...nueva, id }] : nuevas.slice(0, -1)
+    }
+    fijar(nuevas)
+  }, [activa, reloj, partidoId, fijar, confirmarCierres])
 
-  const cerrar = useCallback(() => aplicar(cerrarUltima(actual.current, reloj.leer())), [reloj, aplicar])
+  const cerrar = useCallback(() => {
+    const antes = actual.current
+    const resultado = cerrarUltima(antes, reloj.leer())
+    fijar(resultado.abiertas)
+    confirmarCierres(resultado.cerradas, antes)
+  }, [reloj, fijar, confirmarCierres])
+
   const cerrarTodas = useCallback(() => {
+    const antes = actual.current
     const segundo = reloj.leer()
-    aplicar({ abiertas: [], cerradas: actual.current.map((g) => cerrarGrabacion(g, segundo)) })
-  }, [reloj, aplicar])
+    fijar([])
+    confirmarCierres(antes.map((g) => cerrarGrabacion(g, segundo)), antes)
+  }, [reloj, fijar, confirmarCierres])
 
-  // Cierre solo, con la duración por defecto, mientras avanza el video.
+  const olvidar = useCallback((id) => {
+    if (actual.current.some((g) => g.id === id)) fijar(actual.current.filter((g) => g.id !== id))
+  }, [fijar])
+
+  // Se cierra solo con la duración por defecto: ya está guardado con ese fin, no hace falta mandar nada.
   useEffect(() => reloj.suscribir(() => {
     const resultado = cerrarVencidas(actual.current, reloj.leer())
-    if (resultado.cerradas.length) aplicar(resultado)
-  }), [reloj, aplicar])
+    if (resultado.cerradas.length) fijar(resultado.abiertas)
+  }), [reloj, fijar])
 
-  // Si se cambia de partido con momentos abiertos, se cierran con su duración por defecto (en su partido).
+  // Al cambiar de partido, los abiertos del otro partido quedan con su fin provisorio.
   useEffect(() => {
-    if (!partidoId) return
-    const ajenas = actual.current.filter((g) => g.partidoId !== partidoId)
-    if (ajenas.length) {
-      aplicar({
-        abiertas: actual.current.filter((g) => g.partidoId === partidoId),
-        cerradas: ajenas.map((g) => cerrarGrabacion(g, g.inicio + g.duracion)),
-      })
-    }
-  }, [partidoId, aplicar])
+    if (partidoId && actual.current.some((g) => g.partidoId !== partidoId)) fijar(actual.current.filter((g) => g.partidoId === partidoId))
+  }, [partidoId, fijar])
 
-  return { abiertas, tocar, cerrar, cerrarTodas }
+  return { abiertas, tocar, cerrar, cerrarTodas, olvidar }
 }
