@@ -50,6 +50,15 @@ import { MARCAS, enCancha as enCanchaEn, estabaEnCancha, faltanMarcas, minutoRea
 import { tiemposDe } from '../utils/analisis/marcador'
 import MarcadorVideo from './analisis/MarcadorVideo'
 import { BotonesGol, CartelMarcador, FilaTarjetaCambio } from './analisis/MarcadorBotonera'
+import BotoneraColectiva from './analisis/BotoneraColectiva'
+import LineaTiempo from './analisis/LineaTiempo'
+import ClipSeleccionado from './analisis/ClipSeleccionado'
+import FormularioScouting from './analisis/FormularioScouting'
+import useGrabacionColectiva from '../hooks/useGrabacionColectiva'
+import {
+  equiposDelAnalisis, esMomento, esScouting, filtrarAnalisis, guardarAtajosColectiva, leerAtajosColectiva,
+  momentosDesde, separarAcciones,
+} from '../utils/analisis/colectiva'
 
 const CATEGORIA_ID = '438874e7-e59f-460b-bec4-3c0ef5b44016'
 
@@ -291,7 +300,9 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
   const [partidos, setPartidos] = useState([])
   const [partidosCalendario, setPartidosCalendario] = useState([])
-  const [eventos, setEventos] = useState([])
+  // Todas las acciones leídas de la base. Las individuales («eventos», lo de siempre) y los momentos colectivos
+  // (etapa 1) se separan más abajo, cuando ya está el catálogo.
+  const [todasLasAcciones, setEventos] = useState([])
   const [jugadoras, setJugadoras] = useState([])
   const [citaciones, setCitaciones] = useState([])
 
@@ -333,6 +344,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   const [unToque, setUnToque] = useState(leerUnToque)
   const [catalogoAcciones, setCatalogoAcciones] = useState({ catalogo: CATALOGO_POR_DEFECTO, origen: 'base', aviso: '' })
   const catalogo = catalogoAcciones.catalogo
+  // Lo de siempre (Playlist, mapa, estadísticas, informe) sigue viendo solo las individuales.
+  const { individuales: eventos, momentos } = useMemo(() => separarAcciones(todasLasAcciones, catalogo), [todasLasAcciones, catalogo])
   const etiquetaTipo = (codigo) => etiquetaDe(catalogo, codigo)
   // Formularios: los tipos visibles, más el actual aunque esté oculto.
   const opcionesTipo = (actual) => {
@@ -376,6 +389,10 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   const [bloqueoEtiquetado] = useState(crearBloqueoEtiquetado)
 
   const partidoActual = partidos.find((p) => p.id === partidoId)
+  // Scouting (no juega Comunicaciones): por ahora solo botonera colectiva, sin marcador, COMET ni planilla.
+  const scouting = esScouting(partidoActual)
+  // Equipo analizado (desde donde marca la colectiva) y el otro.
+  const equiposPartido = useMemo(() => equiposDelAnalisis(partidoActual), [partidoActual])
   const direccionAtaqueActual = direccionDelPeriodo(partidoActual, periodoActual)
 
   const partidoCalendarioActual =
@@ -443,6 +460,30 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   const botonera = useMemo(() => tiposBotonera(catalogo), [catalogo])
   // Solo las acciones de la botonera tienen tecla.
   const atajosBotonera = useMemo(() => atajosDeBotonera(atajos, botonera), [atajos, botonera])
+  // Botonera colectiva (etapa 1): momentos que duran, sin jugadora. Teclas propias, guardadas en esta compu.
+  const botoneraColectiva = useMemo(() => tiposBotonera(catalogo, 'colectiva'), [catalogo])
+  const [atajosColectiva, setAtajosColectiva] = useState(leerAtajosColectiva)
+  const cambiarAtajosColectiva = useCallback((nuevo) => { setAtajosColectiva(nuevo); guardarAtajosColectiva(nuevo) }, [])
+  const atajosBotoneraColectiva = useMemo(() => atajosDeBotonera(atajosColectiva, botoneraColectiva), [atajosColectiva, botoneraColectiva])
+  const [modoBotonera, setModoBotonera] = useState(() => {
+    // Por defecto la individual (la de siempre); la compu recuerda la última elegida.
+    try { return window.localStorage.getItem('analisis_modo_botonera_v1') === 'colectiva' ? 'colectiva' : 'individual' } catch { return 'individual' }
+  })
+  const elegirModoBotonera = useCallback((modo) => {
+    setModoBotonera(modo)
+    try { window.localStorage.setItem('analisis_modo_botonera_v1', modo) } catch { /* Sin preferencia guardada. */ }
+  }, [])
+  const botoneraEnUso = scouting ? 'colectiva' : modoBotonera
+  // Línea de tiempo: desde qué equipo se ven los momentos (espejo) y cuál está elegido.
+  const [vistaMomentos, setVistaMomentos] = useState('analizado')
+  const [momentoElegidoId, setMomentoElegidoId] = useState(null)
+  // Biblioteca: filtro de análisis (propios / scouting) y búsqueda por rival.
+  const [filtroBiblioteca, setFiltroBiblioteca] = useState({ tipo: 'todos', rival: '' })
+  const partidosFiltrados = useMemo(() => filtrarAnalisis(partidos, filtroBiblioteca), [partidos, filtroBiblioteca])
+  // Nuevo análisis: partido propio (del calendario) o de scouting.
+  const [tipoNuevoAnalisis, setTipoNuevoAnalisis] = useState('propio')
+  // Partido propio: desde qué equipo marca la botonera colectiva (Comunicaciones o el rival).
+  const [equipoAnalizadoPropio, setEquipoAnalizadoPropio] = useState('propio')
   // Pestaña del panel derecho (Etiquetado / Playlist / Partido).
   const [pestanaPanel, setPestanaPanel] = useState(modoConsulta ? 'playlist' : 'etiquetado')
   const pestanasPanel = modoConsulta ? PESTANAS_PANEL.filter(([id]) => id !== 'etiquetado') : PESTANAS_PANEL
@@ -616,7 +657,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
           (p) => p.id === analisis.partido_calendario_id,
         ) || null
 
-        if (!calendarioPartido && analisis.fecha && analisis.rival) {
+        // Un scouting nunca se vincula con el calendario (no juega Comunicaciones).
+        if (!calendarioPartido && analisis.tipo_partido !== 'scouting' && analisis.fecha && analisis.rival) {
           const coincidencias = calendarioLista.filter(
             (p) =>
               p.fecha === analisis.fecha &&
@@ -903,20 +945,25 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
   // Acciones de la cola que todavía no están confirmadas: se muestran al instante, marcadas con su estado.
   const pendientesCola = useMemo(() => {
-    const confirmadas = new Set(eventos.map((e) => e.id))
+    const confirmadas = new Set(todasLasAcciones.map((e) => e.id))
     return colaItems.filter((i) => !i.cancelada && !confirmadas.has(i.id)).map((i) => ({ ...i.registro, _cola: i.estado, _error: i.error }))
-  }, [colaItems, eventos])
+  }, [colaItems, todasLasAcciones])
 
   const eventosPartido = useMemo(
     () => {
       const delPartido = eventos.filter((e) => e.partido_id === partidoId)
-      const pendientes = pendientesCola.filter((e) => e.partido_id === partidoId)
+      const pendientes = pendientesCola.filter((e) => e.partido_id === partidoId && !esMomento(e, catalogo))
       return pendientes.length
         ? [...delPartido, ...pendientes].sort((a, b) => Number(a.segundo) - Number(b.segundo))
         : delPartido
     },
-    [eventos, partidoId, pendientesCola],
+    [eventos, partidoId, pendientesCola, catalogo],
   )
+  // Momentos colectivos del partido (confirmados y los que se están guardando).
+  const momentosPartido = useMemo(() => [
+    ...momentos.filter((m) => m.partido_id === partidoId),
+    ...pendientesCola.filter((e) => e.partido_id === partidoId && esMomento(e, catalogo)),
+  ].sort((a, b) => Number(a.segundo) - Number(b.segundo)), [momentos, pendientesCola, partidoId, catalogo])
   const colaConError = pendientesCola.filter((e) => e._cola === 'error')
   const colaRechazadas = pendientesCola.filter((e) => e._cola === 'rechazada')
 
@@ -943,11 +990,24 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
   // Se oculta si la acción ya no está (borrada o recargada) o si cambió el partido.
   const accionDeshacible = ultimaAccion?.partidoId === partidoId
-    ? eventosPartido.find((evento) => evento.id === ultimaAccion.id) || null
+    ? eventosPartido.find((evento) => evento.id === ultimaAccion.id) || momentosPartido.find((m) => m.id === ultimaAccion.id) || null
     : null
 
   // Playlist: salta al clip de la acción (3 s antes) y lo reproduce.
   const irAClip = useCallback((evento) => (videoListo ? solicitarVideo('salto', clipDe(evento).inicio) : false), [videoListo, solicitarVideo])
+
+  // Línea de tiempo: momentos vistos desde el equipo analizado o desde el otro (espejo, calculado acá).
+  const momentosVista = useMemo(() => momentosDesde(momentosPartido, catalogo, vistaMomentos), [momentosPartido, catalogo, vistaMomentos])
+  const momentoElegido = momentosVista.find((m) => m.id === momentoElegidoId) || null
+  // Tocar una barra: la elige y reproduce el video desde su inicio.
+  const reproducirMomento = useCallback((momento) => {
+    setMomentoElegidoId(momento.id)
+    if (videoListo) solicitarVideo('salto', Number(momento.inicio ?? momento.segundo))
+  }, [videoListo, solicitarVideo])
+  // Largo del video (para la escala de la línea); 0 si el reproductor todavía no lo sabe.
+  const obtenerDuracionVideo = useCallback(() => {
+    try { return Number(playerRef.current?.getDuration?.()) || 0 } catch { return 0 }
+  }, [])
   const playlist = usePlaylistAnalisis({
     partidoId,
     partido: partidoActual || null,
@@ -1415,6 +1475,49 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     return registro
   }
 
+  // Momento colectivo cerrado (etapa 1): se guarda con inicio y fin, sin jugadora, por la misma cola que las demás
+  // acciones (al instante, de fondo y con reintento).
+  function registrarMomento({ tipo, segundo, segundo_fin, partidoId: idPartido }) {
+    if (!esAdmin || !escrituraAutorizada || !idPartido) return null
+    const periodo = (idPartido === partidoId ? periodoPorMarcas(segundo, marcasPartido) : null) ?? periodoActual
+    const registro = {
+      id: crypto.randomUUID(),
+      partido_id: idPartido,
+      jugador_id: null,
+      segundo,
+      segundo_fin,
+      periodo,
+      tipo,
+      zona: null,
+      resultado: null,
+      observaciones: null,
+    }
+    cola.agregar(registro)
+    setUltimaAccion({ id: registro.id, partidoId: idPartido })
+    avisarRapido(`${etiquetaBotonDe(catalogo, tipo)} · ${segundo_fin - segundo} s`, `${formatearTiempo(segundo)} a ${formatearTiempo(segundo_fin)}`)
+    setError('')
+    return registro
+  }
+
+  // Mueve el inicio y el fin de un momento (línea de tiempo). Se ve al instante; si la base no lo acepta, vuelve atrás.
+  async function ajustarMomento(momento, { segundo, segundo_fin }) {
+    if (!esAdmin || !escrituraAutorizada || momento._cola) return
+    const antes = { segundo: momento.segundo, segundo_fin: momento.segundo_fin, periodo: momento.periodo }
+    const periodo = periodoPorMarcas(segundo, marcasPartido) ?? momento.periodo
+    setEventos((lista) => lista.map((e) => (e.id === momento.id ? { ...e, segundo, segundo_fin, periodo } : e)))
+    const { error: errorAjuste } = await supabase.from('analisis_eventos').update({ segundo, segundo_fin, periodo }).eq('id', momento.id).select('id').single()
+    if (errorAjuste) {
+      setEventos((lista) => lista.map((e) => (e.id === momento.id ? { ...e, ...antes } : e)))
+      setError(mensajeErrorOPropio(errorAjuste, 'ajustar el momento'))
+    }
+  }
+
+  // Botón de la botonera colectiva (clic o tecla): abre el momento; la misma tecla o Enter lo cierra.
+  function tocarColectiva(nombre) {
+    setIluminado((anterior) => ({ tipo: nombre, n: (anterior?.n || 0) + 1 }))
+    grabacionColectiva.tocar(nombre)
+  }
+
   // Botón de la botonera (clic o tecla): en «un toque» registra; si no, elige la acción y espera a la jugadora.
   function tocarAccion(nombre) {
     setIluminado((anterior) => ({ tipo: nombre, n: (anterior?.n || 0) + 1 }))
@@ -1603,10 +1706,12 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     setNotas('')
     setPartidoCalendarioId('')
     setEditandoId(null)
+    setEquipoAnalizadoPropio('propio')
   }
 
   function abrirNuevoAnalisis() {
     limpiarFormulario()
+    setTipoNuevoAnalisis('propio')
     setMostrarFormulario(true)
     setError('')
     setMensaje('')
@@ -1637,6 +1742,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     if (!esAdmin || !escrituraAutorizada) return
 
     setEditandoId(partido.id)
+    setTipoNuevoAnalisis(esScouting(partido) ? 'scouting' : 'propio')
+    setEquipoAnalizadoPropio(partido.equipo_analizado === 'rival' ? 'rival' : 'propio')
     setPartidoCalendarioId(
       partido.partido_calendario_id ||
       partido.partido_calendario?.id ||
@@ -1691,6 +1798,10 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
         video_url: videoUrl.trim() || null,
         notas: notas.trim() || null,
         creado_por: usuario?.email || null,
+        // Solo se manda si cambia o si la base ya tiene la columna (antes de correr el SQL de la etapa 1, no existe).
+        ...(equipoAnalizadoPropio === 'rival' || partidos.some((p) => 'equipo_analizado' in p)
+          ? { equipo_analizado: equipoAnalizadoPropio }
+          : {}),
       }
 
       let respuesta
@@ -1730,6 +1841,33 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     } catch (e) {
       console.error('Error al guardar análisis:', e)
       setError(mensajeErrorOPropio(e, 'guardar el análisis'))
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  // Partido de scouting (el rival contra otro club): sin calendario, convocatoria ni minutos.
+  async function guardarScouting(registro) {
+    if (!esAdmin || !escrituraAutorizada || guardando) return
+    setGuardando(true)
+    setError('')
+    setMensaje('')
+    try {
+      const fila = { ...registro, creado_por: usuario?.email || null }
+      const respuesta = editandoId
+        ? await supabase.from('analisis_partidos').update(fila).eq('id', editandoId).select().single()
+        : await supabase.from('analisis_partidos').insert(fila).select().single()
+      if (respuesta.error) throw respuesta.error
+      const estabaEditando = Boolean(editandoId)
+      limpiarFormulario()
+      setMostrarFormulario(false)
+      await cargarDatos()
+      setPartidoId(respuesta.data.id)
+      setSeccion('video')
+      setMensaje(estabaEditando ? 'Partido de scouting actualizado.' : 'Partido de scouting creado. Marcá los momentos con la botonera colectiva.')
+    } catch (e) {
+      console.error('Error al guardar el scouting:', e)
+      setError(mensajeErrorOPropio(e, 'guardar el partido de scouting'))
     } finally {
       setGuardando(false)
     }
@@ -1863,21 +2001,41 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
   // Atajos de teclado: solo en la vista de video, para quien puede etiquetar. Incluye la ventana separada.
   const ventanaAuxiliar = ventanas.modo && ventanas.nodo ? ventanas.nodo.ownerDocument?.defaultView || null : null
+  // Momento colectivo abierto: se cierra con la misma tecla, con Enter o solo (duración por defecto).
+  const grabacionColectiva = useGrabacionColectiva({
+    reloj: relojVideo,
+    catalogo,
+    partidoId,
+    activa: !modoConsulta,
+    guardar: registrarMomento,
+    puedeAbrir: () => {
+      if (!capturaBloqueada) return true
+      setError('Esperá a que el video esté conectado antes de etiquetar.')
+      return false
+    },
+  })
   const estadoAtajos = useAtajosAnalisis({
     activo: !cargando && accesoEditor && !bloqueoEscritura && seccion === 'video' && Boolean(partidoActual),
-    mapa: atajosBotonera,
+    mapa: botoneraEnUso === 'colectiva' ? atajosBotoneraColectiva : atajosBotonera,
     principal: typeof window === 'undefined' ? null : window,
     auxiliar: ventanaAuxiliar,
     // Con el cartel de gol / tarjeta / cambio abierto, las teclas no marcan otras acciones.
     pausar: eligiendoTecla || Boolean(cartelMarcador),
     acciones: {
-      marcar: tocarAccion,
-      marcador: abrirMarcador,
+      marcar: botoneraEnUso === 'colectiva' ? tocarColectiva : tocarAccion,
+      // En scouting no hay marcador (no juega Comunicaciones).
+      marcador: scouting ? undefined : abrirMarcador,
       alternar: alternarReproduccion,
       saltar: desplazarVideo,
       deshacer: deshacerUltimaAccion,
       ayuda: () => setAyudaAtajos((abierta) => !abierta),
-      interceptar: playlist.interceptar,
+      interceptar: (evento) => {
+        if (botoneraEnUso === 'colectiva' && grabacionColectiva.grabacion && evento.key === 'Enter') {
+          grabacionColectiva.cerrar()
+          return true
+        }
+        return playlist.interceptar?.(evento) || false
+      },
     },
   })
 
@@ -1963,9 +2121,28 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       {mostrarFormulario && accesoEditor && !modoConsulta && (
         <Panel>
           <h2 className="mb-2 text-lg font-bold">
-            {editandoId ? 'Editar análisis' : 'Vincular análisis a un partido'}
+            {editandoId ? 'Editar análisis' : tipoNuevoAnalisis === 'scouting' ? 'Nuevo partido de scouting' : 'Vincular análisis a un partido'}
           </h2>
 
+          {!editandoId && (
+            <div className="az-segmento col-selector" role="group" aria-label="Tipo de análisis">
+              <button type="button" aria-pressed={tipoNuevoAnalisis === 'propio'} onClick={() => setTipoNuevoAnalisis('propio')}>Partido propio</button>
+              <button type="button" aria-pressed={tipoNuevoAnalisis === 'scouting'} onClick={() => setTipoNuevoAnalisis('scouting')}>Scouting (rival contra otro club)</button>
+            </div>
+          )}
+
+          {tipoNuevoAnalisis === 'scouting' ? (
+            <FormularioScouting
+              key={editandoId || 'nuevo'}
+              inicial={editandoId ? partidos.find((p) => p.id === editandoId) : null}
+              categoriaPorDefecto={partidoActual?.categoria_id || CATEGORIA_ID}
+              guardando={guardando || bloqueoEscritura}
+              onGuardar={guardarScouting}
+              onCancelar={() => { limpiarFormulario(); setMostrarFormulario(false) }}
+              inputClass={inputClass}
+              inputStyle={inputStyle}
+            />
+          ) : <>
           <p className="mb-4 text-sm" style={{ color: A.secundario }}>
             Seleccioná un encuentro existente del calendario. No se creará otro
             partido en el calendario.
@@ -2017,6 +2194,16 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
               </span>
             </Campo>
 
+            <fieldset>
+              <legend className="mb-1 text-sm font-bold">Equipo analizado (la botonera colectiva marca desde este equipo)</legend>
+              <div className="az-segmento" role="group">
+                <button type="button" aria-pressed={equipoAnalizadoPropio === 'propio'} onClick={() => setEquipoAnalizadoPropio('propio')}>Comunicaciones</button>
+                <button type="button" aria-pressed={equipoAnalizadoPropio === 'rival'} onClick={() => setEquipoAnalizadoPropio('rival')}>
+                  {partidosCalendario.find((p) => p.id === partidoCalendarioId)?.rival || 'Rival'}
+                </button>
+              </div>
+            </fieldset>
+
             <Campo label="Notas generales">
               <textarea
                 className={inputClass}
@@ -2044,6 +2231,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
               </Boton>
             </div>
           </form>
+          </>}
         </Panel>
       )}
 
@@ -2081,14 +2269,36 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
           )}
         </div>
 
+        {partidos.length > 0 && (
+          <div className="bib-filtros">
+            <div className="az-segmento" role="group" aria-label="Tipo de análisis">
+              {[['todos', 'Todos'], ['propio', 'Propios'], ['scouting', 'Scouting']].map(([id, texto]) => (
+                <button key={id} type="button" aria-pressed={filtroBiblioteca.tipo === id}
+                  onClick={() => setFiltroBiblioteca((f) => ({ ...f, tipo: id }))}>{texto}</button>
+              ))}
+            </div>
+            <input
+              className={inputClass}
+              style={inputStyle}
+              type="search"
+              aria-label="Buscar por rival"
+              placeholder="Buscar por rival…"
+              value={filtroBiblioteca.rival}
+              onChange={(e) => setFiltroBiblioteca((f) => ({ ...f, rival: e.target.value }))}
+            />
+          </div>
+        )}
+
         {partidos.length === 0 ? (
           <p className="mt-4 text-sm" style={{ color: A.secundario }}>
             Todavía no hay análisis guardados. Usá «Nuevo análisis» para elegir
             un partido del calendario.
           </p>
+        ) : partidosFiltrados.length === 0 ? (
+          <p className="mt-4 text-sm" style={{ color: A.secundario }}>Ningún análisis coincide con el filtro.</p>
         ) : (
           <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-            {partidos.map((partido) => {
+            {partidosFiltrados.map((partido) => {
               const encuentro =
                 partido.partido_calendario ||
                 partidosCalendario.find(
@@ -2115,7 +2325,12 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                     borderColor: activo ? AMARILLO : A.borde,
                   }}
                 >
-                  <p className="font-bold">{encuentro?.rival || partido.rival}</p>
+                  <p className="font-bold">
+                    {esScouting(partido)
+                      ? `${partido.equipo_local} vs ${partido.equipo_visitante}`
+                      : encuentro?.rival || partido.rival}
+                    {esScouting(partido) && <span className="bib-chip">Scouting</span>}
+                  </p>
                   <p className="mt-1 text-xs" style={{ color: A.secundario }}>
                     {datosEncuentro({
                       ...partido,
@@ -2192,7 +2407,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                     <div className="mv-contenedor aspect-video overflow-hidden rounded-lg bg-black">
                       <MarcadorVideo reloj={relojVideo} marcas={marcasPartido} eventos={eventosDelPartido.eventos}
                         rival={partidoCalendarioActual?.rival || partidoActual.rival}
-                        puedeMarcar={accesoEditor && !bloqueoEscritura && videoListo && !eventosDelPartido.cargando && !eventosDelPartido.error}
+                        puedeMarcar={!scouting && accesoEditor && !bloqueoEscritura && videoListo && !eventosDelPartido.cargando && !eventosDelPartido.error}
                         onMarcar={marcarDesdeMarcador} />
                       <iframe
                         key={`${partidoActual.id}-${videoActual}-${destinoReproductor}-${revisionReproductor}`}
@@ -2230,6 +2445,23 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                   {videoActual && <>
                     {controlesVideo}
                     {videoUrlActual && <a href={videoUrlActual} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-bold" style={{ color: textoAnalisis(AMARILLO) }}>Abrir video en YouTube</a>}
+                    <LineaTiempo
+                      reloj={relojVideo}
+                      catalogo={catalogo}
+                      momentos={momentosVista}
+                      individuales={eventosPartido}
+                      marcas={marcasPartido}
+                      obtenerDuracionVideo={obtenerDuracionVideo}
+                      editable={accesoEditor && !bloqueoEscritura && !modoConsulta}
+                      vista={vistaMomentos}
+                      onVista={(vista) => { setVistaMomentos(vista); setMomentoElegidoId(null) }}
+                      equipos={equiposPartido}
+                      seleccionadoId={momentoElegidoId}
+                      etiquetaDe={etiquetaTipo}
+                      onIr={irAlSegundo}
+                      onReproducir={reproducirMomento}
+                      onAjustar={ajustarMomento}
+                    />
                   </>}
                 </div>
                 </ZonaVentanaAnalisis>
@@ -2255,6 +2487,20 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                   ))}
                 </div>
                 {!modoConsulta && <EstadoGuardado items={colaItems} />}
+                <div className="px-4">
+                  <ClipSeleccionado
+                    momento={momentoElegido}
+                    individuales={eventosPartido}
+                    etiquetaDe={etiquetaTipo}
+                    dorsalDe={(id) => citaciones.find((c) => c.jugador_id === id)?.dorsal ?? null}
+                    minutoDe={(s) => { const m = minutoReal(s, marcasPartido); return m?.estado === 'juego' ? m.texto : '' }}
+                    equipo={momentoElegido?.equipo === 'otro' ? equiposPartido.otro : equiposPartido.analizado}
+                    puedeBorrar={accesoEditor && !bloqueoEscritura && !modoConsulta}
+                    onReproducir={reproducirMomento}
+                    onBorrar={async (m) => { await eliminarEvento(m); setMomentoElegidoId(null) }}
+                    onCerrar={() => setMomentoElegidoId(null)}
+                  />
+                </div>
 
                 <div role="tabpanel" id="az-panel-etiquetado" aria-labelledby="az-pestana-etiquetado" hidden={pestanaPanel !== 'etiquetado'} className="az-panel-cuerpo">
                   {ventanas.modo === 'botonera' && <p className="az-nota">La botonera está abierta en la otra ventana.</p>}
@@ -2275,9 +2521,11 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                     </div>
                     {periodoAutomatico && <p className="az-nota-corta">El 1T / 2T se toma solo de las marcas del partido.</p>}
                     <p className="mt-2 text-sm" style={{ color: A.secundario }}>
-                      {unToque
-                        ? 'Tocá una acción y se guarda al instante, sin jugadora. La completás después, en la revisión.'
-                        : '1. Elegí una acción. 2. Elegí la jugadora. 3. Completá el resultado cuando revises el evento.'}
+                      {botoneraEnUso === 'colectiva'
+                        ? `Momentos que duran, desde ${equiposPartido.analizado}. La tecla abre el momento y la misma tecla o Enter lo cierra.`
+                        : unToque
+                          ? 'Tocá una acción y se guarda al instante, sin jugadora. La completás después, en la revisión.'
+                          : '1. Elegí una acción. 2. Elegí la jugadora. 3. Completá el resultado cuando revises el evento.'}
                     </p>
                   </div>
 
@@ -2287,7 +2535,13 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                     </p>
                   ) : (
                     <>
-                      <button
+                      <div className="az-segmento col-selector" role="group" aria-label="Botonera">
+                        <button type="button" aria-pressed={botoneraEnUso === 'colectiva'} onClick={() => elegirModoBotonera('colectiva')}>Colectiva</button>
+                        <button type="button" aria-pressed={botoneraEnUso === 'individual'} disabled={scouting}
+                          title={scouting ? 'En scouting, por ahora, solo la botonera colectiva' : undefined}
+                          onClick={() => { grabacionColectiva.cerrar(); elegirModoBotonera('individual') }}>Individual</button>
+                      </div>
+                      {botoneraEnUso === 'individual' && <button
                         type="button"
                         role="switch"
                         aria-checked={unToque}
@@ -2308,10 +2562,23 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                         >
                           {unToque ? 'Activado' : 'Apagado'}
                         </span>
-                      </button>
+                      </button>}
 
                       <IndicadorAtajos estado={estadoAtajos} onAyuda={() => setAyudaAtajos((abierta) => !abierta)} />
 
+                      {botoneraEnUso === 'colectiva' ? (
+                        <BotoneraColectiva
+                          tipos={botoneraColectiva}
+                          atajos={atajosBotoneraColectiva}
+                          grabacion={grabacionColectiva.grabacion?.partidoId === partidoId ? grabacionColectiva.grabacion : null}
+                          reloj={relojVideo}
+                          etiquetaDe={etiquetaTipo}
+                          deshabilitado={capturaBloqueada && !grabacionColectiva.grabacion}
+                          iluminado={iluminado}
+                          onTocar={tocarColectiva}
+                          onCerrar={() => grabacionColectiva.cerrar()}
+                        />
+                      ) : <>
                       <div className="az-botonera">
                         {botonera.map((accion) => {
                           const activa = tipoRapido === accion.nombre
@@ -2358,6 +2625,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                           <button type="button" className="et-boton" onClick={() => { guardarAtajos(atajos); setSinTeclaPorMarcador([]) }}>Entendido</button>
                         </p>
                       )}
+                      </>}
 
                       {(colaConError.length > 0 || colaRechazadas.length > 0) && (
                         <div className="et-alerta-cola" role="alert">
@@ -2379,9 +2647,9 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
                       {ayudaAtajos && (
                         <AyudaAtajos
-                          tipos={botonera.map((a) => ({ codigo: a.nombre, etiqueta: a.corto }))}
-                          mapa={atajosBotonera}
-                          onCambiar={cambiarAtajos}
+                          tipos={(botoneraEnUso === 'colectiva' ? botoneraColectiva : botonera).map((a) => ({ codigo: a.nombre, etiqueta: a.corto }))}
+                          mapa={botoneraEnUso === 'colectiva' ? atajosBotoneraColectiva : atajosBotonera}
+                          onCambiar={botoneraEnUso === 'colectiva' ? cambiarAtajosColectiva : cambiarAtajos}
                           onCerrar={() => setAyudaAtajos(false)}
                           onEligiendo={setEligiendoTecla}
                         />
@@ -2842,7 +3110,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                 <div role="tabpanel" id="az-panel-partido" aria-labelledby="az-pestana-partido" hidden={pestanaPanel !== 'partido'} className="az-panel-cuerpo">
                   <h2 className="az-titulo">Datos del partido</h2>
                   <div className="mb-4 mt-3">
-                    {!modoConsulta && <ImportarComet
+                    {!modoConsulta && !scouting && <ImportarComet
                       key={partidoActual.id}
                       analisis={partidoActual}
                       calendario={partidoCalendarioActual || null}

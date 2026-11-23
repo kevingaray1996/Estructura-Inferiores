@@ -30,6 +30,32 @@ export const ATAJOS_COLECTIVA_POR_DEFECTO = Object.freeze({
   'Acción destacada': 'h',
 })
 
+// Teclas que nunca son de un botón: video, ayuda y marcador (como en la individual) y Enter (cierra el momento).
+const NO_ASIGNABLES = new Set([' ', '?', 'g', 'y', 'x'])
+
+function almacenLocal() {
+  try { return typeof window === 'undefined' ? null : window.localStorage } catch { return null }
+}
+
+export function leerAtajosColectiva(almacen = almacenLocal()) {
+  try {
+    const guardado = JSON.parse(almacen?.getItem(CLAVE_ATAJOS_COLECTIVA) || 'null')
+    if (!guardado || typeof guardado !== 'object') return { ...ATAJOS_COLECTIVA_POR_DEFECTO }
+    const mapa = {}, usadas = new Set()
+    for (const [accion, tecla] of Object.entries(guardado)) {
+      const t = typeof tecla === 'string' ? tecla.toLowerCase() : ''
+      if (t.length === 1 && !NO_ASIGNABLES.has(t) && !usadas.has(t)) { mapa[accion] = t; usadas.add(t) }
+    }
+    return mapa
+  } catch {
+    return { ...ATAJOS_COLECTIVA_POR_DEFECTO }
+  }
+}
+
+export function guardarAtajosColectiva(mapa, almacen = almacenLocal()) {
+  try { almacen?.setItem(CLAVE_ATAJOS_COLECTIVA, JSON.stringify(mapa)); return true } catch { return false }
+}
+
 export function esTipoColectivo(catalogo, codigo) {
   return catalogo?.porCodigo?.[codigo]?.botonera === 'colectiva'
 }

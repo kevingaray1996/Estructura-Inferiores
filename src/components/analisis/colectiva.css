@@ -1,0 +1,91 @@
+/* Etapa 1 de Análisis: botonera colectiva, aviso «Grabando», línea de tiempo, clip elegido y scouting.
+   Colores solo desde los tokens de apariencia.css (negro y amarillo; rojo y verde solo para correcta / incorrecta). */
+
+/* Selector «Colectiva | Individual» */
+.col-selector { display: flex; width: 100%; margin-bottom: .75rem; }
+.col-selector button { flex: 1; }
+
+/* Grupos de la botonera colectiva */
+.col-grupo + .col-grupo { margin-top: .875rem; }
+.col-grupo-titulo {
+  margin: 0 0 .375rem; font-size: .75rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--ui-compartido-secundario);
+}
+.col-boton { min-height: 52px; }
+.col-boton[data-grabando] {
+  background: var(--analisis-activo); border-color: var(--ui-acento);
+  box-shadow: inset 0 0 0 2px var(--ui-acento);
+}
+
+/* Aviso de momento abierto */
+.col-grabando {
+  position: sticky; top: calc(var(--az-alto-barra, 0px) + .25rem); z-index: 5;
+  display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; margin-bottom: .75rem; padding: .625rem .75rem;
+  border: 2px solid var(--ui-acento); border-radius: .5rem; background: var(--ui-compartido-fondo); color: var(--ui-texto);
+  font-weight: 800;
+}
+.col-grabando-punto { width: .625rem; height: .625rem; border-radius: 50%; background: var(--ui-acento); animation: col-latido 1s ease-in-out infinite; }
+.col-grabando-nota { flex-basis: 100%; font-size: .75rem; font-weight: 600; color: var(--ui-compartido-secundario); }
+.col-grabando button { margin-left: auto; }
+@keyframes col-latido { 50% { opacity: .3; } }
+
+/* Línea de tiempo */
+.lt { margin-top: 1rem; border: 1px solid var(--ui-compartido-borde); border-radius: .75rem; background: var(--analisis-panel); }
+.lt-barra-sup { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding: .625rem .75rem; border-bottom: 1px solid var(--ui-compartido-borde); }
+.lt-barra-sup h3 { margin: 0 auto 0 0; font-size: .9375rem; font-weight: 800; }
+.lt-control { min-height: 36px; padding: 0 .625rem; border: 1px solid var(--ui-compartido-borde); border-radius: .375rem;
+  background: var(--analisis-control); color: var(--ui-compartido-texto); font-size: .8125rem; font-weight: 700; }
+.lt-control[aria-pressed='true'] { background: var(--ui-acento); color: var(--ui-texto-sobre-acento); border-color: var(--ui-acento); }
+.lt-control:focus-visible, .lt-barra:focus-visible, .lt-punto:focus-visible { outline: 2px solid var(--ui-foco); outline-offset: 2px; }
+.lt-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
+.lt-tabla { position: relative; min-width: 640px; padding: .25rem 0 .5rem; }
+.lt-fila { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); align-items: center; min-height: 34px; }
+.lt-fila + .lt-fila { border-top: 1px solid color-mix(in srgb, var(--ui-compartido-borde) 55%, transparent); }
+.lt-etiqueta {
+  position: sticky; left: 0; z-index: 3; padding: 0 .5rem 0 .75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: .75rem; font-weight: 700; color: var(--ui-compartido-secundario); background: var(--analisis-panel);
+}
+.lt-pista { position: relative; height: 34px; cursor: pointer; touch-action: pan-x; }
+.lt-barra {
+  position: absolute; top: 6px; height: 22px; min-width: 4px; border-radius: 4px; border: 1px solid var(--lt-color);
+  background: color-mix(in srgb, var(--lt-color) 45%, transparent); cursor: pointer; padding: 0;
+}
+.lt-barra[data-elegida] { box-shadow: 0 0 0 2px var(--ui-texto); z-index: 2; }
+.lt-barra[data-editable] { cursor: grab; touch-action: none; }
+.lt-barra[data-arrastrando] { cursor: grabbing; opacity: .85; }
+.lt-barra[data-pendiente] { border-style: dashed; }
+.lt-borde { position: absolute; top: -2px; bottom: -2px; width: 10px; cursor: ew-resize; touch-action: none; }
+.lt-borde[data-lado='inicio'] { left: -5px; }
+.lt-borde[data-lado='fin'] { right: -5px; }
+.lt-borde::after { content: ''; position: absolute; top: 4px; bottom: 4px; left: 4px; width: 2px; border-radius: 1px; background: var(--ui-texto); opacity: .7; }
+.lt-punto {
+  position: absolute; top: 11px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; padding: 0;
+  border: 1px solid var(--analisis-panel); background: var(--ui-acento);
+}
+.lt-punto[data-estado='correcta'] { background: var(--ui-exito); }
+.lt-punto[data-estado='incorrecta'] { background: var(--ui-peligro); }
+.lt-marca { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--ui-texto-secundario); pointer-events: none; }
+.lt-marca span { position: absolute; top: 2px; left: 4px; font-size: .625rem; font-weight: 800; color: var(--ui-texto-secundario); white-space: nowrap; }
+.lt-cursor { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--ui-acento); pointer-events: none; z-index: 4; }
+.lt-capa-cursor { position: absolute; top: 0; bottom: 0; left: 8.5rem; right: 0; pointer-events: none; }
+.lt-vacia { padding: .75rem; font-size: .8125rem; color: var(--ui-compartido-secundario); }
+.lt-pie { padding: .5rem .75rem .75rem; font-size: .75rem; color: var(--ui-compartido-secundario); }
+
+/* Clip elegido */
+.clip { margin-top: .75rem; padding: .75rem; border: 1px solid var(--ui-acento); border-radius: .5rem; background: var(--ui-compartido-fondo); }
+.clip h4 { margin: 0; font-size: .9375rem; font-weight: 800; }
+.clip-datos { margin: .25rem 0 .5rem; font-size: .8125rem; color: var(--ui-compartido-secundario); }
+.clip-eventos { margin: 0 0 .625rem; font-size: .875rem; }
+.clip-acciones { display: flex; flex-wrap: wrap; gap: .5rem; }
+.clip-acciones button { min-height: 44px; }
+
+/* Biblioteca: filtro y marca de scouting */
+.bib-filtros { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: 1rem; }
+.bib-filtros input { min-height: 44px; flex: 1 1 12rem; }
+.bib-chip {
+  display: inline-block; margin-left: .375rem; padding: .0625rem .375rem; border: 1px solid var(--ui-acento); border-radius: 999px;
+  font-size: .625rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--ui-texto-acento); vertical-align: middle;
+}
+
+@media (prefers-reduced-motion: reduce) { .col-grabando-punto { animation: none; } }
+@media (max-width: 767.98px) { .lt-fila { grid-template-columns: 6.5rem minmax(0, 1fr); } .lt-capa-cursor { left: 6.5rem; } }
