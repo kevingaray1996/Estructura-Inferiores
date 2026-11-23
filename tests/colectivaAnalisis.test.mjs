@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import { CATALOGO_BASE, crearCatalogo } from '../src/utils/analisis/catalogoAcciones.js'
 import { tiposBotonera } from '../src/utils/analisis/botonera.js'
 import {
-  abrirGrabacion, cerrarGrabacion, crucesDeClips, debeCerrarseSola, equiposDelAnalisis, espejoDe, esMomento,
+  abrirGrabacion, cerrarGrabacion, cerrarUltima, cerrarVencidas, crucesDeClips, tocarColectiva, debeCerrarseSola, equiposDelAnalisis, espejoDe, esMomento,
   eventosEnClip, filtrarAnalisis, momentosDesde, resumenEventosClip, segundosGrabando, separarAcciones, validarScouting,
 } from '../src/utils/analisis/colectiva.js'
 import {
@@ -97,6 +97,39 @@ test('grabación: abre en el segundo actual, cierra con la misma tecla o sola co
   assert.equal(debeCerrarseSola(g, 127), false)
   assert.equal(debeCerrarseSola(g, 128), true)
   assert.equal(debeCerrarseSola(null, 500), false)
+})
+
+test('Charla se superpone: no cierra la fase abierta; otra fase sí cierra la fase; Enter cierra el último abierto', () => {
+  let r = tocarColectiva([], 'Salida', 100, catalogo)
+  assert.deepEqual([r.abiertas.map((g) => g.tipo), r.cerradas, r.abierto], [['Salida'], [], 'Salida'])
+  // Error defensivo (Charla) mientras sigue la Salida: no cierra nada.
+  r = tocarColectiva(r.abiertas, 'Error defensivo', 103, catalogo)
+  assert.deepEqual([r.abiertas.map((g) => g.tipo), r.cerradas], [['Salida', 'Error defensivo'], []])
+  // Su misma tecla lo cierra; la Salida sigue abierta.
+  r = tocarColectiva(r.abiertas, 'Error defensivo', 106, catalogo)
+  assert.deepEqual(r.cerradas, [{ tipo: 'Error defensivo', segundo: 103, segundo_fin: 106 }])
+  assert.deepEqual(r.abiertas.map((g) => g.tipo), ['Salida'])
+  // Otra Charla con una Charla abierta: cierra la Charla anterior, no la fase.
+  r = tocarColectiva(r.abiertas, 'Error defensivo', 108, catalogo)
+  r = tocarColectiva(r.abiertas, 'Acción destacada', 109, catalogo)
+  assert.deepEqual(r.cerradas, [{ tipo: 'Error defensivo', segundo: 108, segundo_fin: 109 }])
+  assert.deepEqual(r.abiertas.map((g) => g.tipo), ['Salida', 'Acción destacada'])
+  // Otra fase: cierra la fase abierta en este segundo, la Charla sigue.
+  r = tocarColectiva(r.abiertas, 'Presión alta', 112, catalogo)
+  assert.deepEqual(r.cerradas, [{ tipo: 'Salida', segundo: 100, segundo_fin: 112 }])
+  assert.deepEqual(r.abiertas.map((g) => g.tipo), ['Acción destacada', 'Presión alta'])
+  // Enter: cierra el último que se abrió (la fase nueva); queda la Charla.
+  const enter = cerrarUltima(r.abiertas, 115)
+  assert.deepEqual(enter.cerradas, [{ tipo: 'Presión alta', segundo: 112, segundo_fin: 115 }])
+  assert.deepEqual(enter.abiertas.map((g) => g.tipo), ['Acción destacada'])
+  assert.deepEqual(cerrarUltima([], 1), { abiertas: [], cerradas: [] })
+  // Cada una se cierra sola con su duración: Acción destacada (8 s en este catálogo de prueba) vence antes que la fase.
+  const solas = cerrarVencidas(r.abiertas, 117)
+  assert.deepEqual(solas.cerradas, [{ tipo: 'Acción destacada', segundo: 109, segundo_fin: 117 }])
+  assert.deepEqual(solas.abiertas.map((g) => g.tipo), ['Presión alta'])
+  assert.equal(cerrarVencidas(solas.abiertas, 118).cerradas.length, 0)
+  // El partido viaja con el momento cerrado.
+  assert.deepEqual(cerrarUltima([{ tipo: 'Salida', inicio: 1, duracion: 15, partidoId: 'p1' }], 9).cerradas[0], { tipo: 'Salida', segundo: 1, segundo_fin: 9, partidoId: 'p1' })
 })
 
 test('equipos: propio (Comunicaciones o el rival) y scouting (local o visitante)', () => {

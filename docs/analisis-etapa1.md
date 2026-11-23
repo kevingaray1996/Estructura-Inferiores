@@ -32,10 +32,10 @@ Botones colectivos que crea la migración:
 
 | Grupo | Botones (duración por defecto) |
 |---|---|
-| Con pelota | Salida (10 s), Ataque posicional (20 s), Transición ofensiva (8 s) |
-| Sin pelota | Presión alta (10 s), Defensa organizada (20 s), Transición defensiva (8 s), Salida rival (10 s) |
-| Pelota parada | Córner a favor, Córner en contra, Tiro libre a favor, Tiro libre en contra (10 s) |
-| Charla | Error defensivo (6 s), Acción destacada (8 s) |
+| Con pelota | Salida (15 s), Ataque posicional (30 s), Transición ofensiva (10 s) |
+| Sin pelota | Presión alta (10 s), Defensa organizada (30 s), Transición defensiva (10 s), Salida rival (15 s) |
+| Pelota parada | Córner a favor, Córner en contra, Tiro libre a favor, Tiro libre en contra (15 s) |
+| Charla | Error defensivo (6 s), Acción destacada (6 s) — se superponen a la fase abierta |
 
 ### `analisis_eventos` (las acciones que ya existen)
 
@@ -85,7 +85,9 @@ Salida rival → Salida. Funciones en `src/utils/analisis/colectiva.js` (`espejo
 1. **Pestaña Etiquetado**: selector «Colectiva | Individual». La colectiva muestra los botones por grupo con su
    tecla. Tocar (o la tecla) abre el momento en el segundo del video; la misma tecla o Enter lo cierra. Mientras está
    abierto: aviso «Grabando: Transición ofensiva · 6 s». Si no se cierra, al llegar a la duración por defecto se
-   cierra solo. Tocar otro botón cierra el abierto en ese segundo y abre el nuevo.
+   cierra solo. Tocar otra fase cierra la fase abierta en ese segundo y abre la nueva. Los botones de Charla (Error
+   defensivo, Acción destacada) se superponen: no cierran la fase abierta y se ven en su propia fila. Enter cierra el
+   último que se abrió.
 2. **Línea de tiempo** (debajo del video): una fila por tipo colectivo con marcas (barras de inicio a fin), una fila
    de eventos individuales (puntos verdes / rojos) y las marcas de los tiempos. Línea que sigue al video, tocar una
    barra la reproduce, zoom. Coordinación arrastra bordes o la barra entera y borra; cuerpo técnico solo mira. Vista

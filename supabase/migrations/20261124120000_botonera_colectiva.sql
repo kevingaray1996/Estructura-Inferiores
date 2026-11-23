@@ -148,19 +148,19 @@ BEGIN
   -- 4) Botones colectivos. Primero sin espejo (el espejo apunta a filas que tienen que existir).
   INSERT INTO public.analisis_tipos_accion
     (codigo, etiqueta, etiqueta_boton, icono, color, ubicacion, resultados, resultado_implicito, es_pase, grupo, orden, visible, botonera, duracion_defecto) VALUES
-    ('Salida',               'Salida',               'Salida',          '⇡', 'acento',  'opcional', '{}', NULL, false, 'con_pelota',    101, true, 'colectiva', 10),
-    ('Ataque posicional',    'Ataque posicional',    'Ataque posic.',   '▤', 'acento',  'opcional', '{}', NULL, false, 'con_pelota',    102, true, 'colectiva', 20),
-    ('Transición ofensiva',  'Transición ofensiva',  'Transición of.',  '»', 'acento',  'opcional', '{}', NULL, false, 'con_pelota',    103, true, 'colectiva', 8),
+    ('Salida',               'Salida',               'Salida',          '⇡', 'acento',  'opcional', '{}', NULL, false, 'con_pelota',    101, true, 'colectiva', 15),
+    ('Ataque posicional',    'Ataque posicional',    'Ataque posic.',   '▤', 'acento',  'opcional', '{}', NULL, false, 'con_pelota',    102, true, 'colectiva', 30),
+    ('Transición ofensiva',  'Transición ofensiva',  'Transición of.',  '»', 'acento',  'opcional', '{}', NULL, false, 'con_pelota',    103, true, 'colectiva', 10),
     ('Presión alta',         'Presión alta',         'Presión alta',    '⤒', 'info',    'opcional', '{}', NULL, false, 'sin_pelota',    104, true, 'colectiva', 10),
-    ('Defensa organizada',   'Defensa organizada',   'Defensa org.',    '▦', 'info',    'opcional', '{}', NULL, false, 'sin_pelota',    105, true, 'colectiva', 20),
-    ('Transición defensiva', 'Transición defensiva', 'Transición def.', '«', 'info',    'opcional', '{}', NULL, false, 'sin_pelota',    106, true, 'colectiva', 8),
-    ('Salida rival',         'Salida rival',         'Salida rival',    '⇣', 'info',    'opcional', '{}', NULL, false, 'sin_pelota',    107, true, 'colectiva', 10),
-    ('Córner a favor',       'Córner a favor',       'Córner a favor',  '◥', 'alerta',  'opcional', '{}', NULL, false, 'pelota_parada', 108, true, 'colectiva', 10),
-    ('Córner en contra',     'Córner en contra',     'Córner en contra','◣', 'alerta',  'opcional', '{}', NULL, false, 'pelota_parada', 109, true, 'colectiva', 10),
-    ('Tiro libre a favor',   'Tiro libre a favor',   'T. libre a favor','◉', 'alerta',  'opcional', '{}', NULL, false, 'pelota_parada', 110, true, 'colectiva', 10),
-    ('Tiro libre en contra', 'Tiro libre en contra', 'T. libre contra', '○', 'alerta',  'opcional', '{}', NULL, false, 'pelota_parada', 111, true, 'colectiva', 10),
+    ('Defensa organizada',   'Defensa organizada',   'Defensa org.',    '▦', 'info',    'opcional', '{}', NULL, false, 'sin_pelota',    105, true, 'colectiva', 30),
+    ('Transición defensiva', 'Transición defensiva', 'Transición def.', '«', 'info',    'opcional', '{}', NULL, false, 'sin_pelota',    106, true, 'colectiva', 10),
+    ('Salida rival',         'Salida rival',         'Salida rival',    '⇣', 'info',    'opcional', '{}', NULL, false, 'sin_pelota',    107, true, 'colectiva', 15),
+    ('Córner a favor',       'Córner a favor',       'Córner a favor',  '◥', 'alerta',  'opcional', '{}', NULL, false, 'pelota_parada', 108, true, 'colectiva', 15),
+    ('Córner en contra',     'Córner en contra',     'Córner en contra','◣', 'alerta',  'opcional', '{}', NULL, false, 'pelota_parada', 109, true, 'colectiva', 15),
+    ('Tiro libre a favor',   'Tiro libre a favor',   'T. libre a favor','◉', 'alerta',  'opcional', '{}', NULL, false, 'pelota_parada', 110, true, 'colectiva', 15),
+    ('Tiro libre en contra', 'Tiro libre en contra', 'T. libre contra', '○', 'alerta',  'opcional', '{}', NULL, false, 'pelota_parada', 111, true, 'colectiva', 15),
     ('Error defensivo',      'Error defensivo',      'Error def.',      '!', 'peligro', 'opcional', '{}', NULL, false, 'charla',        112, true, 'colectiva', 6),
-    ('Acción destacada',     'Acción destacada',     'Destacada',       '★', 'neutro',  'opcional', '{}', NULL, false, 'charla',        113, true, 'colectiva', 8);
+    ('Acción destacada',     'Acción destacada',     'Destacada',       '★', 'neutro',  'opcional', '{}', NULL, false, 'charla',        113, true, 'colectiva', 6);
   UPDATE public.analisis_tipos_accion SET espejo = m.espejo
     FROM (VALUES ('Transición ofensiva', 'Transición defensiva'), ('Transición defensiva', 'Transición ofensiva'),
                  ('Ataque posicional', 'Defensa organizada'), ('Defensa organizada', 'Ataque posicional'),

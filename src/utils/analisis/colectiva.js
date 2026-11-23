@@ -190,7 +190,45 @@ export function abrirGrabacion(tipo, segundo, catalogo) {
 export function cerrarGrabacion(grabacion, segundoActual) {
   const actual = Math.floor(Number(segundoActual))
   const fin = Number.isFinite(actual) && actual > grabacion.inicio ? actual : grabacion.inicio + grabacion.duracion
-  return { tipo: grabacion.tipo, segundo: grabacion.inicio, segundo_fin: fin }
+  const momento = { tipo: grabacion.tipo, segundo: grabacion.inicio, segundo_fin: fin }
+  return grabacion.partidoId ? { ...momento, partidoId: grabacion.partidoId } : momento
+}
+
+// Los botones de Charla (Error defensivo, Acción destacada) se superponen: no cierran la fase abierta ni la fase los
+// cierra a ellos. Puede haber a la vez una fase abierta y un momento de Charla abierto.
+export function esCharla(catalogo, tipo) {
+  return reglasDe(catalogo, tipo).grupo === 'charla'
+}
+
+// Toque de un botón colectivo sobre los momentos abiertos (en orden de apertura).
+// - Mismo botón abierto: lo cierra.
+// - Otro botón de la misma capa (fase con fase, charla con charla): cierra el abierto en este segundo y abre el nuevo.
+// - Capa distinta: abre sin cerrar nada.
+// Devuelve { abiertas, cerradas, abierto } (abierto: el tipo que se abrió, o null).
+export function tocarColectiva(abiertas, tipo, segundo, catalogo) {
+  const charla = esCharla(catalogo, tipo)
+  const mismaCapa = (abiertas || []).find((g) => esCharla(catalogo, g.tipo) === charla)
+  const cerradas = mismaCapa ? [cerrarGrabacion(mismaCapa, segundo)] : []
+  const resto = (abiertas || []).filter((g) => g !== mismaCapa)
+  if (mismaCapa?.tipo === tipo) return { abiertas: resto, cerradas, abierto: null }
+  return { abiertas: [...resto, abrirGrabacion(tipo, segundo, catalogo)], cerradas, abierto: tipo }
+}
+
+// Enter: cierra el último que se abrió.
+export function cerrarUltima(abiertas, segundo) {
+  if (!abiertas?.length) return { abiertas: [], cerradas: [] }
+  const ultima = abiertas[abiertas.length - 1]
+  return { abiertas: abiertas.slice(0, -1), cerradas: [cerrarGrabacion(ultima, segundo)] }
+}
+
+// Los que llegaron a su duración por defecto se cierran solos (con esa duración).
+export function cerrarVencidas(abiertas, segundo) {
+  const vencidas = (abiertas || []).filter((g) => debeCerrarseSola(g, segundo))
+  if (!vencidas.length) return { abiertas: abiertas || [], cerradas: [] }
+  return {
+    abiertas: abiertas.filter((g) => !vencidas.includes(g)),
+    cerradas: vencidas.map((g) => cerrarGrabacion(g, g.inicio + g.duracion)),
+  }
 }
 
 // Si no se cierra a mano, se cierra sola al llegar a la duración por defecto.

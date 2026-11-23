@@ -102,6 +102,14 @@ test('se aplica sin tocar lo existente: 13 botones colectivos, 10 espejos, pasa 
   assert.equal(await espejo('Presión alta'), 'Salida')
   assert.equal(await espejo('Córner en contra'), 'Córner a favor')
   assert.equal(await espejo('Error defensivo'), null)
+  // Duraciones por defecto (segundos) de los botones que crea la migración.
+  const duraciones = Object.fromEntries((await db.query(`select codigo, duracion_defecto from public.analisis_tipos_accion where botonera = 'colectiva'`)).rows.map((r) => [r.codigo, r.duracion_defecto]))
+  assert.deepEqual(duraciones, {
+    'Salida': 15, 'Salida rival': 15, 'Ataque posicional': 30, 'Defensa organizada': 30,
+    'Transición ofensiva': 10, 'Transición defensiva': 10, 'Presión alta': 10,
+    'Córner a favor': 15, 'Córner en contra': 15, 'Tiro libre a favor': 15, 'Tiro libre en contra': 15,
+    'Error defensivo': 6, 'Acción destacada': 6,
+  })
   await assert.rejects(db.exec(cambio), /Ya está aplicada/)
 })
 

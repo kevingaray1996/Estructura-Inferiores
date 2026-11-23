@@ -2030,7 +2030,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       deshacer: deshacerUltimaAccion,
       ayuda: () => setAyudaAtajos((abierta) => !abierta),
       interceptar: (evento) => {
-        if (botoneraEnUso === 'colectiva' && grabacionColectiva.grabacion && evento.key === 'Enter') {
+        if (botoneraEnUso === 'colectiva' && grabacionColectiva.abiertas.length && evento.key === 'Enter') {
           grabacionColectiva.cerrar()
           return true
         }
@@ -2539,7 +2539,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                         <button type="button" aria-pressed={botoneraEnUso === 'colectiva'} onClick={() => elegirModoBotonera('colectiva')}>Colectiva</button>
                         <button type="button" aria-pressed={botoneraEnUso === 'individual'} disabled={scouting}
                           title={scouting ? 'En scouting, por ahora, solo la botonera colectiva' : undefined}
-                          onClick={() => { grabacionColectiva.cerrar(); elegirModoBotonera('individual') }}>Individual</button>
+                          onClick={() => { grabacionColectiva.cerrarTodas(); elegirModoBotonera('individual') }}>Individual</button>
                       </div>
                       {botoneraEnUso === 'individual' && <button
                         type="button"
@@ -2570,13 +2570,12 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                         <BotoneraColectiva
                           tipos={botoneraColectiva}
                           atajos={atajosBotoneraColectiva}
-                          grabacion={grabacionColectiva.grabacion?.partidoId === partidoId ? grabacionColectiva.grabacion : null}
+                          abiertas={grabacionColectiva.abiertas.filter((g) => g.partidoId === partidoId)}
                           reloj={relojVideo}
                           etiquetaDe={etiquetaTipo}
-                          deshabilitado={capturaBloqueada && !grabacionColectiva.grabacion}
+                          deshabilitado={capturaBloqueada && !grabacionColectiva.abiertas.length}
                           iluminado={iluminado}
                           onTocar={tocarColectiva}
-                          onCerrar={() => grabacionColectiva.cerrar()}
                         />
                       ) : <>
                       <div className="az-botonera">

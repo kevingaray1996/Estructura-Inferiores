@@ -3,7 +3,7 @@ import { mostrarTecla } from '../../utils/analisis/atajos'
 import { GRUPOS_COLECTIVA, segundosGrabando } from '../../utils/analisis/colectiva'
 import './colectiva.css'
 
-// Aviso del momento abierto. Va aparte para que solo él se redibuje cada segundo.
+// Aviso de un momento abierto. Va aparte para que solo él se redibuje cada segundo.
 function AvisoGrabando({ grabacion, reloj, etiqueta, tecla, onCerrar }) {
   const segundo = useTiempoVideo(reloj)
   const lleva = segundosGrabando(grabacion, segundo)
@@ -11,7 +11,7 @@ function AvisoGrabando({ grabacion, reloj, etiqueta, tecla, onCerrar }) {
     <div className="col-grabando" role="status" aria-live="polite">
       <span className="col-grabando-punto" aria-hidden="true" />
       <span>Grabando: {etiqueta} · {lleva} s</span>
-      <button type="button" className="et-boton" onClick={onCerrar}>Cerrar ahora{tecla ? ` (${mostrarTecla(tecla)} o Enter)` : ' (Enter)'}</button>
+      <button type="button" className="et-boton" onClick={onCerrar}>Cerrar ahora{tecla ? ` (${mostrarTecla(tecla)})` : ''}</button>
       <span className="col-grabando-nota">Si no lo cerrás, se cierra solo a los {grabacion.duracion} s. Después lo ajustás en la línea de tiempo.</span>
     </div>
   )
@@ -19,12 +19,15 @@ function AvisoGrabando({ grabacion, reloj, etiqueta, tecla, onCerrar }) {
 
 // Botonera colectiva: momentos que duran (Salida, Transición, Córner…), sin jugadora, agrupados.
 // tipos: los de tiposBotonera(catalogo, 'colectiva'). atajos: { código: tecla }.
-export default function BotoneraColectiva({ tipos, atajos, grabacion, reloj, etiquetaDe, deshabilitado, onTocar, onCerrar, iluminado }) {
+// abiertas: momentos abiertos (una fase y, superpuesto, uno de Charla). Enter cierra el último abierto.
+export default function BotoneraColectiva({ tipos, atajos, abiertas = [], reloj, etiquetaDe, deshabilitado, onTocar, iluminado }) {
   return (
     <div>
-      {grabacion && (
-        <AvisoGrabando grabacion={grabacion} reloj={reloj} etiqueta={etiquetaDe(grabacion.tipo)} tecla={atajos[grabacion.tipo]} onCerrar={() => onCerrar()} />
-      )}
+      {abiertas.map((g) => (
+        <AvisoGrabando key={`${g.tipo}-${g.inicio}`} grabacion={g} reloj={reloj} etiqueta={etiquetaDe(g.tipo)} tecla={atajos[g.tipo]}
+          onCerrar={() => onTocar(g.tipo)} />
+      ))}
+      {abiertas.length > 0 && <p className="col-grabando-nota mb-2">Enter cierra el último que abriste.</p>}
       {tipos.length === 0 && (
         <p className="az-nota">Todavía no hay botones colectivos. Falta correr en Supabase el SQL de la etapa 1 (botonera colectiva).</p>
       )}
@@ -33,11 +36,11 @@ export default function BotoneraColectiva({ tipos, atajos, grabacion, reloj, eti
         if (!delGrupo.length) return null
         return (
           <section key={grupo} className="col-grupo" aria-label={titulo}>
-            <h3 className="col-grupo-titulo">{titulo}</h3>
+            <h3 className="col-grupo-titulo">{titulo}{grupo === 'charla' ? ' · se suma a la fase abierta' : ''}</h3>
             <div className="az-botonera">
               {delGrupo.map((accion) => {
                 const tecla = atajos[accion.nombre]
-                const abierta = grabacion?.tipo === accion.nombre
+                const abierta = abiertas.some((g) => g.tipo === accion.nombre)
                 return (
                   <button
                     key={accion.nombre}
