@@ -101,7 +101,8 @@ test('Atajos: tecla por acción, Espacio, flechas, Ctrl+Z, ayuda, editar una tec
     await h.act(() => { campo.dispatchEvent(new h.dom.window.KeyboardEvent('keydown', { key: '+', bubbles: true, cancelable: true })) })
     assert.equal(h.writes.length, antes)
 
-    // «?» muestra los atajos; se cambia la tecla de Pérdida a «x» y queda guardada en esta computadora.
+    // «?» muestra los atajos; se cambia la tecla de Pérdida a «q» y queda guardada en esta computadora.
+    // G, Y y X son del marcador (gol, tarjeta y cambio): no se pueden dar a una acción.
     await h.tecla('?')
     assert.match(texto(), /Atajos de teclado/)
     const fila = [...document.querySelectorAll('.et-ayuda li')].find((li) => li.textContent.includes('Pérdida'))
@@ -109,10 +110,12 @@ test('Atajos: tecla por acción, Espacio, flechas, Ctrl+Z, ayuda, editar una tec
     await h.tecla('+')
     assert.match(texto(), /ya es de/, 'No deja repetir una tecla')
     await h.tecla('x')
-    assert.equal(JSON.parse(h.dom.window.localStorage.getItem('analisis_atajos_v1')).Pérdida, 'x')
-    assert.equal(h.tipo('Pérdida').querySelector('kbd').textContent, 'X')
+    assert.match(texto(), /son del marcador/, 'La X es del marcador')
+    await h.tecla('q')
+    assert.equal(JSON.parse(h.dom.window.localStorage.getItem('analisis_atajos_v1')).Pérdida, 'q')
+    assert.equal(h.tipo('Pérdida').querySelector('kbd').textContent, 'Q')
     h.activo().time = 75
-    await h.tecla('x')
+    await h.tecla('q')
     assert.equal(h.writes.at(-1).tipo, 'Pérdida')
     await h.resolver()
   } finally {
