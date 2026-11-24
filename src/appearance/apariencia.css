@@ -32,6 +32,16 @@
   --foto-texto-secundario: #c9c6b9;
   --foto-borde: #4a483f;
 
+  /* Dibujos sobre el video de Análisis (etapa 4): siempre sobre la imagen, iguales en ambos temas. */
+  --dib-amarillo: #f4c400;
+  --dib-blanco: #ffffff;
+  --dib-rojo: #ef4a4a;
+  --dib-azul: #3b82f6;
+  --dib-tinta: #0b0b0a;
+  --dib-sombra: rgba(0, 0, 0, 0.45);
+  --dib-velo: rgba(0, 0, 0, 0.6);
+  --dib-subtitulo-fondo: rgba(11, 11, 10, 0.82);
+
   /* Tipografía y movimiento */
   --fuente-titulo: 'Barlow Condensed', 'Arial Narrow', Impact, sans-serif;
   --fuente-texto: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
