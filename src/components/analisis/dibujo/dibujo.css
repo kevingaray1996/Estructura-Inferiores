@@ -27,7 +27,7 @@
 /* ---------- Ventana de dibujo ---------- */
 .dib-editor {
   position: fixed; inset: 0; z-index: 80; display: grid; overflow: hidden;
-  grid-template-columns: 5rem minmax(0, 1fr) 21rem; grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: 7.75rem minmax(0, 1fr) 21rem; grid-template-rows: auto minmax(0, 1fr) auto;
   grid-template-areas: "cab cab cab" "her vid pro" "lin lin lin";
   background: var(--ui-fondo-pagina); color: var(--ui-texto);
 }
@@ -50,7 +50,7 @@
 .dib-segmento button[aria-pressed='true'] { background: var(--ui-acento); color: var(--ui-texto-sobre-acento); }
 .dib-segmento button:disabled { color: var(--ui-texto-muted); cursor: not-allowed; }
 
-.dib-herramientas { grid-area: her; display: flex; flex-direction: column; gap: .3rem; padding: .5rem; overflow-y: auto; border-right: 1px solid var(--ui-borde); }
+.dib-herramientas { grid-area: her; display: grid; grid-template-columns: 1fr 1fr; align-content: start; gap: .3rem; padding: .5rem; overflow-y: auto; border-right: 1px solid var(--ui-borde); }
 .dib-herramienta {
   position: relative; display: grid; place-items: center; width: 100%; min-height: 48px; border: 1px solid var(--ui-borde); border-radius: .5rem;
   background: var(--ui-superficie); color: var(--ui-texto); font-size: 1.15rem; font-weight: 900;
@@ -58,7 +58,7 @@
 .dib-herramienta kbd { position: absolute; right: .2rem; bottom: .1rem; font-size: .625rem; color: var(--ui-texto-secundario); font-family: inherit; }
 .dib-herramienta[aria-pressed='true'] { border-color: var(--ui-acento); background: var(--ui-acento-suave); color: var(--ui-texto-acento); }
 .dib-herramienta:disabled { opacity: .4; }
-.dib-separador { height: 1px; margin: .25rem 0; background: var(--ui-borde); }
+.dib-separador { grid-column: 1 / -1; height: 1px; margin: .25rem 0; background: var(--ui-borde); }
 
 .dib-centro { grid-area: vid; display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: .5rem; padding: .75rem; min-width: 0; min-height: 0; }
 .dib-escenario { position: relative; display: grid; place-items: center; min-height: 0; }
@@ -121,5 +121,5 @@
 .dib-cursor { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--ui-texto); pointer-events: none; }
 
 @media (max-width: 1279px) {
-  .dib-editor { grid-template-columns: 4.25rem minmax(0, 1fr) 17.5rem; }
+  .dib-editor { grid-template-columns: 7.25rem minmax(0, 1fr) 17.5rem; }
 }

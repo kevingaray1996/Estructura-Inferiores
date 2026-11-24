@@ -74,7 +74,7 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
   const cuadro = cuadroVideo(ancho, alto)
 
   const objElegido = elegido?.tipo === 'objeto' ? dibujo.objetos.find((o) => o.id === elegido.id) || null : null
-  const escena = useMemo(() => escenaEn(dibujo, tiempo, { elegidoId: vistaPrevia ? null : objElegido?.id }), [dibujo, tiempo, vistaPrevia, objElegido?.id])
+  const escena = useMemo(() => escenaEn(dibujo, tiempo, { elegidoId: vistaPrevia ? null : objElegido?.id, animar: vistaPrevia }), [dibujo, tiempo, vistaPrevia, objElegido?.id])
 
   const cambiar = useCallback((fn) => setHist((h) => aplicar(h, fn(h.presente))), [])
   const dibujoRef = useRef(dibujo)
@@ -83,6 +83,7 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
   // ---------- Reproductor (solo el tramo del clip) ----------
   useEffect(() => {
     let vigente = true
+    let primerCuadro = false
     const destino = document.createElement('div')
     zonaRef.current?.appendChild(destino)
     cargarYouTubeAPI().then((YT) => {
@@ -96,9 +97,16 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
         events: {
           onReady: (e) => {
             if (!vigente) return
-            try { e.target.seekTo(rango.inicio, true); e.target.pauseVideo() } catch { /* nada */ }
+            // YouTube no muestra la imagen hasta reproducir: arranca en silencio y se pausa en el primer cuadro.
+            try { e.target.mute(); e.target.seekTo(rango.inicio, true); e.target.playVideo() } catch { /* nada */ }
             forzadoRef.current = { t: rango.inicio, ms: performance.now() }
             setListo(true)
+          },
+          onStateChange: (e) => {
+            if (!vigente || primerCuadro || e.data !== YT.PlayerState.PLAYING) return
+            primerCuadro = true
+            try { e.target.pauseVideo(); e.target.seekTo(rango.inicio, true); e.target.unMute() } catch { /* nada */ }
+            forzadoRef.current = { t: rango.inicio, ms: performance.now() }
           },
           onError: () => { if (vigente) setErrorVideo('YouTube no pudo reproducir este video (puede ser privado o no permitir verse fuera de YouTube).') },
         },

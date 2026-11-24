@@ -124,14 +124,12 @@ function Objeto({ el, cuadro, base, idMascara }) {
       const r = cuadro.ancho * 0.065 * escala
       const centro = { x: p.x, y: p.y - r * 0.55 }
       const ancho_ = cuadro.ancho + cuadro.izquierda * 2 + 4, alto_ = cuadro.alto + cuadro.arriba * 2 + 4
+      const rr = Math.max(0.1, r)
       return (
         <g>
-          <mask id={idMascara} maskUnits="userSpaceOnUse" x={-cuadro.izquierda - 2} y={-cuadro.arriba - 2} width={ancho_} height={alto_}>
-            <rect x={-cuadro.izquierda - 2} y={-cuadro.arriba - 2} width={ancho_} height={alto_} style={{ fill: 'white' }} />
-            <circle cx={centro.x} cy={centro.y} r={Math.max(0, r)} style={{ fill: 'black' }} />
-          </mask>
-          <rect x={-cuadro.izquierda - 2} y={-cuadro.arriba - 2} width={ancho_} height={alto_}
-            mask={`url(#${idMascara})`} style={{ fill: 'var(--dib-velo)' }} />
+          {/* Velo con un agujero redondo (regla evenodd): oscurece todo menos a la jugadora. */}
+          <path fillRule="evenodd" style={{ fill: 'var(--dib-velo)' }}
+            d={`M${-cuadro.izquierda - 2},${-cuadro.arriba - 2} h${ancho_} v${alto_} h${-ancho_} Z M${centro.x - rr},${centro.y} a${rr},${rr} 0 1,0 ${rr * 2},0 a${rr},${rr} 0 1,0 ${-rr * 2},0 Z`} />
           {el.rastro && <Rastro puntos={el.rastro.map(px)} color={color} ancho={ancho} />}
           <circle cx={centro.x} cy={centro.y} r={Math.max(0, r)} style={{ fill: 'none', stroke: color, strokeWidth: Math.max(1.5, ancho * 0.6) }} />
         </g>

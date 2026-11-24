@@ -43,8 +43,9 @@ export function subtituloEn(dibujo, t) {
 }
 
 // Elementos para pintar en t. Cada uno: { obj, posicion?, escala, rastro?, a?, b? }.
-// todos: en el editor se ven también los objetos fuera de su tiempo (tenues) si están elegidos.
-export function escenaEn(dibujo, t, { elegidoId = null } = {}) {
+// elegidoId: en el editor se ve también el objeto elegido fuera de su tiempo (tenue). animar: false en el editor
+// (sin rebote ni pulso, para ver cada objeto a su tamaño al dibujar).
+export function escenaEn(dibujo, t, { elegidoId = null, animar = true } = {}) {
   const objetos = dibujo?.objetos || []
   const porId = new Map(objetos.map((o) => [o.id, o]))
   const elementos = []
@@ -52,7 +53,7 @@ export function escenaEn(dibujo, t, { elegidoId = null } = {}) {
     if (obj.tipo === 'zoom') continue
     const visible = visibleEn(obj, t)
     if (!visible && obj.id !== elegidoId) continue
-    const base = { obj, fuera: !visible, escala: visible ? escalaDe(obj, t) : 1 }
+    const base = { obj, fuera: !visible, escala: visible && animar ? escalaDe(obj, t) : 1 }
     if (esSeguimiento(obj.tipo)) {
       base.posicion = posicionEn(obj.pista.claves, t)
       if (obj.efectos?.rastro && visible) {

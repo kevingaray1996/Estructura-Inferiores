@@ -281,3 +281,61 @@ test('operaciones del editor: crear, marcar posiciones, mover, duplicar, borrar 
   assert.equal(dibujoVacio(clip).objetos.length, 0)
   assert.equal(normalizarDibujo(s.dibujo).dibujo.objetos.length, s.dibujo.objetos.length, 'Lo que arma el editor pasa la validación')
 })
+
+test('editor: el clic elige el objeto de más arriba, atajos de teclado, cuadro a cuadro y solo en la compu', async () => {
+  const { objetoEnPunto, ordenTeclaEditor, tiempoPreciso, moverTiempo, esCompu } = await import('../src/utils/analisis/dibujos/editor.js')
+  const { dibujo } = normalizarDibujo({
+    version: 1,
+    objetos: [
+      { id: 'z', tipo: 'zona', desde: 0, hasta: 10, puntos: [{ x: 0.1, y: 0.1 }, { x: 0.5, y: 0.5 }] },
+      { id: 'l', tipo: 'linea', desde: 0, hasta: 10, puntos: [{ x: 0.1, y: 0.3 }, { x: 0.5, y: 0.3 }] },
+      { id: 'a', tipo: 'anillo', desde: 0, hasta: 10, pista: { claves: [{ t: 0, x: 0.8, y: 0.8 }] } },
+    ],
+  })
+  const { elementos } = escenaEn(dibujo, 5)
+  assert.equal(objetoEnPunto(elementos, { x: 0.3, y: 0.305 }).obj.id, 'l', 'La línea está encima de la zona')
+  assert.equal(objetoEnPunto(elementos, { x: 0.3, y: 0.2 }).obj.id, 'z')
+  assert.equal(objetoEnPunto(elementos, { x: 0.81, y: 0.8 }).obj.id, 'a')
+  assert.equal(objetoEnPunto(elementos, { x: 0.95, y: 0.1 }), null)
+  const tecla = (key, extra = {}) => ordenTeclaEditor({ key, target: { tagName: 'DIV' }, ...extra })
+  assert.equal(tecla('z', { ctrlKey: true }), 'deshacer')
+  assert.equal(tecla('y', { ctrlKey: true }), 'rehacer')
+  assert.equal(tecla('Z', { ctrlKey: true, shiftKey: true }), 'rehacer')
+  assert.equal(tecla('d', { ctrlKey: true }), 'duplicar')
+  assert.equal(tecla('Delete'), 'borrar')
+  assert.equal(tecla('ArrowRight'), 'avanzar:0.1')
+  assert.equal(tecla('ArrowLeft', { shiftKey: true }), 'retroceder:1')
+  assert.equal(tecla('b'), 'herramienta:pase_bajo')
+  assert.equal(tecla('O'), 'herramienta:anillo')
+  assert.equal(tecla('p'), 'pausa')
+  assert.equal(ordenTeclaEditor({ key: 'b', target: { tagName: 'INPUT' } }), null, 'Mientras se escribe no hay atajos')
+  assert.equal(ordenTeclaEditor({ key: 'Escape', target: { tagName: 'INPUT' } }), 'escape')
+  assert.equal(tiempoPreciso(1415.26), '23:35,3')
+  assert.equal(moverTiempo(10.05, -0.1, { inicio: 10, fin: 20 }), 10)
+  assert.equal(moverTiempo(12, 0.1, { inicio: 10, fin: 20 }), 12.1)
+  const ventana = (fino, ancho) => ({ innerWidth: ancho, matchMedia: () => ({ matches: fino }) })
+  assert.equal(esCompu(ventana(true, 1440)), true)
+  assert.equal(esCompu(ventana(false, 1440)), false, 'Pantalla táctil: no se edita')
+  assert.equal(esCompu(ventana(true, 800)), false, 'Pantalla chica: no se edita')
+  assert.equal(esCompu(null), false)
+})
+
+test('pantallas: el editor se carga solo al abrirlo y dibujar es solo de coordinación en la compu', async () => {
+  const { readFileSync } = await import('node:fs')
+  const leer = (r) => readFileSync(new URL('../' + r, import.meta.url), 'utf8')
+  const seccion = leer('src/components/AnalisisSection.jsx')
+  assert.match(seccion, /lazy\(\(\) => import\('\.\/analisis\/dibujo\/EditorDibujo'\)\)/)
+  assert.doesNotMatch(seccion, /^import EditorDibujo/m, 'Nada de import directo del editor')
+  assert.match(seccion, /const puedeDibujar = esAdmin && !bloqueoEscritura && !modoConsulta && enCompu && dibujosApi\.listo/)
+  assert.match(seccion, /onDibujar=\{puedeDibujar \?/)
+  // Pantalla completa del contenedor con los dibujos; sin el botón de YouTube.
+  assert.match(seccion, /BotonPantallaCompleta objetivoRef=\{marcoVideoRef\}/)
+  assert.match(seccion, /&fs=0/)
+  assert.match(leer('src/components/analisis/ReproductorPlaylist.jsx'), /fs: 0/)
+  // El editor ofrece la pizarra 2D deshabilitada (etapa 5).
+  assert.match(leer('src/components/analisis/dibujo/EditorDibujo.jsx'), /disabled title="Próximamente"/)
+  // Colores solo por tokens.
+  for (const r of ['src/components/analisis/dibujo/CapaDibujos.jsx', 'src/components/analisis/dibujo/EditorDibujo.jsx', 'src/components/analisis/dibujo/dibujo.css']) {
+    assert.doesNotMatch(leer(r), /#[0-9a-fA-F]{3,8}\b|rgba?\(/, r)
+  }
+})
