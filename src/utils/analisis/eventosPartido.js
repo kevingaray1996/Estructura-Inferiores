@@ -109,3 +109,88 @@ export function leerTiempo(texto) {
   if (numeros.slice(1).some((n) => n > 59)) return null
   return numeros.reduce((total, n) => total * 60 + n, 0)
 }
+
+// ---------- Etapa 3: minutos con expulsiones y avisos ----------
+
+// Expulsiones nuestras (roja o segunda amarilla de la misma jugadora), en orden de video. sinJugadora: rojas nuestras
+// sin jugadora cargada (no se pueden descontar).
+export function expulsionesDe(eventos) {
+  const tarjetas = (eventos || []).filter((e) => e.tipo === 'tarjeta' && e.equipo === 'propio')
+    .sort((a, b) => Number(a.segundo) - Number(b.segundo))
+  const amarillas = {}, expulsadas = new Set(), expulsiones = []
+  let sinJugadora = 0
+  for (const t of tarjetas) {
+    if (!t.jugador_id) { if (t.tarjeta === 'roja') sinJugadora += 1; continue }
+    if (expulsadas.has(t.jugador_id)) continue
+    if (t.tarjeta === 'amarilla') amarillas[t.jugador_id] = (amarillas[t.jugador_id] || 0) + 1
+    if (t.tarjeta === 'roja' || amarillas[t.jugador_id] >= 2) {
+      expulsadas.add(t.jugador_id)
+      expulsiones.push({ segundo: Number(t.segundo), jugadora: t.jugador_id })
+    }
+  }
+  return { expulsiones, sinJugadora }
+}
+
+// Minutos jugados sugeridos con cambios y expulsiones, sobre las marcas reales del video (incluye el agregado).
+// acciones: las individuales del partido, para avisar si alguien tiene acciones mientras figura afuera.
+// Devuelve { minutos: { id: minutos } | null, avisos: [{ tipo, texto, jugadoraId? }] }. Sin marcas o sin titulares,
+// minutos es null y los avisos dicen qué falta.
+export function minutosDetallados({ convocadas = [], titulares = [], cambios = [], tarjetas = [], marcas = null, acciones = [] }) {
+  const avisos = []
+  if (!titulares?.length) avisos.push({ tipo: 'titulares', texto: 'No hay titulares en la formación: cargalas en Convocados.' })
+  const faltan = faltanMarcas(marcas)
+  if (faltan.length) avisos.push({ tipo: 'marcas', texto: `Faltan marcas de tiempo: ${faltan.join(', ')}.` })
+  for (const texto of problemasOrden(marcas || {})) avisos.push({ tipo: 'orden', texto })
+  const { expulsiones, sinJugadora } = expulsionesDe(tarjetas)
+  if (sinJugadora) avisos.push({ tipo: 'roja', texto: `Hay ${sinJugadora === 1 ? 'una roja nuestra' : `${sinJugadora} rojas nuestras`} sin jugadora: no se puede descontar quién salió.` })
+  if (avisos.some((a) => ['titulares', 'marcas', 'orden'].includes(a.tipo))) return { minutos: null, avisos }
+
+  const salidas = [
+    ...cambios.map((c) => ({ segundo: Number(c.segundo), sale: c.jugadora_sale, entra: c.jugadora_entra, cambio: true })),
+    ...expulsiones.map((e) => ({ segundo: e.segundo, sale: e.jugadora, entra: null, cambio: false })),
+  ].sort((a, b) => a.segundo - b.segundo)
+  const cancha = (segundo) => {
+    const c = new Set(titulares)
+    for (const s of salidas) {
+      if (s.segundo > segundo) break
+      c.delete(s.sale)
+      if (s.entra) c.add(s.entra)
+    }
+    return c
+  }
+  // Cambios que sacan a alguien que no estaba en cancha.
+  for (const s of salidas.filter((x) => x.cambio)) {
+    const antes = cancha(s.segundo - 1)
+    if (!antes.has(s.sale)) avisos.push({ tipo: 'cambio', jugadoraId: s.sale, texto: `El cambio de las ${Math.floor(s.segundo / 60)}:${String(s.segundo % 60).padStart(2, '0')} saca a una jugadora que no estaba en cancha.` })
+  }
+
+  const segundos = Object.fromEntries((convocadas || []).map((id) => [id, 0]))
+  const periodos = [[marcas.inicio_1t, marcas.fin_1t], [marcas.inicio_2t, marcas.fin_partido]]
+  for (const [desde, hasta] of periodos) {
+    const cortes = [...new Set([desde, ...salidas.map((s) => s.segundo).filter((s) => s > desde && s < hasta), hasta])].sort((a, b) => a - b)
+    for (let i = 0; i < cortes.length - 1; i++) {
+      for (const id of cancha(cortes[i])) segundos[id] = (segundos[id] || 0) + (cortes[i + 1] - cortes[i])
+    }
+  }
+
+  // Acciones de jugadoras que figuran afuera de la cancha (¿falta marcar un cambio?).
+  const fuera = {}
+  for (const a of acciones || []) {
+    const s = Number(a.segundo)
+    if (!a.jugador_id || !periodos.some(([d, h]) => s >= d && s <= h)) continue
+    if (!cancha(s).has(a.jugador_id)) fuera[a.jugador_id] = (fuera[a.jugador_id] || 0) + 1
+  }
+  for (const [jugadoraId, n] of Object.entries(fuera)) {
+    avisos.push({ tipo: 'fuera', jugadoraId, texto: `tiene ${n} ${n === 1 ? 'acción' : 'acciones'} mientras figura afuera de la cancha: ¿falta marcar un cambio?` })
+  }
+  return { minutos: Object.fromEntries(Object.entries(segundos).map(([id, s]) => [id, Math.round(s / 60)])), avisos }
+}
+
+// Fila de la tabla de minutos: sugeridos, cargados y diferencia. cambia: si confirmar escribiría algo.
+export function filaMinutos(jugadoraId, sugeridos, cargados) {
+  const sugerido = sugeridos?.[jugadoraId] ?? null
+  const cargado = cargados?.[jugadoraId] ?? null
+  const diferencia = sugerido == null || cargado == null ? null : sugerido - Number(cargado)
+  const cambia = sugerido != null && (cargado == null ? sugerido > 0 : sugerido !== Number(cargado))
+  return { jugadoraId, sugerido, cargado: cargado == null ? null : Number(cargado), diferencia, cambia }
+}

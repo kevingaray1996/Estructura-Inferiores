@@ -15,9 +15,12 @@ export function normalizarNombre(valor) {
 // Sin la columna activo (antes de la migración) todos están activos.
 export const estaActivo = (equipo) => equipo?.activo !== false
 
-// Para cargar (scouting, nuevo partido): solo los activos, salvo los ya elegidos. Para filtrar: todos.
+// El club (Comunicaciones) no es un rival: no se ofrece para elegir en scouting.
+export const esNombreDelClub = (nombre) => normalizarNombre(nombre).includes(normalizarNombre(NOMBRE_CLUB))
+
+// Para cargar (scouting, nuevo partido): solo los activos y nunca el club, salvo los ya elegidos. Para filtrar: todos.
 export function equiposParaElegir(equipos, { elegidos = [] } = {}) {
-  return (equipos || []).filter((e) => estaActivo(e) || elegidos.includes(e.id))
+  return (equipos || []).filter((e) => elegidos.includes(e.id) || (estaActivo(e) && !esNombreDelClub(e.nombre)))
 }
 
 // Buscador: por nombre, sin mayúsculas ni acentos.

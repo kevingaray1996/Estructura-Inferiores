@@ -134,8 +134,10 @@ export function prepararAcciones(eventos, { partidos, marcas, detallesPases = {}
   })
 }
 
-export function filtrarAcciones(acciones, { capa = 'todas', resultado = 'todas', tiempo = 'partido', pasesErrados = true } = {}) {
+// tipo: un tipo de acción puntual ('todos' = sin filtro).
+export function filtrarAcciones(acciones, { capa = 'todas', resultado = 'todas', tiempo = 'partido', pasesErrados = true, tipo = 'todos' } = {}) {
   return acciones.filter((a) => enCapa(a.evento, capa, { pasesErrados }) &&
+    (tipo === 'todos' || a.evento.tipo === tipo) &&
     pasaResultado(a, resultado, capa) &&
     (tiempo === 'partido' || a.periodo === Number(tiempo)))
 }
