@@ -110,3 +110,8 @@ button.rs-comp-valor:disabled { text-decoration: none; cursor: default; }
 .pa-vista-previa { margin-top: .5rem; padding: .75rem; border: 1px solid var(--ui-acento); border-radius: .5rem; }
 .pa-vista-previa ul { margin: .25rem 0 .5rem; padding-left: 1.25rem; font-size: .875rem; }
 .pa-botones { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+/* Lado de ataque del 1T sin confirmar */
+.ev-lado { display: grid; gap: .375rem; margin-bottom: .75rem; padding: .75rem; border: 2px solid var(--ui-alerta); border-radius: .5rem; background: var(--ui-compartido-fondo); }
+.ev-lado p { margin: 0; }
+.ev-lado-botones { display: flex; flex-wrap: wrap; gap: .5rem; }

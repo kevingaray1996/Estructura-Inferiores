@@ -16,7 +16,7 @@ const etiquetaConvocada = (c) => `${c.dorsal ?? '—'} · ${nombreJugadora(c.jug
 // ev: useEventosPartido. tomarSegundo(): segundo actual del video (o null si no está listo).
 export default function PartidoEventos({
   ev, puedeEditar, videoListo, tomarSegundo, irA, citaciones, titulares, direccion1T, onDireccion1T, avisar, alFallar,
-  minutos,
+  minutos, avisoLado = null,
 }) {
   const [ocupado, setOcupado] = useState(false)
   const faltan = faltanMarcas(ev.marcas)
@@ -42,6 +42,7 @@ export default function PartidoEventos({
     <div className="pa">
       <section className="pa-seccion" aria-labelledby="pa-marcas-titulo">
         <h3 id="pa-marcas-titulo" className="pa-titulo">Marcas de tiempo</h3>
+        {avisoLado}
         {ev.error && <p role="alert" className="pa-alerta">{ev.error}</p>}
         {!ev.error && faltan.length > 0 && (
           <p className="pa-aviso" role="status">
@@ -78,7 +79,7 @@ export default function PartidoEventos({
           <button type="button" aria-pressed={direccion1T === 'izquierda'} disabled={!puedeEditar} onClick={() => onDireccion1T('izquierda')}>← Izquierda</button>
           <button type="button" aria-pressed={direccion1T === 'derecha'} disabled={!puedeEditar} onClick={() => onDireccion1T('derecha')}>Derecha →</button>
         </div>
-        <p className="pa-nota">En el 2T se toma el sentido contrario. Cambiarlo no modifica las acciones ya cargadas.</p>
+        <p className="pa-nota">En el 2T se toma el sentido contrario. Cambiarlo no modifica las acciones ya cargadas. Elegir un lado lo deja confirmado.</p>
       </section>
 
       <Cambios ev={ev} citaciones={citaciones} titulares={titulares} nombre={nombre} bloqueado={bloqueado || Boolean(ev.error)}

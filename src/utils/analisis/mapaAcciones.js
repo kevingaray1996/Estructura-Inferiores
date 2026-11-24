@@ -290,3 +290,15 @@ export function avisosDireccion(acciones, { partidos, marcas } = {}) {
   }
   return avisos
 }
+
+// ---------- Etapa 3: lado de ataque del 1T confirmado ----------
+
+// true si el lado del 1T está sin confirmar (columna direccion_confirmada en false). Sin la columna (antes de la
+// migración) no se puede saber y no se avisa.
+export const ladoSinConfirmar = (partido) => partido?.direccion_confirmada === false
+
+// Cuántos partidos de las acciones del filtro tienen el lado sin confirmar. partidos: Map id → partido.
+export function partidosSinConfirmar(eventos, partidos) {
+  const ids = new Set((eventos || []).map((e) => e.partido_id).filter(Boolean))
+  return [...ids].filter((id) => ladoSinConfirmar(partidos?.get?.(id))).length
+}

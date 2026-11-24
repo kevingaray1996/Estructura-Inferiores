@@ -32,6 +32,14 @@ BEGIN
   SELECT string_agg(a.id::text, ', ') INTO v_mal FROM public.analisis_posesion_tramos a
     JOIN public.analisis_posesion_tramos b ON a.partido_id = b.partido_id AND a.id < b.id AND a.inicio < b.fin AND b.inicio < a.fin;
   IF v_mal IS NOT NULL THEN RAISE EXCEPTION 'Tramos a mano superpuestos: %.', v_mal; END IF;
-  RAISE NOTICE 'OK: tramos de posesión y permisos.';
+  -- Lado de ataque del 1T confirmado.
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'analisis_partidos'
+                  AND column_name = 'direccion_confirmada' AND data_type = 'boolean' AND is_nullable = 'NO'
+                  AND column_default = 'false') THEN
+    RAISE EXCEPTION 'Falta la columna analisis_partidos.direccion_confirmada (booleana, obligatoria y false por defecto).';
+  END IF;
+  RAISE NOTICE 'OK: tramos de posesión, permisos y lado del 1T (% análisis sin confirmar, % confirmados).',
+    (SELECT count(*) FROM public.analisis_partidos WHERE NOT direccion_confirmada),
+    (SELECT count(*) FROM public.analisis_partidos WHERE direccion_confirmada);
 END
 $verificar_posesion_tramos$;

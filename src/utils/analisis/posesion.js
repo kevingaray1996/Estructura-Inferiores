@@ -182,13 +182,23 @@ export function terminarPosesion(grabacion, segundo) {
   return grabacion && s > grabacion.inicio ? { inicio: grabacion.inicio, fin: s, estado: grabacion.estado } : null
 }
 
+// Tecla para el Modo posesión: una sola, que no sea Espacio (pausa), ? (ayuda) ni un número, y distinta de la otra.
+// En la pestaña Posesión las teclas de la botonera y del marcador no marcan nada, así que no chocan.
+export function validarTeclaPosesion(tecla, otra) {
+  const t = String(tecla || '').toLowerCase()
+  if (t.length !== 1) return { ok: false, motivo: 'Elegí una sola tecla (una letra).' }
+  if (t === ' ' || t === '?' || /[0-9]/.test(t)) return { ok: false, motivo: 'Espacio, ? y los números ya se usan (pausa, ayuda y dorsales).' }
+  if (otra && t === String(otra).toLowerCase()) return { ok: false, motivo: 'Esa tecla ya es de la otra acción.' }
+  return { ok: true }
+}
+
 function almacenLocal() {
   try { return typeof window === 'undefined' ? null : window.localStorage } catch { return null }
 }
 export function leerTeclasPosesion(almacen = almacenLocal()) {
   try {
     const g = JSON.parse(almacen?.getItem(CLAVE_TECLAS_POSESION) || 'null')
-    const ok = (t) => typeof t === 'string' && t.length === 1 && t !== ' '
+    const ok = (t) => validarTeclaPosesion(t, null).ok
     if (g && ok(g.cambio) && ok(g.detenida) && g.cambio.toLowerCase() !== g.detenida.toLowerCase()) {
       return { cambio: g.cambio.toLowerCase(), detenida: g.detenida.toLowerCase() }
     }

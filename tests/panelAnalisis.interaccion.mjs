@@ -59,6 +59,62 @@ test('Pestañas Etiquetado / Acciones / Partido / Posesión: se cambian con clic
   }
 })
 
+test('Pestaña Posesión: la P no marca Pérdida ni la G abre el marcador; Espacio sigue pausando; la Q solo anda acá', async () => {
+  const h = await montar()
+  try {
+    await h.iniciar()
+    await h.click('Marcar sin jugadora')
+    const pestanas = [...document.querySelectorAll('[role="tab"]')]
+    const indicador = () => document.querySelector('#az-panel-posesion .mp-indicador')
+    // Fuera de la pestaña, la Q no hace nada del Modo posesión.
+    h.activo().time = 30
+    await h.tecla('q')
+    assert.doesNotMatch(indicador().textContent, /Marcando desde/)
+
+    await h.act(() => pestanas[3].click())
+    const antes = h.writes.length
+    await h.tecla('p')
+    await h.tecla('g')
+    assert.equal(h.writes.length, antes, 'Las teclas de la botonera no marcan acciones en Posesión')
+    assert.equal(document.querySelector('.mb-cartel, [role="dialog"][aria-label*="Gol"]'), null, 'La G no abre el marcador')
+    const estado = h.activo().state
+    await h.tecla(' ')
+    assert.notEqual(h.activo().state, estado, 'Espacio sigue pausando el video')
+    h.activo().time = 40
+    await h.tecla('q')
+    assert.match(indicador().textContent, /Marcando desde 00:40/)
+    assert.equal(indicador().dataset.estado, 'analizado')
+
+    // De vuelta en Etiquetado, la P vuelve a marcar Pérdida.
+    await h.act(() => pestanas[0].click())
+    await h.tecla('p')
+    assert.equal(h.writes.at(-1)?.tipo, 'Pérdida')
+    await h.resolver()
+  } finally {
+    await h.cerrar()
+  }
+})
+
+test('Lado de ataque del 1T sin confirmar: aviso en el mapa y en la pantalla del partido; elegir el lado lo confirma', async () => {
+  globalThis.__escrituraPartidos = true
+  const h = await montar()
+  try {
+    h.datos.analisis_partidos[0].direccion_confirmada = false
+    await h.iniciar()
+    await h.click('▦ Mapa')
+    assert.match(document.body.textContent, /Lado de ataque del 1T sin confirmar: el mapa puede estar espejado/)
+    await h.click('▥ Estadísticas')
+    assert.match(document.body.textContent, /Lado de ataque del 1T sin confirmar/)
+    await h.act(async () => { [...document.querySelectorAll('.ev-lado button')].find((b) => b.textContent.includes('izquierda')).click(); await new Promise((r) => setTimeout(r, 20)) })
+    const guardado = h.guardados.filter((g) => g.tabla === 'analisis_partidos' && g.op === 'update').at(-1)
+    assert.deepEqual(guardado.valores, { direccion_primer_tiempo: 'izquierda', direccion_confirmada: true })
+    assert.doesNotMatch(document.body.textContent, /sin confirmar/)
+  } finally {
+    delete globalThis.__escrituraPartidos
+    await h.cerrar()
+  }
+})
+
 test('1T / 2T en Etiquetado: la acción nueva se guarda con el tiempo elegido', async () => {
   const h = await montar()
   try {

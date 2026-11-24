@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTiempoVideo } from '../../utils/relojVideo'
 import { formatearTiempo } from '../../utils/analisis/formato'
-import { estadoEn, guardarTeclasPosesion, leerTeclasPosesion, terminarPosesion, tocarPosesion } from '../../utils/analisis/posesion'
+import { estadoEn, guardarTeclasPosesion, validarTeclaPosesion, leerTeclasPosesion, terminarPosesion, tocarPosesion } from '../../utils/analisis/posesion'
 import './estadisticasVisuales.css'
 
 // Modo posesión (coordinación): una pasada aparte con el video (por ejemplo a 2x) para completar los huecos.
@@ -53,10 +53,11 @@ export default function ModoPosesion({ reloj, tomarSegundo, linea, nombres, acti
       if (destino && (['INPUT', 'TEXTAREA', 'SELECT'].includes(destino.tagName) || destino.isContentEditable)) return
       const t = String(e.key || '').toLowerCase()
       if (cambiando) {
-        if (t.length !== 1 || t === ' ') return
+        if (t.length !== 1) return
         e.preventDefault()
         const otra = cambiando === 'cambio' ? 'detenida' : 'cambio'
-        if (teclas[otra] === t) { setError('Esa tecla ya es de la otra acción.'); return }
+        const v = validarTeclaPosesion(t, teclas[otra])
+        if (!v.ok) { setError(v.motivo); return }
         const nuevas = { ...teclas, [cambiando]: t }
         setTeclas(nuevas); guardarTeclasPosesion(nuevas); setCambiando(null); setError('')
         return

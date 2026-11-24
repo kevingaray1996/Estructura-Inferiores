@@ -69,6 +69,8 @@ import { prepararParaReproducir } from '../utils/analisis/reproductorPlaylist'
 import useTramosPosesion from '../hooks/useTramosPosesion'
 import ModoPosesion from './analisis/ModoPosesion'
 import ResumenPartido from './analisis/ResumenPartido'
+import AvisoLadoAtaque, { AvisoLadosSinConfirmar } from './analisis/AvisoLadoAtaque'
+import { partidosSinConfirmar } from '../utils/analisis/mapaAcciones'
 import { ajustarTramo, insertarTramo, lineaPosesion } from '../utils/analisis/posesion'
 import {
   equiposDelAnalisis, esMomento, esScouting, filtrarAnalisis, guardarAtajosColectiva, leerAtajosColectiva,
@@ -103,6 +105,8 @@ const inputStyle = ESTILO_CAMPO
 const catalogoExplorador = { resultados: RESULTADOS, zonas: ZONAS }
 
 // Pestañas del panel derecho de la vista de video.
+// En la pestaña Posesión las teclas de la botonera (individual y colectiva) y del marcador no marcan nada.
+const SIN_ATAJOS = Object.freeze({})
 const PESTANAS_PANEL = [['etiquetado', 'Etiquetado'], ['playlist', 'Acciones'], ['partido', 'Partido'], ['posesion', 'Posesión']]
 
 // Al cambiar de tipo se conserva el resultado si sigue siendo válido para el
@@ -1404,12 +1408,12 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     setError('')
     setMensaje('')
     try {
-      const { data, error: updateError } = await supabase
-        .from('analisis_partidos')
-        .update({ direccion_primer_tiempo: nuevaDireccionPrimerTiempo })
-        .eq('id', partidoActual.id)
-        .select()
-        .single()
+      const escribir = (cambios) => supabase.from('analisis_partidos').update(cambios).eq('id', partidoActual.id).select().single()
+      // Elegir o corregir el lado lo deja confirmado (etapa 3). Sin esa columna (antes de la migración), solo el lado.
+      let { data, error: updateError } = await escribir({ direccion_primer_tiempo: nuevaDireccionPrimerTiempo, direccion_confirmada: true })
+      if (updateError?.code === 'PGRST204' || updateError?.code === '42703') {
+        ({ data, error: updateError } = await escribir({ direccion_primer_tiempo: nuevaDireccionPrimerTiempo }))
+      }
       if (updateError) throw updateError
       setPartidos((actuales) => actuales.map((p) => p.id === data.id ? { ...p, ...data } : p))
       setMensaje(`Dirección del ataque actualizada. ${periodoElegido === 1 ? 'El segundo tiempo queda en el sentido contrario.' : 'El primer tiempo queda en el sentido contrario.'}`)
@@ -2073,9 +2077,12 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     },
     actualizarFin: actualizarFinMomento,
   })
+  // Pestaña Posesión: siguen Espacio (pausa) y ← → (5 s) para la pasada a 2x; las teclas de acciones, del marcador,
+  // Ctrl+Z y Enter de la colectiva no hacen nada (ahí mandan las teclas del Modo posesión).
+  const enPosesion = pestanaPanel === 'posesion'
   const estadoAtajos = useAtajosAnalisis({
-    activo: !cargando && accesoEditor && !bloqueoEscritura && seccion === 'video' && pestanaPanel !== 'posesion' && Boolean(partidoActual),
-    mapa: botoneraEnUso === 'colectiva' ? atajosBotoneraColectiva : atajosBotonera,
+    activo: !cargando && accesoEditor && !bloqueoEscritura && seccion === 'video' && Boolean(partidoActual),
+    mapa: enPosesion ? SIN_ATAJOS : botoneraEnUso === 'colectiva' ? atajosBotoneraColectiva : atajosBotonera,
     principal: typeof window === 'undefined' ? null : window,
     auxiliar: ventanaAuxiliar,
     // Con el cartel de gol / tarjeta / cambio abierto, las teclas no marcan otras acciones.
@@ -2083,12 +2090,13 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     acciones: {
       marcar: botoneraEnUso === 'colectiva' ? tocarColectiva : tocarAccion,
       // En scouting no hay marcador (no juega Comunicaciones).
-      marcador: scouting ? undefined : abrirMarcador,
+      marcador: scouting || enPosesion ? undefined : abrirMarcador,
       alternar: alternarReproduccion,
       saltar: desplazarVideo,
-      deshacer: deshacerUltimaAccion,
+      deshacer: enPosesion ? () => {} : deshacerUltimaAccion,
       ayuda: () => setAyudaAtajos((abierta) => !abierta),
       interceptar: (evento) => {
+        if (enPosesion) return false
         if (botoneraEnUso === 'colectiva' && grabacionColectiva.abiertas.length && evento.key === 'Enter') {
           grabacionColectiva.cerrar()
           return true
@@ -3220,6 +3228,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                       citaciones={citaciones}
                       titulares={titularesIds}
                       direccion1T={partidoActual.direccion_primer_tiempo}
+                      avisoLado={scouting ? null : <AvisoLadoAtaque partido={partidoActual} puedeEditar={esAdmin && !bloqueoEscritura && !modoConsulta} onConfirmar={(lado) => cambiarDireccionAtaque(lado, 1)} />}
                       onDireccion1T={(direccion) => cambiarDireccionAtaque(direccion, 1)}
                       avisar={avisarRapido}
                       alFallar={(e) => setError(mensajeErrorOPropio(e, 'guardar el evento del partido'))}
@@ -3494,6 +3503,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                     </div>
                   </div>
                   <div className="mt-4">
+                    <AvisoLadoAtaque partido={partidoActual} puedeEditar={esAdmin && !bloqueoEscritura && !modoConsulta} onConfirmar={(lado) => cambiarDireccionAtaque(lado, 1)} />
                     <ResumenPartido analisis={partidoActual} equipos={equiposApi.equipos} acciones={accionesDelPartido} catalogo={catalogo} jugadoras={jugadoras}
                       marcas={marcasPartido} eventosPartido={eventosDelPartido.eventos} linea={lineaPos} minutos={minutosPartido.sugeridos}
                       onAbrir={(titulo, clips) => abrirReproductor({ titulo, clips })} />
@@ -3524,6 +3534,9 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
           {seccion === 'mapa' && (
             <Panel>
+              {alcanceMapa === 'partido'
+                ? !scouting && <AvisoLadoAtaque partido={partidoActual} puedeEditar={esAdmin && !bloqueoEscritura && !modoConsulta} onConfirmar={(lado) => cambiarDireccionAtaque(lado, 1)} />
+                : <AvisoLadosSinConfirmar cantidad={partidosSinConfirmar(eventosMapa, partidosPorId)} />}
               <MapaAcciones titulo="Mapa de acciones" encabezado={encabezadoMapa} eventos={eventosMapa} partidos={partidosPorId} marcas={marcasMapa}
                 detallesPases={resumenDestinatarias.detalles} nombreJugadora={nombreJugadoraPorId} etiquetaTipo={etiquetaTipo} receptoraDe={receptoraDe}
                 estadoPases={estadoPasesMapa} onVideo={abrirEventoEnVideo} onDestinoPase={(evento) => setPaseDestinoId(evento.id)}

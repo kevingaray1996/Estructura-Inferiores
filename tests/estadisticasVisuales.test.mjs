@@ -12,6 +12,10 @@ import { expulsionesDe, filaMinutos, minutosDetallados } from '../src/utils/anal
 import { comparacion, destacadas, lineaResumen, resultadoPartido, tiposComparables } from '../src/utils/analisis/resumenPartido.js'
 import { clipsDeAnalisis } from '../src/utils/analisis/tableroClips.js'
 import { CLUB, equiposParaElegir } from '../src/utils/analisis/equipos.js'
+import { TECLAS_POSESION_POR_DEFECTO, leerTeclasPosesion, validarTeclaPosesion } from '../src/utils/analisis/posesion.js'
+import { ladoSinConfirmar, partidosSinConfirmar } from '../src/utils/analisis/mapaAcciones.js'
+import { ATAJOS_POR_DEFECTO, TECLAS_MARCADOR } from '../src/utils/analisis/atajos.js'
+import { ATAJOS_COLECTIVA_POR_DEFECTO } from '../src/utils/analisis/colectiva.js'
 
 const col = (codigo, grupo, espejo = null) => ({
   codigo, etiqueta: codigo, etiqueta_boton: codigo, color: 'acento', ubicacion: 'opcional', resultados: [],
@@ -226,6 +230,29 @@ test('pantalla del partido: compara solo lo que existe para los dos equipos (con
   assert.deepEqual(top.map((t) => [t.jugadoraId, t.minutos, t.goles.length]), [['J1', 90, 1], ['J2', null, 0]])
   const linea = lineaResumen([{ id: 'g', tipo: 'gol', segundo: 600 }, { id: 'x', tipo: 'inicio_1t', segundo: 0 }, { id: 'c', tipo: 'cambio', segundo: 100 }], marcas)
   assert.deepEqual(linea.map((e) => [e.tipo, e.minuto]), [['cambio', "1T 2'"], ['gol', "1T 11'"]])
+})
+
+test('teclas del Modo posesión: Q y W no son de ninguna botonera ni del marcador; Espacio, ? y números no se aceptan', () => {
+  const usadas = new Set([...Object.values(ATAJOS_POR_DEFECTO), ...Object.values(ATAJOS_COLECTIVA_POR_DEFECTO), ...TECLAS_MARCADOR])
+  assert.equal(usadas.has(TECLAS_POSESION_POR_DEFECTO.cambio), false)
+  assert.equal(usadas.has(TECLAS_POSESION_POR_DEFECTO.detenida), false)
+  assert.deepEqual(TECLAS_POSESION_POR_DEFECTO, { cambio: 'q', detenida: 'w' })
+  assert.equal(validarTeclaPosesion(' ', 'w').ok, false)
+  assert.equal(validarTeclaPosesion('?', 'w').ok, false)
+  assert.equal(validarTeclaPosesion('7', 'w').ok, false)
+  assert.equal(validarTeclaPosesion('W', 'w').ok, false)
+  assert.equal(validarTeclaPosesion('z', 'w').ok, true)
+  const almacen = { valor: JSON.stringify({ cambio: ' ', detenida: 'w' }), getItem() { return this.valor } }
+  assert.deepEqual(leerTeclasPosesion(almacen), { cambio: 'q', detenida: 'w' }, 'Una tecla inválida guardada vuelve a las de siempre')
+})
+
+test('lado del 1T sin confirmar: avisa solo con la columna en false; cuenta los partidos del filtro', () => {
+  assert.equal(ladoSinConfirmar({ direccion_confirmada: false }), true)
+  assert.equal(ladoSinConfirmar({ direccion_confirmada: true }), false)
+  assert.equal(ladoSinConfirmar({}), false, 'Sin la columna (antes de la migración) no se puede saber')
+  const partidos = new Map([['a', { direccion_confirmada: false }], ['b', { direccion_confirmada: true }], ['c', { direccion_confirmada: false }]])
+  assert.equal(partidosSinConfirmar([{ partido_id: 'a' }, { partido_id: 'a' }, { partido_id: 'b' }, { partido_id: 'c' }], partidos), 2)
+  assert.equal(partidosSinConfirmar([{ partido_id: 'b' }], partidos), 0)
 })
 
 test('selector de scouting: no ofrece al club', () => {

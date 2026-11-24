@@ -132,6 +132,26 @@ test('permisos: coordinación marca; la técnica de la categoría ve y no escrib
   try { await assert.rejects(db.query(`select count(*) from public.analisis_posesion_tramos`), codigo('42501')) } finally { await db.exec('reset role') }
 })
 
+test('lado del 1T: los análisis que existen quedan sin confirmar; solo coordinación lo confirma; la verificación lo controla', async () => {
+  const db = await crearBase()
+  await db.exec(cambio)
+  assert.equal(await n(db, `select count(*) n from public.analisis_partidos where direccion_confirmada`), 0)
+  assert.equal(await n(db, `select count(*) n from public.analisis_partidos where not direccion_confirmada`), 2)
+  const tec = await como(db, 'tec', `update public.analisis_partidos set direccion_confirmada = true where id = $1`, [P], { confirmar: true })
+  assert.equal(tec.affectedRows ?? 0, 0, 'La técnica no confirma')
+  const admin = await como(db, 'admin', `update public.analisis_partidos set direccion_primer_tiempo = 'izquierda', direccion_confirmada = true where id = $1`, [P], { confirmar: true })
+  assert.equal(admin.affectedRows, 1)
+  await db.exec(verificacion)
+  // La reversión no pierde confirmaciones sin permiso.
+  await assert.rejects(db.exec(reversion), /1 análisis con el lado del 1T confirmado/)
+  await db.exec(reversion.replace('v_borrar_datos constant boolean := false', 'v_borrar_datos constant boolean := true'))
+  assert.equal(await n(db, `select count(*) n from information_schema.columns where table_name = 'analisis_partidos' and column_name = 'direccion_confirmada'`), 0)
+  assert.equal((await db.query(`select direccion_primer_tiempo d from public.analisis_partidos where id = $1`, [P])).rows[0].d, 'izquierda', 'El lado no se toca')
+  // Si la columna ya existe, no se aplica.
+  await db.exec(`alter table public.analisis_partidos add column direccion_confirmada boolean`)
+  await assert.rejects(db.exec(cambio), /Ya está aplicada/)
+})
+
 test('reversión: no borra tramos sin permiso; con permiso deja todo como antes y se puede volver a aplicar', async () => {
   const db = await crearBase()
   await db.exec(cambio)

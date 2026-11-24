@@ -1,13 +1,17 @@
--- Análisis · Etapa 3: tramos de posesión marcados a mano.
+-- Análisis · Etapa 3: tramos de posesión marcados a mano y lado de ataque del 1T confirmado.
 -- Diseño: docs/analisis-etapa3.md
 --
--- Qué cambia (NO modifica ni mueve datos existentes: solo crea una tabla nueva):
---   public.analisis_posesion_tramos: lo que se marca a mano en el «Modo posesión» (pelota del equipo analizado, del
---   otro o pelota detenida), con inicio y fin en segundos del video. Lo automático (desde los momentos colectivos) NO se
---   guarda: se calcula en la app. Los tramos a mano de un mismo análisis no se pisan (trigger). Si se borra el análisis,
---   se borran sus tramos.
---   Permisos: escribir solo puede_administrar_analisis(); leer quien puede ver el análisis
---   (puede_consultar_analisis). Nada para anon ni para cuentas de jugadoras (red RESTRICTIVE «sin_cuentas_jugadoras»).
+-- Qué cambia (NO modifica ni mueve datos existentes: crea una tabla nueva y agrega una columna con valor por defecto):
+--   a) public.analisis_posesion_tramos: lo que se marca a mano en el «Modo posesión» (pelota del equipo analizado, del
+--      otro o pelota detenida), con inicio y fin en segundos del video. Lo automático (desde los momentos colectivos) NO
+--      se guarda: se calcula en la app. Los tramos a mano de un mismo análisis no se pisan (trigger). Si se borra el
+--      análisis, se borran sus tramos.
+--      Permisos: escribir solo puede_administrar_analisis(); leer quien puede ver el análisis
+--      (puede_consultar_analisis). Nada para anon ni para cuentas de jugadoras (red RESTRICTIVE «sin_cuentas_jugadoras»).
+--   b) public.analisis_partidos.direccion_confirmada (false por defecto, también para todos los análisis que ya existen):
+--      si el lado de ataque del 1T (direccion_primer_tiempo, que hoy vale «derecha» si nadie lo eligió) fue confirmado
+--      por coordinación. Mientras sea false, la app avisa que el mapa puede estar espejado. Se pone en true solo cuando
+--      coordinación elige o corrige el lado. Los permisos de analisis_partidos no cambian.
 --
 -- Un único bloque DO (todo o nada; correr como postgres en el editor SQL de Supabase). Espera como máximo 5 s por
 -- cada tabla; si está ocupada, aborta sin aplicar nada y se vuelve a correr.
@@ -27,8 +31,10 @@ BEGIN
      OR to_regprocedure('public.puede_consultar_analisis(uuid)') IS NULL THEN
     RAISE EXCEPTION 'Faltan requisitos (Análisis, esquemas privados, cuentas de jugadoras o la etapa 0). No se tocó nada.';
   END IF;
-  IF to_regclass('public.analisis_posesion_tramos') IS NOT NULL OR to_regclass('seguridad_privado.respaldo_posesion_tramos') IS NOT NULL THEN
-    RAISE EXCEPTION 'Ya está aplicada (existe la tabla o el respaldo). No se tocó nada.';
+  IF to_regclass('public.analisis_posesion_tramos') IS NOT NULL OR to_regclass('seguridad_privado.respaldo_posesion_tramos') IS NOT NULL
+     OR EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public'
+                 AND table_name = 'analisis_partidos' AND column_name = 'direccion_confirmada') THEN
+    RAISE EXCEPTION 'Ya está aplicada (existe la tabla, el respaldo o la columna direccion_confirmada). No se tocó nada.';
   END IF;
 
   -- 2) Respaldo: lo que se crea.
@@ -36,7 +42,13 @@ BEGIN
   REVOKE ALL ON seguridad_privado.respaldo_posesion_tramos FROM PUBLIC, anon, authenticated;
   INSERT INTO seguridad_privado.respaldo_posesion_tramos VALUES
     ('tabla', 'public.analisis_posesion_tramos'),
-    ('funcion', 'analisis_privado.sellar_tramo_posesion()');
+    ('funcion', 'analisis_privado.sellar_tramo_posesion()'),
+    ('columna', 'public.analisis_partidos.direccion_confirmada');
+
+  -- Lado de ataque del 1T confirmado: false para todos (nadie lo confirmó todavía con esta marca).
+  ALTER TABLE public.analisis_partidos ADD COLUMN direccion_confirmada boolean NOT NULL DEFAULT false;
+  COMMENT ON COLUMN public.analisis_partidos.direccion_confirmada IS
+    'true cuando coordinación eligió o corrigió el lado de ataque del 1T (direccion_primer_tiempo). false: el mapa puede estar espejado.';
 
   -- 3) La tabla.
   CREATE TABLE public.analisis_posesion_tramos (
@@ -109,8 +121,12 @@ BEGIN
      OR has_table_privilege('anon', 'public.analisis_posesion_tramos', 'INSERT') THEN
     RAISE EXCEPTION 'La seguridad de la tabla no quedó como se esperaba. Se deshizo todo.';
   END IF;
+  IF EXISTS (SELECT 1 FROM public.analisis_partidos WHERE direccion_confirmada) THEN
+    RAISE EXCEPTION 'Algún análisis quedó con el lado confirmado sin que nadie lo confirmara. Se deshizo todo.';
+  END IF;
 
   PERFORM pg_notify('pgrst', 'reload schema');
-  RAISE NOTICE 'Listo: tramos de posesión marcados a mano.';
+  RAISE NOTICE 'Listo: tramos de posesión marcados a mano y lado de ataque del 1T sin confirmar en % análisis.',
+    (SELECT count(*) FROM public.analisis_partidos);
 END
 $posesion_tramos$;
