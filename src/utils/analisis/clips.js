@@ -94,7 +94,7 @@ export function resolverClipsGuardados(filas, { accionesPorId, analisisPorId, ca
       analisis, catalogo, equipos, marcas: marcasPorPartido?.get?.(evento.partido_id) || null,
       espejo: fila.espejo, ajuste: fila, nota: fila.nota,
     })
-    if (clip) clips.push({ ...clip, filaId: fila.id, orden: fila.orden })
+    if (clip) clips.push({ ...clip, filaId: fila.id, orden: fila.orden, conDibujos: fila.con_dibujos !== false })
     else faltan.push(fila)
   }
   return { clips, faltan }

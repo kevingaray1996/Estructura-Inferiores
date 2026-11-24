@@ -10,8 +10,10 @@ import './playlists.css'
 
 // Sección «Playlists» de Análisis: biblioteca, nueva playlist desde un filtro y edición (coordinación).
 // El cuerpo técnico ve y reproduce las de su categoría (la base no le deja ver otras ni editar).
+// dibujos (etapa 4): { tiene } de useDibujos. onDibujar(clip): ventana de dibujo (solo coordinación en la compu).
 export default function PlaylistsSection({
   api, equipos, analisis, acciones, catalogo, jugadoras, categoriaPorDefecto, puedeEditar, marcasPorPartido, onReproducir,
+  dibujos = null, onDibujar = null,
 }) {
   const [vista, setVista] = useState({ tipo: 'lista' })
   const [categorias, setCategorias] = useState([])
@@ -66,6 +68,7 @@ export default function PlaylistsSection({
         analisis={analisis} acciones={acciones} etiqueta={etiqueta} jugadoras={jugadoras} aviso={aviso}
         onReproducir={(clips, indice) => onReproducir({ titulo: editando.nombre, clips, indice })}
         onVolver={() => { setAviso(''); setVista({ tipo: 'lista' }) }}
+        dibujos={dibujos} onDibujar={onDibujar}
       />
     )
   }
@@ -291,7 +294,7 @@ function NuevaPlaylist({ equipos, analisis, acciones, catalogo, jugadoras, categ
 
 // ---------- Edición ----------
 
-function EditarPlaylist({ playlist, filas, api, contexto, analisis, acciones, etiqueta, jugadoras, aviso, onReproducir, onVolver }) {
+function EditarPlaylist({ playlist, filas, api, contexto, analisis, acciones, etiqueta, jugadoras, aviso, onReproducir, onVolver, dibujos, onDibujar }) {
   const { clips, faltan } = useMemo(() => resolverClipsGuardados(filas, contexto), [filas, contexto])
   const [estado, setEstado] = useState(aviso || '')
   const [nombre, setNombre] = useState(playlist.nombre)
@@ -356,7 +359,7 @@ function EditarPlaylist({ playlist, filas, api, contexto, analisis, acciones, et
                   onDragStart={(e) => { setArrastrando(i); e.dataTransfer.effectAllowed = 'move' }}
                   onDragEnd={() => { setArrastrando(null); setDestino(null) }}>⠿</span>
                 <div>
-                  <p className="ed-titulo">{i + 1}. {etiqueta(c.tipo)}{c.equipo ? ` · ${nombreDeClave(c.equipo, contexto.equipos)}` : ''}</p>
+                  <p className="ed-titulo">{i + 1}. {etiqueta(c.tipo)}{c.equipo ? ` · ${nombreDeClave(c.equipo, contexto.equipos)}` : ''}{dibujos?.tiene(c.eventoId, c.espejo) && <span className="dib-icono" title="Tiene dibujos"> ✎</span>}</p>
                   <p className="ed-dato">{tituloPartido(a, contexto.equipos)} · {formatearTiempo(c.inicio)} a {formatearTiempo(c.fin)} ({c.fin - c.inicio} s)</p>
                 </div>
                 <div className="ed-controles">
@@ -371,6 +374,17 @@ function EditarPlaylist({ playlist, filas, api, contexto, analisis, acciones, et
                     <button type="button" className="et-boton" aria-label="Terminar 1 segundo después" onClick={() => ajustar(c, 'fin', 1)}>+1</button>
                   </span>
                   <button type="button" className="et-boton" onClick={() => onReproducir(clips, i)}>▶</button>
+                  {onDibujar && <button type="button" className="et-boton" onClick={() => onDibujar(c)}>✎ Dibujar</button>}
+                  {dibujos?.tiene(c.eventoId, c.espejo) && (
+                    <span className="az-segmento" role="group" aria-label="Dibujos en este clip">
+                      {[[true, 'Con dibujos'], [false, 'Sin dibujos']].map(([valor, texto]) => (
+                        <button key={texto} type="button" aria-pressed={c.conDibujos === valor}
+                          onClick={async () => { if (c.conDibujos !== valor) avisar(await api.editarClip(c.filaId, playlist.id, { con_dibujos: valor }), valor ? 'Se verá con sus dibujos.' : 'Se verá sin dibujos.') }}>
+                          {texto}
+                        </button>
+                      ))}
+                    </span>
+                  )}
                   <button type="button" className="et-boton pls-peligro" onClick={async () => {
                     avisar(await api.quitarClip(playlist, { id: c.filaId }, c.clave), 'Clip quitado.')
                   }}>Quitar</button>

@@ -15,7 +15,7 @@ const nombreConocida = (j) => (j ? nombreJugadora(j) : 'Jugadora guardada')
 // Lista de acciones del partido para revisar y detallar. Toda la lógica está en usePlaylistAnalisis.
 export default function PlaylistAnalisis({
   pl, total, partido, marcas, fueraDeCancha, faltanMarcas = [], onIrAPartido, catalogo, citaciones, jugadoras, detalles, cargandoDetalles, errorDetalles, onReintentarDetalles,
-  puedeEditar, videoListo, onEditarTodo, onEliminar, onDescartar, antesDeLaLista, onAgregarAPlaylist = null,
+  puedeEditar, videoListo, onEditarTodo, onEliminar, onDescartar, antesDeLaLista, onAgregarAPlaylist = null, onDibujar = null, tieneDibujos = null,
 }) {
   const { lista, progreso, filtros, cambiarFiltro, activoId } = pl
   const porcentaje = progreso.total ? Math.round((progreso.detalladas / progreso.total) * 100) : 0
@@ -106,6 +106,8 @@ export default function PlaylistAnalisis({
               puedeEditar={puedeEditar}
               onEditarTodo={onEditarTodo}
               onAgregarAPlaylist={onAgregarAPlaylist}
+              onDibujar={onDibujar}
+              conDibujos={Boolean(tieneDibujos?.(ev.id))}
               onEliminar={onEliminar}
               onDescartar={onDescartar}
             />
@@ -116,7 +118,7 @@ export default function PlaylistAnalisis({
   )
 }
 
-function FilaPlaylist({ ev, activa, pl, partido, marcas, fuera, catalogo, citaciones, jugadoras, detalle, cargandoDetalles, puedeEditar, onEditarTodo, onEliminar, onDescartar, onAgregarAPlaylist }) {
+function FilaPlaylist({ ev, activa, pl, partido, marcas, fuera, catalogo, citaciones, jugadoras, detalle, cargandoDetalles, puedeEditar, onEditarTodo, onEliminar, onDescartar, onAgregarAPlaylist, onDibujar, conDibujos }) {
   const fila = useRef(null)
   // La acción elegida (con clic o con ↑ / ↓) queda a la vista dentro de la lista.
   useEffect(() => { if (activa) fila.current?.scrollIntoView?.({ block: 'nearest' }) }, [activa])
@@ -167,7 +169,7 @@ function FilaPlaylist({ ev, activa, pl, partido, marcas, fuera, catalogo, citaci
             {apariencia.icono}
           </span>
           <span className="pl-texto">
-            <span className="pl-tipo">{reglas.etiqueta}</span>
+            <span className="pl-tipo">{reglas.etiqueta}{conDibujos && <span className="dib-icono" title="Tiene dibujos"> ✎</span>}</span>
             <span className="pl-sub">{resumen}</span>
           </span>
           {fuera && <span className="pl-estado" data-estado="fuera" title="Según la formación y los cambios, no estaba en cancha en ese momento">Fuera de cancha</span>}
@@ -238,6 +240,7 @@ function FilaPlaylist({ ev, activa, pl, partido, marcas, fuera, catalogo, citaci
                 {estadoGuardado === 'guardando' ? 'Guardando…' : estadoGuardado || ''}
               </span>
               {onAgregarAPlaylist && !enCola && <button type="button" className="pl-enlace" onClick={() => onAgregarAPlaylist(ev)}>+ Agregar a playlist</button>}
+              {onDibujar && !enCola && <button type="button" className="pl-enlace" onClick={() => onDibujar(ev)}>✎ Dibujar</button>}
               <button type="button" className="pl-enlace" onClick={() => onEditarTodo(ev)}>Editar todo</button>
               <button type="button" className="pl-enlace" data-peligro="si" onClick={() => onEliminar(ev)}>Eliminar</button>
             </div>

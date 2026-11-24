@@ -74,11 +74,11 @@ export default function useDibujos(activo) {
     return {}
   }, [indice])
 
-  return {
+  return useMemo(() => ({
     listo: estado.cargado && !estado.aviso,
     aviso: estado.aviso,
     sinTabla: estado.sinTabla,
     filas: estado.filas,
     tiene, cargar, guardar,
-  }
+  }), [estado, tiene, cargar, guardar])
 }

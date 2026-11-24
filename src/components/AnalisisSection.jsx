@@ -3,7 +3,7 @@ import { ANALISIS as A, textoAnalisis } from '../appearance/analisis'
 
 
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { consultarAdministracionAnalisis, esCuentaAdministradoraAnalisis, faltaRpcAdministracionAnalisis } from '../utils/permisosAnalisis'
 import useVentanaAnalisis from '../hooks/useVentanaAnalisis'
@@ -67,6 +67,11 @@ import { crearClip } from '../utils/analisis/clips'
 import { equiposConAnalisis, filtrarPorEquipo } from '../utils/analisis/equipos'
 import { prepararParaReproducir } from '../utils/analisis/reproductorPlaylist'
 import useTramosPosesion from '../hooks/useTramosPosesion'
+import useDibujos from '../hooks/useDibujos'
+import CapaReproduccion, { BotonPantallaCompleta } from './analisis/dibujo/CapaReproduccion'
+import { useZoomContenedor } from './analisis/dibujo/apoyo'
+import { esCompu } from '../utils/analisis/dibujos/editor'
+import { normalizarDibujo, estaVacio } from '../utils/analisis/dibujos/formato'
 import ModoPosesion from './analisis/ModoPosesion'
 import ResumenPartido from './analisis/ResumenPartido'
 import AvisoLadoAtaque, { AvisoLadosSinConfirmar } from './analisis/AvisoLadoAtaque'
@@ -254,6 +259,9 @@ function CanchaInteractiva({ eventos = [], coordenadas, direccion = null, intera
 }
 
 
+// Ventana de dibujo (etapa 4): su código se baja recién cuando se abre, para que Análisis no pese más.
+const EditorDibujo = lazy(() => import('./analisis/dibujo/EditorDibujo'))
+
 // modoConsulta: cuerpo técnico (y coordinación sin permiso de edición). Ve video, Playlist, mapa, estadísticas e
 // informe; no ve la botonera ni nada que guarde. La base (RLS) igual rechaza cualquier escritura.
 export default function AnalisisSection({ escrituraAutorizada = true, estadoAutorizacion, modoConsulta = false }) {
@@ -378,7 +386,9 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   const videoUrlActual =
     partidoActual?.video_url || videoCalendario(partidoCalendarioActual)
 
-  const videoActual = youtubeEmbed(videoUrlActual)
+  // fs=0: sin el botón de pantalla completa de YouTube (dejaría afuera los dibujos); se usa el del contenedor.
+  const embedVideo = youtubeEmbed(videoUrlActual)
+  const videoActual = embedVideo ? `${embedVideo}&fs=0` : ''
   useLayoutEffect(() => { contextoAnalisisRef.current = { partidoId, videoActual, seccion } }, [partidoId, videoActual, seccion])
   const ventanas = useVentanaAnalisis((anterior, siguiente) => {
     if (anterior !== 'reproductor' && siguiente !== 'reproductor') return
@@ -687,7 +697,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       if (categoriaIds.length) {
         const { data: jugadoresData, error: jugadoresError } = await supabase
           .from('jugadores')
-          .select('id, nombre, apellido, categoria_id, estado')
+          .select('id, nombre, apellido, categoria_id, estado, foto_url')
           .in('categoria_id', categoriaIds)
           .order('apellido', { ascending: true })
 
@@ -979,8 +989,12 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     ? eventosPartido.find((evento) => evento.id === ultimaAccion.id) || momentosPartido.find((m) => m.id === ultimaAccion.id) || null
     : null
 
-  // Playlist: salta al clip de la acción (3 s antes) y lo reproduce.
-  const irAClip = useCallback((evento) => (videoListo ? solicitarVideo('salto', clipDe(evento).inicio) : false), [videoListo, solicitarVideo])
+  // Playlist: salta al clip de la acción (3 s antes) y lo reproduce. Si el clip tiene dibujos, se ven encima (etapa 4).
+  const alElegirClipRef = useRef(null)
+  const irAClip = useCallback((evento) => {
+    alElegirClipRef.current?.(evento)
+    return videoListo ? solicitarVideo('salto', clipDe(evento).inicio) : false
+  }, [videoListo, solicitarVideo])
 
   // Línea de tiempo: momentos vistos desde el equipo analizado o desde el otro (espejo, calculado acá).
   const momentosVista = useMemo(() => momentosDesde(momentosPartido, catalogo, vistaMomentos), [momentosPartido, catalogo, vistaMomentos])
@@ -1161,6 +1175,82 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     const clip = crearClip(original, { analisis: partidoActual, catalogo, equipos: equiposApi.equipos, marcas: marcasPartido, espejo })
     if (clip) setAgregarClip({ clip, titulo: `${etiquetaDe(catalogo, clip.tipo)} · ${formatearTiempo(clip.segundo)}` })
   }, [todasLasAcciones, partidoActual, catalogo, equiposApi.equipos, marcasPartido])
+  // ---------- Etapa 4: dibujos sobre el video ----------
+  const dibujosApi = useDibujos(!cargando)
+  const [enCompu] = useState(() => esCompu())
+  // Dibujar es solo de coordinación y en la compu; el cuerpo técnico y el celular ven los dibujos al reproducir.
+  const puedeDibujar = esAdmin && !bloqueoEscritura && !modoConsulta && enCompu && dibujosApi.listo
+  const [editorDibujo, setEditorDibujo] = useState(null)
+  const [clipVideo, setClipVideo] = useState(null) // { clave, rango, dibujo }: dibujos sobre el video de Análisis
+  const [zoomVideoRef, aplicarZoomVideo] = useZoomContenedor()
+  const marcoVideoRef = useRef(null)
+  const obtenerPlayerVideo = useCallback(() => playerRef.current, [])
+  // Acción o momento (también visto desde el otro equipo) → su clip.
+  const clipDeAccion = useCallback((accion) => {
+    if (!accion || accion._cola) return null
+    const espejo = Boolean(accion.origen)
+    const original = espejo ? todasLasAcciones.find((e) => e.id === accion.origenId) : (todasLasAcciones.find((e) => e.id === accion.id) || accion)
+    const analisis = original && partidosPorId.get(original.partido_id)
+    if (!analisis) return null
+    return crearClip(original, { analisis, catalogo, equipos: equiposApi.equipos, marcas: marcasPorPartido.get(original.partido_id) || null, espejo })
+  }, [todasLasAcciones, partidosPorId, catalogo, equiposApi.equipos, marcasPorPartido])
+  const mostrarDibujosEnVideo = useCallback(async (clip) => {
+    if (!clip || !dibujosApi.tiene(clip.eventoId, clip.espejo)) { setClipVideo(null); return }
+    const r = await dibujosApi.cargar(clip.eventoId, clip.espejo)
+    setClipVideo(r?.dibujo ? { clave: clip.clave, rango: { inicio: clip.inicio, fin: clip.fin }, dibujo: r.dibujo } : null)
+  }, [dibujosApi])
+  useLayoutEffect(() => { alElegirClipRef.current = (evento) => mostrarDibujosEnVideo(clipDeAccion(evento)) })
+  const reproducirConDibujos = useCallback((momento) => {
+    reproducirMomento(momento)
+    mostrarDibujosEnVideo(clipDeAccion(momento))
+  }, [reproducirMomento, mostrarDibujosEnVideo, clipDeAccion])
+  // Fila «Dibujos» de la línea de tiempo: los clips de este partido que tienen dibujos.
+  const dibujosPartido = useMemo(() => dibujosApi.filas.filter((f) => f.partido_id === partidoId).map((f) => {
+    const original = todasLasAcciones.find((e) => e.id === f.evento_id)
+    const clip = original && clipDeAccion(f.espejo ? { ...original, id: `${original.id}:espejo`, origen: original.tipo, origenId: original.id } : original)
+    return clip ? { id: clip.clave, inicio: clip.inicio, fin: clip.fin, etiqueta: etiquetaDe(catalogo, clip.tipo), clip } : null
+  }).filter(Boolean), [dibujosApi.filas, partidoId, todasLasAcciones, clipDeAccion, catalogo])
+  const reproducirDibujo = useCallback((d) => {
+    mostrarDibujosEnVideo(d.clip)
+    if (videoListo) solicitarVideo('salto', d.clip.inicio)
+  }, [mostrarDibujosEnVideo, videoListo, solicitarVideo])
+  // Ventana de dibujo de un clip.
+  const abrirDibujo = useCallback(async (clip) => {
+    if (!clip || !puedeDibujar) return
+    const [listo] = prepararParaReproducir([clip], { analisisPorId: partidosPorId, equipos: equiposApi.equipos, etiqueta: (t) => etiquetaDe(catalogo, t), marcasPorPartido })
+    if (!listo?.videoId) { setError('Este partido no tiene un video de YouTube para dibujar.'); return }
+    const previo = await dibujosApi.cargar(clip.eventoId, clip.espejo)
+    if (previo && !previo.dibujo) { setError(previo.aviso || 'No se pudieron leer los dibujos de este clip.'); return }
+    const tipoOriginal = clip.origen || clip.tipo
+    const iguales = todasLasAcciones.filter((e) => e.partido_id === clip.partidoId && e.tipo === tipoOriginal).sort((a, b) => Number(a.segundo) - Number(b.segundo))
+    const numero = iguales.findIndex((e) => e.id === clip.eventoId) + 1
+    try { playerRef.current?.pauseVideo?.() } catch { /* Sin video conectado. */ }
+    setEditorDibujo({
+      clip: {
+        eventoId: clip.eventoId, espejo: clip.espejo, partidoId: clip.partidoId, videoId: listo.videoId, inicio: clip.inicio, fin: clip.fin, clave: clip.clave,
+        titulo: `${listo.etiqueta}${numero ? ` #${numero}` : ''} · ${formatearTiempo(clip.inicio)} → ${formatearTiempo(clip.fin)}`,
+      },
+      dibujo: previo?.dibujo || null,
+    })
+  }, [puedeDibujar, partidosPorId, equiposApi.equipos, catalogo, marcasPorPartido, dibujosApi, todasLasAcciones])
+  const guardarDibujo = useCallback(async (dibujo) => {
+    const clip = editorDibujo?.clip
+    if (!clip) return { error: 'No hay clip.' }
+    const r = await dibujosApi.guardar(clip, dibujo)
+    if (!r.error) {
+      const limpio = normalizarDibujo(dibujo).dibujo
+      setClipVideo((c) => (c && c.clave === clip.clave ? (estaVacio(limpio) ? null : { ...c, dibujo: limpio }) : c))
+    }
+    return r
+  }, [editorDibujo, dibujosApi])
+  // Jugadoras para «Nombre y dorsal»: las convocadas del partido (con dorsal) o, si no hay, el plantel.
+  const jugadorasDibujo = useMemo(() => {
+    const corto = (j) => [j?.nombre?.trim()?.[0] ? `${j.nombre.trim()[0]}.` : '', j?.apellido || ''].filter(Boolean).join(' ') || nombreJugadora(j)
+    const convocadas = citaciones.filter((c) => c.jugadora).map((c) => ({ id: c.jugador_id, nombre: corto(c.jugadora), dorsal: c.dorsal != null ? String(c.dorsal) : '', foto: c.jugadora.foto_url || '' }))
+    if (editorDibujo?.clip.partidoId === partidoId && convocadas.length) return convocadas
+    return jugadoras.map((j) => ({ id: j.id, nombre: corto(j), dorsal: '', foto: j.foto_url || '' }))
+  }, [citaciones, jugadoras, editorDibujo, partidoId])
+
   // ---------- Etapa 3: posesión del partido ----------
   const tramosPosesion = useTramosPosesion(partidoActual?.id || null)
   const lineaPos = useMemo(() => lineaPosesion({ momentos: momentosPartido, manuales: tramosPosesion.tramos, catalogo, marcas: marcasPartido }),
@@ -2121,6 +2211,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       style={{ color: A.texto }}
     >
       <AvisoAccion aviso={avisoAccion} />
+      {esAdmin && !modoConsulta && dibujosApi.sinTabla && <p role="status" className="text-sm" style={{ color: A.secundario }}>{dibujosApi.aviso}</p>}
       {modoConsulta && <p role="status" className="text-sm" style={{ color: A.secundario }}>Modo consulta: podés ver el video, las Acciones, las playlists, el mapa, las estadísticas y el informe. Etiquetar y editar acciones es solo de coordinación.</p>}
       {bloqueoEscritura && !modoConsulta && <p role="status">{(estadoAutorizacion || estadoPermiso) === 'pendiente_migracion'
         ? 'Análisis en modo consulta: falta activar la función de autorización de la migración pendiente. Crear, guardar, editar y eliminar están bloqueados hasta que el servidor confirme los permisos.'
@@ -2486,11 +2577,12 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                 <ZonaVentanaAnalisis tipo="reproductor" ventana={ventanas} encabezado={encabezadoVentana}>
                 <div className="az-video-marco">
                   {videoActual ? (
-                    <div className="mv-contenedor aspect-video overflow-hidden rounded-lg bg-black">
+                    <div ref={marcoVideoRef} className="mv-contenedor dib-marco aspect-video overflow-hidden rounded-lg bg-black">
                       <MarcadorVideo reloj={relojVideo} marcas={marcasPartido} eventos={eventosDelPartido.eventos}
                         rival={partidoCalendarioActual?.rival || partidoActual.rival}
                         puedeMarcar={!scouting && accesoEditor && !bloqueoEscritura && videoListo && !eventosDelPartido.cargando && !eventosDelPartido.error}
                         onMarcar={marcarDesdeMarcador} />
+                      <div ref={zoomVideoRef} className="dib-zoom">
                       <iframe
                         key={`${partidoActual.id}-${videoActual}-${destinoReproductor}-${revisionReproductor}`}
                         ref={iframeRef}
@@ -2501,6 +2593,10 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                         referrerPolicy="strict-origin-when-cross-origin"
                         allowFullScreen
                       />
+                      </div>
+                      {clipVideo && <CapaReproduccion obtenerPlayer={obtenerPlayerVideo} dibujo={clipVideo.dibujo} rango={clipVideo.rango}
+                        onZoom={aplicarZoomVideo} onSalir={() => setClipVideo(null)} />}
+                      <BotonPantallaCompleta objetivoRef={marcoVideoRef} />
                     </div>
                   ) : (
                     <div
@@ -2541,10 +2637,12 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                       seleccionadoId={momentoElegidoId}
                       etiquetaDe={etiquetaTipo}
                       onIr={irAlSegundo}
-                      onReproducir={reproducirMomento}
+                      onReproducir={reproducirConDibujos}
                       onAjustar={ajustarMomento}
                       posesion={lineaPos}
                       onAjustarPosesion={puedeMarcarPosesion ? ajustarPosesion : null}
+                      dibujos={dibujosPartido}
+                      onReproducirDibujo={reproducirDibujo}
                     />
                   </>}
                 </div>
@@ -2580,10 +2678,12 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                     minutoDe={(s) => { const m = minutoReal(s, marcasPartido); return m?.estado === 'juego' ? m.texto : '' }}
                     equipo={momentoElegido?.equipo === 'otro' ? equiposPartido.otro : equiposPartido.analizado}
                     puedeBorrar={accesoEditor && !bloqueoEscritura && !modoConsulta}
-                    onReproducir={reproducirMomento}
+                    onReproducir={reproducirConDibujos}
                     onBorrar={async (m) => { await eliminarEvento(m); setMomentoElegidoId(null) }}
                     onCerrar={() => setMomentoElegidoId(null)}
                     onAgregarAPlaylist={puedeEditarPlaylists ? pedirAgregarAPlaylist : null}
+                    onDibujar={puedeDibujar ? (m) => abrirDibujo(clipDeAccion(m)) : null}
+                    conDibujos={Boolean(momentoElegido && dibujosApi.tiene(momentoElegido.origenId || momentoElegido.id, Boolean(momentoElegido.origen)))}
                   />
                 </div>
 
@@ -3009,6 +3109,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                     onEliminar={eliminarEvento}
                     onDescartar={(id) => cola.descartar(id)}
                     onAgregarAPlaylist={puedeEditarPlaylists ? pedirAgregarAPlaylist : null}
+                    onDibujar={puedeDibujar ? (ev) => abrirDibujo(clipDeAccion(ev)) : null}
+                    tieneDibujos={(id) => dibujosApi.tiene(id, false)}
                     antesDeLaLista={<>
                 {mostrarEdicionEvento && (
                   <form
@@ -3529,7 +3631,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
           {seccion === 'playlists' && (
             <PlaylistsSection api={playlistsApi} equipos={equiposApi.equipos} analisis={partidos} acciones={todasLasAcciones}
               catalogo={catalogo} jugadoras={jugadoras} categoriaPorDefecto={partidoActual?.categoria_id || CATEGORIA_ID}
-              puedeEditar={puedeEditarPlaylists} marcasPorPartido={marcasPorPartido} onReproducir={abrirReproductor} />
+              puedeEditar={puedeEditarPlaylists} marcasPorPartido={marcasPorPartido} onReproducir={abrirReproductor}
+              dibujos={dibujosApi} onDibujar={puedeDibujar ? abrirDibujo : null} />
           )}
 
           {seccion === 'mapa' && (
@@ -3626,10 +3729,17 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
       {reproduccion && (
         <ReproductorPlaylist key={reproduccion.titulo + reproduccion.clips.length} titulo={reproduccion.titulo} clips={reproduccion.clips}
-          indiceInicial={reproduccion.indice} onCerrar={() => setReproduccion(null)}
+          indiceInicial={reproduccion.indice} onCerrar={() => setReproduccion(null)} dibujos={dibujosApi}
           onGuardar={puedeEditarPlaylists ? (nombre) => playlistsApi.crear({
             nombre, categoriaId: partidoActual?.categoria_id || CATEGORIA_ID, filtro: null, clips: reproduccion.clips,
           }) : null} />
+      )}
+
+      {editorDibujo && (
+        <Suspense fallback={<div className="dib-editor" role="status" style={{ placeItems: 'center', display: 'grid' }}>Abriendo la ventana de dibujo…</div>}>
+          <EditorDibujo key={editorDibujo.clip.clave} clip={editorDibujo.clip} dibujoInicial={editorDibujo.dibujo} jugadoras={jugadorasDibujo}
+            onGuardar={guardarDibujo} onCerrar={() => setEditorDibujo(null)} />
+        </Suspense>
       )}
 
       {agregarClip && (

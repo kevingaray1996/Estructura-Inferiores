@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { cargarYouTubeAPI } from '../../utils/analisis/youtubeApi'
 import { formatearTiempo } from '../../utils/analisis/formato'
 import { VELOCIDADES, alTerminarClip, indiceValido, llegoAlFin, ordenDeTecla, planDeClip, rotuloClip } from '../../utils/analisis/reproductorPlaylist'
+import CapaReproduccion from './dibujo/CapaReproduccion'
+import { useZoomContenedor } from './dibujo/apoyo'
 import './playlists.css'
 
 const CLAVE_PAUSA = 'analisis_playlist_pausa_final_v1'
@@ -10,7 +12,8 @@ const leerPausa = () => { try { return window.localStorage.getItem(CLAVE_PAUSA) 
 // Reproductor de playlist: pantalla encima de todo. Reproduce los clips seguidos aunque sean de partidos distintos
 // (cambia de video de YouTube solo). clips: ya preparados (videoId, inicio, fin, etiqueta, partido, minuto, nota).
 // onGuardar(nombre): opcional («Guardar como playlist», solo coordinación). Devuelve { error } si falla.
-export default function ReproductorPlaylist({ titulo, clips, indiceInicial = 0, onCerrar, onGuardar = null }) {
+// dibujos (etapa 4): { tiene, cargar } de useDibujos. Cada clip se ve con sus dibujos salvo que diga conDibujos: false.
+export default function ReproductorPlaylist({ titulo, clips, indiceInicial = 0, onCerrar, onGuardar = null, dibujos = null }) {
   const contenedorRef = useRef(null)
   const zonaVideoRef = useRef(null)
   const playerRef = useRef(null)
@@ -27,6 +30,12 @@ export default function ReproductorPlaylist({ titulo, clips, indiceInicial = 0, 
   const [terminado, setTerminado] = useState(false)
   const [guardando, setGuardando] = useState(null) // null | { nombre, estado }
   const clip = clips[indice] || null
+  const [zoomRef, aplicarZoom] = useZoomContenedor()
+  const [dibujoClip, setDibujoClip] = useState(null) // { clave, dibujo }
+  const conDibujo = (c) => Boolean(c && c.conDibujos !== false && dibujos?.tiene?.(c.eventoId, c.espejo))
+  const quiereDibujo = conDibujo(clip)
+  const obtenerPlayer = useCallback(() => playerRef.current, [])
+  const rangoClip = useMemo(() => (clip ? { inicio: clip.inicio, fin: clip.fin } : null), [clip])
   // Lo que leen el reloj y las teclas (sin volver a crear el intervalo en cada cambio).
   const estadoRef = useRef({})
   useLayoutEffect(() => { estadoRef.current = { indice, total: clips.length, repetir, pausaAlFinal, clip, velocidad } })
@@ -47,7 +56,8 @@ export default function ReproductorPlaylist({ titulo, clips, indiceInicial = 0, 
       if (!vigente) return
       playerRef.current = new YT.Player(destino, {
         width: '100%', height: '100%',
-        playerVars: { playsinline: 1, rel: 0, modestbranding: 1, origin: window.location.origin },
+        // fs: 0 — la pantalla completa es la del reproductor entero, para que se sigan viendo los dibujos.
+        playerVars: { playsinline: 1, rel: 0, modestbranding: 1, fs: 0, origin: window.location.origin },
         events: {
           onReady: () => { if (vigente) setListo(true) },
           onStateChange: (e) => {
@@ -94,6 +104,16 @@ export default function ReproductorPlaylist({ titulo, clips, indiceInicial = 0, 
   // Sincroniza el reproductor de YouTube (sistema externo) con el clip elegido.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (listo) mostrar(clip) }, [listo, clip, mostrar])
+
+  // Dibujos del clip actual (se piden recién al llegar a ese clip).
+  useEffect(() => {
+    if (!quiereDibujo) return undefined
+    let vigente = true
+    const clave = clip.clave
+    dibujos.cargar(clip.eventoId, clip.espejo).then((r) => { if (vigente) setDibujoClip({ clave, dibujo: r?.dibujo || null }) })
+    return () => { vigente = false }
+  }, [quiereDibujo, clip, dibujos])
+  const dibujoActual = quiereDibujo && dibujoClip?.clave === clip?.clave ? dibujoClip.dibujo : null
 
   // Vigila el fin del clip.
   useEffect(() => {
@@ -214,7 +234,8 @@ export default function ReproductorPlaylist({ titulo, clips, indiceInicial = 0, 
           ) : <p className="rp-rotulo">La playlist no tiene clips.</p>}
 
           <div className="rp-video">
-            <div ref={zonaVideoRef} />
+            <div ref={zoomRef} className="dib-zoom"><div ref={zonaVideoRef} /></div>
+            {dibujoActual && <CapaReproduccion obtenerPlayer={obtenerPlayer} dibujo={dibujoActual} rango={rangoClip} onZoom={aplicarZoom} />}
             {!listo && !errorVideo && <p className="rp-video-aviso">Cargando el video…</p>}
             {errorVideo && <p className="rp-video-aviso" role="alert">{errorVideo}</p>}
           </div>
@@ -242,7 +263,7 @@ export default function ReproductorPlaylist({ titulo, clips, indiceInicial = 0, 
           {clips.map((c, i) => (
             <li key={c.clave + i}>
               <button type="button" aria-current={i === indice ? 'true' : undefined} onClick={() => irA(i)}>
-                <strong>{i + 1}. {c.etiqueta}{c.equipoNombre ? ` · ${c.equipoNombre}` : ''}</strong>
+                <strong>{i + 1}. {c.etiqueta}{c.equipoNombre ? ` · ${c.equipoNombre}` : ''}{conDibujo(c) && <span className="dib-icono" title="Con dibujos"> ✎</span>}</strong>
                 <span>{c.partido} · {c.minuto}{c.nota ? ` · ${c.nota}` : ''}</span>
               </button>
             </li>

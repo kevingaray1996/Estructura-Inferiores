@@ -22,9 +22,11 @@ function esTactil() {
 // y reproducir. onAjustar(barra, { segundo, segundo_fin }) guarda; onIr(segundo) mueve el video; onReproducir(barra).
 // posesion (etapa 3): la línea de posesión (amarillo analizado, blanco el otro, gris detenida, rayado sin datos).
 // onAjustarPosesion(tramo, { segundo, segundo_fin }): coordinación arrastra los bordes como en las otras barras.
+// dibujos (etapa 4): clips con dibujos [{ id, inicio, fin, etiqueta }]; onReproducirDibujo(clip) los muestra con sus dibujos.
 export default function LineaTiempo({
   reloj, catalogo, momentos, individuales, marcas, obtenerDuracionVideo, editable, vista, onVista, equipos,
   seleccionadoId, onReproducir, onIr, onAjustar, etiquetaDe, posesion = [], onAjustarPosesion = null,
+  dibujos = [], onReproducirDibujo = null,
 }) {
   const segundo = useTiempoVideo(reloj)
   const duracion = duracionEje({ duracionVideo: obtenerDuracionVideo?.(), momentos, eventos: individuales, marcas })
@@ -141,6 +143,24 @@ export default function LineaTiempo({
                           onPointerDown={(e) => empezar(e, original, 'fin')} onPointerMove={mover} onPointerUp={soltar} />
                       </>}
                     </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {dibujos.length > 0 && (
+            <div className="lt-fila">
+              <span className="lt-etiqueta" title="Clips con dibujos">✎ Dibujos</span>
+              <div className="lt-pista" onClick={tocarPista} role="presentation" style={{ '--lt-color': 'var(--ui-acento)' }}>
+                {dibujos.filter((d) => visible(d.inicio, d.fin)).map((d) => {
+                  const izquierda = pos(d.inicio)
+                  const texto = `Dibujos: ${d.etiqueta} de ${formatearTiempo(d.inicio)} a ${formatearTiempo(d.fin)}`
+                  return (
+                    <button key={d.id} type="button" className="lt-barra" data-dibujo="si"
+                      style={{ left: `${izquierda}%`, width: `${Math.max(0.4, pos(d.fin) - izquierda)}%` }}
+                      aria-label={texto} title={texto}
+                      onClick={(e) => { e.stopPropagation(); onReproducirDibujo?.(d) }} />
                   )
                 })}
               </div>
