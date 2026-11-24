@@ -132,40 +132,40 @@ test('Cambios y goles: se cargan con el tiempo del video', async () => {
   }
 })
 
-test('Minutos sugeridos: se muestran, se corrigen y se guardan en la planilla solo al confirmar', async () => {
+test('Minutos sugeridos: sugeridos, cargados y diferencia; solo «Confirmar» los guarda en la planilla', async () => {
   const h = await montar({ eventosPartido: [...MARCAS, CAMBIO], planilla: [{ id: 'f1', jugador_id: 'j', partido_id: 'c1', minutos_jugados: 70, titular: true }] })
   try {
     await abrir(h, 'partido')
     await h.act(async () => { await esperar() })
     const tabla = panel('partido').querySelector('.pa-tabla')
     const filaDe = (nombre) => [...tabla.querySelectorAll('tbody tr')].find((tr) => tr.textContent.includes(nombre))
-    assert.match(filaDe('Ana Prueba').textContent, /75'70'/, 'Sugeridos 75\', en planilla 70\'')
+    assert.match(filaDe('Ana Prueba').textContent, /75'70'\+5'/, 'Sugeridos 75\', cargados 70\', diferencia +5\'')
     assert.match(filaDe('Bea Ensayo').textContent, /15'—/)
+    assert.equal(h.guardados.filter((g) => g.tabla === 'estadisticas_jugador').length, 0, 'Nada se guarda solo')
 
-    // Sin confirmar no se guarda nada.
-    let preguntas = 0
-    h.dom.window.confirm = () => { preguntas += 1; return false }
-    const guardar = botonEn(panel('partido'), 'Guardar minutos en la planilla (2)')
-    await h.act(async () => { guardar.click(); await esperar() })
-    assert.equal(preguntas, 1)
+    // «Confirmar todos» primero muestra lo que cambia; cancelar no guarda nada.
+    await h.act(async () => { botonEn(panel('partido'), 'Confirmar todos (2)').click(); await esperar() })
+    const previa = panel('partido').querySelector('.pa-vista-previa')
+    assert.match(previa.textContent, /Ana Prueba: 70' → 75'/)
+    assert.match(previa.textContent, /Bea Ensayo: sin cargar → 15'/)
+    await h.act(async () => { botonEn(previa, 'Cancelar').click(); await esperar() })
     assert.equal(h.guardados.filter((g) => g.tabla === 'estadisticas_jugador').length, 0)
 
-    // Corrige a mano a Bea (16') y confirma: Ana se actualiza, Bea se agrega.
-    await h.act(async () => {
-      const input = filaDe('Bea Ensayo').querySelector('input')
-      Object.getOwnPropertyDescriptor(h.dom.window.HTMLInputElement.prototype, 'value').set.call(input, '16')
-      input.dispatchEvent(new h.dom.window.Event('input', { bubbles: true }))
-    })
-    h.dom.window.confirm = () => true
-    await h.act(async () => { guardar.click(); await esperar(); await esperar() })
-    const planilla = h.guardados.filter((g) => g.tabla === 'estadisticas_jugador')
-    assert.equal(planilla.length, 2)
-    const actualizada = planilla.find((g) => g.op === 'update'), nueva = planilla.find((g) => g.op === 'insert')
-    assert.deepEqual(actualizada.valores, { minutos_jugados: 75 })
-    assert.deepEqual(actualizada.ids, ['f1'])
-    assert.deepEqual({ ...nueva.fila, id: undefined }, { id: undefined, jugador_id: 'j2', partido_id: 'c1', minutos_jugados: 16, titular: false })
+    // Confirmar solo a Ana: se actualiza su fila y nada más.
+    await h.act(async () => { filaDe('Ana Prueba').querySelector('button').click(); await esperar(); await esperar() })
+    let planilla = h.guardados.filter((g) => g.tabla === 'estadisticas_jugador')
+    assert.equal(planilla.length, 1)
+    assert.deepEqual([planilla[0].op, planilla[0].valores, planilla[0].ids], ['update', { minutos_jugados: 75 }, ['f1']])
+
+    // Confirmar todos (queda Bea): se agrega su fila.
     await h.act(async () => { await esperar() })
-    assert.match(botonEn(panel('partido'), 'La planilla ya tiene estos minutos')?.textContent || '', /ya tiene/)
+    await h.act(async () => { botonEn(panel('partido'), 'Confirmar todos (1)').click(); await esperar() })
+    await h.act(async () => { botonEn(panel('partido').querySelector('.pa-vista-previa'), 'Confirmar estos cambios').click(); await esperar(); await esperar() })
+    planilla = h.guardados.filter((g) => g.tabla === 'estadisticas_jugador')
+    const nueva = planilla.find((g) => g.op === 'insert')
+    assert.deepEqual({ ...nueva.fila, id: undefined }, { id: undefined, jugador_id: 'j2', partido_id: 'c1', minutos_jugados: 15, titular: false })
+    await h.act(async () => { await esperar() })
+    assert.match(panel('partido').textContent, /La planilla ya tiene estos minutos/)
   } finally {
     await h.cerrar()
   }

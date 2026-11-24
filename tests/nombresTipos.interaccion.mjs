@@ -85,7 +85,8 @@ test('Análisis muestra los nombres configurables y guarda el código', async ()
     // Estadísticas, Mapa e Informe.
     await h.click('▥ Estadísticas')
     assert.match(document.body.textContent, /Pase bien/)
-    assert.match(document.body.textContent, /Control de arquera: 1/)
+    // Pantalla del partido (etapa 3): el tablero muestra el nombre del tipo con su número.
+    assert.match(document.body.textContent, /Control de arquera1/)
     sinCodigo('estadísticas')
 
     await h.click('▦ Mapa')

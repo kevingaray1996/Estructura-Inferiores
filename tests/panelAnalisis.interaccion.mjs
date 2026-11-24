@@ -28,12 +28,12 @@ test('La botonera sale de la base: solo los visibles, en su orden y con su nombr
   }
 })
 
-test('Pestañas Etiquetado / Acciones / Partido: se cambian con clic y con flechas sin mover el video', async () => {
+test('Pestañas Etiquetado / Acciones / Partido / Posesión: se cambian con clic y con flechas sin mover el video', async () => {
   const h = await montar()
   try {
     await h.iniciar()
     const pestanas = [...document.querySelectorAll('[role="tab"]')]
-    assert.deepEqual(pestanas.map((p) => p.textContent.replace(/\d+$/, '')), ['Etiquetado', 'Acciones', 'Partido'])
+    assert.deepEqual(pestanas.map((p) => p.textContent.replace(/\d+$/, '')), ['Etiquetado', 'Acciones', 'Partido', 'Posesión'])
     const panel = (id) => document.getElementById(`az-panel-${id}`)
     assert.equal(panel('etiquetado').hidden, false)
     assert.equal(panel('playlist').hidden, true)
