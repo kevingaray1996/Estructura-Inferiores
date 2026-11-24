@@ -109,7 +109,8 @@
 .ma-toque-linea { stroke: transparent; stroke-width: 2.6; }
 .ma-punto { stroke-width: .3; }
 .ma-punto[data-calidad='bien'] { fill: var(--mapa-bien); fill-opacity: .78; stroke: var(--mapa-cesped); }
-.ma-punto[data-calidad='mal'] { fill: var(--mapa-mal); fill-opacity: .16; stroke: var(--mapa-mal); stroke-width: .34; stroke-dasharray: .7 .45; }
+/* Incorrectas: rojo lleno, bien distinto del amarillo de las correctas. */
+.ma-punto[data-calidad='mal'] { fill: var(--mapa-mal); fill-opacity: .85; stroke: var(--mapa-cesped); }
 .ma-punto[data-calidad='neutro'] { fill: var(--mapa-neutro); fill-opacity: .45; stroke: none; }
 .ma-anillo { fill: none; stroke: var(--mapa-seleccion); stroke-width: .35; }
 /* En el celular la cancha es chica: puntos un poco más grandes para que se vean y se puedan tocar. */
@@ -245,3 +246,8 @@
   .ma-grupo { gap: .25rem; }
   .ma-chip { min-height: 36px; padding: 0 .625rem; font-size: .8125rem; letter-spacing: .04em; }
 }
+
+/* Filtro por tipo de acción (etapa 3). */
+.ma-tipo { align-items: center; }
+.ma-tipo-etiqueta { font-size: .75rem; font-weight: 700; color: var(--ui-compartido-secundario); }
+.ma-tipo select { min-height: 44px; max-width: 100%; padding: .375rem .625rem; border: 1px solid var(--ui-compartido-borde); border-radius: .5rem; background: var(--analisis-control); color: var(--ui-compartido-texto); }

@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { MARCAS, estabaEnCancha, faltanMarcas, leerTiempo, problemasOrden } from '../../utils/analisis/eventosPartido'
+import { MARCAS, estabaEnCancha, faltanMarcas, filaMinutos, leerTiempo, problemasOrden } from '../../utils/analisis/eventosPartido'
 import { leerTiempoPartido, textoTiempos, tiemposDe } from '../../utils/analisis/marcador'
 import { formatearTiempo, nombreJugadora } from '../../utils/analisis/formato'
 import './partido.css'
+import './estadisticasVisuales.css'
 
 // «2T 12' (video 58:40)» (o solo el tiempo del video si faltan marcas). Para avisos de texto.
 export function tiempoConMinuto(segundo, marcas) {
@@ -288,10 +289,11 @@ function GolesTarjetas({ ev, citaciones, nombre, bloqueado, videoListo, tomarSeg
   )
 }
 
-// Minutos sugeridos desde el video: se muestran, se pueden corregir y se guardan en la planilla solo al confirmar.
-function MinutosSugeridos({ sugeridos, motivo, vinculado, planilla, onGuardar, citaciones, titulares, puedeEditar }) {
-  const [editados, setEditados] = useState({})
-  const [guardando, setGuardando] = useState(false)
+// Minutos sugeridos desde el video (solo partidos propios). Nunca se escriben solos: «Confirmar» (por jugadora) o
+// «Confirmar todos» (con vista previa) son lo único que actualiza los minutos cargados en la planilla.
+function MinutosSugeridos({ sugeridos, motivo, avisos = [], vinculado, planilla, onGuardar, citaciones, titulares, puedeEditar }) {
+  const [guardando, setGuardando] = useState(null) // null | jugador_id | 'todos'
+  const [vistaPrevia, setVistaPrevia] = useState(false)
 
   if (!vinculado) {
     return (
@@ -302,61 +304,77 @@ function MinutosSugeridos({ sugeridos, motivo, vinculado, planilla, onGuardar, c
     )
   }
 
-  const filas = sugeridos ? citaciones.map((c) => {
-    const sugerido = sugeridos[c.jugador_id] ?? 0
-    const enPlanilla = planilla.minutosPlanilla[c.jugador_id]
-    const texto = editados[c.jugador_id] ?? String(sugerido)
-    return { c, sugerido, enPlanilla, texto, minutos: Number.parseInt(texto, 10) }
-  }) : []
-  // Se guarda lo que cambia respecto de la planilla. Una jugadora sin fila y con 0 minutos no se agrega.
-  const aGuardar = filas.filter((f) => Number.isInteger(f.minutos) && f.minutos >= 0 && f.minutos <= 200
-    && (f.enPlanilla == null ? f.minutos > 0 : f.minutos !== Number(f.enPlanilla)))
-  const invalidos = filas.filter((f) => !Number.isInteger(f.minutos) || f.minutos < 0 || f.minutos > 200)
+  const nombreDe = (id) => {
+    const c = citaciones.find((x) => x.jugador_id === id)
+    return c ? nombreJugadora(c.jugadora) : 'Una jugadora'
+  }
+  const filas = sugeridos ? citaciones.map((c) => ({ c, ...filaMinutos(c.jugador_id, sugeridos, planilla.minutosPlanilla) })) : []
+  const aConfirmar = filas.filter((f) => f.cambia)
+  const lista = (fs) => fs.map((f) => ({ jugador_id: f.c.jugador_id, minutos: f.sugerido, titular: titulares.includes(f.c.jugador_id) }))
 
-  async function guardar() {
-    if (!window.confirm(`Se van a guardar los minutos de ${aGuardar.length} jugadora${aGuardar.length === 1 ? '' : 's'} en la planilla del partido. ¿Seguir?`)) return
-    setGuardando(true)
-    try {
-      // Se conservan las correcciones a mano: después de guardar coinciden con la planilla y no quedan pendientes.
-      await onGuardar(aGuardar.map((f) => ({ jugador_id: f.c.jugador_id, minutos: f.minutos, titular: titulares.includes(f.c.jugador_id) })))
-    } finally { setGuardando(false) }
+  async function confirmar(fs, quien) {
+    setGuardando(quien)
+    try { await onGuardar(lista(fs)) } finally { setGuardando(null); setVistaPrevia(false) }
   }
 
   return (
     <section className="pa-seccion" aria-labelledby="pa-minutos-titulo">
       <h3 id="pa-minutos-titulo" className="pa-titulo">Minutos jugados sugeridos</h3>
+      {avisos.length > 0 && (
+        <ul className="pa-avisos" role="status">
+          {avisos.map((a, i) => <li key={i} className="pa-aviso">{a.jugadoraId ? `${nombreDe(a.jugadoraId)} ${a.texto}` : a.texto}</li>)}
+        </ul>
+      )}
       {!sugeridos ? (
-        <p className="pa-aviso">{motivo}</p>
+        !avisos.length && <p className="pa-aviso">{motivo || 'Faltan datos para sugerir los minutos.'}</p>
       ) : (
         <>
-          <p className="pa-nota">Salen de las marcas y los cambios. Revisalos y corregí lo que haga falta: recién se guardan en la planilla del partido cuando confirmás.</p>
+          <p className="pa-nota">Salen de las marcas del video (con el tiempo agregado), los cambios y las expulsiones. Se guardan en la planilla solo cuando tocás «Confirmar».</p>
           {planilla.error && <p className="pa-alerta" role="alert">{planilla.error}</p>}
           <div className="pa-tabla-marco">
             <table className="pa-tabla">
               <thead>
-                <tr><th scope="col">Jugadora</th><th scope="col">Sugeridos</th><th scope="col">En planilla</th><th scope="col">A guardar</th></tr>
+                <tr><th scope="col">Jugadora</th><th scope="col">Sugeridos</th><th scope="col">Cargados</th><th scope="col">Diferencia</th><th scope="col"><span className="pa-sr">Confirmar</span></th></tr>
               </thead>
               <tbody>
                 {filas.map((f) => (
-                  <tr key={f.c.jugador_id} data-cambia={aGuardar.includes(f) ? 'si' : undefined}>
+                  <tr key={f.c.jugador_id} data-cambia={f.cambia ? 'si' : undefined}>
                     <th scope="row">{etiquetaConvocada(f.c)}</th>
                     <td>{f.sugerido}'</td>
-                    <td>{planilla.cargando ? '…' : f.enPlanilla == null ? '—' : `${f.enPlanilla}'`}</td>
+                    <td>{planilla.cargando ? '…' : f.cargado == null ? '—' : `${f.cargado}'`}</td>
+                    <td>{f.diferencia == null ? '—' : f.diferencia === 0 ? '=' : `${f.diferencia > 0 ? '+' : ''}${f.diferencia}'`}</td>
                     <td>
-                      <label className="pa-sr" htmlFor={`pa-min-${f.c.jugador_id}`}>Minutos a guardar de {nombreJugadora(f.c.jugadora)}</label>
-                      <input id={`pa-min-${f.c.jugador_id}`} className="pa-minutos" inputMode="numeric" value={f.texto} disabled={!puedeEditar || guardando}
-                        aria-invalid={invalidos.includes(f) ? 'true' : undefined}
-                        onChange={(e) => setEditados((m) => ({ ...m, [f.c.jugador_id]: e.target.value.replace(/[^\d]/g, '') }))} />
+                      {f.cambia && puedeEditar && (
+                        <button type="button" className="pa-boton" disabled={Boolean(guardando) || planilla.cargando}
+                          aria-label={`Confirmar ${f.sugerido} minutos de ${nombreJugadora(f.c.jugadora)}`}
+                          onClick={() => confirmar([f], f.c.jugador_id)}>{guardando === f.c.jugador_id ? 'Guardando…' : 'Confirmar'}</button>
+                      )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          {invalidos.length > 0 && <p className="pa-error" role="alert">Revisá los minutos marcados: tienen que ser un número entre 0 y 200.</p>}
-          <button type="button" className="pa-boton" data-principal="si" disabled={!puedeEditar || guardando || planilla.cargando || aGuardar.length === 0 || invalidos.length > 0} onClick={guardar}>
-            {guardando ? 'Guardando…' : aGuardar.length ? `Guardar minutos en la planilla (${aGuardar.length})` : 'La planilla ya tiene estos minutos'}
-          </button>
+          {puedeEditar && aConfirmar.length > 0 && !vistaPrevia && (
+            <button type="button" className="pa-boton" data-principal="si" disabled={Boolean(guardando) || planilla.cargando} onClick={() => setVistaPrevia(true)}>
+              Confirmar todos ({aConfirmar.length})
+            </button>
+          )}
+          {vistaPrevia && (
+            <div className="pa-vista-previa" role="region" aria-label="Lo que va a cambiar en la planilla">
+              <p className="pa-nota"><strong>Va a cambiar en la planilla:</strong></p>
+              <ul>
+                {aConfirmar.map((f) => <li key={f.c.jugador_id}>{nombreJugadora(f.c.jugadora)}: {f.cargado == null ? 'sin cargar' : `${f.cargado}'`} → {f.sugerido}'</li>)}
+              </ul>
+              <div className="pa-botones">
+                <button type="button" className="pa-boton" data-principal="si" disabled={Boolean(guardando)} onClick={() => confirmar(aConfirmar, 'todos')}>
+                  {guardando === 'todos' ? 'Guardando…' : 'Confirmar estos cambios'}
+                </button>
+                <button type="button" className="pa-boton" disabled={Boolean(guardando)} onClick={() => setVistaPrevia(false)}>Cancelar</button>
+              </div>
+            </div>
+          )}
+          {!aConfirmar.length && !planilla.cargando && <p className="pa-nota">La planilla ya tiene estos minutos.</p>}
         </>
       )}
     </section>

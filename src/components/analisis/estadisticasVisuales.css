@@ -1,0 +1,112 @@
+/* Etapa 3 de Análisis: posesión, modo posesión, pantalla del partido y minutos.
+   Colores solo desde tokens de apariencia.css. Todo lo que se toca mide al menos 44 px. Primero el celular. */
+
+.ev-nota { margin: .25rem 0 0; font-size: .8125rem; color: var(--ui-compartido-secundario); }
+.ev-parcial {
+  display: inline-block; margin-left: .25rem; padding: .0625rem .5rem; border: 1px dashed var(--ui-alerta); border-radius: 999px;
+  font-size: .6875rem; font-weight: 800; color: var(--ui-alerta); text-transform: uppercase; letter-spacing: .03em; vertical-align: middle;
+}
+
+/* Barra de posesión */
+.ev-posesion { display: grid; gap: .375rem; }
+.ev-posesion-nombres { display: flex; justify-content: space-between; gap: .5rem; font-size: .875rem; }
+.ev-posesion-nombres strong { font-size: 1.25rem; font-weight: 900; }
+.ev-posesion-barra { display: flex; height: 18px; overflow: hidden; border-radius: 999px; border: 1px solid var(--posesion-otro-borde); }
+.ev-posesion-barra span[data-estado='analizado'], .ev-dominio [data-estado='analizado'] { background: var(--posesion-analizado); }
+.ev-posesion-barra span[data-estado='otro'], .ev-dominio [data-estado='otro'] { background: var(--posesion-otro); }
+
+/* Dominio por bloques */
+.ev-dominio { display: grid; gap: .5rem; }
+.ev-dominio-leyenda { display: flex; flex-wrap: wrap; gap: .75rem; font-size: .75rem; color: var(--ui-compartido-secundario); }
+.ev-dominio-leyenda i { display: inline-block; width: .75rem; height: .75rem; border-radius: 2px; vertical-align: -1px; border: 1px solid var(--posesion-otro-borde); }
+.ev-dominio-tiempos { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); }
+.ev-dominio-tiempo { margin: 0; }
+.ev-dominio-tiempo figcaption { margin-bottom: .25rem; font-size: .75rem; font-weight: 800; color: var(--ui-compartido-secundario); }
+.ev-dominio-barras { display: flex; gap: 3px; align-items: stretch; height: 120px; overflow-x: auto; }
+.ev-dominio-bloque {
+  position: relative; display: grid; grid-template-rows: 1fr 1fr; flex: 1 0 22px; min-width: 22px; padding: 0 0 14px; border: 0; background: none;
+  border-bottom: 0; color: inherit;
+}
+button.ev-dominio-bloque { cursor: pointer; }
+button.ev-dominio-bloque:hover .ev-dominio-mitad, button.ev-dominio-bloque:focus-visible .ev-dominio-mitad { background: var(--analisis-activo); }
+button.ev-dominio-bloque:focus-visible { outline: 2px solid var(--ui-foco); outline-offset: 1px; }
+.ev-dominio-mitad { display: flex; background: var(--ui-compartido-fondo); }
+.ev-dominio-mitad[data-lado='arriba'] { align-items: flex-end; border-bottom: 1px solid var(--ui-compartido-borde); }
+.ev-dominio-mitad[data-lado='abajo'] { align-items: flex-start; }
+.ev-dominio-mitad > span { width: 100%; border-radius: 2px; }
+.ev-dominio-minuto { position: absolute; bottom: 0; left: 0; right: 0; font-size: .5625rem; text-align: center; color: var(--ui-compartido-secundario); }
+
+/* Fila de posesión en la línea de tiempo */
+.lt-pos { position: absolute; top: 6px; height: 22px; min-width: 2px; padding: 0; border: 0; border-radius: 3px; cursor: pointer; }
+.lt-pos[data-estado='analizado'] { background: var(--posesion-analizado); }
+.lt-pos[data-estado='otro'] { background: var(--posesion-otro); box-shadow: inset 0 0 0 1px var(--posesion-otro-borde); }
+.lt-pos[data-estado='detenida'] { background: var(--posesion-detenida); }
+.lt-pos[data-estado='sin_datos'] {
+  background: repeating-linear-gradient(45deg, var(--posesion-sin-datos) 0 4px, transparent 4px 8px); cursor: default;
+}
+.lt-pos[data-origen='manual'] { outline: 1px solid var(--ui-texto); outline-offset: -1px; }
+.lt-pos[data-editable] { cursor: grab; touch-action: none; }
+.lt-pos:focus-visible { outline: 2px solid var(--ui-foco); outline-offset: 2px; }
+
+/* Modo posesión */
+.mp { display: grid; gap: .75rem; }
+.mp-indicador {
+  display: grid; place-items: center; gap: .25rem; min-height: 120px; padding: 1rem; border-radius: .75rem; text-align: center;
+  border: 2px solid var(--ui-compartido-borde); background: var(--ui-compartido-fondo);
+}
+.mp-indicador strong { font-size: 1.75rem; font-weight: 900; line-height: 1.1; }
+.mp-indicador span { font-size: .8125rem; color: var(--ui-compartido-secundario); }
+.mp-indicador[data-estado='analizado'] { background: var(--posesion-analizado); border-color: var(--posesion-analizado); color: var(--ui-texto-sobre-acento); }
+.mp-indicador[data-estado='analizado'] span { color: var(--ui-texto-sobre-acento); }
+.mp-indicador[data-estado='otro'] { background: var(--posesion-otro); border-color: var(--posesion-otro-borde); color: var(--marca-negro); }
+.mp-indicador[data-estado='otro'] span { color: var(--marca-negro); }
+.mp-indicador[data-estado='detenida'] { background: var(--posesion-detenida); border-color: var(--posesion-detenida); }
+.mp-indicador[data-grabando] { box-shadow: 0 0 0 3px var(--ui-acento); }
+.mp-botones { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); }
+.mp-botones button { min-height: 56px; font-size: .9375rem; }
+.mp-teclas { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; font-size: .8125rem; }
+.mp-teclas kbd { display: inline-grid; place-items: center; min-width: 1.75rem; height: 1.75rem; border: 1px solid var(--ui-compartido-borde); border-radius: .25rem; font-weight: 800; }
+.mp-aviso { margin: 0; padding: .5rem .75rem; border: 1px solid var(--ui-compartido-borde); border-radius: .5rem; font-size: .8125rem; }
+.mp-error { margin: 0; font-size: .8125rem; color: var(--ui-peligro-texto); }
+
+/* Pantalla del partido */
+.rs { display: grid; gap: 1rem; }
+.rs-encabezado { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: .5rem; text-align: center; }
+.rs-equipo { display: grid; justify-items: center; gap: .375rem; min-width: 0; }
+.rs-equipo img, .rs-escudo-vacio { width: 56px; height: 56px; object-fit: contain; border-radius: 50%; }
+.rs-escudo-vacio { display: grid; place-items: center; background: var(--ui-compartido-fondo); border: 1px solid var(--ui-compartido-borde); font-weight: 900; }
+.rs-equipo strong { font-size: .875rem; overflow-wrap: anywhere; }
+.rs-resultado { font-size: 2.25rem; font-weight: 900; line-height: 1; color: var(--ui-texto-acento); white-space: nowrap; }
+.rs-fecha { grid-column: 1 / -1; font-size: .8125rem; color: var(--ui-compartido-secundario); }
+.rs-bloque { display: grid; gap: .5rem; padding: .875rem; border: 1px solid var(--ui-compartido-borde); border-radius: .75rem; background: var(--ui-compartido-fondo); }
+.rs-bloque h3 { margin: 0; font-size: 1rem; font-weight: 900; }
+.rs-comp { display: grid; gap: .625rem; margin: 0; padding: 0; list-style: none; }
+.rs-comp-titulo { display: flex; justify-content: center; gap: .5rem; font-size: .8125rem; font-weight: 700; color: var(--ui-compartido-secundario); }
+.rs-comp-fila { display: grid; grid-template-columns: auto 1fr 1fr auto; align-items: center; gap: .375rem; }
+.rs-comp-valor { min-width: 44px; min-height: 44px; padding: 0 .25rem; border: 0; background: none; color: var(--ui-compartido-texto); font-size: 1rem; font-weight: 900; }
+button.rs-comp-valor { text-decoration: underline dotted; cursor: pointer; }
+button.rs-comp-valor:disabled { text-decoration: none; cursor: default; }
+.rs-comp-barra { height: 10px; border-radius: 999px; background: var(--ui-compartido-borde); display: flex; overflow: hidden; }
+.rs-comp-barra[data-lado='nuestro'] { justify-content: flex-end; }
+.rs-comp-barra span { display: block; height: 100%; }
+.rs-comp-barra[data-lado='nuestro'] span { background: var(--posesion-analizado); }
+.rs-comp-barra[data-lado='rival'] span { background: var(--posesion-otro); }
+.rs-linea { margin: 0; padding: 0; list-style: none; display: grid; gap: .375rem; }
+.rs-linea button { display: flex; align-items: center; gap: .625rem; width: 100%; min-height: 44px; padding: .25rem .5rem; text-align: left; border: 1px solid var(--ui-compartido-borde); border-radius: .5rem; background: var(--analisis-control); color: var(--ui-compartido-texto); }
+.rs-linea-min { min-width: 4.25rem; font-weight: 900; color: var(--ui-texto-acento); }
+.rs-icono { font-size: 1.1rem; }
+.rs-icono[data-tarjeta='amarilla'] { color: var(--ui-acento); }
+.rs-icono[data-tarjeta='roja'] { color: var(--ui-peligro); }
+.rs-destacadas { margin: 0; padding: 0; list-style: none; display: grid; gap: .375rem; }
+.rs-destacadas button { display: grid; gap: .125rem; width: 100%; min-height: 52px; padding: .5rem .75rem; text-align: left; border: 1px solid var(--ui-compartido-borde); border-radius: .5rem; background: var(--analisis-control); color: var(--ui-compartido-texto); }
+.rs-destacadas span { font-size: .75rem; color: var(--ui-compartido-secundario); }
+.rs-colectivos { margin: 0; padding: 0; list-style: none; display: grid; gap: .375rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr)); }
+.rs-colectivos button { display: grid; width: 100%; min-height: 52px; padding: .5rem .75rem; text-align: left; border: 1px solid var(--ui-compartido-borde); border-radius: .5rem; background: var(--analisis-control); color: var(--ui-compartido-texto); }
+.rs-colectivos small { color: var(--ui-compartido-secundario); }
+.rs button:focus-visible { outline: 2px solid var(--ui-foco); outline-offset: 2px; }
+
+/* Minutos */
+.pa-avisos { margin: 0 0 .5rem; padding: 0; list-style: none; display: grid; gap: .375rem; }
+.pa-vista-previa { margin-top: .5rem; padding: .75rem; border: 1px solid var(--ui-acento); border-radius: .5rem; }
+.pa-vista-previa ul { margin: .25rem 0 .5rem; padding-left: 1.25rem; font-size: .875rem; }
+.pa-botones { display: flex; flex-wrap: wrap; gap: .5rem; }

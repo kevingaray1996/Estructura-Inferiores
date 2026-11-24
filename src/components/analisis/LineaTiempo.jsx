@@ -5,7 +5,9 @@ import { formatearTiempo } from '../../utils/analisis/formato'
 import {
   ZOOMS, ajustarArrastre, duracionEje, filasLinea, porcentajeDe, segundoDeArrastre, segundoDePorcentaje, ventanaVisible,
 } from '../../utils/analisis/lineaTiempo'
+import { NOMBRE_ESTADO } from '../../utils/analisis/posesion'
 import './colectiva.css'
+import './estadisticasVisuales.css'
 
 const MARCAS = [['inicio_1t', 'Inicio 1T'], ['fin_1t', 'Fin 1T'], ['inicio_2t', 'Inicio 2T'], ['fin_partido', 'Fin']]
 const SALTO_MS = 180
@@ -18,9 +20,11 @@ function esTactil() {
 // momentos: los colectivos de la vista elegida (con espejo ya calculado). individuales: acciones con jugadora.
 // editable: coordinación en compu (arrastrar bordes o la barra entera). En el celular y en modo consulta, solo mirar
 // y reproducir. onAjustar(barra, { segundo, segundo_fin }) guarda; onIr(segundo) mueve el video; onReproducir(barra).
+// posesion (etapa 3): la línea de posesión (amarillo analizado, blanco el otro, gris detenida, rayado sin datos).
+// onAjustarPosesion(tramo, { segundo, segundo_fin }): coordinación arrastra los bordes como en las otras barras.
 export default function LineaTiempo({
   reloj, catalogo, momentos, individuales, marcas, obtenerDuracionVideo, editable, vista, onVista, equipos,
-  seleccionadoId, onReproducir, onIr, onAjustar, etiquetaDe,
+  seleccionadoId, onReproducir, onIr, onAjustar, etiquetaDe, posesion = [], onAjustarPosesion = null,
 }) {
   const segundo = useTiempoVideo(reloj)
   const duracion = duracionEje({ duracionVideo: obtenerDuracionVideo?.(), momentos, eventos: individuales, marcas })
@@ -39,6 +43,7 @@ export default function LineaTiempo({
 
   function empezar(evento, barra, modo) {
     if (!puedeEditar || barra._cola || evento.button > 0) return
+    if (barra._posesion && (barra.estado === 'sin_datos' || !onAjustarPosesion)) return
     evento.stopPropagation()
     const pista = evento.currentTarget.closest('.lt-pista')
     const ancho = pista?.getBoundingClientRect().width || 1
@@ -64,8 +69,11 @@ export default function LineaTiempo({
     if (!arrastre) return
     const { original, ajuste, movido } = arrastre
     setArrastre(null)
-    if (!movido) { onReproducir(original); return }
-    if (ajuste.segundo !== original.inicio || ajuste.segundo_fin !== original.fin) onAjustar(original, ajuste)
+    if (!movido) { if (original._posesion) onIr(original.inicio); else onReproducir(original); return }
+    if (ajuste.segundo !== original.inicio || ajuste.segundo_fin !== original.fin) {
+      if (original._posesion) onAjustarPosesion?.(original, ajuste)
+      else onAjustar(original, ajuste)
+    }
   }
 
   function tocarPista(evento) {
@@ -103,6 +111,41 @@ export default function LineaTiempo({
               ))}
             </div>
           </div>
+
+          {posesion.length > 0 && (
+            <div className="lt-fila">
+              <span className="lt-etiqueta" title="Posesión">Posesión</span>
+              <div className="lt-pista" onClick={tocarPista} role="presentation">
+                {posesion.map((tramo) => {
+                  const original = { ...tramo, id: `pos:${tramo.periodo}:${tramo.inicio}`, _posesion: true }
+                  const enArrastre = arrastre?.id === original.id
+                  const inicio = enArrastre ? arrastre.ajuste.segundo : original.inicio
+                  const fin = enArrastre ? arrastre.ajuste.segundo_fin : original.fin
+                  if (!visible(inicio, fin)) return null
+                  const izquierda = pos(inicio)
+                  const ajustable = puedeEditar && onAjustarPosesion && tramo.estado !== 'sin_datos'
+                  const nombre = tramo.estado === 'analizado' ? equipos?.analizado || NOMBRE_ESTADO.analizado
+                    : tramo.estado === 'otro' ? equipos?.otro || NOMBRE_ESTADO.otro : NOMBRE_ESTADO[tramo.estado]
+                  const texto = `Posesión: ${nombre} de ${formatearTiempo(inicio)} a ${formatearTiempo(fin)}${tramo.origen === 'manual' ? ' · marcada a mano' : tramo.origen === 'auto' ? ' · por los momentos' : ''}`
+                  return (
+                    <button key={original.id} type="button" className="lt-pos" data-estado={tramo.estado} data-origen={tramo.origen || undefined}
+                      data-editable={ajustable ? 'si' : undefined}
+                      style={{ left: `${izquierda}%`, width: `${Math.max(0.2, pos(fin) - izquierda)}%` }}
+                      aria-label={texto} title={texto}
+                      onClick={(e) => { e.stopPropagation(); if (!ajustable || e.detail === 0) onIr(tramo.inicio) }}
+                      onPointerDown={(e) => empezar(e, original, 'mover')} onPointerMove={mover} onPointerUp={soltar} onPointerCancel={() => setArrastre(null)}>
+                      {ajustable && <>
+                        <span className="lt-borde" data-lado="inicio" aria-hidden="true"
+                          onPointerDown={(e) => empezar(e, original, 'inicio')} onPointerMove={mover} onPointerUp={soltar} />
+                        <span className="lt-borde" data-lado="fin" aria-hidden="true"
+                          onPointerDown={(e) => empezar(e, original, 'fin')} onPointerMove={mover} onPointerUp={soltar} />
+                      </>}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {filas.map((fila) => (
             <div key={fila.codigo} className="lt-fila">

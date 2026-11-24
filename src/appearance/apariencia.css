@@ -271,6 +271,13 @@
   --marcador-secundario: #c9c6b8;
   --marcador-rival-fondo: #3a3a32;
   --marcador-sombra: rgba(0, 0, 0, .45);
+
+  /* Posesión (etapa 3 de Análisis): equipo analizado amarillo, el otro blanco, pelota detenida gris, sin datos rayado. */
+  --posesion-analizado: #f4c400;
+  --posesion-otro: #f3f1e8;
+  --posesion-otro-borde: #f3f1e8;
+  --posesion-detenida: #6d6b62;
+  --posesion-sin-datos: #3a3a33;
 }
 
 /* Equivalentes claros de los mismos tokens. El tema de pantalla nunca cambia
@@ -297,6 +304,10 @@
     --ui-texto-sobre-estado: #ffffff;
     --analisis-azul: #1D4ED8;
     --escudo-fondo-opacidad: 0.06;
+    --posesion-otro: #ffffff;
+    --posesion-otro-borde: #8f8b7c;
+    --posesion-detenida: #a9a597;
+    --posesion-sin-datos: #d6d2c4;
   }
 }
 

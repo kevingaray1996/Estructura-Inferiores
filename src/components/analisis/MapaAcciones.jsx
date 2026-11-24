@@ -19,9 +19,10 @@ const ESTADO = {
 // Mapa de acciones unificado: el mismo en la pestaña Mapa (completo) y abajo del panel del video (compacto).
 // eventos: las acciones del alcance elegido. partidos y marcas: Map por partido_id. detallesPases: destinos por id de evento.
 // onVideo(evento): abrir el video en esa acción. onDestinoPase(evento): ver o editar el destino (opcional).
+// onClip(evento): reproducir el clip de la acción (etapa 2), opcional.
 export default function MapaAcciones({
   eventos = [], partidos, marcas, detallesPases = {}, nombreJugadora = () => '', etiquetaTipo = (c) => c,
-  onVideo, onDestinoPase, compacto = false, estadoPases = {}, masFiltros = null, titulo = 'Mapa de acciones',
+  onVideo, onClip = null, onDestinoPase, compacto = false, estadoPases = {}, masFiltros = null, titulo = 'Mapa de acciones',
   encabezado = null, receptoraDe = () => '',
 }) {
   const [capa, setCapa] = useState('todas')
@@ -29,13 +30,17 @@ export default function MapaAcciones({
   const [tiempo, setTiempo] = useState('partido')
   const [modo, setModo] = useState('puntos')
   const [pasesErrados, setPasesErrados] = useState(true)
+  const [tipoAccion, setTipoAccion] = useState('todos')
   const [seleccionId, setSeleccionId] = useState(null)
   const [ayuda, setAyuda] = useState(false)
   const [lista, setLista] = useState(false)
   const prefijo = useId().replaceAll(':', '')
 
   const acciones = useMemo(() => prepararAcciones(eventos, { partidos, marcas, detallesPases }), [eventos, partidos, marcas, detallesPases])
-  const filtradas = useMemo(() => filtrarAcciones(acciones, { capa, resultado, tiempo, pasesErrados }), [acciones, capa, resultado, tiempo, pasesErrados])
+  // Tipos de acción que hay en la capa elegida (para el filtro por tipo).
+  const tiposDisponibles = useMemo(() => [...new Set(filtrarAcciones(acciones, { capa, pasesErrados }).map((a) => a.evento.tipo))].sort(), [acciones, capa, pasesErrados])
+  const tipoVigente = tiposDisponibles.includes(tipoAccion) ? tipoAccion : 'todos'
+  const filtradas = useMemo(() => filtrarAcciones(acciones, { capa, resultado, tiempo, pasesErrados, tipo: tipoVigente }), [acciones, capa, resultado, tiempo, pasesErrados, tipoVigente])
   const conPunto = useMemo(() => filtradas.filter((a) => a.punto), [filtradas])
   const avisos = useMemo(() => avisosDireccion(acciones, { partidos, marcas }), [acciones, partidos, marcas])
   const resumen = useMemo(() => resumenCapa(filtradas, capa, nombreJugadora), [filtradas, capa, nombreJugadora])
@@ -59,7 +64,7 @@ export default function MapaAcciones({
     setCapa(id); setResultado('todas'); setSeleccionId(null)
   }
   function verTodas() {
-    setCapa('todas'); setResultado('todas'); setTiempo('partido'); setSeleccionId(null)
+    setCapa('todas'); setResultado('todas'); setTiempo('partido'); setTipoAccion('todos'); setSeleccionId(null)
   }
 
   const fichaPos = seleccion ? {
@@ -91,6 +96,15 @@ export default function MapaAcciones({
         )}
         <Grupo etiqueta="Tiempo" opciones={TIEMPOS} valor={tiempo} cambiar={(v) => { setTiempo(v); setSeleccionId(null) }} />
         <Grupo etiqueta="Ver como" opciones={MODOS} valor={modo} cambiar={(v) => { setModo(v); setSeleccionId(null) }} />
+        {tiposDisponibles.length > 1 && (
+          <label className="ma-grupo ma-tipo">
+            <span className="ma-tipo-etiqueta">Acción</span>
+            <select value={tipoVigente} onChange={(e) => { setTipoAccion(e.target.value); setSeleccionId(null) }}>
+              <option value="todos">Todas las de la capa</option>
+              {tiposDisponibles.map((t) => <option key={t} value={t}>{etiquetaTipo(t)}</option>)}
+            </select>
+          </label>
+        )}
         {capa === 'perdidas' && (
           <button type="button" className="ma-interruptor" role="switch" aria-checked={pasesErrados} onClick={() => setPasesErrados((v) => !v)}>
             <span className="ma-interruptor-riel" aria-hidden="true"><span /></span>Incluir pases errados
@@ -135,7 +149,7 @@ export default function MapaAcciones({
                   </defs>
                   <Cancha />
                   {modo === 'calor' && densidad && (
-                    <g clipPath={`url(#${prefijo}-cancha)`} className="ma-calor-capa" data-tono={capa === 'perdidas' ? 'mal' : 'bien'}>
+                    <g clipPath={`url(#${prefijo}-cancha)`} className="ma-calor-capa" data-tono={capa === 'perdidas' || tipoVigente === 'Pérdida' || resultado === 'mal' ? 'mal' : 'bien'}>
                       <g filter={`url(#${prefijo}-suave)`}>
                         {densidad.celdas.map((c) => (
                           <rect key={`${c.c}-${c.f}`} x={c.c * 4} y={c.f * 4} width="4" height="4" className="ma-calor" style={{ fillOpacity: Math.pow(c.v, 1.6) * 0.9 }} />
@@ -153,7 +167,7 @@ export default function MapaAcciones({
                 </svg>
                 {seleccion && modo === 'puntos' && (
                   <Ficha accion={seleccion} pos={fichaPos} nombreJugadora={nombreJugadora} etiquetaTipo={etiquetaTipo} receptoraDe={receptoraDe}
-                    onVideo={onVideo} onDestinoPase={onDestinoPase} cerrar={() => setSeleccionId(null)}
+                    onVideo={onVideo} onClip={onClip} onDestinoPase={onDestinoPase} cerrar={() => setSeleccionId(null)}
                     rival={variosPartidos ? partidos?.get?.(seleccion.evento.partido_id)?.rival : null} />
                 )}
                 {filtradas.length === 0 && (
@@ -174,7 +188,7 @@ export default function MapaAcciones({
             <div id={`${prefijo}-ayuda`} className="ma-ayuda" role="note">
               <ul>
                 <li>Siempre atacamos hacia la derecha. El 2T se da vuelta solo.</li>
-                <li>Amarillo: salió bien. Rojo punteado: salió mal. Gris: sin resultado.</li>
+                <li>Amarillo: salió bien. Rojo: salió mal. Gris: sin resultado.</li>
                 <li>Tocá un punto para ver quién fue, en qué minuto, y abrir el video.</li>
                 <li>Calor: dónde se juntan más acciones. Zonas: qué parte pasó en cada tercio.</li>
                 <li>Pase progresivo: acerca la pelota al arco rival 30 m en campo propio, 15 m si cruza la mitad o 10 m en campo rival.</li>
@@ -281,7 +295,7 @@ function Flecha({ accion, prefijo, elegida, elegir }) {
 }
 
 // Ficha al tocar un punto: quién (en los pases, quién → a quién), cuándo, cómo salió y el botón al video.
-function Ficha({ accion, pos, nombreJugadora, etiquetaTipo, receptoraDe, onVideo, onDestinoPase, cerrar, rival }) {
+function Ficha({ accion, pos, nombreJugadora, etiquetaTipo, receptoraDe, onVideo, onClip, onDestinoPase, cerrar, rival }) {
   const { evento } = accion
   const estado = accion.remate || accion.calidad
   const esPase = esPaseMapa(evento)
@@ -304,7 +318,8 @@ function Ficha({ accion, pos, nombreJugadora, etiquetaTipo, receptoraDe, onVideo
       <p className="ma-ficha-quien">{autora}{esPase && <> → {receptora}</>}</p>
       <p className="ma-ficha-detalle"><span className="ma-estado" data-estado={estado} aria-hidden="true" />{detalle}</p>
       <div className="ma-ficha-acciones">
-        {onVideo && <button type="button" className="ma-primario" onClick={() => onVideo(evento)}><span aria-hidden="true">▶ </span>Ver en el video</button>}
+        {onClip && <button type="button" className="ma-primario" onClick={() => onClip(evento)}><span aria-hidden="true">▶ </span>Ver clip</button>}
+        {onVideo && <button type="button" className={onClip ? 'ma-boton-texto' : 'ma-primario'} onClick={() => onVideo(evento)}><span aria-hidden="true">▶ </span>Ver en el video</button>}
         {esPase && onDestinoPase && <button type="button" className="ma-boton-texto" onClick={() => onDestinoPase(evento)}>Destino del pase</button>}
       </div>
     </div>

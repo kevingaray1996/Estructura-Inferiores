@@ -48,7 +48,7 @@ import ImportarComet from './analisis/ImportarComet'
 import InformeAnalisis from './analisis/InformeAnalisis'
 import useEventosPartido from '../hooks/useEventosPartido'
 import usePlanillaMinutos from '../hooks/usePlanillaMinutos'
-import { MARCAS, enCancha as enCanchaEn, estabaEnCancha, faltanMarcas, minutoReal, minutosSugeridos, periodoPorMarcas, problemasOrden } from '../utils/analisis/eventosPartido'
+import { MARCAS, enCancha as enCanchaEn, estabaEnCancha, faltanMarcas, minutoReal, minutosDetallados, periodoPorMarcas } from '../utils/analisis/eventosPartido'
 import { tiemposDe } from '../utils/analisis/marcador'
 import MarcadorVideo from './analisis/MarcadorVideo'
 import { BotonesGol, CartelMarcador, FilaTarjetaCambio } from './analisis/MarcadorBotonera'
@@ -66,6 +66,10 @@ import TableroClips, { TableroPorEquipo } from './analisis/TableroClips'
 import { crearClip } from '../utils/analisis/clips'
 import { equiposConAnalisis, filtrarPorEquipo } from '../utils/analisis/equipos'
 import { prepararParaReproducir } from '../utils/analisis/reproductorPlaylist'
+import useTramosPosesion from '../hooks/useTramosPosesion'
+import ModoPosesion from './analisis/ModoPosesion'
+import ResumenPartido from './analisis/ResumenPartido'
+import { ajustarTramo, insertarTramo, lineaPosesion } from '../utils/analisis/posesion'
 import {
   equiposDelAnalisis, esMomento, esScouting, filtrarAnalisis, guardarAtajosColectiva, leerAtajosColectiva,
   momentosDesde, separarAcciones,
@@ -99,7 +103,7 @@ const inputStyle = ESTILO_CAMPO
 const catalogoExplorador = { resultados: RESULTADOS, zonas: ZONAS }
 
 // Pestañas del panel derecho de la vista de video.
-const PESTANAS_PANEL = [['etiquetado', 'Etiquetado'], ['playlist', 'Acciones'], ['partido', 'Partido']]
+const PESTANAS_PANEL = [['etiquetado', 'Etiquetado'], ['playlist', 'Acciones'], ['partido', 'Partido'], ['posesion', 'Posesión']]
 
 // Al cambiar de tipo se conserva el resultado si sigue siendo válido para el
 // tipo nuevo según el catálogo; si no, se preselecciona su primera opción.
@@ -1153,6 +1157,21 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     const clip = crearClip(original, { analisis: partidoActual, catalogo, equipos: equiposApi.equipos, marcas: marcasPartido, espejo })
     if (clip) setAgregarClip({ clip, titulo: `${etiquetaDe(catalogo, clip.tipo)} · ${formatearTiempo(clip.segundo)}` })
   }, [todasLasAcciones, partidoActual, catalogo, equiposApi.equipos, marcasPartido])
+  // ---------- Etapa 3: posesión del partido ----------
+  const tramosPosesion = useTramosPosesion(partidoActual?.id || null)
+  const lineaPos = useMemo(() => lineaPosesion({ momentos: momentosPartido, manuales: tramosPosesion.tramos, catalogo, marcas: marcasPartido }),
+    [momentosPartido, tramosPosesion.tramos, catalogo, marcasPartido])
+  const puedeMarcarPosesion = esAdmin && !bloqueoEscritura && !modoConsulta
+  const guardarTramoPosesion = useCallback(async (tramo) => {
+    const r = await tramosPosesion.aplicar(insertarTramo(tramosPosesion.tramos, tramo))
+    if (r.error) setError(r.error)
+    return r
+  }, [tramosPosesion])
+  const ajustarPosesion = useCallback(async (tramo, ajuste) => {
+    const r = await tramosPosesion.aplicar(ajustarTramo(tramosPosesion.tramos, tramo, ajuste))
+    if (r.error) setError(r.error)
+  }, [tramosPosesion])
+
   const accionesPropias = useMemo(() => {
     const ids = new Set(partidosPropios.map((p) => p.id))
     return todasLasAcciones.filter((e) => ids.has(e.partido_id))
@@ -1193,12 +1212,14 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   )
   const planillaMinutos = usePlanillaMinutos(partidoActual?.partido_calendario_id || null, seccion === 'video' && pestanaPanel === 'partido')
   const minutosPartido = useMemo(() => {
-    const sugeridos = minutosSugeridos(citaciones.map((c) => c.jugador_id), titularesIds, eventosDelPartido.cambios, marcasPartido)
-    const motivo = !titularesIds.length ? 'No hay titulares en la formación: cargalas en Convocados para calcular los minutos.'
-      : faltanMarcas(marcasPartido).length ? `Para sugerir los minutos faltan marcas: ${faltanMarcas(marcasPartido).join(', ')}.`
-        : problemasOrden(marcasPartido).length ? 'Corregí el orden de las marcas de tiempo para sugerir los minutos.' : ''
-    return { sugeridos, motivo }
-  }, [citaciones, titularesIds, eventosDelPartido.cambios, marcasPartido])
+    // Etapa 3: con expulsiones (roja o doble amarilla) y avisos de lo que falta (marcas, titulares, un cambio sin marcar).
+    const { minutos: sugeridos, avisos } = minutosDetallados({
+      convocadas: citaciones.map((c) => c.jugador_id), titulares: titularesIds, cambios: eventosDelPartido.cambios,
+      tarjetas: eventosDelPartido.eventos, marcas: marcasPartido, acciones: eventosPartido,
+    })
+    const motivo = avisos[0]?.texto || ''
+    return { sugeridos, motivo, avisos }
+  }, [citaciones, titularesIds, eventosDelPartido.cambios, eventosDelPartido.eventos, marcasPartido, eventosPartido])
 
   // Con el inicio del 2T marcado, el 1T / 2T sigue solo al video.
   const periodoAutomatico = marcasPartido.inicio_2t != null
@@ -2053,7 +2074,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     actualizarFin: actualizarFinMomento,
   })
   const estadoAtajos = useAtajosAnalisis({
-    activo: !cargando && accesoEditor && !bloqueoEscritura && seccion === 'video' && Boolean(partidoActual),
+    activo: !cargando && accesoEditor && !bloqueoEscritura && seccion === 'video' && pestanaPanel !== 'posesion' && Boolean(partidoActual),
     mapa: botoneraEnUso === 'colectiva' ? atajosBotoneraColectiva : atajosBotonera,
     principal: typeof window === 'undefined' ? null : window,
     auxiliar: ventanaAuxiliar,
@@ -2514,6 +2535,8 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                       onIr={irAlSegundo}
                       onReproducir={reproducirMomento}
                       onAjustar={ajustarMomento}
+                      posesion={lineaPos}
+                      onAjustarPosesion={puedeMarcarPosesion ? ajustarPosesion : null}
                     />
                   </>}
                 </div>
@@ -3161,6 +3184,12 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
                   />
                 </div>
 
+                <div role="tabpanel" id="az-panel-posesion" aria-labelledby="az-pestana-posesion" hidden={pestanaPanel !== 'posesion'} className="az-panel-cuerpo">
+                  <ModoPosesion reloj={relojVideo} tomarSegundo={() => (videoListo ? tiempoCaptura() : null)} linea={lineaPos}
+                    nombres={{ analizado: equiposPartido.analizado, otro: equiposPartido.otro }} activo={seccion === 'video' && pestanaPanel === 'posesion'}
+                    puedeEditar={puedeMarcarPosesion} aviso={tramosPosesion.aviso} onGuardar={guardarTramoPosesion} />
+                </div>
+
                 <div role="tabpanel" id="az-panel-partido" aria-labelledby="az-pestana-partido" hidden={pestanaPanel !== 'partido'} className="az-panel-cuerpo">
                   <h2 className="az-titulo">Datos del partido</h2>
                   <div className="mb-4 mt-3">
@@ -3445,14 +3474,36 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
             <Panel>
               <h2 className="text-xl font-black">Estadísticas del scouting</h2>
               <p className="mt-1 text-sm" style={{ color: A.secundario }}>Un scouting no cuenta en las estadísticas del club: acá se ve solo lo colectivo de cada equipo.</p>
+              <div className="mt-4">
+                <ResumenPartido analisis={partidoActual} equipos={equiposApi.equipos} acciones={accionesDelPartido} catalogo={catalogo} jugadoras={jugadoras}
+                  marcas={marcasPartido} eventosPartido={eventosDelPartido.eventos} linea={lineaPos} minutos={null}
+                  onAbrir={(titulo, clips) => abrirReproductor({ titulo, clips })} />
+              </div>
               <TableroClips scouting analisis={analisisDelPartido} acciones={accionesDelPartido} catalogo={catalogo} equipos={equiposApi.equipos}
                 jugadoras={jugadoras} marcasPorPartido={marcasPorPartido} onAbrir={(titulo, clips) => abrirReproductor({ titulo, clips })} />
             </Panel>
           ) : (
             <>
-              <EstadisticasAnalisis alcance={alcanceEstadisticas} cambiarAlcance={setAlcanceEstadisticas} catalogoAcciones={catalogo}
-                partidoActual={partidoActual} partidos={partidosPropios} eventos={eventos} eventosPartido={eventosPartido} jugadoras={jugadoras}
-                onAbrirEventos={abrirEventos} />
+              {alcanceEstadisticas === 'partido' ? (
+                <Panel>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-xl font-black">Partido</h2>
+                    <div className="az-segmento" role="group" aria-label="Alcance de estadísticas">
+                      <button type="button" aria-pressed="true">Este partido</button>
+                      <button type="button" aria-pressed="false" onClick={() => setAlcanceEstadisticas('acumulado')}>Todos los partidos</button>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <ResumenPartido analisis={partidoActual} equipos={equiposApi.equipos} acciones={accionesDelPartido} catalogo={catalogo} jugadoras={jugadoras}
+                      marcas={marcasPartido} eventosPartido={eventosDelPartido.eventos} linea={lineaPos} minutos={minutosPartido.sugeridos}
+                      onAbrir={(titulo, clips) => abrirReproductor({ titulo, clips })} />
+                  </div>
+                </Panel>
+              ) : (
+                <EstadisticasAnalisis alcance={alcanceEstadisticas} cambiarAlcance={setAlcanceEstadisticas} catalogoAcciones={catalogo}
+                  partidoActual={partidoActual} partidos={partidosPropios} eventos={eventos} eventosPartido={eventosPartido} jugadoras={jugadoras}
+                  onAbrirEventos={abrirEventos} />
+              )}
               <Panel>
                 <h2 className="text-xl font-black">Tablero clickeable · {alcanceEstadisticas === 'acumulado' ? 'todos los partidos' : 'este partido'}</h2>
                 <TableroClips analisis={alcanceEstadisticas === 'acumulado' ? partidosPropios : analisisDelPartido}
@@ -3476,7 +3527,20 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
               <MapaAcciones titulo="Mapa de acciones" encabezado={encabezadoMapa} eventos={eventosMapa} partidos={partidosPorId} marcas={marcasMapa}
                 detallesPases={resumenDestinatarias.detalles} nombreJugadora={nombreJugadoraPorId} etiquetaTipo={etiquetaTipo} receptoraDe={receptoraDe}
                 estadoPases={estadoPasesMapa} onVideo={abrirEventoEnVideo} onDestinoPase={(evento) => setPaseDestinoId(evento.id)}
+                onClip={(evento) => abrirEventos(etiquetaTipo(evento.tipo), [evento])}
                 masFiltros={<>
+                  {alcanceMapa === 'partido' && partidoActual && (
+                    <div className="grid gap-1">
+                      <span className="text-sm font-bold">Hacia dónde atacamos en el 1T (el 2T se invierte solo)</span>
+                      <div className="ma-segmento" role="group" aria-label="Dirección de ataque en el 1T">
+                        {[['izquierda', '← Izquierda'], ['derecha', 'Derecha →']].map(([valor, texto]) => (
+                          <button key={valor} type="button" aria-pressed={partidoActual.direccion_primer_tiempo === valor}
+                            disabled={!esAdmin || bloqueoEscritura || modoConsulta} onClick={() => cambiarDireccionAtaque(valor, 1)}>{texto}</button>
+                        ))}
+                      </div>
+                      <span className="text-xs" style={{ color: A.secundario }}>El mapa siempre se dibuja atacando hacia la derecha. Si el lado está mal, los puntos quedan dados vuelta: corregilo acá.</span>
+                    </div>
+                  )}
                   <div className="ma-segmento" role="group" aria-label="Partidos">
                     {[['partido', `Este partido${partidoActual?.rival ? ` (${partidoActual.rival})` : ''}`], ['acumulado', 'Todos los partidos']].map(([valor, etiqueta]) => (
                       <button key={valor} type="button" aria-pressed={alcanceMapa === valor} onClick={() => setAlcanceMapa(valor)}>{etiqueta}</button>
