@@ -36,7 +36,8 @@ test('Bibliotecas Premium conservan escrituras, filtros, reproducción por enlac
   // PizarraTactica.jsx se rediseñó a propósito (etapa 1 de la pizarra); su comportamiento lo cubren
   // tests/pizarra.test.mjs y tests/pizarra.interaccion.mjs.
   // EstadisticasEquipo cambió a propósito (mejoras etapa A): lee en tandas y avisa si falla. Lo cubre el test de abajo.
-  for (const p of ['src/components/EncabezadoFotografico.jsx']) assert.equal(soloLogica(leer(p)), soloLogica(antes(p)), p)
+  // EncabezadoFotografico cambió a propósito (rediseño paso 3, bbc2a97): suma eyebrow y parte resaltada del título,
+  // igual que EncabezadoSeccion. Su comportamiento lo cubre tests/fotografiasClub.test.mjs.
 })
 
 // Base simulada: guarda cada consulta y responde por tramos (range), como Supabase con su límite de 1000 filas.

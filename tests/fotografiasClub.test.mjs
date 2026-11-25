@@ -43,6 +43,12 @@ test('Fotografías: encabezado accesible, acciones conservadas y estilos aislado
     const html = renderToStaticMarkup(h(Encabezado, { titulo: 'Partidos', imagen: '/images/fotos-comunicaciones/camiseta-escudo-comunicaciones.jpeg', descripcionImagen: 'Camiseta con escudo' }, h('button', { type: 'button' }, 'Nuevo partido')))
     assert.match(html, /<h1>Partidos<\/h1>/)
     assert.match(html, /alt="Camiseta con escudo"/)
+    // Rediseño paso 3: eyebrow «Comunicaciones» por defecto; con parte resaltada y título con parte en amarillo.
+    assert.match(html, /<p>Comunicaciones<\/p>/)
+    const resaltado = renderToStaticMarkup(h(Encabezado, { titulo: 'Partidos ', resaltado: 'del club', eyebrowResaltado: 'Femenino', imagen: '/x.jpeg', descripcionImagen: '' }))
+    assert.match(resaltado, /<p>Comunicaciones · <b>Femenino<\/b><\/p>/)
+    assert.match(resaltado, /<h1>Partidos <em>del club<\/em><\/h1>/)
+    assert.match(renderToStaticMarkup(h(Encabezado, { titulo: 'X', eyebrow: '', imagen: '/x.jpeg', descripcionImagen: '' })), /<p><\/p>/)
     assert.match(html, /<button type="button">Nuevo partido<\/button>/)
     const css = readFileSync(new URL('../src/components/fotografiasClub.css', import.meta.url), 'utf8')
     assert.match(css, /@media screen/)
