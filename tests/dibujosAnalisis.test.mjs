@@ -351,8 +351,9 @@ test('pantallas: el editor se carga solo al abrirlo y dibujar es solo de coordin
   assert.match(seccion, /BotonPantallaCompleta objetivoRef=\{marcoVideoRef\}/)
   assert.match(seccion, /&fs=0/)
   assert.match(leer('src/components/analisis/ReproductorPlaylist.jsx'), /fs: 0/)
-  // El editor ofrece la pizarra 2D deshabilitada (etapa 5).
-  assert.match(leer('src/components/analisis/dibujo/EditorDibujo.jsx'), /disabled title="Próximamente"/)
+  // Etapa 5: el selector «Video real | Pizarra 2D» ya funciona.
+  assert.match(leer('src/components/analisis/dibujo/EditorDibujo.jsx'), /onClick=\{\(\) => cambiarModo\('2d'\)\}/)
+  assert.doesNotMatch(leer('src/components/analisis/dibujo/EditorDibujo.jsx'), /Próximamente/)
   // Colores solo por tokens.
   for (const r of ['src/components/analisis/dibujo/CapaDibujos.jsx', 'src/components/analisis/dibujo/EditorDibujo.jsx', 'src/components/analisis/dibujo/dibujo.css']) {
     assert.doesNotMatch(leer(r), /#[0-9a-fA-F]{3,8}\b|rgba?\(/, r)

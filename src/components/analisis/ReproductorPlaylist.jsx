@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { estaCalibrado } from '../../utils/analisis/dibujos/calibracion'
 import { cargarYouTubeAPI } from '../../utils/analisis/youtubeApi'
 import { formatearTiempo } from '../../utils/analisis/formato'
 import { VELOCIDADES, alTerminarClip, indiceValido, llegoAlFin, ordenDeTecla, planDeClip, rotuloClip } from '../../utils/analisis/reproductorPlaylist'
 import CapaReproduccion from './dibujo/CapaReproduccion'
 import { useZoomContenedor } from './dibujo/apoyo'
 import './playlists.css'
+
+// Pizarra 2D (etapa 5): se carga recién cuando alguien la abre.
+const Vista2DReproduccion = lazy(() => import('./dibujo/Vista2DReproduccion'))
 
 const CLAVE_PAUSA = 'analisis_playlist_pausa_final_v1'
 const leerPausa = () => { try { return window.localStorage.getItem(CLAVE_PAUSA) === 'si' } catch { return false } }
@@ -13,7 +17,8 @@ const leerPausa = () => { try { return window.localStorage.getItem(CLAVE_PAUSA) 
 // (cambia de video de YouTube solo). clips: ya preparados (videoId, inicio, fin, etiqueta, partido, minuto, nota).
 // onGuardar(nombre): opcional («Guardar como playlist», solo coordinación). Devuelve { error } si falla.
 // dibujos (etapa 4): { tiene, cargar } de useDibujos. Cada clip se ve con sus dibujos salvo que diga conDibujos: false.
-export default function ReproductorPlaylist({ titulo, clips, indiceInicial = 0, onCerrar, onGuardar = null, dibujos = null }) {
+// rivalDe(clip) (etapa 5): equipo rival del clip, para la camiseta de las fichas en la pizarra 2D.
+export default function ReproductorPlaylist({ titulo, clips, indiceInicial = 0, onCerrar, onGuardar = null, dibujos = null, rivalDe = null }) {
   const contenedorRef = useRef(null)
   const zonaVideoRef = useRef(null)
   const playerRef = useRef(null)
@@ -114,6 +119,9 @@ export default function ReproductorPlaylist({ titulo, clips, indiceInicial = 0, 
     return () => { vigente = false }
   }, [quiereDibujo, clip, dibujos])
   const dibujoActual = quiereDibujo && dibujoClip?.clave === clip?.clave ? dibujoClip.dibujo : null
+  const con2d = Boolean(dibujoActual && estaCalibrado(dibujoActual))
+  const [ver2d, setVer2d] = useState(false)
+  const rivalClip = useMemo(() => (clip && rivalDe ? rivalDe(clip) : null), [clip, rivalDe])
 
   // Vigila el fin del clip.
   useEffect(() => {
@@ -255,7 +263,13 @@ export default function ReproductorPlaylist({ titulo, clips, indiceInicial = 0, 
               ))}
             </div>
             <button type="button" className="et-boton" aria-label="Pantalla completa" onClick={pantallaCompleta}>⛶</button>
+            {con2d && <button type="button" className="et-boton" aria-pressed={ver2d} onClick={() => setVer2d((v) => !v)} title="Ver la jugada en una cancha vista desde arriba">2D</button>}
           </div>
+          {con2d && ver2d && (
+            <Suspense fallback={<p className="rp-sub">Cargando la pizarra 2D…</p>}>
+              <Vista2DReproduccion key={clip.clave} obtenerPlayer={obtenerPlayer} dibujo={dibujoActual} rango={rangoClip} rival={rivalClip} />
+            </Suspense>
+          )}
           {terminado && <p className="rp-sub" role="status">Terminó la playlist. Tocá ▶ para ver el último clip otra vez.</p>}
           <p className="rp-atajos">Teclas: ← → clip anterior / siguiente · espacio pausa · R repetir · P pausa al final · 1 2 3 velocidad · F pantalla completa · Esc cerrar</p>
         </div>

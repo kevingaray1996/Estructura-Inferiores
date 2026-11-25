@@ -20,6 +20,11 @@ export function crearObjeto(tipo, { t, clip, puntos = [], color = 'amarillo', gr
     if (tipo === 'nombre') obj.jugadora = { rival: true, dorsal: '', nombre: '' }
   } else if (tipo === 'enlace') {
     obj.a = ''; obj.b = ''
+  } else if (tipo === 'ficha') {
+    // Jugadora marcada en este cuadro: queda quieta en la pizarra 2D todo el clip (no se ve sobre el video).
+    obj.t = desde; obj.punto = puntos[0] || { x: 0.5, y: 0.5 }
+    obj.desde = redondear(clip?.inicio ?? desde); obj.hasta = redondear(Math.max(obj.desde + 0.5, finClip))
+    obj.jugadora = color === 'rojo' || color === 'azul' ? { rival: true, dorsal: '', nombre: '' } : { id: '', nombre: '', dorsal: '', foto: '' }
   } else if (tipo === 'zoom') {
     obj.escala = 2; obj.objetivo = puntos[0] || { x: 0.5, y: 0.5 }; obj.seguir = null
     obj.hasta = redondear(Math.min(finClip, desde + DURACION_OBJETO))
@@ -120,5 +125,5 @@ export function borrarDeLista(d, lista, id) {
 export const NOMBRE_TIPO = Object.freeze({
   pase_bajo: 'Pase por bajo', pase_alto: 'Pase por alto', movimiento: 'Movimiento', linea: 'Línea', zona: 'Zona',
   poligono: 'Zona libre', texto: 'Texto', anillo: 'Anillo', foco: 'Foco', nombre: 'Nombre y dorsal', enlace: 'Línea entre dos',
-  zoom: 'Zoom de cámara',
+  zoom: 'Zoom de cámara', ficha: 'Ficha (solo 2D)',
 })

@@ -3,7 +3,7 @@ import { cargarYouTubeAPI } from '../../../utils/analisis/youtubeApi'
 import { aRelativo, cuadroVideo, distancia, simplificarTrazo } from '../../../utils/analisis/dibujos/coordenadas'
 import { escenaEn, transformZoom } from '../../../utils/analisis/dibujos/escena'
 import { HERRAMIENTAS, moverTiempo, objetoEnPunto, ordenTeclaEditor, tiempoPreciso } from '../../../utils/analisis/dibujos/editor'
-import { COLORES_DIBUJO, PAUSA_MAXIMA, PAUSA_MINIMA, ZOOM_MAXIMO, ZOOM_MINIMO, dibujoVacio, esSeguimiento, excedeTamano, normalizarDibujo } from '../../../utils/analisis/dibujos/formato'
+import { COLORES_DIBUJO, PAUSA_MAXIMA, PAUSA_MINIMA, ZOOM_MAXIMO, ZOOM_MINIMO, dibujoVacio, esSeguimiento, excedeTamano, normalizarDibujo, nuevoId } from '../../../utils/analisis/dibujos/formato'
 import { aplicar, crearHistorial, deshacer, puedeDeshacer, puedeRehacer, reemplazar, rehacer } from '../../../utils/analisis/dibujos/historial'
 import { quitarClave, claveEn } from '../../../utils/analisis/dibujos/interpolacion'
 import {
@@ -13,13 +13,26 @@ import {
 import { crearEstadoPausas, pasoPausas } from '../../../utils/analisis/dibujos/pausas'
 import { crearRelojSuave } from '../../../utils/analisis/dibujos/reloj'
 import {
-  ACCIONES_RAPIDAS, CLAVE_GUIA_EDITOR, CLAVE_GUIA_SEGUIMIENTO, CLAVE_SALTO, GUIA_EDITOR, GUIA_SEGUIMIENTO, SALTOS, TEXTO_SEGUIMIENTO,
-  ayudaHerramienta, claveAnterior, deshacerToque, guardarPreferencia, instruccion, leerPreferencia, saltoGuardado, siguienteCuadro,
+  ACCIONES_RAPIDAS, CLAVE_FICHAS_2D, CLAVE_GUIA_CALIBRACION, CLAVE_GUIA_EDITOR, CLAVE_GUIA_SEGUIMIENTO, CLAVE_SALTO, GUIA_CALIBRACION, GUIA_EDITOR,
+  GUIA_SEGUIMIENTO, SALTOS, TEXTO_SEGUIMIENTO, ayudaHerramienta, claveAnterior, deshacerToque, guardarPreferencia, instruccion, leerPreferencia,
+  saltoGuardado, siguienteCuadro,
 } from '../../../utils/analisis/dibujos/guias'
+import { MAXIMO_CALIBRACIONES, aCancha, estaCalibrado, marcarPunto, medidasCancha, nuevaCalibracion, quitarPunto } from '../../../utils/analisis/dibujos/calibracion'
+import { aJugadaPizarra, fijarAjuste, jugadoras2d, quitarAjustes } from '../../../utils/analisis/dibujos/pizarra2d'
 import CapaDibujos from './CapaDibujos'
+import CalibrarCancha, { CapaCalibracion } from './CalibrarCancha'
+import GuardarJugada from './GuardarJugada'
 import GuiaEditor from './GuiaEditor'
+import Pizarra2D from './Pizarra2D'
+import PizarraExportar from '../../PizarraExportar'
 import { COLOR, useMedidas } from './apoyo'
 import './dibujo.css'
+
+const GUIAS = {
+  editor: { pasos: GUIA_EDITOR, clave: CLAVE_GUIA_EDITOR, nombre: 'Guía del editor' },
+  seguimiento: { pasos: GUIA_SEGUIMIENTO, clave: CLAVE_GUIA_SEGUIMIENTO, nombre: 'Guía: seguir a una jugadora' },
+  calibracion: { pasos: GUIA_CALIBRACION, clave: CLAVE_GUIA_CALIBRACION, nombre: 'Guía: calibrar la cancha' },
+}
 
 const DOS_PUNTOS = ['pase_bajo', 'pase_alto', 'linea', 'zona']
 const NOMBRE_COLOR = { amarillo: 'Amarillo', blanco: 'Blanco', rojo: 'Rojo', azul: 'Azul' }
@@ -37,7 +50,9 @@ function leer(player) {
 // Ventana de dibujo de un clip (pantalla completa). Solo coordinación y en la compu (lo decide quien la abre).
 // clip: { eventoId, espejo, partidoId, videoId, inicio, fin, titulo }. jugadoras: [{ id, nombre, dorsal, foto }].
 // onGuardar(dibujo) → Promise<{ error? }>. onCerrar().
-export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoInicial = '', jugadoras = [], onGuardar, onCerrar }) {
+// Etapa 5: rival (equipo de Equipos, para la camiseta en la 2D), canchaPartido ({ largo, ancho } de otro clip del partido),
+// biblioteca ({ cargarCarpetas, guardar }) para «Guardar en Biblioteca de jugadas».
+export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoInicial = '', jugadoras = [], rival = null, canchaPartido = null, biblioteca = null, onGuardar, onCerrar }) {
   const rango = useMemo(() => ({ inicio: Number(clip.inicio), fin: Number(clip.fin) }), [clip.inicio, clip.fin])
   const [hist, setHist] = useState(() => crearHistorial({ ...(dibujoInicial || dibujoVacio(rango)), clip: rango }))
   const dibujo = hist.presente
@@ -64,6 +79,12 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
   const [salto, setSalto] = useState(() => saltoGuardado(leerPreferencia(CLAVE_SALTO)))
   const [pista, setPista] = useState(null) // ayuda flotante de una herramienta: { id, left, top }
   const [escribiendo, setEscribiendo] = useState(null) // texto que se escribe sobre el video: { p, valor }
+  // Etapa 5: «Video real» o «Pizarra 2D»; calibración en curso ({ id, ref: punto elegido }); agregar ficha; ventanas.
+  const [modo, setModo] = useState('video')
+  const [calibrando, setCalibrando] = useState(null)
+  const [agregandoFicha, setAgregandoFicha] = useState(false)
+  const [fichas2d, setFichas2d] = useState(() => (leerPreferencia(CLAVE_FICHAS_2D) === 'foto' ? 'foto' : 'dorsal'))
+  const [ventana, setVentana] = useState(null) // 'biblioteca' | { tipo: 'exportar', doc, fotos }
   const escribiendoRef = useRef(null)
   useLayoutEffect(() => { escribiendoRef.current = escribiendo })
   const pistaTimerRef = useRef(null)
@@ -319,10 +340,64 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
   }, [])
 
   const cerrarGuia = useCallback(() => {
-    guardarPreferencia(guia === 'seguimiento' ? CLAVE_GUIA_SEGUIMIENTO : CLAVE_GUIA_EDITOR, 'si')
+    guardarPreferencia((GUIAS[guia] || GUIAS.editor).clave, 'si')
     setGuia(null)
     requestAnimationFrame(() => raizRef.current?.focus())
   }, [guia])
+
+  // ---------- Etapa 5: calibración y pizarra 2D ----------
+  const calActual = calibrando ? (dibujo.calibraciones || []).find((c) => c.id === calibrando.id) || null : null
+  const cambiarCal = useCallback((id, fn) => cambiar((d) => ({ ...d, calibraciones: (d.calibraciones || []).map((c) => (c.id === id ? fn(c) : c)) })), [cambiar])
+
+  // Calibración nueva en el cuadro t (copia los puntos de la más cercana). La primera vez se abre la guía.
+  const calibrarEn = useCallback((t) => {
+    const d = dibujoRef.current
+    if ((d.calibraciones || []).length >= MAXIMO_CALIBRACIONES) { setMensaje({ tipo: 'aviso', texto: `Un clip admite hasta ${MAXIMO_CALIBRACIONES} calibraciones.` }); return }
+    const cal = nuevaCalibracion(d, t, nuevoId('c', (d.calibraciones || []).map((c) => c.id)))
+    const nuevo = { ...d, cancha: d.cancha || medidasCancha(canchaPartido), calibraciones: [...(d.calibraciones || []), cal].sort((a, b) => a.t - b.t) }
+    dibujoRef.current = nuevo
+    setHist((h) => aplicar(h, nuevo))
+    setCalibrando({ id: cal.id, ref: null })
+    setAgregandoFicha(false)
+    irA(t)
+    if (!leerPreferencia(CLAVE_GUIA_CALIBRACION)) setGuia('calibracion')
+  }, [canchaPartido, irA])
+
+  const cambiarModo = useCallback((nuevo) => {
+    if (nuevo === modo) return
+    if (vistaRef.current.activa) alternarVistaPrevia()
+    setSeguir(null); setHerramienta('seleccionar'); setBorrador(null); setEnlacePendiente(null); setAgregandoFicha(false)
+    setModo(nuevo)
+    if (nuevo === 'video') { setCalibrando(null); return }
+    // La primera vez que se pasa a la 2D en un clip sin calibrar, se pide calibrar.
+    if (!(dibujoRef.current.calibraciones || []).length) calibrarEn(tiempo)
+  }, [modo, alternarVistaPrevia, calibrarEn, tiempo])
+
+  const terminarCalibracion = useCallback(() => {
+    const cal = calActual
+    if (cal && cal.puntos.length === 0) cambiar((d) => ({ ...d, calibraciones: (d.calibraciones || []).filter((c) => c.id !== cal.id) }))
+    setCalibrando(null)
+    if (!estaCalibrado(dibujoRef.current)) setMensaje({ tipo: 'aviso', texto: 'La cancha todavía no está calibrada: la 2D aparece cuando hay al menos 4 puntos bien marcados.' })
+  }, [calActual, cambiar])
+
+  const borrarCalibracion = useCallback(() => {
+    if (!calActual) return
+    cambiar((d) => ({ ...d, calibraciones: (d.calibraciones || []).filter((c) => c.id !== calActual.id) }))
+    setCalibrando(null)
+  }, [calActual, cambiar])
+
+  const cambiarFichas2d = useCallback((valor) => { setFichas2d(valor); guardarPreferencia(CLAVE_FICHAS_2D, valor) }, [])
+
+  // Exportar la 2D (PNG o video) con la ventana de la Pizarra.
+  const abrirExportar = useCallback(() => {
+    try {
+      const doc = aJugadaPizarra(normalizarDibujo(dibujoRef.current).dibujo, { titulo: clip.titulo, rival })
+      const fotos = fichas2d === 'foto'
+        ? Object.fromEntries(jugadoras2d(dibujoRef.current).filter((o) => /^https:\/\//.test(o.jugadora?.foto || '')).map((o) => [o.id, o.jugadora.foto]))
+        : null
+      setVentana({ tipo: 'exportar', doc, fotos: fotos && Object.keys(fotos).length ? fotos : null, raiz: raizRef.current })
+    } catch (e) { setMensaje({ tipo: 'error', texto: e.message }) }
+  }, [clip.titulo, rival, fichas2d])
 
   // Ayuda flotante de una herramienta: a la derecha del botón.
   const mostrarPista = useCallback((id, el) => {
@@ -376,6 +451,8 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
       if (orden === 'cerrarPoligono') return cerrarPoligono()
       if (orden === 'escape') {
         if (vistaRef.current.activa) return alternarVistaPrevia()
+        if (calibrando?.ref) { setCalibrando((c) => (c ? { ...c, ref: null } : c)); return }
+        if (agregandoFicha) { setAgregandoFicha(false); return }
         if (document.activeElement && document.activeElement !== document.body && raizRef.current?.contains(document.activeElement) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) { document.activeElement.blur(); return }
         if (borrador || enlacePendiente) { setBorrador(null); setEnlacePendiente(null); return }
         if (herramienta !== 'seleccionar') { elegirHerramienta('seleccionar'); return }
@@ -389,7 +466,7 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
     window.addEventListener('keydown', tecla)
     return () => window.removeEventListener('keydown', tecla)
   }, [duplicar, borrarElegido, alternarVistaPrevia, reproducir, irA, rango, nuevaPausa, nuevoPaso, cerrarPoligono, borrador, enlacePendiente, herramienta, tiempo,
-    deshacerAccion, seguir, terminarSeguimiento, elegirHerramienta])
+    deshacerAccion, seguir, terminarSeguimiento, elegirHerramienta, calibrando, agregandoFicha])
 
   // Foco en la ventana al abrir; el resto de la app queda detrás.
   useEffect(() => {
@@ -413,6 +490,21 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
     try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* nada */ }
     if (reproduciendo) { try { playerRef.current?.pauseVideo() } catch { /* nada */ } }
     setMensaje(null)
+    if (calibrando && calActual) {
+      // Calibración: el clic marca el punto elegido en la cancha chica, en el cuadro de esta calibración.
+      if (Math.abs(tiempo - calActual.t) > 0.05) { irA(calActual.t); setMensaje({ tipo: 'aviso', texto: 'Volví al cuadro de esta calibración. Marcá el punto otra vez.' }); return }
+      if (!calibrando.ref) { setMensaje({ tipo: 'aviso', texto: 'Primero elegí en la cancha chica qué punto vas a marcar.' }); return }
+      cambiarCal(calActual.id, (c) => marcarPunto(c, calibrando.ref, p))
+      setCalibrando((c) => (c ? { ...c, ref: null } : c))
+      return
+    }
+    if (agregandoFicha) {
+      // Jugadora en este cuadro: su ficha queda quieta en la 2D.
+      if (!aCancha(dibujo, tiempo, p)) { setMensaje({ tipo: 'aviso', texto: 'Para agregar fichas, primero calibrá la cancha.' }); return }
+      crear('ficha', { puntos: [p] })
+      setAgregandoFicha(false)
+      return
+    }
     if (herramienta === 'seleccionar') {
       const el = objetoEnPunto(escena.elementos, p)
       if (!el) { setElegido(null); return }
@@ -537,18 +629,23 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
   const ayudaPista = pista ? ayudaHerramienta(pista.id) : null
   const puntosMarcados = objSeguido?.pista?.claves.length || 0
   const anterior = seguir && objSeguido ? claveAnterior(objSeguido.pista.claves, tiempo) : null
-  const textoInstruccion = instruccion({
-    herramienta, borrador, enlacePendiente, vistaPrevia,
-    fueraDeTiempo: objElegido && objElegido.tipo !== 'zoom' && (tiempo < objElegido.desde || tiempo > objElegido.hasta) ? objElegido : null,
-  })
+  const textoInstruccion = modo === '2d' && !vistaPrevia
+    ? (calibrando ? 'Calibración: elegí un punto en la cancha chica y hacé clic en el video donde está.'
+      : agregandoFicha ? 'Tocá en el video a la jugadora (a la altura de los pies): su ficha queda quieta en la 2D.'
+        : 'Pizarra 2D: arrastrá una ficha para corregir su lugar solo en la 2D (el video no cambia). Tocá una ficha para elegir quién es.')
+    : instruccion({
+      herramienta, borrador, enlacePendiente, vistaPrevia,
+      fueraDeTiempo: objElegido && !['zoom', 'ficha'].includes(objElegido.tipo) && (tiempo < objElegido.desde || tiempo > objElegido.hasta) ? objElegido : null,
+    })
+  const calibrado = estaCalibrado(dibujo)
 
   return (
     <div ref={raizRef} className="dib-editor" role="dialog" aria-modal="true" aria-label={`Dibujar: ${clip.titulo}`} tabIndex={-1}>
       <header className="dib-cab">
         <h2>{clip.titulo}</h2>
         <div className="dib-segmento" role="group" aria-label="Modo de dibujo">
-          <button type="button" aria-pressed="true">Video real</button>
-          <button type="button" disabled title="Próximamente">Pizarra 2D · Próximamente</button>
+          <button type="button" aria-pressed={modo === 'video'} onClick={() => cambiarModo('video')}>Video real</button>
+          <button type="button" aria-pressed={modo === '2d'} onClick={() => cambiarModo('2d')} disabled={!listo}>Pizarra 2D</button>
         </div>
         <button type="button" className="dib-boton" onClick={deshacerAccion} disabled={!puedeDeshacer(hist) || vistaPrevia} title="Deshacer (Ctrl+Z)">↶ Deshacer</button>
         <button type="button" className="dib-boton" onClick={() => setHist(rehacer)} disabled={!puedeRehacer(hist) || vistaPrevia} title="Rehacer (Ctrl+Y)">↷ Rehacer</button>
@@ -562,7 +659,7 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
         {HERRAMIENTAS.map((h, i) => (
           <div key={h.id} style={{ display: 'contents' }}>
             {(i === 1 || i === 8) && <span className="dib-separador" aria-hidden="true" />}
-            <button type="button" className="dib-herramienta" aria-pressed={herramienta === h.id} disabled={vistaPrevia} data-herramienta={h.id}
+            <button type="button" className="dib-herramienta" aria-pressed={herramienta === h.id} disabled={vistaPrevia || modo === '2d'} data-herramienta={h.id}
               aria-label={`${h.texto} (tecla ${h.tecla})`} aria-keyshortcuts={h.tecla} {...eventosPista(h.id)}
               onClick={() => elegirHerramienta(h.id)}>
               <span aria-hidden="true">{h.icono}</span><kbd aria-hidden="true">{h.tecla}</kbd>
@@ -571,7 +668,7 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
         ))}
         <span className="dib-separador" aria-hidden="true" />
         {ACCIONES_RAPIDAS.map((h) => (
-          <button key={h.id} type="button" className="dib-herramienta" disabled={vistaPrevia} data-herramienta={h.id}
+          <button key={h.id} type="button" className="dib-herramienta" disabled={vistaPrevia || modo === '2d'} data-herramienta={h.id}
             aria-label={h.id === 'pausa' ? 'Agregar pausa en este cuadro (tecla P)' : 'Agregar paso con subtítulo desde este cuadro (tecla S)'}
             aria-keyshortcuts={h.tecla} {...eventosPista(h.id)} onClick={h.id === 'pausa' ? nuevaPausa : nuevoPaso}>
             <span aria-hidden="true">{h.icono}</span><kbd aria-hidden="true">{h.tecla}</kbd>
@@ -597,7 +694,9 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
         ) : (
           <p className="dib-instruccion" aria-live="polite">{textoInstruccion}</p>
         )}
-        <div className="dib-escenario" style={{ containerType: 'size' }}>
+        <div className="dib-escenario">
+          <div className={modo === '2d' ? 'dib-dos' : 'dib-dos dib-uno'}>
+          <div className="dib-celda" style={{ containerType: 'size' }}>
           <div ref={videoRef} className="dib-video" data-guia="video" style={{ width: 'min(100cqw, calc(100cqh * 16 / 9))' }}>
             <div className="dib-zoom" style={zoomVista}>
               <div ref={zonaRef} className="dib-zoom dib-sin-interfaz" />
@@ -640,6 +739,45 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
             )}
             {!listo && !errorVideo && <p className="rp-video-aviso" style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>Cargando el clip…</p>}
             {errorVideo && <p className="dib-error" role="alert" style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: '1rem', textAlign: 'center' }}>{errorVideo}</p>}
+            {calActual && <CapaCalibracion dibujo={dibujo} cal={calActual} elegido={calibrando.ref} ancho={ancho} alto={alto} cuadro={cuadro} />}
+          </div>
+          </div>
+          {modo === '2d' && (
+            <div className="dib-celda dib-celda-2d" aria-label="Pizarra 2D">
+              {calActual ? (
+                <CalibrarCancha dibujo={dibujo} cal={calActual} elegido={calibrando.ref} tiempo={tiempo}
+                  onElegir={(ref) => setCalibrando((c) => (c ? { ...c, ref: c.ref === ref ? null : ref } : c))}
+                  onMedidas={(cancha) => cambiar((d) => ({ ...d, cancha: medidasCancha(cancha) }))}
+                  onQuitar={(ref) => cambiarCal(calActual.id, (c) => quitarPunto(c, ref))}
+                  onRecalibrar={() => calibrarEn(tiempo)}
+                  onIr={(c) => { setCalibrando({ id: c.id, ref: null }); irA(c.t) }}
+                  onBorrar={borrarCalibracion} onListo={terminarCalibracion} onGuia={() => setGuia('calibracion')} />
+              ) : <>
+                <div className="dib-barra2d">
+                  <button type="button" className="dib-boton" onClick={() => {
+                    const cercana = (dibujo.calibraciones || []).reduce((m, c) => (!m || Math.abs(c.t - tiempo) < Math.abs(m.t - tiempo) ? c : m), null)
+                    if (cercana) { setCalibrando({ id: cercana.id, ref: null }); irA(cercana.t) } else calibrarEn(tiempo)
+                  }}>{calibrado ? 'Revisar calibración' : 'Calibrar cancha'}</button>
+                  {calibrado && <button type="button" className="dib-boton" onClick={() => calibrarEn(tiempo)}>Recalibrar en este cuadro</button>}
+                  <button type="button" className="dib-boton" aria-pressed={agregandoFicha} disabled={!calibrado || vistaPrevia}
+                    onClick={() => setAgregandoFicha((v) => !v)}>+ Agregar jugadora en este cuadro</button>
+                  <div className="dib-segmento" role="group" aria-label="Qué muestran nuestras fichas">
+                    <button type="button" aria-pressed={fichas2d === 'dorsal'} onClick={() => cambiarFichas2d('dorsal')}>Dorsal</button>
+                    <button type="button" aria-pressed={fichas2d === 'foto'} onClick={() => cambiarFichas2d('foto')}>Foto</button>
+                  </div>
+                </div>
+                <Pizarra2D dibujo={dibujo} tiempo={tiempo} rival={rival} fichas={fichas2d} editable={!vistaPrevia}
+                  elegidoId={objElegido?.id || null}
+                  onElegir={(id) => { const objId = id.replace(/-m$/, ''); if (dibujo.objetos.some((o) => o.id === objId)) setElegido({ tipo: 'objeto', id: objId }) }}
+                  onMover={(id, metros) => cambiar((d) => fijarAjuste(d, id, tiempo, metros))} />
+                <div className="dib-barra2d">
+                  <button type="button" className="dib-boton" onClick={() => setVentana('biblioteca')} disabled={!calibrado || !biblioteca}>Guardar en Biblioteca de jugadas</button>
+                  <button type="button" className="dib-boton" onClick={abrirExportar} disabled={!calibrado}>Exportar PNG o video</button>
+                </div>
+                <p className="dib-ayuda">Las fichas siguen a las jugadoras que marcaste con Anillo, Foco o Nombre. Para elegir quién es cada una, tocala y mirá Propiedades.</p>
+              </>}
+            </div>
+          )}
           </div>
         </div>
         <div className="dib-controles">
@@ -660,6 +798,7 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
             onObjeto={editarObjeto}
             onLista={(lista, id, cambios) => cambiar((d) => actualizarEnLista(d, lista, id, cambios))}
             onQuitarClave={() => objElegido?.pista && cambiar((d) => actualizarObjeto(d, objElegido.id, { pista: { ...objElegido.pista, claves: quitarClave(objElegido.pista.claves, tiempo) } }))}
+            onQuitarAjustes={() => objElegido && cambiar((d) => quitarAjustes(d, objElegido.id))}
             onDuplicar={duplicar} onBorrar={borrarElegido} onIr={irA}
           />
         </div>
@@ -691,9 +830,15 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
         </p>
       )}
       {guia && (
-        <GuiaEditor key={guia} raizRef={raizRef} onTerminar={cerrarGuia}
-          nombre={guia === 'seguimiento' ? 'Guía: seguir a una jugadora' : 'Guía del editor'}
-          pasos={guia === 'seguimiento' ? GUIA_SEGUIMIENTO : GUIA_EDITOR} />
+        <GuiaEditor key={guia} raizRef={raizRef} onTerminar={cerrarGuia} nombre={(GUIAS[guia] || GUIAS.editor).nombre} pasos={(GUIAS[guia] || GUIAS.editor).pasos} />
+      )}
+      {ventana === 'biblioteca' && biblioteca && (
+        <GuardarJugada titulo={clip.titulo} dibujo={dibujo} rival={rival} videoId={clip.videoId} inicio={rango.inicio} biblioteca={biblioteca}
+          onCerrar={() => { setVentana(null); requestAnimationFrame(() => raizRef.current?.focus()) }} />
+      )}
+      {ventana?.tipo === 'exportar' && (
+        <PizarraExportar doc={ventana.doc} titulo={clip.titulo} indice={0} fotos={ventana.fotos} preferencias={{ estela: 'estela', flechas: false }}
+          raiz={ventana.raiz} onPlaca={() => {}} onCerrar={() => { setVentana(null); requestAnimationFrame(() => raizRef.current?.focus()) }} />
       )}
     </div>
   )
@@ -713,7 +858,7 @@ function CampoTiempo({ etiqueta, valor, onCambiar, tiempo, rango }) {
   )
 }
 
-function Propiedades({ elegido, obj, dibujo, tiempo, rango, jugadoras, textoRef, onObjeto, onLista, onQuitarClave, onDuplicar, onBorrar, onIr }) {
+function Propiedades({ elegido, obj, dibujo, tiempo, rango, jugadoras, textoRef, onObjeto, onLista, onQuitarClave, onQuitarAjustes, onDuplicar, onBorrar, onIr }) {
   if (elegido?.tipo === 'pausa') {
     const p = dibujo.pausas.find((x) => x.id === elegido.id)
     if (!p) return <h3>Elegí un dibujo</h3>
@@ -789,6 +934,22 @@ function Propiedades({ elegido, obj, dibujo, tiempo, rango, jugadoras, textoRef,
         </label>
       )}
       {obj.tipo === 'nombre' && <ElegirJugadora jugadora={obj.jugadora} jugadoras={jugadoras} onCambiar={(jugadora) => onObjeto({ jugadora })} />}
+      {(obj.tipo === 'anillo' || obj.tipo === 'foco' || obj.tipo === 'ficha') && <>
+        <ElegirJugadora titulo="¿Quién es? (para la pizarra 2D)" jugadora={obj.jugadora} jugadoras={jugadoras} onCambiar={(jugadora) => onObjeto({ jugadora })} />
+        {obj.tipo !== 'ficha' && (
+          <label className="dib-check">
+            <input type="checkbox" checked={obj.en2d !== false} onChange={(e) => onObjeto({ en2d: e.target.checked ? undefined : false })} />
+            Mostrar en la pizarra 2D
+          </label>
+        )}
+      </>}
+      {obj.tipo === 'ficha' && <>
+        <p className="dib-ayuda">Jugadora marcada en el cuadro {tiempoPreciso(obj.t)}: en la 2D queda quieta en ese lugar.</p>
+        <button type="button" className="dib-boton" onClick={() => onIr(obj.t)}>Ir a ese cuadro</button>
+      </>}
+      {obj.ajustes2d?.length > 0 && (
+        <button type="button" className="dib-boton" onClick={onQuitarAjustes}>Quitar las correcciones de la 2D ({obj.ajustes2d.length})</button>
+      )}
       {obj.tipo === 'enlace' && ['a', 'b'].map((lado) => (
         <label key={lado} className="dib-campo"><span>{lado === 'a' ? 'Jugadora 1' : 'Jugadora 2'}</span>
           <select value={obj[lado]} onChange={(e) => onObjeto({ [lado]: e.target.value })}>
@@ -830,12 +991,12 @@ function Propiedades({ elegido, obj, dibujo, tiempo, rango, jugadoras, textoRef,
   )
 }
 
-function ElegirJugadora({ jugadora, jugadoras, onCambiar }) {
+function ElegirJugadora({ jugadora, jugadoras, onCambiar, titulo = 'Jugadora' }) {
   const rival = Boolean(jugadora?.rival)
   const elegida = !rival ? jugadoras.find((j) => j.id === jugadora?.id) : null
   return (
     <div className="dib-campo">
-      <span>Jugadora</span>
+      <span>{titulo}</span>
       <div className="dib-segmento" role="group" aria-label="De qué equipo">
         <button type="button" aria-pressed={!rival} disabled={!jugadoras.length} onClick={() => { const j = jugadoras[0]; if (j) onCambiar({ id: j.id, nombre: j.nombre, dorsal: j.dorsal, foto: j.foto }) }}>Nuestra</button>
         <button type="button" aria-pressed={rival} onClick={() => onCambiar({ rival: true, dorsal: jugadora?.rival ? jugadora.dorsal : '', nombre: '' })}>Rival</button>
@@ -847,6 +1008,7 @@ function ElegirJugadora({ jugadora, jugadoras, onCambiar }) {
             const j = jugadoras.find((x) => x.id === e.target.value)
             if (j) onCambiar({ id: j.id, nombre: j.nombre, dorsal: j.dorsal, foto: j.foto })
           }}>
+            {!elegida && <option value="">Sin elegir</option>}
             {jugadoras.map((j) => <option key={j.id} value={j.id}>{j.dorsal ? `${j.dorsal} · ` : ''}{j.nombre}</option>)}
           </select>
         </div>

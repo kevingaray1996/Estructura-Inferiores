@@ -65,6 +65,13 @@ export function ladosDelAnalisis(analisis, equipos) {
     : { analizado: CLUB, otro: rival, local, visitante }
 }
 
+// Equipo rival de un análisis (de Equipos, con sus colores), o null. En scouting, el que no es el analizado.
+export function equipoRivalDe(analisis, equipos) {
+  const lados = ladosDelAnalisis(analisis, equipos)
+  const clave = lados.otro === CLUB ? lados.analizado : lados.otro
+  return (equipos || []).find((e) => e.id === clave) || null
+}
+
 export function juegaEquipo(analisis, clave, equipos) {
   if (!clave) return true
   const { analizado, otro } = ladosDelAnalisis(analisis, equipos)

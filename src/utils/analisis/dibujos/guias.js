@@ -98,6 +98,16 @@ export const GUIA_SEGUIMIENTO = Object.freeze([
   { objetivo: 'propiedades', titulo: 'Ajustes de la jugadora seguida', texto: 'En Propiedades elegís el color y los efectos (rebote, pulso, sombra, rastro) y, en «Nombre y dorsal», quién es. Para la «Línea entre dos jugadoras», primero seguí a las dos y después unilas.' },
 ])
 
+// Guía de la calibración de la cancha (etapa 5): la primera vez que se calibra, y con «?».
+export const GUIA_CALIBRACION = Object.freeze([
+  { objetivo: 'cal-medidas', titulo: 'Medidas de la cancha', texto: 'Poné el largo y el ancho de esta cancha en metros. Si no las sabés, dejá 100 × 64: se pueden cambiar después y valen para todo el partido.' },
+  { objetivo: 'cal-cancha', titulo: 'Elegí un punto de la cancha', texto: 'En la cancha chica, tocá un punto que se vea en el video: una esquina del área, el punto penal, el centro, la mitad de cancha con el lateral, un banderín…' },
+  { objetivo: 'video', titulo: 'Marcalo en el video', texto: 'Después hacé clic en el video justo donde está ese punto. Repetí con al menos 4 puntos bien separados, que no estén todos sobre la misma línea.' },
+  { objetivo: 'cal-lista', titulo: 'Revisá que coincida', texto: 'Con 4 puntos aparecen las líneas de la cancha en amarillo sobre el video. Si no coinciden con las líneas reales, tocá «Corregir» en el punto que está mal y volvé a marcarlo. Con 5 o más puntos, la app te avisa cuál parece mal marcado.' },
+  { objetivo: 'cal-recalibrar', titulo: 'Si la cámara se mueve', texto: 'Si la cámara se mueve en el clip, andá al cuadro donde cambió y tocá «Recalibrar en este cuadro». Se copian los puntos y corregís solo los que se movieron. Cada momento usa la calibración más cercana.' },
+  { objetivo: 'cal-listo', titulo: 'Listo', texto: 'Tocá «Listo» para ver la jugada en la pizarra 2D. Para ver esta guía otra vez, tocá «?».' },
+])
+
 // Avanza la guía: 'siguiente' | 'anterior' | 'saltar'. Devuelve el índice nuevo, o null si la guía terminó.
 export function moverGuia(indice, accion, total) {
   if (accion === 'saltar') return null
@@ -109,6 +119,8 @@ export function moverGuia(indice, accion, total) {
 export const CLAVE_GUIA_EDITOR = 'analisis_dibujo_guia_v1'
 export const CLAVE_GUIA_SEGUIMIENTO = 'analisis_dibujo_guia_seguimiento_v1'
 export const CLAVE_SALTO = 'analisis_dibujo_salto_v1'
+export const CLAVE_GUIA_CALIBRACION = 'analisis_dibujo_guia_calibracion_v1'
+export const CLAVE_FICHAS_2D = 'analisis_pizarra2d_fichas_v1' // 'dorsal' | 'foto'
 
 export function leerPreferencia(clave, almacen = typeof window === 'undefined' ? null : window.localStorage) {
   try { return almacen?.getItem(clave) ?? null } catch { return null }

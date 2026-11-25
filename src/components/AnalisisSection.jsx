@@ -64,7 +64,8 @@ import ReproductorPlaylist from './analisis/ReproductorPlaylist'
 import AgregarAPlaylist from './analisis/AgregarAPlaylist'
 import TableroClips, { TableroPorEquipo } from './analisis/TableroClips'
 import { crearClip } from '../utils/analisis/clips'
-import { equiposConAnalisis, filtrarPorEquipo } from '../utils/analisis/equipos'
+import { equipoRivalDe, equiposConAnalisis, filtrarPorEquipo } from '../utils/analisis/equipos'
+import useBibliotecaJugadas from '../hooks/useBibliotecaJugadas'
 import { prepararParaReproducir } from '../utils/analisis/reproductorPlaylist'
 import useTramosPosesion from '../hooks/useTramosPosesion'
 import useDibujos from '../hooks/useDibujos'
@@ -1181,6 +1182,9 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   // Dibujar es solo de coordinación y en la compu; el cuerpo técnico y el celular ven los dibujos al reproducir.
   const puedeDibujar = esAdmin && !bloqueoEscritura && !modoConsulta && enCompu && dibujosApi.listo
   const [editorDibujo, setEditorDibujo] = useState(null)
+  const bibliotecaJugadas = useBibliotecaJugadas()
+  // Etapa 5: camiseta del rival de cada clip en la pizarra 2D.
+  const rivalDeClip = useCallback((c) => equipoRivalDe(partidosPorId.get(c.partidoId), equiposApi.equipos), [partidosPorId, equiposApi.equipos])
   const [clipVideo, setClipVideo] = useState(null) // { clave, rango, dibujo }: dibujos sobre el video de Análisis
   const [zoomVideoRef, aplicarZoomVideo] = useZoomContenedor()
   const marcoVideoRef = useRef(null)
@@ -1225,7 +1229,15 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     const iguales = todasLasAcciones.filter((e) => e.partido_id === clip.partidoId && e.tipo === tipoOriginal).sort((a, b) => Number(a.segundo) - Number(b.segundo))
     const numero = iguales.findIndex((e) => e.id === clip.eventoId) + 1
     try { playerRef.current?.pauseVideo?.() } catch { /* Sin video conectado. */ }
+    // Etapa 5: medidas de la cancha de otro clip ya calibrado del mismo partido (se proponen al calibrar).
+    let canchaPartido = null
+    for (const f of dibujosApi.filas.filter((x) => x.partido_id === clip.partidoId && (x.evento_id !== clip.eventoId || x.espejo !== clip.espejo)).slice(0, 6)) {
+      const otro = await dibujosApi.cargar(f.evento_id, f.espejo)
+      if (otro?.dibujo?.cancha) { canchaPartido = otro.dibujo.cancha; break }
+    }
     setEditorDibujo({
+      canchaPartido,
+      rival: equipoRivalDe(partidosPorId.get(clip.partidoId), equiposApi.equipos),
       clip: {
         eventoId: clip.eventoId, espejo: clip.espejo, partidoId: clip.partidoId, videoId: listo.videoId, inicio: clip.inicio, fin: clip.fin, clave: clip.clave,
         titulo: `${listo.etiqueta}${numero ? ` #${numero}` : ''} · ${formatearTiempo(clip.inicio)} → ${formatearTiempo(clip.fin)}`,
@@ -3729,7 +3741,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
 
       {reproduccion && (
         <ReproductorPlaylist key={reproduccion.titulo + reproduccion.clips.length} titulo={reproduccion.titulo} clips={reproduccion.clips}
-          indiceInicial={reproduccion.indice} onCerrar={() => setReproduccion(null)} dibujos={dibujosApi}
+          indiceInicial={reproduccion.indice} onCerrar={() => setReproduccion(null)} dibujos={dibujosApi} rivalDe={rivalDeClip}
           onGuardar={puedeEditarPlaylists ? (nombre) => playlistsApi.crear({
             nombre, categoriaId: partidoActual?.categoria_id || CATEGORIA_ID, filtro: null, clips: reproduccion.clips,
           }) : null} />
@@ -3738,6 +3750,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       {editorDibujo && (
         <Suspense fallback={<div className="dib-editor" role="status" style={{ placeItems: 'center', display: 'grid' }}>Abriendo la ventana de dibujo…</div>}>
           <EditorDibujo key={editorDibujo.clip.clave} clip={editorDibujo.clip} dibujoInicial={editorDibujo.dibujo} jugadoras={jugadorasDibujo}
+            rival={editorDibujo.rival} canchaPartido={editorDibujo.canchaPartido} biblioteca={bibliotecaJugadas}
             onGuardar={guardarDibujo} onCerrar={() => setEditorDibujo(null)} />
         </Suspense>
       )}
