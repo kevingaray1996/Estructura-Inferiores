@@ -12,28 +12,21 @@ import {
 } from '../../../utils/analisis/dibujos/operaciones'
 import { crearEstadoPausas, pasoPausas } from '../../../utils/analisis/dibujos/pausas'
 import { crearRelojSuave } from '../../../utils/analisis/dibujos/reloj'
+import {
+  ACCIONES_RAPIDAS, CLAVE_GUIA_EDITOR, CLAVE_GUIA_SEGUIMIENTO, CLAVE_SALTO, GUIA_EDITOR, GUIA_SEGUIMIENTO, SALTOS, TEXTO_SEGUIMIENTO,
+  ayudaHerramienta, claveAnterior, deshacerToque, guardarPreferencia, instruccion, leerPreferencia, saltoGuardado, siguienteCuadro,
+} from '../../../utils/analisis/dibujos/guias'
 import CapaDibujos from './CapaDibujos'
+import GuiaEditor from './GuiaEditor'
 import { COLOR, useMedidas } from './apoyo'
 import './dibujo.css'
 
 const DOS_PUNTOS = ['pase_bajo', 'pase_alto', 'linea', 'zona']
 const NOMBRE_COLOR = { amarillo: 'Amarillo', blanco: 'Blanco', rojo: 'Rojo', azul: 'Azul' }
 const NOMBRE_GROSOR = { 1: 'Fino', 2: 'Medio', 3: 'Grueso' }
-const AYUDA = {
-  seleccionar: 'Tocá un dibujo para elegirlo y arrastralo para moverlo. Con una jugadora seguida, arrastrar corrige su lugar en este cuadro.',
-  pase_bajo: 'Arrastrá desde quien da el pase hasta quien lo recibe.',
-  pase_alto: 'Arrastrá desde quien da el pase hasta donde cae la pelota (se dibuja en curva, con su sombra en el piso).',
-  movimiento: 'Dibujá a mano alzada el recorrido (conducción o desmarque).',
-  linea: 'Arrastrá para trazar una línea.',
-  zona: 'Arrastrá de una esquina a la otra.',
-  poligono: 'Tocá cada esquina. Enter o tocar el primer punto la cierra; Esc la cancela.',
-  texto: 'Tocá donde va el texto y escribilo a la derecha.',
-  anillo: 'Tocá los pies de la jugadora. Después avanzá cuadro a cuadro (← →) y volvé a tocarla: cada toque es un punto clave.',
-  foco: 'Tocá los pies de la jugadora; avanzá con ← → y volvé a tocarla para que el foco la siga.',
-  nombre: 'Tocá los pies de la jugadora y elegí su nombre a la derecha; avanzá con ← → y volvé a tocarla para que la siga.',
-  enlace: 'Tocá una jugadora seguida (anillo, foco o nombre) y después otra: la línea se estira y se acorta con ellas.',
-  zoom: 'Tocá el punto hacia donde acercar la cámara. Si hay una jugadora seguida elegida, el zoom la sigue.',
-}
+// Herramientas que abren la guía de seguimiento la primera vez (las que siguen a una jugadora y la que las une).
+const ABREN_GUIA_SEGUIMIENTO = ['anillo', 'foco', 'nombre', 'enlace']
+const MANTENER_MS = 450
 
 function leer(player) {
   try {
@@ -61,6 +54,16 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
   const [errorVideo, setErrorVideo] = useState('')
   const [mensaje, setMensaje] = useState(avisoInicial ? { tipo: 'aviso', texto: avisoInicial } : null)
   const [guardando, setGuardando] = useState(false)
+  // Guías: la del editor la primera vez que se abre; la de seguimiento, la primera vez que se elige una herramienta
+  // que sigue a una jugadora. Se recuerda en este navegador.
+  const [guia, setGuia] = useState(() => (leerPreferencia(CLAVE_GUIA_EDITOR) ? null : 'editor'))
+  const guiaRef = useRef(guia)
+  useLayoutEffect(() => { guiaRef.current = guia })
+  // Modo seguimiento: { tipo, id (objeto que se está siguiendo), marcas (tiempos de cada toque, para deshacer) }.
+  const [seguir, setSeguir] = useState(null)
+  const [salto, setSalto] = useState(() => saltoGuardado(leerPreferencia(CLAVE_SALTO)))
+  const [pista, setPista] = useState(null) // ayuda flotante de una herramienta: { id, left, top }
+  const pistaTimerRef = useRef(null)
   const raizRef = useRef(null)
   const zonaRef = useRef(null)
   const videoRef = useRef(null)
@@ -74,6 +77,8 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
   const cuadro = cuadroVideo(ancho, alto)
 
   const objElegido = elegido?.tipo === 'objeto' ? dibujo.objetos.find((o) => o.id === elegido.id) || null : null
+  // Jugadora que se está siguiendo (si se deshizo su primer toque, ya no está y el próximo toque la crea de nuevo).
+  const objSeguido = seguir?.id ? dibujo.objetos.find((o) => o.id === seguir.id && o.tipo === seguir.tipo) || null : null
   const escena = useMemo(() => escenaEn(dibujo, tiempo, { elegidoId: vistaPrevia ? null : objElegido?.id, animar: vistaPrevia }), [dibujo, tiempo, vistaPrevia, objElegido?.id])
 
   const cambiar = useCallback((fn) => setHist((h) => aplicar(h, fn(h.presente))), [])
@@ -265,14 +270,88 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
     onCerrar()
   }, [hist, onCerrar])
 
+  // Elegir una herramienta. Las que siguen a una jugadora entran en «Modo seguimiento» (si ya hay una elegida del
+  // mismo tipo, se sigue marcando esa). La primera vez se abre la guía de seguimiento.
+  const elegirHerramienta = useCallback((id) => {
+    setHerramienta(id); setBorrador(null); setEnlacePendiente(null); setPista(null)
+    setSeguir(esSeguimiento(id) ? { tipo: id, id: objElegido?.tipo === id ? objElegido.id : null, marcas: [] } : null)
+    if (ABREN_GUIA_SEGUIMIENTO.includes(id) && !leerPreferencia(CLAVE_GUIA_SEGUIMIENTO)) setGuia('seguimiento')
+  }, [objElegido])
+
+  // Deshacer: en modo seguimiento también vuelve el video al momento del toque que se borró.
+  const deshacerAccion = useCallback(() => {
+    if (!puedeDeshacer(hist)) return
+    setHist(deshacer)
+    // Solo si lo último que se hizo fue un toque (no, por ejemplo, un cambio de color).
+    const ultima = seguir?.marcas[seguir.marcas.length - 1]
+    if (ultima && ultima.n === hist.pasado.length) {
+      const r = deshacerToque(seguir.marcas)
+      setSeguir({ ...seguir, marcas: r.marcas })
+      irA(r.volverA.t)
+    }
+  }, [hist, seguir, irA])
+
+  // «Listo» (o Enter) en modo seguimiento: termina y muestra el resultado en Vista previa.
+  const terminarSeguimiento = useCallback(() => {
+    const marcados = objSeguido?.pista?.claves.length || 0
+    setSeguir(null)
+    setHerramienta('seleccionar')
+    if (objSeguido) setElegido({ tipo: 'objeto', id: objSeguido.id })
+    if (marcados > 0 && !vistaRef.current.activa) alternarVistaPrevia()
+  }, [objSeguido, alternarVistaPrevia])
+
+  const cambiarSalto = useCallback((valor) => {
+    setSalto(valor)
+    guardarPreferencia(CLAVE_SALTO, valor)
+  }, [])
+
+  const cerrarGuia = useCallback(() => {
+    guardarPreferencia(guia === 'seguimiento' ? CLAVE_GUIA_SEGUIMIENTO : CLAVE_GUIA_EDITOR, 'si')
+    setGuia(null)
+    requestAnimationFrame(() => raizRef.current?.focus())
+  }, [guia])
+
+  // Ayuda flotante de una herramienta: a la derecha del botón.
+  const mostrarPista = useCallback((id, el) => {
+    clearTimeout(pistaTimerRef.current)
+    const r = el.getBoundingClientRect()
+    setPista({ id, left: r.right + 8, top: r.top })
+  }, [])
+  const ocultarPista = useCallback((demora = 0) => {
+    clearTimeout(pistaTimerRef.current)
+    if (demora) pistaTimerRef.current = setTimeout(() => setPista(null), demora)
+    else setPista(null)
+  }, [])
+  useEffect(() => () => clearTimeout(pistaTimerRef.current), [])
+  // En pantallas táctiles: mantener apretado muestra la ayuda.
+  const eventosPista = (id) => ({
+    onMouseEnter: (e) => mostrarPista(id, e.currentTarget),
+    onMouseLeave: () => ocultarPista(),
+    onFocus: (e) => mostrarPista(id, e.currentTarget),
+    onBlur: () => ocultarPista(),
+    onPointerDown: (e) => {
+      if (e.pointerType !== 'touch') return
+      const el = e.currentTarget
+      clearTimeout(pistaTimerRef.current)
+      pistaTimerRef.current = setTimeout(() => mostrarPista(id, el), MANTENER_MS)
+    },
+    onPointerUp: (e) => { if (e.pointerType === 'touch') ocultarPista(1500) },
+    onPointerCancel: () => ocultarPista(),
+    'aria-describedby': pista?.id === id ? 'dib-pista' : undefined,
+  })
+
   // ---------- Teclado ----------
   useEffect(() => {
     function tecla(e) {
+      if (guiaRef.current) return // Mientras se ve una guía, las teclas son de la guía.
       const orden = ordenTeclaEditor(e)
       if (!orden) return
       if (vistaRef.current.activa && !['reproducir', 'escape'].includes(orden)) return
       e.preventDefault()
-      if (orden === 'deshacer') { setHist(deshacer); return }
+      if (orden === 'deshacer') return deshacerAccion()
+      if (seguir && (orden === 'cerrarPoligono' || orden === 'escape') && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
+        return orden === 'cerrarPoligono' ? terminarSeguimiento() : elegirHerramienta('seleccionar')
+      }
       if (orden === 'rehacer') { setHist(rehacer); return }
       if (orden === 'duplicar') return duplicar()
       if (orden === 'borrar') return borrarElegido()
@@ -286,17 +365,18 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
         if (vistaRef.current.activa) return alternarVistaPrevia()
         if (document.activeElement && document.activeElement !== document.body && raizRef.current?.contains(document.activeElement) && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) { document.activeElement.blur(); return }
         if (borrador || enlacePendiente) { setBorrador(null); setEnlacePendiente(null); return }
-        if (herramienta !== 'seleccionar') { setHerramienta('seleccionar'); return }
+        if (herramienta !== 'seleccionar') { elegirHerramienta('seleccionar'); return }
         setElegido(null); return
       }
       const [tipo, valor] = orden.split(':')
       if (tipo === 'avanzar') return irA(moverTiempo(tiempo, Number(valor), rango))
       if (tipo === 'retroceder') return irA(moverTiempo(tiempo, -Number(valor), rango))
-      if (tipo === 'herramienta') { setHerramienta(valor); setBorrador(null); setEnlacePendiente(null) }
+      if (tipo === 'herramienta') elegirHerramienta(valor)
     }
     window.addEventListener('keydown', tecla)
     return () => window.removeEventListener('keydown', tecla)
-  }, [duplicar, borrarElegido, alternarVistaPrevia, reproducir, irA, rango, nuevaPausa, nuevoPaso, cerrarPoligono, borrador, enlacePendiente, herramienta, tiempo])
+  }, [duplicar, borrarElegido, alternarVistaPrevia, reproducir, irA, rango, nuevaPausa, nuevoPaso, cerrarPoligono, borrador, enlacePendiente, herramienta, tiempo,
+    deshacerAccion, seguir, terminarSeguimiento, elegirHerramienta])
 
   // Foco en la ventana al abrir; el resto de la app queda detrás.
   useEffect(() => {
@@ -327,7 +407,15 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
       arrastreRef.current = { modo: esSeguimiento(el.obj.tipo) ? 'clave' : 'mover', id: el.obj.id, ultimo: p, empezado: false }
       return
     }
-    if (DOS_PUNTOS.includes(herramienta)) { setBorrador({ tipo: herramienta, puntos: [p, p] }); arrastreRef.current = { modo: 'trazar' }; return }
+    if (DOS_PUNTOS.includes(herramienta)) {
+      // Segundo clic (modo «clic y clic»): termina el dibujo.
+      if (borrador?.esperando && borrador.tipo === herramienta) {
+        if (distancia(borrador.puntos[0], p) > 0.012) crear(herramienta, { puntos: [borrador.puntos[0], p] })
+        setBorrador(null)
+        return
+      }
+      setBorrador({ tipo: herramienta, puntos: [p, p] }); arrastreRef.current = { modo: 'trazar' }; return
+    }
     if (herramienta === 'movimiento') { setBorrador({ tipo: 'movimiento', puntos: [p] }); arrastreRef.current = { modo: 'trazo' }; return }
     if (herramienta === 'poligono') {
       if (borrador?.tipo === 'poligono') {
@@ -339,13 +427,20 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
     }
     if (herramienta === 'texto') { crear('texto', { puntos: [p], texto: 'Texto' }); requestAnimationFrame(() => textoRef.current?.select()); return }
     if (esSeguimiento(herramienta)) {
-      if (objElegido && objElegido.tipo === herramienta) {
-        setHist((h) => aplicar(h, marcarPosicion(h.presente, objElegido.id, tiempo, p)))
-        arrastreRef.current = { modo: 'clave', id: objElegido.id, ultimo: p, empezado: true }
+      // Modo seguimiento: cada toque guarda la posición en este cuadro (un paso de deshacer). Al soltar, el video
+      // adelanta solo el salto elegido. Mientras se mantiene apretado, se puede corregir el lugar arrastrando.
+      let id
+      if (objSeguido) {
+        setHist((h) => aplicar(h, marcarPosicion(h.presente, objSeguido.id, tiempo, p)))
+        id = objSeguido.id
       } else {
-        const id = crear(herramienta, { puntos: [p] })
-        arrastreRef.current = { modo: 'clave', id, ultimo: p, empezado: true }
+        id = crear(herramienta, { puntos: [p] })
       }
+      setElegido({ tipo: 'objeto', id })
+      // n: largo del historial después de este toque (para saber si Ctrl+Z lo deshace a él).
+      const marca = { t: tiempo, n: Math.min(hist.limite, hist.pasado.length + 1) }
+      setSeguir((s) => ({ tipo: herramienta, id, marcas: [...(s?.id === id ? s.marcas : []), marca] }))
+      arrastreRef.current = { modo: 'clave', id, ultimo: p, empezado: true, seguimiento: true }
       return
     }
     if (herramienta === 'enlace') {
@@ -364,7 +459,11 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
 
   function mover(e) {
     const a = arrastreRef.current
-    if (!a) return
+    if (!a) {
+      // Entre el primer y el segundo clic, la línea sigue al mouse.
+      if (borrador?.esperando) { const p = puntoDe(e); setBorrador((b) => (b?.esperando ? { ...b, puntos: [b.puntos[0], p] } : b)) }
+      return
+    }
     const p = puntoDe(e)
     if (a.modo === 'trazar') { setBorrador((b) => (b ? { ...b, puntos: [b.puntos[0], p] } : b)); return }
     if (a.modo === 'trazo') { setBorrador((b) => (b ? { ...b, puntos: [...b.puntos, p] } : b)); return }
@@ -385,11 +484,18 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
   function arriba() {
     const a = arrastreRef.current
     arrastreRef.current = null
+    if (a?.seguimiento) {
+      const destino = siguienteCuadro(tiempo, salto, rango)
+      if (destino !== null) irA(destino)
+      else setMensaje({ tipo: 'aviso', texto: 'Llegaste al final del clip. Tocá «Listo» (o Enter) para ver cómo quedó.' })
+      return
+    }
     if (!a || !borrador) return
     if (a.modo === 'trazar') {
       const [p, q] = borrador.puntos
-      if (distancia(p, q) > 0.012) crear(borrador.tipo, { puntos: [p, q] })
-      setBorrador(null)
+      // Si no arrastró, queda esperando el segundo clic.
+      if (distancia(p, q) > 0.012) { crear(borrador.tipo, { puntos: [p, q] }); setBorrador(null) }
+      else setBorrador({ ...borrador, esperando: true })
     } else if (a.modo === 'trazo') {
       const puntos = simplificarTrazo(borrador.puntos)
       if (puntos.length >= 2 && distancia(puntos[0], puntos[puntos.length - 1]) > 0.01) crear('movimiento', { puntos })
@@ -409,6 +515,11 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
     if (cambios.color || cambios.grosor) setEstilo((s) => ({ ...s, ...(cambios.color ? { color: cambios.color } : {}), ...(cambios.grosor ? { grosor: cambios.grosor } : {}) }))
   }
 
+  const ayudaPista = pista ? ayudaHerramienta(pista.id) : null
+  const puntosMarcados = objSeguido?.pista?.claves.length || 0
+  const anterior = seguir && objSeguido ? claveAnterior(objSeguido.pista.claves, tiempo) : null
+  const textoInstruccion = instruccion({ herramienta, borrador, enlacePendiente, vistaPrevia })
+
   return (
     <div ref={raizRef} className="dib-editor" role="dialog" aria-modal="true" aria-label={`Dibujar: ${clip.titulo}`} tabIndex={-1}>
       <header className="dib-cab">
@@ -417,36 +528,55 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
           <button type="button" aria-pressed="true">Video real</button>
           <button type="button" disabled title="Próximamente">Pizarra 2D · Próximamente</button>
         </div>
-        <button type="button" className="dib-boton" onClick={() => setHist(deshacer)} disabled={!puedeDeshacer(hist) || vistaPrevia} title="Deshacer (Ctrl+Z)">↶ Deshacer</button>
+        <button type="button" className="dib-boton" onClick={deshacerAccion} disabled={!puedeDeshacer(hist) || vistaPrevia} title="Deshacer (Ctrl+Z)">↶ Deshacer</button>
         <button type="button" className="dib-boton" onClick={() => setHist(rehacer)} disabled={!puedeRehacer(hist) || vistaPrevia} title="Rehacer (Ctrl+Y)">↷ Rehacer</button>
-        <button type="button" className="dib-boton" aria-pressed={vistaPrevia} onClick={alternarVistaPrevia} disabled={!listo}>{vistaPrevia ? '■ Detener vista previa' : '▶ Vista previa'}</button>
+        <button type="button" className="dib-boton" data-guia="vista-previa" aria-pressed={vistaPrevia} onClick={alternarVistaPrevia} disabled={!listo}>{vistaPrevia ? '■ Detener vista previa' : '▶ Vista previa'}</button>
+        <button type="button" className="dib-boton" onClick={() => setGuia('editor')} aria-label="Ver la guía del editor" title="Ver la guía del editor">?</button>
         <button type="button" className="dib-boton" onClick={cancelar}>Cancelar</button>
-        <button type="button" className="dib-boton dib-principal" onClick={guardar} disabled={guardando}>{guardando ? 'Guardando…' : 'Pegar en la línea de tiempo'}</button>
+        <button type="button" className="dib-boton dib-principal" data-guia="pegar" onClick={guardar} disabled={guardando}>{guardando ? 'Guardando…' : 'Pegar en la línea de tiempo'}</button>
       </header>
 
-      <nav className="dib-herramientas" aria-label="Herramientas">
+      <nav className="dib-herramientas" aria-label="Herramientas" data-guia="herramientas">
         {HERRAMIENTAS.map((h, i) => (
           <div key={h.id} style={{ display: 'contents' }}>
             {(i === 1 || i === 8) && <span className="dib-separador" aria-hidden="true" />}
-            <button type="button" className="dib-herramienta" aria-pressed={herramienta === h.id} disabled={vistaPrevia}
-              title={`${h.texto} (${h.tecla})`} aria-label={`${h.texto} (tecla ${h.tecla})`} aria-keyshortcuts={h.tecla}
-              onClick={() => { setHerramienta(h.id); setBorrador(null); setEnlacePendiente(null) }}>
+            <button type="button" className="dib-herramienta" aria-pressed={herramienta === h.id} disabled={vistaPrevia} data-herramienta={h.id}
+              aria-label={`${h.texto} (tecla ${h.tecla})`} aria-keyshortcuts={h.tecla} {...eventosPista(h.id)}
+              onClick={() => elegirHerramienta(h.id)}>
               <span aria-hidden="true">{h.icono}</span><kbd aria-hidden="true">{h.tecla}</kbd>
             </button>
           </div>
         ))}
         <span className="dib-separador" aria-hidden="true" />
-        <button type="button" className="dib-herramienta" disabled={vistaPrevia} title="Pausa acá (P)" aria-label="Agregar pausa en este cuadro (tecla P)" onClick={nuevaPausa}>
-          <span aria-hidden="true">⏸</span><kbd aria-hidden="true">P</kbd>
-        </button>
-        <button type="button" className="dib-herramienta" disabled={vistaPrevia} title="Paso con subtítulo (S)" aria-label="Agregar paso con subtítulo desde este cuadro (tecla S)" onClick={nuevoPaso}>
-          <span aria-hidden="true">≡</span><kbd aria-hidden="true">S</kbd>
-        </button>
+        {ACCIONES_RAPIDAS.map((h) => (
+          <button key={h.id} type="button" className="dib-herramienta" disabled={vistaPrevia} data-herramienta={h.id}
+            aria-label={h.id === 'pausa' ? 'Agregar pausa en este cuadro (tecla P)' : 'Agregar paso con subtítulo desde este cuadro (tecla S)'}
+            aria-keyshortcuts={h.tecla} {...eventosPista(h.id)} onClick={h.id === 'pausa' ? nuevaPausa : nuevoPaso}>
+            <span aria-hidden="true">{h.icono}</span><kbd aria-hidden="true">{h.tecla}</kbd>
+          </button>
+        ))}
       </nav>
 
       <main className="dib-centro">
+        {seguir && !vistaPrevia ? (
+          <div className="dib-seguimiento" data-guia="seguimiento" role="status">
+            <p className="dib-seguimiento-texto"><strong>Modo seguimiento.</strong> {TEXTO_SEGUIMIENTO}</p>
+            <p className="dib-contador" data-guia="contador">Puntos marcados: {puntosMarcados}</p>
+            <div className="dib-salto" data-guia="salto">
+              <span>Adelanta</span>
+              <div className="dib-segmento" role="group" aria-label="Cuánto adelanta el video después de cada toque">
+                {SALTOS.map((v) => (
+                  <button key={v} type="button" aria-pressed={salto === v} onClick={() => cambiarSalto(v)}>{String(v).replace('.', ',')} s</button>
+                ))}
+              </div>
+            </div>
+            <button type="button" className="dib-boton dib-principal" data-guia="listo" onClick={terminarSeguimiento}>Listo (Enter)</button>
+          </div>
+        ) : (
+          <p className="dib-instruccion" aria-live="polite">{textoInstruccion}</p>
+        )}
         <div className="dib-escenario" style={{ containerType: 'size' }}>
-          <div ref={videoRef} className="dib-video" style={{ width: 'min(100cqw, calc(100cqh * 16 / 9))' }}>
+          <div ref={videoRef} className="dib-video" data-guia="video" style={{ width: 'min(100cqw, calc(100cqh * 16 / 9))' }}>
             <div className="dib-zoom" style={zoomVista}>
               <div ref={zonaRef} className="dib-zoom" />
               <CapaDibujos escena={escena} ancho={ancho} alto={alto} cuadro={cuadro} elegidoId={vistaPrevia ? null : objElegido?.id} borrador={elBorrador} />
@@ -455,6 +585,17 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
                   position: 'absolute', left: cuadro.izquierda + zoomElegido.objetivo.x * cuadro.ancho - 14, top: cuadro.arriba + zoomElegido.objetivo.y * cuadro.alto - 14,
                   width: 28, height: 28, borderRadius: 999, border: '2px dashed var(--dib-blanco)', pointerEvents: 'none',
                 }} />
+              )}
+              {/* Modo seguimiento: el recorrido marcado y el punto anterior, tenues, para seguir a la jugadora. */}
+              {seguir && objSeguido && !vistaPrevia && ancho > 0 && (
+                <svg className="dib-rastro-guia" width={ancho} height={alto} aria-hidden="true">
+                  <g transform={`translate(${cuadro.izquierda} ${cuadro.arriba})`} opacity="0.55">
+                    <polyline points={objSeguido.pista.claves.map((c) => `${c.x * cuadro.ancho},${c.y * cuadro.alto}`).join(' ')}
+                      style={{ fill: 'none', stroke: 'var(--dib-blanco)', strokeWidth: 2, strokeDasharray: '4 5' }} />
+                    {anterior && <circle data-punto-anterior="si" cx={anterior.x * cuadro.ancho} cy={anterior.y * cuadro.alto} r={9}
+                      style={{ fill: 'none', stroke: 'var(--dib-amarillo)', strokeWidth: 2 }} />}
+                  </g>
+                </svg>
               )}
             </div>
             {escena.subtitulo && <p className="dib-subtitulo" style={{ bottom: `${cuadro.arriba + 12}px` }}>{escena.subtitulo}</p>}
@@ -474,21 +615,20 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
           <span className="dib-reloj" aria-live="off">{tiempoPreciso(tiempo)} <small>/ {tiempoPreciso(rango.fin)}</small></span>
           {mensaje && <p className={mensaje.tipo === 'error' ? 'dib-error' : 'dib-aviso'} role={mensaje.tipo === 'error' ? 'alert' : 'status'}>{mensaje.texto}</p>}
         </div>
-        <p className="dib-ayuda">
-          {vistaPrevia ? 'Vista previa: así lo ve el cuerpo técnico. Espacio o Esc para volver a editar.' : AYUDA[herramienta]}
-          {' '}Teclas: ← → cuadro a cuadro (Mayús: 1 s) · Ctrl+Z / Ctrl+Y · Ctrl+D duplicar · Supr borrar.
-        </p>
+        <p className="dib-ayuda">Teclas: ← → cuadro a cuadro (Mayús: 1 s) · Espacio reproducir · Ctrl+Z / Ctrl+Y · Ctrl+D duplicar · Supr borrar · «?» guía.</p>
       </main>
 
       <aside className="dib-propiedades" aria-label="Propiedades y pasos">
-        <Propiedades
-          elegido={elegido} obj={objElegido} dibujo={dibujo} tiempo={tiempo} rango={rango} jugadoras={jugadoras} textoRef={textoRef}
-          onObjeto={editarObjeto}
-          onLista={(lista, id, cambios) => cambiar((d) => actualizarEnLista(d, lista, id, cambios))}
-          onQuitarClave={() => objElegido?.pista && cambiar((d) => actualizarObjeto(d, objElegido.id, { pista: { ...objElegido.pista, claves: quitarClave(objElegido.pista.claves, tiempo) } }))}
-          onDuplicar={duplicar} onBorrar={borrarElegido} onIr={irA}
-        />
-        <section className="dib-campo" aria-label="Pasos">
+        <div data-guia="propiedades">
+          <Propiedades
+            elegido={elegido} obj={objElegido} dibujo={dibujo} tiempo={tiempo} rango={rango} jugadoras={jugadoras} textoRef={textoRef}
+            onObjeto={editarObjeto}
+            onLista={(lista, id, cambios) => cambiar((d) => actualizarEnLista(d, lista, id, cambios))}
+            onQuitarClave={() => objElegido?.pista && cambiar((d) => actualizarObjeto(d, objElegido.id, { pista: { ...objElegido.pista, claves: quitarClave(objElegido.pista.claves, tiempo) } }))}
+            onDuplicar={duplicar} onBorrar={borrarElegido} onIr={irA}
+          />
+        </div>
+        <section className="dib-campo" aria-label="Pasos" data-guia="pasos">
           <h3>Pasos y subtítulos</h3>
           {dibujo.subtitulos.length === 0 && <p className="dib-ayuda">Sin pasos. Un paso es un tramo del clip con su texto abajo.</p>}
           <ol className="dib-pasos">
@@ -509,6 +649,17 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
       <LineaClip dibujo={dibujo} rango={rango} tiempo={tiempo} elegido={elegido} deshabilitada={vistaPrevia}
         onElegir={(sel, t) => { setElegido(sel); if (Number.isFinite(t)) irA(t) }} onIr={irA}
         onCambiar={(fn, empezado) => setHist((h) => (empezado ? reemplazar : aplicar)(h, fn(h.presente)))} />
+
+      {ayudaPista && (
+        <p id="dib-pista" role="tooltip" className="dib-pista-flotante" style={{ left: pista.left, top: pista.top }}>
+          <strong>{ayudaPista.nombre} (tecla {ayudaPista.tecla})</strong>{ayudaPista.descripcion}
+        </p>
+      )}
+      {guia && (
+        <GuiaEditor key={guia} raizRef={raizRef} onTerminar={cerrarGuia}
+          nombre={guia === 'seguimiento' ? 'Guía: seguir a una jugadora' : 'Guía del editor'}
+          pasos={guia === 'seguimiento' ? GUIA_SEGUIMIENTO : GUIA_EDITOR} />
+      )}
     </div>
   )
 }
@@ -714,7 +865,7 @@ function LineaClip({ dibujo, rango, tiempo, elegido, deshabilitada, onElegir, on
   )
 
   return (
-    <section className="dib-linea" aria-label="Línea de tiempo del clip">
+    <section className="dib-linea" aria-label="Línea de tiempo del clip" data-guia="linea">
       <div className="dib-linea-fila">
         <span className="dib-linea-etiqueta">Pausas</span>
         {pista('Pausas', <>

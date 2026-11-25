@@ -60,7 +60,47 @@
 .dib-herramienta:disabled { opacity: .4; }
 .dib-separador { grid-column: 1 / -1; height: 1px; margin: .25rem 0; background: var(--ui-borde); }
 
-.dib-centro { grid-area: vid; display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: .5rem; padding: .75rem; min-width: 0; min-height: 0; }
+.dib-centro { grid-area: vid; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: .5rem; padding: .75rem; min-width: 0; min-height: 0; }
+
+/* Qué hacer ahora (arriba del video) y cartel fijo del modo seguimiento. */
+.dib-instruccion {
+  margin: 0; min-height: 44px; display: flex; align-items: center; gap: .5rem; padding: .4rem .75rem; border-radius: .5rem;
+  border: 1px solid var(--ui-borde); background: var(--ui-superficie); font-size: .9375rem; font-weight: 700;
+}
+.dib-instruccion::before { content: '→'; color: var(--ui-texto-acento); font-weight: 900; }
+.dib-seguimiento {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; padding: .5rem .75rem; border-radius: .5rem;
+  border: 2px solid var(--ui-acento); background: var(--ui-acento-suave);
+}
+.dib-seguimiento-texto { margin: 0 auto 0 0; font-size: .9375rem; font-weight: 800; min-width: 14rem; flex: 1 1 18rem; }
+.dib-seguimiento-texto strong { color: var(--ui-texto-acento); }
+.dib-contador { margin: 0; font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dib-salto { display: inline-flex; align-items: center; gap: .4rem; font-size: .8125rem; font-weight: 700; }
+.dib-rastro-guia { position: absolute; inset: 0; pointer-events: none; }
+
+/* Ayuda de cada herramienta (al pasar el mouse o mantener apretado). */
+.dib-pista-flotante {
+  position: fixed; z-index: 95; max-width: 19rem; margin: 0; padding: .55rem .7rem; border-radius: .5rem; pointer-events: none;
+  border: 1px solid var(--ui-acento); background: var(--ui-superficie); color: var(--ui-texto); font-size: .8125rem; line-height: 1.35;
+  box-shadow: 0 6px 20px var(--dib-sombra);
+}
+.dib-pista-flotante strong { display: block; color: var(--ui-texto-acento); font-size: .875rem; }
+
+/* Guía paso a paso. */
+.dib-guia { position: fixed; inset: 0; z-index: 100; }
+.dib-guia-velo { position: absolute; inset: 0; background: var(--dib-velo); }
+.dib-guia-recuadro {
+  position: fixed; border: 3px solid var(--ui-acento); border-radius: .625rem; pointer-events: none;
+  box-shadow: 0 0 0 9999px var(--dib-velo); transition: left .2s var(--curva-salida), top .2s var(--curva-salida), width .2s var(--curva-salida), height .2s var(--curva-salida);
+}
+.dib-guia-tarjeta {
+  position: fixed; display: grid; gap: .5rem; max-width: calc(100vw - 16px); padding: .9rem 1rem; border-radius: .75rem;
+  border: 1px solid var(--ui-acento); background: var(--ui-superficie); color: var(--ui-texto); box-shadow: 0 10px 30px var(--dib-sombra);
+}
+.dib-guia-tarjeta h3 { margin: 0; font-family: var(--fuente-titulo); font-size: 1.25rem; font-weight: 800; color: var(--ui-texto-acento); }
+.dib-guia-tarjeta p { margin: 0; font-size: .9375rem; line-height: 1.4; }
+.dib-guia-tarjeta .dib-guia-contador { font-size: .75rem; font-weight: 700; color: var(--ui-texto-secundario); }
+@media (prefers-reduced-motion: reduce) { .dib-guia-recuadro { transition: none; } }
 .dib-escenario { position: relative; display: grid; place-items: center; min-height: 0; }
 .dib-video { position: relative; width: 100%; max-height: 100%; aspect-ratio: 16 / 9; background: var(--dib-tinta); border-radius: .5rem; overflow: hidden; }
 .dib-video .dib-svg { pointer-events: none; }
