@@ -188,11 +188,13 @@ test('formato: recorta, ordena, completa ids y deja afuera lo inválido', () => 
   assert.equal(zoom.escala, 4); assert.equal(zoom.seguir, null)
   assert.deepEqual(dibujo.pausas.map((p) => [p.t, p.duracion]), [[12, 3], [18, 20]])
   assert.deepEqual(dibujo.subtitulos.map((s) => s.texto), ['Salida'])
-  assert.equal(dibujo.version, VERSION_DIBUJO)
+  // Sin nada de la etapa 5, sigue siendo versión 1 (la más nueva que entiende la app es VERSION_DIBUJO).
+  assert.equal(dibujo.version, 1)
+  assert.ok(VERSION_DIBUJO >= 1)
 })
 
 test('formato: versión nueva no se dibuja; basura da un dibujo vacío; tamaño máximo', () => {
-  const nueva = normalizarDibujo({ version: 2, objetos: [] })
+  const nueva = normalizarDibujo({ version: VERSION_DIBUJO + 1, objetos: [] })
   assert.equal(nueva.ok, false); assert.match(nueva.aviso, /versión más nueva/)
   assert.deepEqual(normalizarDibujo(null).dibujo, dibujoVacio())
   assert.deepEqual(normalizarDibujo([1, 2]).dibujo, dibujoVacio())

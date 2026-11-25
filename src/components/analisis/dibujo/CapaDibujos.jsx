@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import { aPixeles } from '../../../utils/analisis/dibujos/coordenadas'
+import { textoMetros } from '../../../utils/analisis/dibujos/calibracion'
 import { COLOR } from './apoyo'
 
 // Pinta en SVG lo que devuelve escenaEn() sobre el cuadro del video. Solo dibuja: el que la usa decide el tiempo.
@@ -105,6 +106,18 @@ function Objeto({ el, cuadro, base, idMascara }) {
           <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} style={trazo} />
           <circle cx={a.x} cy={a.y} r={ancho * 1.4} style={{ fill: color }} />
           <circle cx={b.x} cy={b.y} r={ancho * 1.4} style={{ fill: color }} />
+          {Number.isFinite(el.metros) && (() => {
+            // Distancia en metros (clip calibrado), en un cartel en el medio de la línea.
+            const texto = textoMetros(el.metros), alto = Math.max(16, cuadro.ancho * 0.026)
+            const largo = texto.length * alto * 0.6 + alto * 0.6
+            return (
+              <g data-metros="si" transform={`translate(${(a.x + b.x) / 2} ${(a.y + b.y) / 2})`}>
+                <rect x={-largo / 2} y={-alto / 2} width={largo} height={alto} rx={alto / 2} style={{ fill: 'var(--dib-subtitulo-fondo)' }} />
+                <text textAnchor="middle" dominantBaseline="central" fontSize={alto * 0.68}
+                  style={{ fill: color, fontFamily: 'var(--fuente-titulo)', fontWeight: 800 }}>{texto}</text>
+              </g>
+            )
+          })()}
         </g>
       )
     }

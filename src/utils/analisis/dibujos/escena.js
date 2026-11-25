@@ -1,5 +1,6 @@
 // Qué se ve en un instante del clip: objetos visibles con su posición (los que siguen a una jugadora), efectos,
 // subtítulo y zoom de cámara. Lógica pura; la capa de dibujo solo pinta lo que devuelve.
+import { aCancha, distanciaMetros } from './calibracion.js'
 import { esSeguimiento } from './formato.js'
 import { posicionEn, recorrido } from './interpolacion.js'
 
@@ -50,7 +51,7 @@ export function escenaEn(dibujo, t, { elegidoId = null, animar = true } = {}) {
   const porId = new Map(objetos.map((o) => [o.id, o]))
   const elementos = []
   for (const obj of objetos) {
-    if (obj.tipo === 'zoom') continue
+    if (obj.tipo === 'zoom' || obj.tipo === 'ficha') continue // la ficha solo se ve en la pizarra 2D
     const visible = visibleEn(obj, t)
     if (!visible && obj.id !== elegidoId) continue
     const base = { obj, fuera: !visible, escala: visible && animar ? escalaDe(obj, t) : 1 }
@@ -65,6 +66,9 @@ export function escenaEn(dibujo, t, { elegidoId = null, animar = true } = {}) {
       base.a = posicionEn(a.pista.claves, t)
       base.b = posicionEn(b.pista.claves, t)
       if (!base.a || !base.b) continue
+      // Con la cancha calibrada, la línea muestra la distancia en metros.
+      const metros = distanciaMetros(aCancha(dibujo, t, base.a), aCancha(dibujo, t, base.b))
+      if (metros !== null) base.metros = metros
     }
     elementos.push(base)
   }

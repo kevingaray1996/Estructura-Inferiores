@@ -1,8 +1,12 @@
-// Formato de los dibujos de un clip (etapa 4, docs/analisis-etapa4.md). Lógica pura: valida y ordena el JSON antes de
-// guardarlo y al leerlo, para que un dato raro nunca rompa la reproducción.
+// Formato de los dibujos de un clip (etapa 4, docs/analisis-etapa4.md; versión 2 de la etapa 5, docs/analisis-etapa5.md).
+// Lógica pura: valida y ordena el JSON antes de guardarlo y al leerlo, para que un dato raro nunca rompa la reproducción.
+// La versión 2 suma campos opcionales (cancha, calibraciones, fichas, jugadora en anillo y foco, ajustes de la 2D). Un
+// dibujo que no usa nada de eso se sigue guardando como versión 1, así lo puede mostrar una app que no se actualizó.
 import { recortar01 } from './coordenadas.js'
+import { MAXIMO_CALIBRACIONES, MAXIMO_PUNTOS, REFS, medidasCancha } from './calibracion.js'
 
-export const VERSION_DIBUJO = 1
+// La versión más nueva que esta app entiende.
+export const VERSION_DIBUJO = 2
 export const LIMITES = Object.freeze({
   objetos: 200, claves: 600, pausas: 50, subtitulos: 50, puntos: 60, texto: 140, bytes: 200 * 1024,
 })
@@ -10,7 +14,9 @@ export const COLORES_DIBUJO = Object.freeze(['amarillo', 'blanco', 'rojo', 'azul
 export const GROSORES = Object.freeze([1, 2, 3])
 export const TIPOS_FIJOS = Object.freeze(['pase_bajo', 'pase_alto', 'movimiento', 'linea', 'zona', 'poligono', 'texto'])
 export const TIPOS_SEGUIMIENTO = Object.freeze(['anillo', 'foco', 'nombre'])
-export const TIPOS = Object.freeze([...TIPOS_FIJOS, ...TIPOS_SEGUIMIENTO, 'enlace', 'zoom'])
+// ficha (v2): jugadora marcada en un solo cuadro; se ve quieta en la pizarra 2D, no sobre el video.
+export const TIPOS = Object.freeze([...TIPOS_FIJOS, ...TIPOS_SEGUIMIENTO, 'enlace', 'zoom', 'ficha'])
+export const MAXIMO_AJUSTES = 200
 export const PAUSA_POR_DEFECTO = 3
 export const PAUSA_MINIMA = 0.5
 export const PAUSA_MAXIMA = 20
@@ -31,14 +37,14 @@ const idValido = (v) => (typeof v === 'string' && /^[\w-]{1,40}$/.test(v) ? v : 
 
 export function dibujoVacio(clip = null) {
   return {
-    version: VERSION_DIBUJO,
+    version: 1,
     clip: clip ? { inicio: tiempo(clip.inicio), fin: tiempo(clip.fin) } : null,
     objetos: [], pausas: [], subtitulos: [],
   }
 }
 
 export function estaVacio(dibujo) {
-  return !dibujo || (!dibujo.objetos?.length && !dibujo.pausas?.length && !dibujo.subtitulos?.length)
+  return !dibujo || (!dibujo.objetos?.length && !dibujo.pausas?.length && !dibujo.subtitulos?.length && !dibujo.calibraciones?.length)
 }
 
 // Id corto que no esté usado (o1, o2, … / p1 … / s1 …).
@@ -70,6 +76,46 @@ function normalizarJugadora(j) {
   const id = typeof j.id === 'string' ? j.id.slice(0, 40) : ''
   const foto = typeof j.foto === 'string' && /^https:\/\//.test(j.foto) ? j.foto.slice(0, 500) : ''
   return { id, nombre: cadena(j.nombre, 40), dorsal, foto }
+}
+
+// Correcciones hechas en la pizarra 2D (v2): [{ t, dx, dy }] en metros, ordenadas, una por instante.
+function normalizarAjustes(lista) {
+  const salida = []
+  for (const a of (Array.isArray(lista) ? lista : [])) {
+    if (!a || !Number.isFinite(Number(a.t))) continue
+    const ajuste = { t: tiempo(a.t), dx: Math.round(Math.max(-60, Math.min(60, numero(a.dx))) * 100) / 100, dy: Math.round(Math.max(-60, Math.min(60, numero(a.dy))) * 100) / 100 }
+    const i = salida.findIndex((x) => Math.abs(x.t - ajuste.t) < 0.001)
+    if (i >= 0) salida[i] = ajuste
+    else salida.push(ajuste)
+  }
+  return salida.sort((a, b) => a.t - b.t).slice(0, MAXIMO_AJUSTES)
+}
+
+// Calibraciones (v2): { id, t, puntos: [{ ref, x, y }] }, sin repetir punto conocido.
+function normalizarCalibraciones(lista) {
+  const ids = new Set()
+  return (Array.isArray(lista) ? lista : [])
+    .filter((c) => c && Number.isFinite(Number(c.t)) && Array.isArray(c.puntos))
+    .map((c) => {
+      const refs = new Set()
+      const puntos = []
+      for (const p of c.puntos) {
+        if (!p || !REFS.includes(p.ref) || refs.has(p.ref) || puntos.length >= MAXIMO_PUNTOS) continue
+        refs.add(p.ref)
+        puntos.push({ ref: p.ref, ...punto(p) })
+      }
+      return { id: idValido(c.id), t: tiempo(c.t), puntos }
+    })
+    .filter((c) => c.puntos.length)
+    .sort((a, b) => a.t - b.t)
+    .slice(0, MAXIMO_CALIBRACIONES)
+    .map((c) => { const id = c.id && !ids.has(c.id) ? c.id : nuevoId('c', ids); ids.add(id); return { ...c, id } })
+}
+
+// ¿Usa algo de la versión 2? (si no, se guarda como 1)
+export function usaVersion2(d) {
+  return Boolean(d?.cancha || d?.calibraciones?.length || (d?.objetos || []).some((o) => o.tipo === 'ficha' || o.ajustes2d?.length || o.en2d === false
+    || (o.jugadora && o.tipo !== 'nombre')))
 }
 
 function normalizarObjeto(o) {
@@ -104,6 +150,19 @@ function normalizarObjeto(o) {
       sombra: Boolean(o.efectos?.sombra), rastro: Boolean(o.efectos?.rastro),
     }
     if (o.tipo === 'nombre') base.jugadora = normalizarJugadora(o.jugadora) || { rival: true, dorsal: '', nombre: '' }
+    else if (o.jugadora) { const j = normalizarJugadora(o.jugadora); if (j) base.jugadora = j } // v2
+    if (o.en2d === false) base.en2d = false // v2
+    const ajustes = normalizarAjustes(o.ajustes2d)
+    if (ajustes.length) base.ajustes2d = ajustes // v2
+    return base
+  }
+  if (o.tipo === 'ficha') {
+    if (!o.punto || typeof o.punto !== 'object') return null
+    base.t = tiempo(o.t ?? desde)
+    base.punto = punto(o.punto)
+    base.jugadora = normalizarJugadora(o.jugadora) || { rival: false, id: '', nombre: '', dorsal: '', foto: '' }
+    const ajustes = normalizarAjustes(o.ajustes2d)
+    if (ajustes.length) base.ajustes2d = ajustes
     return base
   }
   if (o.tipo === 'enlace') {
@@ -157,7 +216,13 @@ export function normalizarDibujo(datos) {
 
   const clip = datos.clip && Number.isFinite(Number(datos.clip.inicio)) && Number.isFinite(Number(datos.clip.fin))
     ? { inicio: tiempo(datos.clip.inicio), fin: tiempo(datos.clip.fin) } : null
-  return { ok: true, dibujo: { version: VERSION_DIBUJO, clip, objetos: limpios, pausas, subtitulos }, aviso: '' }
+  const dibujo = { version: 1, clip, objetos: limpios, pausas, subtitulos }
+  // v2: medidas de la cancha y calibraciones (sin calibraciones, las medidas no hacen falta).
+  const calibraciones = normalizarCalibraciones(datos.calibraciones)
+  if (calibraciones.length || (datos.cancha && typeof datos.cancha === 'object')) dibujo.cancha = medidasCancha(datos.cancha)
+  if (calibraciones.length) dibujo.calibraciones = calibraciones
+  if (usaVersion2(dibujo)) dibujo.version = 2
+  return { ok: true, dibujo, aviso: '' }
 }
 
 // Bytes del JSON (lo que controla la base: máximo 200 KB).
