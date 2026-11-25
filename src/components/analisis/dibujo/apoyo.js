@@ -31,6 +31,9 @@ export function useZoomContenedor() {
     if (!el) return
     el.style.transform = !estilo || estilo.transform === 'none' ? '' : estilo.transform
     el.style.transformOrigin = estilo?.transformOrigin || ''
+    // Pausa de dibujo: se recorta la interfaz de YouTube (ver .dib-zoom[data-pausa-dibujo] en dibujo.css).
+    if (estilo?.pausaDibujo) el.dataset.pausaDibujo = 'si'
+    else delete el.dataset.pausaDibujo
   }, [])
   return [ref, aplicar]
 }

@@ -537,7 +537,10 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
   const ayudaPista = pista ? ayudaHerramienta(pista.id) : null
   const puntosMarcados = objSeguido?.pista?.claves.length || 0
   const anterior = seguir && objSeguido ? claveAnterior(objSeguido.pista.claves, tiempo) : null
-  const textoInstruccion = instruccion({ herramienta, borrador, enlacePendiente, vistaPrevia })
+  const textoInstruccion = instruccion({
+    herramienta, borrador, enlacePendiente, vistaPrevia,
+    fueraDeTiempo: objElegido && objElegido.tipo !== 'zoom' && (tiempo < objElegido.desde || tiempo > objElegido.hasta) ? objElegido : null,
+  })
 
   return (
     <div ref={raizRef} className="dib-editor" role="dialog" aria-modal="true" aria-label={`Dibujar: ${clip.titulo}`} tabIndex={-1}>
@@ -597,7 +600,7 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
         <div className="dib-escenario" style={{ containerType: 'size' }}>
           <div ref={videoRef} className="dib-video" data-guia="video" style={{ width: 'min(100cqw, calc(100cqh * 16 / 9))' }}>
             <div className="dib-zoom" style={zoomVista}>
-              <div ref={zonaRef} className="dib-zoom" />
+              <div ref={zonaRef} className="dib-zoom dib-sin-interfaz" />
               <CapaDibujos escena={escena} ancho={ancho} alto={alto} cuadro={cuadro} elegidoId={vistaPrevia ? null : objElegido?.id} borrador={elBorrador} />
               {zoomElegido && !vistaPrevia && (
                 <span aria-hidden="true" style={{

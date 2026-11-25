@@ -48,8 +48,14 @@ export function ayudaHerramienta(id) {
 const QUE_DIBUJA = { pase_bajo: 'el pase', pase_alto: 'el pase', linea: 'la línea' }
 export const TEXTO_SEGUIMIENTO = 'Tocá a la jugadora. Cada toque guarda su posición y adelanta el video solo. Enter para terminar.'
 
-export function instruccion({ herramienta, borrador = null, enlacePendiente = null, vistaPrevia = false }) {
+const reloj = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, '0').replace('.', ',')}`
+
+// fueraDeTiempo: { desde, hasta } del dibujo elegido cuando no se ve en el momento actual (se muestra punteado).
+export function instruccion({ herramienta, borrador = null, enlacePendiente = null, vistaPrevia = false, fueraDeTiempo = null }) {
   if (vistaPrevia) return 'Vista previa: así lo ve el cuerpo técnico. Espacio o Esc para volver a editar.'
+  if (fueraDeTiempo && !borrador) {
+    return `El dibujo elegido no se ve en este momento (aparece de ${reloj(fueraDeTiempo.desde)} a ${reloj(fueraDeTiempo.hasta)}). Lo ves punteado solo para encontrarlo.`
+  }
   if (QUE_DIBUJA[herramienta]) {
     return borrador?.esperando
       ? `Ahora hacé clic donde termina ${QUE_DIBUJA[herramienta]}.`

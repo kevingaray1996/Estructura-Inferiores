@@ -29,6 +29,11 @@ test('qué hacer ahora: cambia con la herramienta y con lo que ya se marcó', ()
   for (const t of ['anillo', 'foco', 'nombre']) assert.equal(instruccion({ herramienta: t }), TEXTO_SEGUIMIENTO)
   assert.match(instruccion({ herramienta: 'texto', vistaPrevia: true }), /^Vista previa/)
   for (const h of HERRAMIENTAS) assert.ok(instruccion({ herramienta: h.id }), `Sin instrucción: ${h.id}`)
+  // Dibujo elegido fuera de su tiempo: avisa que se ve punteado solo para encontrarlo (no en vista previa).
+  const fuera = { desde: 379.5 - 5, hasta: 379.5 }
+  assert.equal(instruccion({ herramienta: 'seleccionar', fueraDeTiempo: fuera }),
+    'El dibujo elegido no se ve en este momento (aparece de 6:14,5 a 6:19,5). Lo ves punteado solo para encontrarlo.')
+  assert.match(instruccion({ herramienta: 'seleccionar', fueraDeTiempo: fuera, vistaPrevia: true }), /^Vista previa/)
 })
 
 test('guías: marcan todas las partes pedidas, avanzan, retroceden y se saltan', () => {

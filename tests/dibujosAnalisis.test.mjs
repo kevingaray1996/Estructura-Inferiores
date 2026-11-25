@@ -1,9 +1,12 @@
 // Etapa 4 de Análisis: lógica pura de los dibujos (formato, coordenadas, interpolación, pausas, reloj, deshacer).
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { aPixeles, aRelativo, cuadroVideo, simplificarTrazo } from '../src/utils/analisis/dibujos/coordenadas.js'
 import { LIMITES, VERSION_DIBUJO, dibujoVacio, excedeTamano, normalizarDibujo } from '../src/utils/analisis/dibujos/formato.js'
 import { agregarClave, posicionEn, quitarClave, recorrido } from '../src/utils/analisis/dibujos/interpolacion.js'
+
+const leer = (r) => readFileSync(new URL('../' + r, import.meta.url), 'utf8')
 import { crearEstadoPausas, pasoPausas } from '../src/utils/analisis/dibujos/pausas.js'
 import { crearRelojSuave } from '../src/utils/analisis/dibujos/reloj.js'
 import { aplicar, crearHistorial, deshacer, puedeDeshacer, puedeRehacer, reemplazar, rehacer } from '../src/utils/analisis/dibujos/historial.js'
@@ -228,6 +231,22 @@ test('escena: visibilidad, entrada con rebote, enlace entre dos y subtítulo por
   // La línea elegida se ve (tenue) aunque no sea su momento; si no está elegida, no.
   assert.equal(escenaEn(dibujo, 11).elementos.some((x) => x.obj.id === 'l'), false)
   assert.equal(escenaEn(dibujo, 11, { elegidoId: 'l' }).elementos.find((x) => x.obj.id === 'l').fuera, true)
+  // Vista previa y reproducción (playlists, video de Análisis) no pasan elegido: fuera de su tramo no se ve.
+  assert.match(leer('src/components/analisis/dibujo/EditorDibujo.jsx'), /elegidoId: vistaPrevia \? null :/)
+  assert.doesNotMatch(leer('src/components/analisis/dibujo/CapaReproduccion.jsx'), /elegidoId/)
+  // En el editor se ve punteado.
+  assert.match(leer('src/components/analisis/dibujo/CapaDibujos.jsx'), /className=\{el\.fuera \? 'dib-fuera'/)
+  assert.match(leer('src/components/analisis/dibujo/dibujo.css'), /\.dib-fuera \* \{ stroke-dasharray/)
+})
+
+test('interfaz de YouTube recortada con el video pausado por nosotros', () => {
+  const css = leer('src/components/analisis/dibujo/dibujo.css')
+  // Mismo ancho, más alto: el video queda en su lugar y título/compartir/logo/«Más videos» quedan afuera.
+  assert.match(css, /\.dib-zoom\.dib-sin-interfaz > iframe[\s\S]*\.dib-zoom\[data-pausa-dibujo='si'\] > div \{ top: -60%; bottom: auto; height: 220%; \}/)
+  assert.match(leer('src/components/analisis/dibujo/EditorDibujo.jsx'), /className="dib-zoom dib-sin-interfaz"/)
+  assert.match(leer('src/components/analisis/ReproductorPlaylist.jsx'), /listo && !reproduciendo \? 'dib-zoom dib-sin-interfaz'/)
+  assert.match(leer('src/components/analisis/dibujo/CapaReproduccion.jsx'), /pausaDibujo = vista\.pausa !== null/)
+  assert.match(leer('src/components/analisis/dibujo/apoyo.js'), /el\.dataset\.pausaDibujo = 'si'/)
 })
 
 test('zoom de cámara: entra suave, sigue a la jugadora y vuelve al plano general', () => {
@@ -320,9 +339,7 @@ test('editor: el clic elige el objeto de más arriba, atajos de teclado, cuadro 
   assert.equal(esCompu(null), false)
 })
 
-test('pantallas: el editor se carga solo al abrirlo y dibujar es solo de coordinación en la compu', async () => {
-  const { readFileSync } = await import('node:fs')
-  const leer = (r) => readFileSync(new URL('../' + r, import.meta.url), 'utf8')
+test('pantallas: el editor se carga solo al abrirlo y dibujar es solo de coordinación en la compu', () => {
   const seccion = leer('src/components/AnalisisSection.jsx')
   assert.match(seccion, /lazy\(\(\) => import\('\.\/analisis\/dibujo\/EditorDibujo'\)\)/)
   assert.doesNotMatch(seccion, /^import EditorDibujo/m, 'Nada de import directo del editor')

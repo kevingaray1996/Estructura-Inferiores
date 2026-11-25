@@ -234,7 +234,8 @@ export default function ReproductorPlaylist({ titulo, clips, indiceInicial = 0, 
           ) : <p className="rp-rotulo">La playlist no tiene clips.</p>}
 
           <div className="rp-video">
-            <div ref={zoomRef} className="dib-zoom"><div ref={zonaVideoRef} /></div>
+            {/* En pausa se recorta la interfaz de YouTube (título, compartir, «Más videos»): los controles son los de abajo. */}
+            <div ref={zoomRef} className={listo && !reproduciendo ? 'dib-zoom dib-sin-interfaz' : 'dib-zoom'}><div ref={zonaVideoRef} /></div>
             {dibujoActual && <CapaReproduccion obtenerPlayer={obtenerPlayer} dibujo={dibujoActual} rango={rangoClip} onZoom={aplicarZoom} />}
             {!listo && !errorVideo && <p className="rp-video-aviso">Cargando el video…</p>}
             {errorVideo && <p className="rp-video-aviso" role="alert">{errorVideo}</p>}

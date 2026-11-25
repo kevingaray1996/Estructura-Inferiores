@@ -67,11 +67,13 @@ export default function CapaReproduccion({ obtenerPlayer, dibujo, rango = null, 
   const escena = dibujo && vista.tiempo !== null ? escenaEn(dibujo, vista.tiempo) : null
   const zoom = transformZoom(escena?.zoom || null)
 
-  // El zoom de cámara agranda el contenedor del video (no se lee la imagen de YouTube).
+  // El zoom de cámara agranda el contenedor del video (no se lee la imagen de YouTube). Durante una pausa de dibujo
+  // el contenedor también recorta la interfaz de YouTube que aparece con el video pausado.
+  const pausaDibujo = vista.pausa !== null
   useLayoutEffect(() => {
-    onZoom?.({ transform: zoom.transform, transformOrigin: zoom.transformOrigin })
+    onZoom?.({ transform: zoom.transform, transformOrigin: zoom.transformOrigin, pausaDibujo })
     return () => onZoom?.(null)
-  }, [onZoom, zoom.transform, zoom.transformOrigin])
+  }, [onZoom, zoom.transform, zoom.transformOrigin, pausaDibujo])
 
   const cuadro = cuadroVideo(ancho, alto)
   return (

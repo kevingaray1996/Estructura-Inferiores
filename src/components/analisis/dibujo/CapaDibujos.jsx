@@ -196,7 +196,7 @@ export default function CapaDibujos({ escena, ancho, alto, cuadro, elegidoId = n
     <svg className={className} width={ancho} height={alto} viewBox={`0 0 ${ancho} ${alto}`} aria-hidden="true">
       <g transform={`translate(${cuadro.izquierda} ${cuadro.arriba})`}>
         {elementos.map((el, i) => (
-          <g key={el.obj.id || `borrador${i}`} opacity={el.fuera ? 0.35 : 1}>
+          <g key={el.obj.id || `borrador${i}`} opacity={el.fuera ? 0.45 : 1} className={el.fuera ? 'dib-fuera' : undefined} data-fuera={el.fuera ? 'si' : undefined}>
             <Objeto el={el} cuadro={cuadro} base={base} idMascara={`${idBase}-m${i}`} />
             {el.obj.id && el.obj.id === elegidoId && <Agarres el={el} cuadro={cuadro} />}
           </g>
