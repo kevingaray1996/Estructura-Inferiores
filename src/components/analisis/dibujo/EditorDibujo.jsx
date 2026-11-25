@@ -63,6 +63,9 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
   const [seguir, setSeguir] = useState(null)
   const [salto, setSalto] = useState(() => saltoGuardado(leerPreferencia(CLAVE_SALTO)))
   const [pista, setPista] = useState(null) // ayuda flotante de una herramienta: { id, left, top }
+  const [escribiendo, setEscribiendo] = useState(null) // texto que se escribe sobre el video: { p, valor }
+  const escribiendoRef = useRef(null)
+  useLayoutEffect(() => { escribiendoRef.current = escribiendo })
   const pistaTimerRef = useRef(null)
   const raizRef = useRef(null)
   const zonaRef = useRef(null)
@@ -249,6 +252,16 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
     else setMensaje({ tipo: 'aviso', texto: 'Para un paso nuevo, mové el cursor a un momento sin subtítulo (al menos medio segundo antes del fin).' })
   }, [tiempo, rango])
 
+  // Texto escrito sobre el video: Enter o hacer clic afuera lo deja (si no está vacío); Esc lo cancela.
+  const confirmarTexto = useCallback(() => {
+    const actual = escribiendoRef.current
+    if (!actual) return
+    escribiendoRef.current = null
+    setEscribiendo(null)
+    const texto = actual.valor.trim()
+    if (texto) crear('texto', { puntos: [actual.p], texto })
+  }, [crear])
+
   const cerrarPoligono = useCallback(() => {
     if (borrador?.tipo !== 'poligono') return
     if (borrador.puntos.length >= 3) crear('poligono', { puntos: borrador.puntos })
@@ -425,7 +438,13 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
       } else setBorrador({ tipo: 'poligono', puntos: [p] })
       return
     }
-    if (herramienta === 'texto') { crear('texto', { puntos: [p], texto: 'Texto' }); requestAnimationFrame(() => textoRef.current?.select()); return }
+    if (herramienta === 'texto') {
+      // Se escribe ahí mismo, sobre el video (si había otro a medio escribir, queda guardado).
+      e.preventDefault() // que el foco quede en el campo nuevo y no en el video
+      confirmarTexto()
+      setEscribiendo({ p, valor: '' })
+      return
+    }
     if (esSeguimiento(herramienta)) {
       // Modo seguimiento: cada toque guarda la posición en este cuadro (un paso de deshacer). Al soltar, el video
       // adelanta solo el salto elegido. Mientras se mantiene apretado, se puede corregir el lugar arrastrando.
@@ -603,6 +622,19 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
             <div ref={lienzoRef} className="dib-lienzo" data-herramienta={herramienta} data-vista-previa={vistaPrevia ? 'si' : undefined}
               onPointerDown={abajo} onPointerMove={mover} onPointerUp={arriba} onPointerCancel={() => { arrastreRef.current = null; setBorrador(null) }}
               onDoubleClick={() => { if (herramienta === 'poligono') cerrarPoligono() }} />
+            {escribiendo && (
+              <input type="text" className="dib-texto-en-video" autoFocus maxLength={140} placeholder="Escribí y apretá Enter"
+                aria-label="Texto sobre el video (Enter para terminar, Esc para cancelar)" value={escribiendo.valor}
+                style={{ left: cuadro.izquierda + escribiendo.p.x * cuadro.ancho, top: cuadro.arriba + escribiendo.p.y * cuadro.alto, color: COLOR[estilo.color] }}
+                onChange={(e) => { const valor = e.target.value; setEscribiendo((s) => (s ? { ...s, valor } : s)) }}
+                onBlur={confirmarTexto}
+                onKeyDown={(e) => {
+                  // Estas teclas son del campo, no de los atajos del editor.
+                  if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); confirmarTexto(); raizRef.current?.focus() }
+                  else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); escribiendoRef.current = null; setEscribiendo(null); raizRef.current?.focus() }
+                  else e.stopPropagation()
+                }} />
+            )}
             {!listo && !errorVideo && <p className="rp-video-aviso" style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>Cargando el clip…</p>}
             {errorVideo && <p className="dib-error" role="alert" style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: '1rem', textAlign: 'center' }}>{errorVideo}</p>}
           </div>

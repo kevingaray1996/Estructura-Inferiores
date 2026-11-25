@@ -77,6 +77,13 @@
 .dib-contador { margin: 0; font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .dib-salto { display: inline-flex; align-items: center; gap: .4rem; font-size: .8125rem; font-weight: 700; }
 .dib-rastro-guia { position: absolute; inset: 0; pointer-events: none; }
+/* Texto que se escribe directo sobre el video (se ve como va a quedar). */
+.dib-texto-en-video {
+  position: absolute; z-index: 2; transform: translate(-50%, -50%); width: min(24rem, 60%); min-height: 44px; padding: .25rem .5rem;
+  border: 2px dashed var(--dib-blanco); border-radius: .375rem; background: var(--dib-subtitulo-fondo); text-align: center;
+  font-family: var(--fuente-titulo); font-weight: 800; font-size: clamp(1rem, 2.4vw, 1.6rem);
+}
+.dib-texto-en-video::placeholder { color: var(--ui-texto-secundario); font-weight: 600; }
 
 /* Ayuda de cada herramienta (al pasar el mouse o mantener apretado). */
 .dib-pista-flotante {

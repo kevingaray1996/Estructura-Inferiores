@@ -100,6 +100,29 @@ test('Editor de dibujos: guías, ayuda de herramientas y modo seguimiento', asyn
     await tocarVideo(500, 300)
     assert.equal(document.querySelectorAll('.dib-linea-fila').length, 3, 'Pausas, Pasos y el pase nuevo')
 
+    // Texto: se escribe ahí mismo, sobre el video. Enter lo deja; Esc lo cancela.
+    await tecla('t')
+    assert.match(document.querySelector('.dib-instruccion').textContent, /escribilo ahí mismo/)
+    const escribir = async (valor) => {
+      const campo = document.querySelector('.dib-texto-en-video')
+      assert.ok(campo, 'Aparece el campo sobre el video')
+      const setter = Object.getOwnPropertyDescriptor(w.HTMLInputElement.prototype, 'value').set
+      await act(() => { setter.call(campo, valor); campo.dispatchEvent(new w.Event('input', { bubbles: true })) })
+      return campo
+    }
+    await tocarVideo(800, 200)
+    let campo = await escribir('Salida limpia')
+    await act(() => { campo.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true })) }); await esperar()
+    assert.equal(document.querySelector('.dib-texto-en-video'), null)
+    assert.equal(document.querySelectorAll('.dib-linea-fila').length, 4, 'Quedó el texto')
+    assert.match(document.querySelector('.dib-propiedades input[type="text"]').value, /^Salida limpia$/)
+    await tocarVideo(300, 600)
+    campo = await escribir('No va')
+    await act(() => { campo.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })) }); await esperar()
+    assert.equal(document.querySelector('.dib-texto-en-video'), null)
+    assert.equal(document.querySelectorAll('.dib-linea-fila').length, 4, 'Esc no deja nada')
+    assert.equal(document.querySelector('[data-herramienta="texto"]').getAttribute('aria-pressed'), 'true', 'Esc en el campo no cambia la herramienta')
+
     // 4) Modo seguimiento: la primera vez aparece su guía.
     await clic(document.querySelector('[data-herramienta="anillo"]'))
     assert.equal(guia()?.getAttribute('aria-label'), 'Guía: seguir a una jugadora')

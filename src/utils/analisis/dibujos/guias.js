@@ -63,7 +63,7 @@ export function instruccion({ herramienta, borrador = null, enlacePendiente = nu
       const n = borrador?.tipo === 'poligono' ? borrador.puntos.length : 0
       return n ? `Seguí marcando esquinas (van ${n}). Enter o clic en el primer punto para cerrarla; Esc para cancelar.` : 'Hacé clic en cada esquina de la zona.'
     }
-    case 'texto': return 'Hacé clic donde va el texto y escribilo en Propiedades, a la derecha.'
+    case 'texto': return 'Hacé clic donde va el texto y escribilo ahí mismo. Enter para terminar, Esc para cancelar.'
     case 'enlace': return enlacePendiente ? 'Ahora tocá la otra jugadora.' : 'Tocá una jugadora seguida (con anillo, foco o nombre).'
     case 'zoom': return 'Hacé clic hacia donde querés acercar la cámara.'
     case 'anillo': case 'foco': case 'nombre': return TEXTO_SEGUIMIENTO
@@ -76,7 +76,7 @@ export function instruccion({ herramienta, borrador = null, enlacePendiente = nu
 export const GUIA_EDITOR = Object.freeze([
   { objetivo: 'herramientas', titulo: 'Herramientas', texto: 'Acá elegís qué dibujar: pases, movimientos, zonas, textos y herramientas que siguen a una jugadora. Pasá el mouse por cada una para ver qué hace. Cada una tiene su tecla.' },
   { objetivo: 'video', titulo: 'El video del clip', texto: 'Dibujás directo sobre la imagen. Con ← → avanzás o retrocedés de a 0,1 s (cuadro a cuadro) y con Espacio reproducís. Arriba del video siempre dice qué hacer con la herramienta elegida.' },
-  { objetivo: 'propiedades', titulo: 'Propiedades', texto: 'Cuando elegís un dibujo, acá cambiás su color, su grosor y cuándo aparece y desaparece dentro del clip.' },
+  { objetivo: 'propiedades', titulo: 'Propiedades', texto: 'Cuando elegís un dibujo, acá cambiás su color, su grosor y cuándo aparece y desaparece dentro del clip. Para borrar un dibujo, elegilo y apretá Supr.' },
   { objetivo: 'pasos', titulo: 'Pasos con subtítulo', texto: 'Partí la jugada en pasos: cada paso es un texto que se ve abajo del video durante un tramo. Se agregan con la tecla S o con el botón de esta sección.' },
   { objetivo: 'linea', titulo: 'Línea de tiempo del clip', texto: 'Una fila por dibujo: la barra muestra cuándo se ve (arrastrá sus bordes para cambiarlo). Los rombos son las pausas y los puntos clave de las jugadoras seguidas.' },
   { objetivo: 'vista-previa', titulo: 'Vista previa', texto: 'Reproduce el clip con los dibujos, las pausas y los subtítulos, tal cual lo va a ver el cuerpo técnico.' },
