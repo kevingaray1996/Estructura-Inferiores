@@ -41,8 +41,13 @@ No hay script de tests en `package.json`: se corren con `node --test`, de a uno 
   jsdom se carga desde `%TEMP%/comunicaciones-pizarra-dom` (o `PIZARRA_DOM_PATH`).
 - `*.postgres.mjs`: prueban migraciones, reversiones y verificaciones de `supabase/` en PGlite en memoria, con
   `%TEMP%/comunicaciones-planificacion-pg` (o `PLANIFICACION_PG_PATH`). Nunca tocan la base real.
-- En Windows, correr los tests desde `C:\` con mayúscula: con `c:\` React se carga dos veces y fallan las
-  interacciones.
+- En Windows, correr los tests parado en la carpeta del proyecto, escrita con la `C` de la unidad en mayúscula:
+  `C:\Users\kevin\OneDrive\Documentos\GitHub\Estructura-Inferiores` (por ejemplo, `Set-Location` a esa ruta y después
+  `node --test tests\<archivo>.mjs`).
+  - Con la unidad en minúscula (`c:\Users\...`), React se carga dos veces y fallan las interacciones.
+  - Nunca correrlos desde la raíz del disco (`C:\`): los tests que leen `src/` o `supabase/` con rutas relativas
+    fallan, y los de interacción levantan Vite vigilando todo el disco y se cuelgan. Si un test falla buscando
+    `C:\src\...` o no termina, revisar primero desde qué carpeta se corrió.
 - Hay tests viejos que ya fallaban antes de los cambios recientes; comparar contra `main` antes de atribuir una falla.
 
 ## Arquitectura
