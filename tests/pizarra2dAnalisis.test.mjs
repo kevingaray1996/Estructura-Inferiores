@@ -267,3 +267,48 @@ test('guardar en la Biblioteca: jugada de Cancha, con carpeta y enlace al clip',
   assert.deepEqual(datosFicha({ jugadora: { id: '11111111-2222-3333-4444-555555555555', dorsal: '12345', foto: 'https://x/f.jpg' } }).vinculo, { tipo: 'jugadora', id: '11111111-2222-3333-4444-555555555555' })
   assert.equal(datosFicha({ jugadora: { dorsal: '12345' } }).numero, '1234')
 })
+
+test('calibración espejada (izquierda por derecha o arriba por abajo): se rechaza con un aviso claro', async () => {
+  const { espejada, estadoCalibracion, ladoDe } = await import('../src/utils/analisis/dibujos/calibracion.js')
+  // Bien: área de la derecha y círculo central; una jugadora en el círculo cae en el círculo.
+  const bien = { id: 'c', t: 0, puntos: ['area_d_fa', 'area_d_fb', 'circulo_a', 'circulo_b'].map((r) => ({ ref: r, ...enVideo(CONOCIDOS[r]) })) }
+  const rb = resolverCalibracion(bien, CANCHA)
+  assert.equal(rb.ok, true)
+  assert.equal(espejada(rb.H, bien.puntos[0]), false)
+  const m = aCancha({ cancha: CANCHA, calibraciones: [bien] }, 0, enVideo({ x: 55, y: 36 }))
+  cerca(m.x, 55, 1e-6); cerca(m.y, 36, 1e-6)
+  // Mal: el área de la derecha marcada como si fuera la de la izquierda → antes daba una cancha espejada sin avisar.
+  const izquierdaPorDerecha = { id: 'c', t: 0, puntos: [['area_i_fa', 'area_d_fa'], ['area_i_fb', 'area_d_fb'], ['circulo_a', 'circulo_a'], ['circulo_b', 'circulo_b']].map(([ref, real]) => ({ ref, ...enVideo(CONOCIDOS[real]) })) }
+  const r1 = resolverCalibracion(izquierdaPorDerecha, CANCHA)
+  assert.equal(r1.ok, false); assert.equal(r1.espejada, true); assert.match(r1.motivo, /espejada.*izquierda con derecha/)
+  assert.equal(aCancha({ cancha: CANCHA, calibraciones: [izquierdaPorDerecha] }, 0, enVideo({ x: 55, y: 36 })), null)
+  const arribaPorAbajo = { id: 'c', t: 0, puntos: [['area_d_fb', 'area_d_fa'], ['area_d_fa', 'area_d_fb'], ['circulo_b', 'circulo_a'], ['circulo_a', 'circulo_b']].map(([ref, real]) => ({ ref, ...enVideo(CONOCIDOS[real]) })) }
+  assert.equal(resolverCalibracion(arribaPorAbajo, CANCHA).espejada, true)
+  // De qué lado es cada punto.
+  assert.equal(ladoDe('penal_i', CANCHA).lado, 'izquierda')
+  assert.match(ladoDe('banderin_bd', CANCHA).texto, /mitad DERECHA.*ABAJO \(el lateral más cerca de la cámara\)/)
+  assert.equal(ladoDe('centro', CANCHA).lado, 'centro')
+  // Estado claro: con 4 puntos pide un quinto; con 5 bien, coinciden; con uno corrido, «Revisar».
+  assert.equal(estadoCalibracion(rb, 4).tipo, 'cuatro')
+  assert.match(estadoCalibracion(rb, 4).texto, /marcá un quinto/)
+  assert.equal(estadoCalibracion(r1, 4).tipo, 'error')
+  const cinco = calibracionDe(['mitad_a', 'centro', 'circulo_b', 'area_i_fa', 'area_i_fb'])
+  assert.equal(estadoCalibracion(resolverCalibracion(cinco, CANCHA), 5).tipo, 'bien')
+  cinco.puntos[2] = { ...cinco.puntos[2], x: cinco.puntos[2].x + 0.08 }
+  const rc = resolverCalibracion(cinco, CANCHA)
+  assert.equal(estadoCalibracion(rc, 5).tipo, 'revisar')
+})
+
+test('ficha quieta → «Seguir a esta jugadora»: pasa a anillo con su primer punto y la misma jugadora', async () => {
+  const { fichaASeguimiento } = await import('../src/utils/analisis/dibujos/operaciones.js')
+  const d = calibrado({ objetos: [{ id: 'f', tipo: 'ficha', desde: 10, hasta: 16, t: 12.5, punto: { x: 0.7, y: 0.4 }, jugadora: { rival: true, dorsal: '4', nombre: '' } }] })
+  const nuevo = fichaASeguimiento(d, 'f')
+  const a = nuevo.objetos.find((o) => o.id === 'f')
+  assert.equal(a.tipo, 'anillo'); assert.equal(a.color, 'rojo'); assert.equal(a.desde, 12.5); assert.equal(a.hasta, 16)
+  assert.deepEqual(a.pista.claves, [{ t: 12.5, x: 0.7, y: 0.4 }])
+  assert.deepEqual(a.jugadora, { rival: true, dorsal: '4', nombre: '' })
+  assert.deepEqual(normalizarDibujo(nuevo).dibujo.objetos.find((o) => o.id === 'f').pista.claves, a.pista.claves)
+  // En la 2D sigue en el mismo lugar en ese cuadro.
+  assert.deepEqual(posicionCancha(nuevo, a, 12.5), aCancha(d, 12.5, { x: 0.7, y: 0.4 }))
+  assert.equal(fichaASeguimiento(d, 'nada'), d)
+})

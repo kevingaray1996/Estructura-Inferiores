@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import {
-  ERROR_REVISAR, LIMITES_CANCHA, MINIMO_PUNTOS, lineasCancha, lineasEnVideo, medidasCancha, puntosConocidos, resolverCalibracion,
+  ERROR_REVISAR, LIMITES_CANCHA, MINIMO_PUNTOS, estadoCalibracion, ladoDe, lineasCancha, lineasEnVideo, medidasCancha, puntosConocidos, resolverCalibracion,
 } from '../../../utils/analisis/dibujos/calibracion'
 import { tiempoPreciso } from '../../../utils/analisis/dibujos/editor'
 import './dibujo.css'
@@ -19,6 +19,8 @@ export default function CalibrarCancha({
   const errorDe = new Map(r.errores.map((e) => [e.ref, e.error]))
   const conError = cal.puntos.length > MINIMO_PUNTOS
   const nombreElegido = elegido ? porRef.get(elegido)?.nombre : ''
+  const lado = elegido ? ladoDe(elegido, cancha) : null
+  const estado = estadoCalibracion(r, cal.puntos.length)
   const otras = (dibujo.calibraciones || []).filter((c) => c.id !== cal.id)
 
   return (
@@ -40,7 +42,15 @@ export default function CalibrarCancha({
       <div data-guia="cal-cancha">
         <svg className="dib-mini-cancha" viewBox={`-5 -5 ${cancha.largo + 10} ${cancha.ancho + 10}`} role="group" aria-label="Puntos conocidos de la cancha">
           <rect x={-5} y={-5} width={cancha.largo + 10} height={cancha.ancho + 10} className="dib-mini-cesped" />
+          {/* Mientras se elige, la mitad de ese punto queda resaltada (para no confundir izquierda con derecha). */}
+          {lado && lado.lado !== 'centro' && (
+            <rect data-lado-resaltado={lado.lado} x={lado.lado === 'izquierda' ? 0 : cancha.largo / 2} y={0} width={cancha.largo / 2} height={cancha.ancho} className="dib-mini-lado" />
+          )}
           {lineas.map((l, i) => <polyline key={i} points={l.map((p) => `${p.x},${p.y}`).join(' ')} className="dib-mini-linea" />)}
+          <text x={-2.2} y={cancha.ancho / 2} className="dib-mini-rotulo" textAnchor="middle" dominantBaseline="middle" transform={`rotate(-90 ${-2.2} ${cancha.ancho / 2})`}>IZQ.</text>
+          <text x={cancha.largo + 2.2} y={cancha.ancho / 2} className="dib-mini-rotulo" textAnchor="middle" dominantBaseline="middle" transform={`rotate(90 ${cancha.largo + 2.2} ${cancha.ancho / 2})`}>DER.</text>
+          <text x={cancha.largo / 2} y={-1.8} className="dib-mini-rotulo" textAnchor="middle">LEJOS DE LA CÁMARA</text>
+          <text x={cancha.largo / 2} y={cancha.ancho + 3.6} className="dib-mini-rotulo" textAnchor="middle">CERCA DE LA CÁMARA</text>
           {conocidos.map((p) => (
             <g key={p.ref} role="button" tabIndex={0} aria-label={`${p.nombre}${marcados.has(p.ref) ? ' (marcado)' : ''}`} aria-pressed={elegido === p.ref}
               className="dib-mini-punto" data-marcado={marcados.has(p.ref) ? 'si' : undefined} data-elegido={elegido === p.ref ? 'si' : undefined}
@@ -57,6 +67,7 @@ export default function CalibrarCancha({
       <p className="dib-instruccion" aria-live="polite">
         {elegido ? `Ahora hacé clic en el video donde está: ${nombreElegido}.` : 'Tocá en la cancha chica un punto que se vea en el video.'}
       </p>
+      {lado && <p className="dib-ayuda" data-lado={lado.lado}>{lado.texto}</p>}
 
       <div data-guia="cal-lista">
         <p className="dib-ayuda">Puntos marcados: {cal.puntos.length} (mínimo {MINIMO_PUNTOS}).</p>
@@ -76,8 +87,8 @@ export default function CalibrarCancha({
             )
           })}
         </ol>
-        <p className={r.ok ? 'dib-ayuda' : 'dib-aviso'} role="status">
-          {r.ok ? 'Calibración lista: fijate que las líneas amarillas coincidan con las de la cancha en el video.' : r.motivo}
+        <p className={`dib-cal-estado ${estado.tipo === 'error' ? 'dib-error' : estado.tipo === 'bien' ? 'dib-ayuda' : 'dib-aviso'}`} data-estado={estado.tipo} role="status">
+          {estado.texto}
         </p>
       </div>
 

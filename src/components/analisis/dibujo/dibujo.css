@@ -150,7 +150,8 @@
 .dib-foto { width: 2.5rem; height: 2.5rem; border-radius: 999px; object-fit: cover; border: 2px solid var(--ui-acento); }
 
 /* Línea de tiempo del clip */
-.dib-linea { grid-area: lin; max-height: 32vh; overflow-y: auto; padding: .5rem .75rem .75rem; border-top: 1px solid var(--ui-borde); background: var(--ui-superficie); }
+/* Alto fijo (unas 6 filas) con scroll propio: sumar dibujos o fichas nunca achica el video ni la cancha. */
+.dib-linea { grid-area: lin; height: min(13.25rem, 34vh); overflow-y: auto; overscroll-behavior: contain; padding: .5rem .75rem .75rem; border-top: 1px solid var(--ui-borde); background: var(--ui-superficie); }
 .dib-linea-fila { display: grid; grid-template-columns: 9rem minmax(0, 1fr); align-items: center; gap: .5rem; min-height: 30px; }
 .dib-linea-fila + .dib-linea-fila { border-top: 1px solid var(--ui-borde); }
 .dib-linea-etiqueta {
@@ -201,6 +202,9 @@
 .dib-mini-cesped { fill: var(--pizarra-cesped); }
 .dib-mini-linea { fill: none; stroke: var(--pizarra-linea); stroke-width: .35; opacity: .85; }
 .dib-mini-punto { cursor: pointer; outline: none; }
+.dib-mini-lado { fill: var(--dib-amarillo); opacity: .22; }
+.dib-mini-rotulo { fill: var(--dib-blanco); font-size: 3px; font-weight: 900; letter-spacing: .15px; }
+.dib-cal-estado { margin: 0; padding: .5rem .6rem; border-radius: .5rem; border: 1px solid var(--ui-borde); background: var(--ui-superficie-alternativa); }
 .dib-mini-toque { fill: transparent; }
 .dib-mini-marca { fill: var(--dib-blanco); stroke: var(--dib-tinta); stroke-width: .35; }
 .dib-mini-punto[data-marcado='si'] .dib-mini-marca { fill: var(--dib-amarillo); }
@@ -222,3 +226,7 @@
 
 /* Reproductor de playlists: la 2D debajo del video (o al lado, en pantallas anchas). */
 .rp-2d { margin-top: .5rem; }
+.dib-linea-fila[data-dentro='si'] .dib-linea-etiqueta { padding-left: 1.25rem; }
+.dib-linea-fila[data-grupo='fichas'] .dib-linea-etiqueta { color: var(--ui-texto-acento); }
+.dib-rombo[data-tipo='ficha'] { background: var(--dib-amarillo); border-radius: 999px; transform: none; }
+.dib-rombo[data-tipo='ficha'][aria-pressed='true'] { box-shadow: 0 0 0 2px var(--ui-texto); }

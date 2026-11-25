@@ -37,6 +37,21 @@ export function crearObjeto(tipo, { t, clip, puntos = [], color = 'amarillo', gr
 
 const ids = (d) => d.objetos.map((o) => o.id)
 
+// «Seguir a esta jugadora»: la ficha quieta pasa a ser un anillo que la sigue, con su primer punto ya puesto (el lugar
+// y el cuadro donde se agregó la ficha). Conserva la misma jugadora y el mismo id. Devuelve el dibujo nuevo.
+export function fichaASeguimiento(d, id) {
+  const f = d.objetos.find((o) => o.id === id && o.tipo === 'ficha')
+  if (!f) return d
+  const rival = Boolean(f.jugadora?.rival)
+  const anillo = {
+    id: f.id, tipo: 'anillo', desde: f.t, hasta: Math.max(f.hasta, f.t + 0.5), color: rival ? 'rojo' : 'amarillo', grosor: f.grosor || 2,
+    pista: { fuente: 'manual', claves: [{ t: f.t, x: f.punto.x, y: f.punto.y }] },
+    efectos: { entrada: true, pulso: false, sombra: true, rastro: false },
+    jugadora: f.jugadora,
+  }
+  return { ...d, objetos: d.objetos.map((o) => (o.id === id ? anillo : o)) }
+}
+
 export function agregarObjeto(d, obj) {
   const id = ids(d).includes(obj.id) ? nuevoId('o', ids(d)) : obj.id
   return { ...d, objetos: [...d.objetos, { ...obj, id }] }

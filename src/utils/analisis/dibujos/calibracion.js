@@ -61,6 +61,31 @@ export function puntosConocidos(cancha) {
   return lista
 }
 
+// En qué parte de la cancha está un punto conocido (para no confundir los lados): { lado, alto, texto }.
+export function ladoDe(ref, cancha) {
+  const p = puntosConocidos(cancha).find((x) => x.ref === ref)
+  if (!p) return null
+  const { largo, ancho } = medidasCancha(cancha)
+  const lado = p.x < largo / 2 - 0.5 ? 'izquierda' : p.x > largo / 2 + 0.5 ? 'derecha' : 'centro'
+  const alto = p.y < ancho / 2 - 0.5 ? 'arriba' : p.y > ancho / 2 + 0.5 ? 'abajo' : 'medio'
+  const partes = [
+    lado === 'izquierda' ? 'mitad IZQUIERDA (el arco que se ve a la izquierda del video)' : lado === 'derecha' ? 'mitad DERECHA (el arco que se ve a la derecha del video)' : 'línea de mitad de cancha',
+    alto === 'arriba' ? 'del lado de ARRIBA (el lateral más lejos de la cámara)' : alto === 'abajo' ? 'del lado de ABAJO (el lateral más cerca de la cámara)' : '',
+  ].filter(Boolean)
+  return { lado, alto, texto: `Está en la ${partes.join(', ')}.` }
+}
+
+// Cómo quedó una calibración, para mostrarlo claro: { tipo: 'faltan' | 'error' | 'cuatro' | 'revisar' | 'bien', texto }.
+export function estadoCalibracion(r, cantidad) {
+  if (!r.ok) return { tipo: cantidad < MINIMO_PUNTOS ? 'faltan' : 'error', texto: r.motivo }
+  const malos = r.errores.filter((e) => e.error > ERROR_REVISAR).length
+  if (cantidad <= MINIMO_PUNTOS) {
+    return { tipo: 'cuatro', texto: 'Calibración calculada con 4 puntos. Mirá el video: las líneas amarillas tienen que quedar justo encima de las líneas blancas de la cancha (áreas, círculo, mitad). Con 4 puntos la app no puede saber si alguno está mal: marcá un quinto para que los revise.' }
+  }
+  if (malos) return { tipo: 'revisar', texto: `${malos === 1 ? 'Hay un punto' : `Hay ${malos} puntos`} que no ${malos === 1 ? 'coincide' : 'coinciden'} con los demás (marcados «Revisar»): corregilo o quitalo.` }
+  return { tipo: 'bien', texto: `✓ Los ${cantidad} puntos coinciden entre sí. Igual mirá que las líneas amarillas queden encima de las de la cancha.` }
+}
+
 export const REFS = Object.freeze(puntosConocidos(CANCHA_POR_DEFECTO).map((p) => p.ref))
 
 // ---------- Álgebra chica (matrices 3×3 como arreglos de 9) ----------
@@ -168,6 +193,13 @@ function hayCuatroSueltos(puntos, tolerancia) {
   return false
 }
 
+// ¿La transformación da vuelta la imagen (como un espejo) cerca del punto p? Signo del determinante de su derivada.
+export function espejada(H, p) {
+  const w = H[6] * p.x + H[7] * p.y + H[8]
+  const det = H[0] * (H[4] * H[8] - H[5] * H[7]) - H[1] * (H[3] * H[8] - H[5] * H[6]) + H[2] * (H[3] * H[7] - H[4] * H[6])
+  return det / (w * w * w) < 0
+}
+
 // Calcula una calibración: { ok, H (video → cancha), inversa (cancha → video), errores: [{ ref, error }], motivo }.
 // error: distancia entre donde se marcó cada punto y donde lo pone la cuenta, en % del ancho del video.
 export function resolverCalibracion(calibracion, cancha) {
@@ -194,6 +226,11 @@ export function resolverCalibracion(calibracion, cancha) {
   // Todos los puntos marcados tienen que quedar del mismo lado del horizonte.
   const signos = video.map((p) => Math.sign(H[6] * p.x + H[7] * p.y + H[8]))
   if (new Set(signos).size > 1) return { ok: false, motivo: 'Algún punto quedó cruzado (por ejemplo, izquierda por derecha). Revisá los puntos marcados.', errores }
+  // Los puntos se nombran desde la cámara (izquierda = el arco que se ve a la izquierda; arriba = el lateral más lejos),
+  // así que una calibración bien hecha nunca da vuelta la imagen. Si queda espejada, hay un lado confundido.
+  if (espejada(H, video[0])) {
+    return { ok: false, espejada: true, errores, motivo: 'La cancha quedó espejada: seguramente confundiste izquierda con derecha (o arriba con abajo). En la cancha chica, la izquierda es el arco que se ve a la izquierda del video y arriba es el lateral más lejos de la cámara. Revisá los puntos.' }
+  }
   return { ok: true, H, inversa, errores, motivo: '' }
 }
 

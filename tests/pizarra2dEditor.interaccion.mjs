@@ -100,10 +100,16 @@ test('Pizarra 2D en el editor: calibrar, ver fichas, agregar una y guardar en la
       assert.ok(punto, nombre)
       await clic(punto)
       assert.match(document.querySelector('.dib-calibrar .dib-instruccion').textContent, new RegExp(`donde está: ${nombre.replace(/[()]/g, '.')}`))
+      // Mientras se elige, se resalta la mitad de ese punto y se dice de qué lado es.
+      if (/izquierda/.test(nombre)) {
+        assert.equal(document.querySelector('.dib-mini-lado')?.getAttribute('data-lado-resaltado'), 'izquierda')
+        assert.match(document.querySelector('.dib-calibrar [data-lado]').textContent, /mitad IZQUIERDA/)
+      }
       await tocarVideo(enVideo(metros))
     }
     assert.match(document.querySelector('.dib-calibrar').textContent, /Puntos marcados: 4/)
-    assert.match(document.querySelector('.dib-calibrar').textContent, /Calibración lista/)
+    assert.equal(document.querySelector('.dib-cal-estado').getAttribute('data-estado'), 'cuatro')
+    assert.match(document.querySelector('.dib-cal-estado').textContent, /marcá un quinto/)
     assert.ok(document.querySelectorAll('[data-calibracion] .dib-cal-linea').length >= 5, 'Las líneas de la cancha aparecen sobre el video')
     await clic(boton('Listo'))
 
@@ -117,6 +123,14 @@ test('Pizarra 2D en el editor: calibrar, ver fichas, agregar una y guardar en la
     const fichas = [...document.querySelectorAll('.dib-2d [data-elemento]')].map((e) => e.getAttribute('data-elemento'))
     assert.equal(fichas.length, 2, fichas.join())
     assert.match(document.querySelector('.dib-propiedades').textContent, /Ficha \(solo 2D\)/)
+    assert.match(document.querySelector('.dib-controles').textContent, /La ficha queda quieta\. Para que siga a la jugadora, tocala y elegí «Seguir a esta jugadora»\./)
+    // En la línea de tiempo, las fichas quietas van juntas en una fila que se despliega.
+    const grupo = () => document.querySelector('[data-grupo="fichas"] .dib-linea-etiqueta')
+    assert.match(grupo().textContent, /Fichas quietas \(1\)/)
+    assert.equal(grupo().getAttribute('aria-expanded'), 'false')
+    assert.equal(document.querySelectorAll('.dib-linea-fila[data-dentro="si"]').length, 1, 'Plegada, igual se ve la ficha elegida')
+    await clic(grupo())
+    assert.equal(grupo().getAttribute('aria-expanded'), 'true')
 
     // 6) Guardar en la Biblioteca de jugadas: carpeta elegida, enlace al clip y pizarra válida.
     await clic(boton('Guardar en Biblioteca de jugadas'))
@@ -140,7 +154,27 @@ test('Pizarra 2D en el editor: calibrar, ver fichas, agregar una y guardar en la
     assert.equal(pegado.calibraciones.length, 1)
     assert.equal(pegado.calibraciones[0].puntos.length, 4)
     assert.deepEqual(pegado.cancha, { largo: 100, ancho: 64 })
-    assert.ok(pegado.objetos.some((o) => o.tipo === 'ficha'))
+    const ficha = pegado.objetos.find((o) => o.tipo === 'ficha')
+    assert.ok(ficha)
+
+    // 8) «Seguir a esta jugadora»: pasa a Video real, en Modo seguimiento, con el primer punto ya puesto.
+    await clic(boton('Seguir a esta jugadora'))
+    if (document.querySelector('.dib-guia')) await clic(boton('Saltar'))
+    assert.equal(boton('Video real').getAttribute('aria-pressed'), 'true')
+    assert.ok(document.querySelector('.dib-seguimiento'), 'Modo seguimiento activo')
+    assert.match(document.querySelector('.dib-contador').textContent, /Puntos marcados: 1/)
+    await tocarVideo(enVideo({ x: 34, y: 40 }))
+    assert.match(document.querySelector('.dib-contador').textContent, /Puntos marcados: 2/)
+    await clic(boton('Listo (Enter)'))
+    // Vuelve a la 2D y la ficha sigue ahí (ahora se mueve).
+    assert.equal(boton('Pizarra 2D').getAttribute('aria-pressed'), 'true')
+    assert.ok(document.querySelector(`.dib-2d [data-elemento="${ficha.id}"]`))
+    await clic(boton('Pegar en la línea de tiempo'))
+    const seguida = pegado.objetos.find((o) => o.id === ficha.id)
+    assert.equal(seguida.tipo, 'anillo')
+    assert.equal(seguida.pista.claves.length, 2)
+    assert.equal(seguida.pista.claves[0].t, ficha.t)
+    assert.equal(pegado.objetos.some((o) => o.tipo === 'ficha'), false)
   } finally {
     await act(async () => { root.unmount() })
     await vite.close()
