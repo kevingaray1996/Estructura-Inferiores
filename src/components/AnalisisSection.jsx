@@ -71,7 +71,7 @@ import useTramosPosesion from '../hooks/useTramosPosesion'
 import useDibujos from '../hooks/useDibujos'
 import CapaReproduccion, { BotonPantallaCompleta } from './analisis/dibujo/CapaReproduccion'
 import { useZoomContenedor } from './analisis/dibujo/apoyo'
-import { esCompu } from '../utils/analisis/dibujos/editor'
+import { mostrarBotonDibujar, motivoParaNoDibujar, tieneMouse } from '../utils/analisis/dibujos/editor'
 import { normalizarDibujo, estaVacio } from '../utils/analisis/dibujos/formato'
 import ModoPosesion from './analisis/ModoPosesion'
 import ResumenPartido from './analisis/ResumenPartido'
@@ -1178,9 +1178,10 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   }, [todasLasAcciones, partidoActual, catalogo, equiposApi.equipos, marcasPartido])
   // ---------- Etapa 4: dibujos sobre el video ----------
   const dibujosApi = useDibujos(!cargando)
-  const [enCompu] = useState(() => esCompu())
+  const [conMouse] = useState(() => tieneMouse())
   // Dibujar es solo de coordinación y en la compu; el cuerpo técnico y el celular ven los dibujos al reproducir.
-  const puedeDibujar = esAdmin && !bloqueoEscritura && !modoConsulta && enCompu && dibujosApi.listo
+  // El botón no depende del ancho de la ventana ni de que los dibujos ya estén leídos: si falta algo, lo avisa al tocarlo.
+  const puedeDibujar = mostrarBotonDibujar({ esAdmin, bloqueoEscritura, modoConsulta, conMouse })
   const [editorDibujo, setEditorDibujo] = useState(null)
   const bibliotecaJugadas = useBibliotecaJugadas()
   // Etapa 5: camiseta del rival de cada clip en la pizarra 2D.
@@ -1220,7 +1221,9 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   }, [mostrarDibujosEnVideo, videoListo, solicitarVideo])
   // Ventana de dibujo de un clip.
   const abrirDibujo = useCallback(async (clip) => {
-    if (!clip || !puedeDibujar) return
+    if (!puedeDibujar) return
+    const motivo = motivoParaNoDibujar({ dibujos: dibujosApi, clip })
+    if (motivo) { setError(motivo); return }
     const [listo] = prepararParaReproducir([clip], { analisisPorId: partidosPorId, equipos: equiposApi.equipos, etiqueta: (t) => etiquetaDe(catalogo, t), marcasPorPartido })
     if (!listo?.videoId) { setError('Este partido no tiene un video de YouTube para dibujar.'); return }
     const previo = await dibujosApi.cargar(clip.eventoId, clip.espejo)

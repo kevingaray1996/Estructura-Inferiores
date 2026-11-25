@@ -341,11 +341,39 @@ test('editor: el clic elige el objeto de más arriba, atajos de teclado, cuadro 
   assert.equal(esCompu(null), false)
 })
 
+test('botón «✎ Dibujar»: para coordinación en la compu, sin depender del ancho, del tipo de acción ni de la carga', async () => {
+  const { mostrarBotonDibujar, motivoParaNoDibujar, tieneMouse, esCompu } = await import('../src/utils/analisis/dibujos/editor.js')
+  // Notebook con pantalla táctil: el puntero principal es el dedo, pero tiene touchpad → cuenta como compu.
+  const ventana = (consultas, ancho) => ({ innerWidth: ancho, matchMedia: (q) => ({ matches: Boolean(consultas[q]) }) })
+  const notebookTactil = ventana({ '(any-pointer: fine)': true, '(pointer: fine)': false, '(hover: hover)': false }, 1366)
+  assert.equal(tieneMouse(notebookTactil), true)
+  assert.equal(esCompu(notebookTactil), true)
+  assert.equal(tieneMouse(ventana({ '(any-pointer: fine)': false }, 1366)), false, 'Celular o tablet sin mouse')
+  const base = { esAdmin: true, bloqueoEscritura: false, modoConsulta: false, conMouse: true }
+  assert.equal(mostrarBotonDibujar(base), true)
+  for (const [k, v] of [['esAdmin', false], ['bloqueoEscritura', true], ['modoConsulta', true], ['conMouse', false]]) {
+    assert.equal(mostrarBotonDibujar({ ...base, [k]: v }), false, k)
+  }
+  // Ventana angosta o dibujos sin leer: el botón está igual y, al tocarlo, explica qué falta.
+  const angosta = ventana({ '(any-pointer: fine)': true }, 900)
+  assert.match(motivoParaNoDibujar({ ventana: angosta, dibujos: { listo: true } }), /agrandá la ventana.*1024 px.*900/)
+  assert.match(motivoParaNoDibujar({ ventana: notebookTactil, dibujos: { listo: false, aviso: '' } }), /cargando/)
+  assert.match(motivoParaNoDibujar({ ventana: notebookTactil, dibujos: { listo: false, aviso: 'Falta correr la migración' } }), /migración/)
+  assert.match(motivoParaNoDibujar({ ventana: notebookTactil, dibujos: { listo: true }, clip: null }), /No se encontró el clip/)
+  assert.equal(motivoParaNoDibujar({ ventana: notebookTactil, dibujos: { listo: true } }), '')
+  // Análisis usa esta regla (y no la vieja que miraba el ancho al abrir la sección).
+  const seccion = leer('src/components/AnalisisSection.jsx')
+  assert.match(seccion, /const puedeDibujar = mostrarBotonDibujar\(\{ esAdmin, bloqueoEscritura, modoConsulta, conMouse \}\)/)
+  assert.doesNotMatch(seccion, /enCompu && dibujosApi\.listo/)
+  assert.match(seccion, /motivoParaNoDibujar\(/)
+})
+
 test('pantallas: el editor se carga solo al abrirlo y dibujar es solo de coordinación en la compu', () => {
   const seccion = leer('src/components/AnalisisSection.jsx')
   assert.match(seccion, /lazy\(\(\) => import\('\.\/analisis\/dibujo\/EditorDibujo'\)\)/)
   assert.doesNotMatch(seccion, /^import EditorDibujo/m, 'Nada de import directo del editor')
-  assert.match(seccion, /const puedeDibujar = esAdmin && !bloqueoEscritura && !modoConsulta && enCompu && dibujosApi\.listo/)
+  // Regla del botón: ver el test «botón ✎ Dibujar» (ya no depende del ancho ni de la carga de los dibujos).
+  assert.match(seccion, /const puedeDibujar = mostrarBotonDibujar\(/)
   assert.match(seccion, /onDibujar=\{puedeDibujar \?/)
   // Pantalla completa del contenedor con los dibujos; sin el botón de YouTube.
   assert.match(seccion, /BotonPantallaCompleta objetivoRef=\{marcoVideoRef\}/)

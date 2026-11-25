@@ -102,11 +102,35 @@ export function moverTiempo(t, delta, clip) {
   return Math.round(Math.min(clip.fin, Math.max(clip.inicio, Number(t) + Number(delta))) * 1000) / 1000
 }
 
-// ¿Se puede editar en este dispositivo? Solo en la compu: mouse y pantalla de al menos 1024 px.
-export function esCompu(ventana = typeof window === 'undefined' ? null : window) {
+export const ANCHO_MINIMO_EDITOR = 1024
+
+// ¿Hay mouse o touchpad? (`any-pointer`: también en las notebooks con pantalla táctil, que informan el dedo como
+// puntero principal). Celulares y tablets sin mouse: no.
+export function tieneMouse(ventana = typeof window === 'undefined' ? null : window) {
   try {
-    return Boolean(ventana) && ventana.matchMedia('(hover: hover) and (pointer: fine)').matches && ventana.innerWidth >= 1024
+    return Boolean(ventana) && ventana.matchMedia('(any-pointer: fine)').matches
   } catch {
     return false
   }
+}
+
+// ¿Se puede abrir el editor ahora? Con mouse y la ventana de al menos 1024 px. Se pregunta al tocar «✎ Dibujar»
+// (no al abrir Análisis): si la ventana se agrandó después, ya sirve.
+export function esCompu(ventana = typeof window === 'undefined' ? null : window) {
+  return tieneMouse(ventana) && Number(ventana?.innerWidth) >= ANCHO_MINIMO_EDITOR
+}
+
+// Botón «✎ Dibujar» en las tarjetas y en el clip elegido: coordinación con escritura, fuera del modo consulta, en un
+// equipo con mouse. No depende del ancho de la ventana, del tipo de acción ni de que los dibujos ya estén leídos:
+// eso se avisa al tocarlo (ver motivoParaNoDibujar).
+export function mostrarBotonDibujar({ esAdmin, bloqueoEscritura, modoConsulta, conMouse }) {
+  return Boolean(esAdmin && !bloqueoEscritura && !modoConsulta && conMouse)
+}
+
+// Por qué no se puede abrir el editor en este momento ('' si se puede).
+export function motivoParaNoDibujar({ ventana = typeof window === 'undefined' ? null : window, dibujos = null, clip = true } = {}) {
+  if (!clip) return 'No se encontró el clip de esta acción. Recargá la página y probá de nuevo.'
+  if (dibujos && !dibujos.listo) return dibujos.aviso || 'Los dibujos todavía se están cargando. Probá de nuevo en unos segundos.'
+  if (!esCompu(ventana)) return `Para dibujar, agrandá la ventana: el editor necesita al menos ${ANCHO_MINIMO_EDITOR} px de ancho (ahora tiene ${Math.round(Number(ventana?.innerWidth) || 0)}).`
+  return ''
 }
