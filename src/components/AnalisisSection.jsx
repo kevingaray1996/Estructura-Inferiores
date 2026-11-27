@@ -1273,14 +1273,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     if (editorDibujo?.clip.partidoId === partidoId && convocadas.length) return convocadas
     return jugadoras.map((j) => ({ id: j.id, nombre: corto(j), dorsal: '', foto: j.foto_url || '' }))
   }, [citaciones, jugadoras, editorDibujo, partidoId])
-  // «Mi estilo» de los dibujos (en la cuenta de cada persona) y la plantilla del pase incorrecto con sus nombres.
-  const miEstilo = useMiEstilo()
-  const plantillaDibujo = useMemo(() => {
-    const ids = editorDibujo?.plantillaIds
-    if (!ids) return null
-    const jugadoraDe = (id) => (id ? { jugadora: jugadorasDibujo.find((j) => j.id === id) || { id, nombre: nombreJugadoraPorId(id), dorsal: '', foto: '' } } : null)
-    return { tipo: 'opciones_pase', pasadora: jugadoraDe(ids.pasadora), receptora: jugadoraDe(ids.receptora) }
-  }, [editorDibujo, jugadorasDibujo, nombreJugadoraPorId])
+
 
   // ---------- Etapa 3: posesión del partido ----------
   const tramosPosesion = useTramosPosesion(partidoActual?.id || null)
@@ -1305,7 +1298,14 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
   const analisisDelPartido = useMemo(() => (partidoActual ? [partidoActual] : []), [partidoActual])
 
   const nombreJugadoraPorId = useCallback((id) => (id && jugadorasPorId.has(id) ? nombreJugadora(jugadorasPorId.get(id)) : ''), [jugadorasPorId])
-  // Receptora de un pase para la ficha del mapa (de la tabla de detalles de pases).
+  // «Mi estilo» de los dibujos (en la cuenta de cada persona) y la plantilla del pase incorrecto con sus nombres.
+  const miEstilo = useMiEstilo()
+  const plantillaDibujo = useMemo(() => {
+    const ids = editorDibujo?.plantillaIds
+    if (!ids) return null
+    const jugadoraDe = (id) => (id ? { jugadora: jugadorasDibujo.find((j) => j.id === id) || { id, nombre: nombreJugadoraPorId(id), dorsal: '', foto: '' } } : null)
+    return { tipo: 'opciones_pase', pasadora: jugadoraDe(ids.pasadora), receptora: jugadoraDe(ids.receptora) }
+  }, [editorDibujo, jugadorasDibujo, nombreJugadoraPorId])  // Receptora de un pase para la ficha del mapa (de la tabla de detalles de pases).
   const receptoraDe = useCallback((evento) => {
     const detalle = resumenDestinatarias.detalles?.[evento.id]
     if (!detalle) return ''
@@ -2206,8 +2206,9 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     mapa: enPosesion ? SIN_ATAJOS : botoneraEnUso === 'colectiva' ? atajosBotoneraColectiva : atajosBotonera,
     principal: typeof window === 'undefined' ? null : window,
     auxiliar: ventanaAuxiliar,
-    // Con el cartel de gol / tarjeta / cambio abierto, las teclas no marcan otras acciones.
-    pausar: eligiendoTecla || Boolean(cartelMarcador),
+    // Con el cartel de gol / tarjeta / cambio abierto, las teclas no marcan otras acciones. Con el editor de dibujos
+    // abierto, las teclas son del editor (B, X, D… no marcan acciones ni abren el marcador).
+    pausar: eligiendoTecla || Boolean(cartelMarcador) || Boolean(editorDibujo),
     acciones: {
       marcar: botoneraEnUso === 'colectiva' ? tocarColectiva : tocarAccion,
       // En scouting no hay marcador (no juega Comunicaciones).
