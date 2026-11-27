@@ -7,6 +7,7 @@ import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRe
 import { supabase } from '../supabaseClient'
 import { consultarAdministracionAnalisis, esCuentaAdministradoraAnalisis, faltaRpcAdministracionAnalisis } from '../utils/permisosAnalisis'
 import useVentanaAnalisis from '../hooks/useVentanaAnalisis'
+import { useMiEstilo } from '../hooks/useMiEstilo'
 import ZonaVentanaAnalisis from './ZonaVentanaAnalisis'
 import ControlesVideoAnalisis from './ControlesVideoAnalisis'
 import { crearBloqueoEtiquetado, leerTiempoActivo, registroInciertoTrasError } from '../utils/ventanaAnalisis'
@@ -1238,8 +1239,15 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       const otro = await dibujosApi.cargar(f.evento_id, f.espejo)
       if (otro?.dibujo?.cancha) { canchaPartido = otro.dibujo.cancha; break }
     }
+    // Pase incorrecto (sin opciones de pase todavía): el editor ofrece empezar con «Opciones de pase», con la pasadora y
+    // la receptora que ya tiene la acción (las posiciones se marcan en el video).
+    const original = todasLasAcciones.find((e) => e.id === clip.eventoId)
+    const plantillaIds = tipoOriginal === 'Pase incorrecto' && !previo?.dibujo?.objetos?.some((o) => o.tipo === 'opciones_pase')
+      ? { pasadora: original?.jugador_id || null, receptora: resumenDestinatarias.detalles?.[clip.eventoId]?.destinataria_id || null }
+      : null
     setEditorDibujo({
       canchaPartido,
+      plantillaIds,
       rival: equipoRivalDe(partidosPorId.get(clip.partidoId), equiposApi.equipos),
       clip: {
         eventoId: clip.eventoId, espejo: clip.espejo, partidoId: clip.partidoId, videoId: listo.videoId, inicio: clip.inicio, fin: clip.fin, clave: clip.clave,
@@ -1247,7 +1255,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
       },
       dibujo: previo?.dibujo || null,
     })
-  }, [puedeDibujar, partidosPorId, equiposApi.equipos, catalogo, marcasPorPartido, dibujosApi, todasLasAcciones])
+  }, [puedeDibujar, partidosPorId, equiposApi.equipos, catalogo, marcasPorPartido, dibujosApi, todasLasAcciones, resumenDestinatarias.detalles])
   const guardarDibujo = useCallback(async (dibujo) => {
     const clip = editorDibujo?.clip
     if (!clip) return { error: 'No hay clip.' }
@@ -1265,6 +1273,14 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
     if (editorDibujo?.clip.partidoId === partidoId && convocadas.length) return convocadas
     return jugadoras.map((j) => ({ id: j.id, nombre: corto(j), dorsal: '', foto: j.foto_url || '' }))
   }, [citaciones, jugadoras, editorDibujo, partidoId])
+  // «Mi estilo» de los dibujos (en la cuenta de cada persona) y la plantilla del pase incorrecto con sus nombres.
+  const miEstilo = useMiEstilo()
+  const plantillaDibujo = useMemo(() => {
+    const ids = editorDibujo?.plantillaIds
+    if (!ids) return null
+    const jugadoraDe = (id) => (id ? { jugadora: jugadorasDibujo.find((j) => j.id === id) || { id, nombre: nombreJugadoraPorId(id), dorsal: '', foto: '' } } : null)
+    return { tipo: 'opciones_pase', pasadora: jugadoraDe(ids.pasadora), receptora: jugadoraDe(ids.receptora) }
+  }, [editorDibujo, jugadorasDibujo, nombreJugadoraPorId])
 
   // ---------- Etapa 3: posesión del partido ----------
   const tramosPosesion = useTramosPosesion(partidoActual?.id || null)
@@ -3754,6 +3770,7 @@ export default function AnalisisSection({ escrituraAutorizada = true, estadoAuto
         <Suspense fallback={<div className="dib-editor" role="status" style={{ placeItems: 'center', display: 'grid' }}>Abriendo la ventana de dibujo…</div>}>
           <EditorDibujo key={editorDibujo.clip.clave} clip={editorDibujo.clip} dibujoInicial={editorDibujo.dibujo} jugadoras={jugadorasDibujo}
             rival={editorDibujo.rival} canchaPartido={editorDibujo.canchaPartido} biblioteca={bibliotecaJugadas}
+            miEstilo={miEstilo.estilo} onGuardarEstilo={miEstilo.guardar} plantilla={plantillaDibujo}
             onGuardar={guardarDibujo} onCerrar={() => setEditorDibujo(null)} />
         </Suspense>
       )}

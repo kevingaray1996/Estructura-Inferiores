@@ -19,7 +19,9 @@ export function useMiEstilo() {
 
   useEffect(() => {
     let vigente = true
-    supabase.auth.getSession().then(({ data }) => {
+    const sesion = (() => { try { return supabase?.auth?.getSession?.() } catch { return null } })()
+    if (!sesion?.then) { setEstilo(leerLocal(null)); return undefined } // eslint-disable-line react-hooks/set-state-in-effect
+    sesion.then(({ data }) => {
       if (!vigente) return
       const usuario = data?.session?.user
       uidRef.current = usuario?.id || null
@@ -37,6 +39,7 @@ export function useMiEstilo() {
     setEstilo(limpio)
     guardarLocal(uidRef.current, limpio)
     try {
+      if (!supabase?.auth?.updateUser) return { soloNavegador: true }
       const { error } = await supabase.auth.updateUser({ data: { analisis_estilo: limpio } })
       return error ? { soloNavegador: true } : {}
     } catch {
