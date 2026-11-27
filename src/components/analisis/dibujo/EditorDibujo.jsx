@@ -202,6 +202,7 @@ export default function EditorDibujo({
         else { setTiempo(forzado.t); return }
       }
       let t = reloj.muestra(l.t, { reproduciendo: l.reproduciendo, velocidad: l.velocidad, ahora })
+      let exacto = false
       // Cámara lenta (v3): solo en la Vista previa; al salir del tramo vuelve la velocidad que había.
       const velocidad = lento.paso({ t, reproduciendo: l.reproduciendo, velocidad: l.velocidad, ahora }, vistaRef.current.activa ? dibujoRef.current.lentos : [])
       if (velocidad !== null) { try { player.setPlaybackRate?.(velocidad) } catch { /* nada */ } }
@@ -216,8 +217,9 @@ export default function EditorDibujo({
         t = r.tiempo
         setPausaRestante(r.pausa ? Math.ceil(r.pausa.restante) : null)
         // Las animaciones siguen durante la pausa (unas 30 veces por segundo).
-        const anim = r.pausa ? { t: r.pausa.t, transcurrido: Math.round(r.pausa.transcurrido * 30) / 30 } : null
+        const anim = r.pausa ? { t: r.pausa.t, transcurrido: Math.round(r.pausa.transcurrido * 30) / 30 } : r.posPausa || null
         setAnimPausa((v) => (v?.transcurrido === anim?.transcurrido && v?.t === anim?.t ? v : anim))
+        exacto = Boolean(anim)
       }
       if (t >= rango.fin && l.reproduciendo) {
         try { player.pauseVideo(); player.seekTo(rango.fin, true) } catch { /* nada */ }
@@ -225,7 +227,8 @@ export default function EditorDibujo({
         if (vistaRef.current.activa) { vistaRef.current.activa = false; setVistaPrevia(false); setPausaRestante(null) }
       }
       t = Math.min(rango.fin, Math.max(rango.inicio, t))
-      setTiempo((v) => (Math.abs(v - t) < 1 / 120 ? v : t))
+      // En una pausa el cuadro queda exacto (lo que aparece justo en la pausa tiene que verse).
+      setTiempo((v) => (v === t || (!exacto && Math.abs(v - t) < 1 / 120) ? v : t))
     }
     cuadroId = requestAnimationFrame(paso)
     return () => cancelAnimationFrame(cuadroId)

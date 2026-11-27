@@ -21,12 +21,16 @@ export function pasoPausas(estado, { t, reproduciendo, ahora }, pausas) {
   const lista = pausas || []
   if (estado.retenida) {
     const r = estado.retenida
+    // posPausa: la pausa ya pasó entera pero el video sigue en ese cuadro (YouTube tarda en arrancar): las animaciones
+    // quedan como al final de la pausa, sin volver a empezar.
     if (ahora >= r.hastaMs) {
-      return { estado: { ...estado, retenida: null, previo: r.t }, orden: { tipo: 'reanudar' }, tiempo: r.t, pausa: null }
+      const terminada = { t: r.t, transcurrido: (r.hastaMs - r.desdeMs) / 1000 }
+      return { estado: { ...estado, retenida: null, previo: r.t, terminada }, orden: { tipo: 'reanudar' }, tiempo: r.t, pausa: null, posPausa: terminada }
     }
     if (reproduciendo && ahora - r.desdeMs > GRACIA_MS) {
       // La persona apretó reproducir: termina la pausa sin pedir nada.
-      return { estado: { ...estado, retenida: null, previo: t }, orden: null, tiempo: t, pausa: null }
+      const terminada = { t: r.t, transcurrido: (ahora - r.desdeMs) / 1000 }
+      return { estado: { ...estado, retenida: null, previo: t, terminada }, orden: null, tiempo: t, pausa: null, posPausa: Math.abs(t - r.t) < 0.002 ? terminada : null }
     }
     // transcurrido: lo que lleva la pausa (las animaciones de los dibujos siguen mientras el video está congelado).
     const duracion = (r.hastaMs - r.desdeMs) / 1000
@@ -50,7 +54,8 @@ export function pasoPausas(estado, { t, reproduciendo, ahora }, pausas) {
       }
     }
   }
-  return { estado: { ...estado, hechas, previo: t }, orden: null, tiempo: t, pausa: null }
+  const terminada = estado.terminada && Math.abs(t - estado.terminada.t) < 0.002 ? estado.terminada : null
+  return { estado: { ...estado, hechas, previo: t, terminada }, orden: null, tiempo: t, pausa: null, posPausa: terminada }
 }
 
 // Pausa que corresponde a un instante (para el editor: mostrar el rombo elegido).

@@ -439,3 +439,21 @@ test('pizarra 2D: línea defensiva con estados y cobertura, zona entre líneas, 
   const doc = aJugadaPizarra(d, { titulo: 'Línea' })
   assert.ok(doc.elementos.some((e) => e.id === 'op-o1'))
 })
+
+test('pausas: al terminar, mientras el video sigue en ese cuadro, la animación queda como al final (no vuelve a empezar)', async () => {
+  const { crearEstadoPausas, pasoPausas } = await import('../src/utils/analisis/dibujos/pausas.js')
+  const pausas = [{ id: 'p1', t: 31, duracion: 3 }]
+  let e = pasoPausas(crearEstadoPausas(), { t: 30.9, reproduciendo: true, ahora: 0 }, pausas).estado
+  let r = pasoPausas(e, { t: 31.02, reproduciendo: true, ahora: 50 }, pausas)
+  assert.equal(r.orden.tipo, 'pausar')
+  r = pasoPausas(r.estado, { t: 31, reproduciendo: false, ahora: 3060 }, pausas)
+  assert.equal(r.orden.tipo, 'reanudar')
+  assert.deepEqual(r.posPausa, { t: 31, transcurrido: 3 })
+  // YouTube todavía en 31: sigue «terminada»; la edad del dibujo que aparece en 31 no vuelve a cero.
+  r = pasoPausas(r.estado, { t: 31, reproduciendo: true, ahora: 3100 }, pausas)
+  assert.deepEqual(r.posPausa, { t: 31, transcurrido: 3 })
+  cerca(edadEn(pausas, 31, 31, r.posPausa), 3)
+  r = pasoPausas(r.estado, { t: 31.1, reproduciendo: true, ahora: 3200 }, pausas)
+  assert.equal(r.posPausa, null)
+  cerca(edadEn(pausas, 31, 31.1), 3.1)
+})

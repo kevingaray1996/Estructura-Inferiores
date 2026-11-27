@@ -62,7 +62,7 @@ export default function CapaReproduccion({ obtenerPlayer, dibujo, rango = null, 
       } catch { /* El reproductor puede estar cambiando de video. */ }
       const tiempo = dentro ? r.tiempo : null
       // Durante una pausa se vuelve a pintar unas 30 veces por segundo (las animaciones siguen).
-      const anim = r.pausa ? { t: r.pausa.t, transcurrido: Math.round(r.pausa.transcurrido * 30) / 30 } : null
+      const anim = r.pausa ? { t: r.pausa.t, transcurrido: Math.round(r.pausa.transcurrido * 30) / 30 } : r.posPausa || null
       setVista((v) => {
         const pausa = r.pausa ? Math.ceil(r.pausa.restante) : null
         const mismaAnim = (v.anim?.transcurrido ?? null) === (anim?.transcurrido ?? null)

@@ -331,7 +331,7 @@ function Objeto({ el, cuadro, base, idMascara }) {
     case 'linea_defensiva': {
       const l = el.linea
       const pts = l.puntos.map((x) => ({ ...x, p: px(x.video) }))
-      const alto = Math.max(15, cuadro.ancho * 0.02)
+      const alto = Math.max(20, cuadro.ancho * 0.03)
       return (
         <g data-linea-defensiva={l.calibrada ? 'calibrada' : 'manual'} opacity={el.aparicion ?? 1}>
           {l.triangulos.map((tr) => (
