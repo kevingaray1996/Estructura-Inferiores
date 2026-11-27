@@ -6,7 +6,7 @@ import './partido.css'
 import './estadisticasVisuales.css'
 
 // «2T 12' (video 58:40)» (o solo el tiempo del video si faltan marcas). Para avisos de texto.
-export function tiempoConMinuto(segundo, marcas) {
+function tiempoConMinuto(segundo, marcas) {
   return textoTiempos(segundo, marcas)
 }
 

@@ -6,6 +6,12 @@ import { montar } from './helpers/montarAnalisis.mjs'
 import { cometSintetico } from './helpers/cometSintetico.mjs'
 
 const esperar = () => new Promise((r) => setTimeout(r, 0))
+// Espera hasta que se cumpla la condición (o pasen unos segundos): con muchas pruebas a la vez, la cadena de promesas
+// de importar y guardar tarda más vueltas que cuando la prueba corre sola.
+async function esperarQue(h, condicion, ms = 5000) {
+  const fin = Date.now() + ms
+  while (!condicion() && Date.now() < fin) await h.act(async () => { await new Promise((r) => setTimeout(r, 10)) })
+}
 const seccion = () => document.getElementById('cm-titulo').closest('section')
 const botonEn = (raiz, texto) => [...raiz.querySelectorAll('button')].find((b) => b.textContent.trim() === texto)
 const MARCAS = [['inicio_1t', 0], ['fin_1t', 2820], ['inicio_2t', 3600], ['fin_partido', 6600]]
@@ -27,6 +33,7 @@ async function elegirPdf(h) {
   const archivo = new h.dom.window.File(['%PDF-1.7'], 'informe.pdf', { type: 'application/pdf' })
   Object.defineProperty(entrada, 'files', { value: [archivo], configurable: true })
   await h.act(async () => { entrada.dispatchEvent(new h.dom.window.Event('change', { bubbles: true })); await esperar(); await esperar() })
+  await esperarQue(h, () => seccion().querySelector('.cm-paso'))
 }
 function cerrarGlobales() { delete globalThis.__escrituraPartidos; delete globalThis.__cometTextos }
 
@@ -44,6 +51,7 @@ test('Importar COMET: asocia jugadoras la primera vez, revisa y guarda solo lo c
     assert.equal(valor('Bea Maria Ensayo'), 'j2')
     assert.equal(valor('Nuestra Uno Portera'), '')
     await h.act(async () => { botonEn(seccion(), 'Confirmar jugadoras').click(); await esperar() })
+    await esperarQue(h, () => h.guardados.some((g) => g.op === 'upsert') && seccion().querySelector('[data-grupo="completar"]'))
     const upsert = h.guardados.find((g) => g.op === 'upsert')
     assert.deepEqual(upsert.filas, [{ nombre_comet: 'PRUEBA, ANA', jugador_id: 'j' }, { nombre_comet: 'ENSAYO, BEA MARIA', jugador_id: 'j2' }])
 
@@ -63,6 +71,9 @@ test('Importar COMET: asocia jugadoras la primera vez, revisa y guarda solo lo c
     assert.equal(h.subidas.length, 0, 'Nada se guarda antes de confirmar')
 
     await h.act(async () => { botonEn(seccion(), 'Confirmar').click(); for (let i = 0; i < 6; i++) await esperar() })
+    await esperarQue(h, () => h.writes.some((w) => w.tipo === 'Gol')
+      && h.guardados.filter((g) => g.tabla === 'analisis_partido_eventos' && g.op === 'insert').length >= 5
+      && /El gol nuestro quedó en Acciones/.test(seccion().textContent))
     assert.deepEqual(h.subidas.map((s) => [s.bucket, s.ruta, s.opciones.upsert]), [['comet-pdf', 'p1/comet.pdf', true]])
     const eventos = h.guardados.filter((g) => g.tabla === 'analisis_partido_eventos' && g.op === 'insert').map((g) => g.fila)
     assert.deepEqual(eventos.map((e) => [e.tipo, e.equipo ?? null, e.segundo]).sort(), [
@@ -72,6 +83,7 @@ test('Importar COMET: asocia jugadoras la primera vez, revisa y guarda solo lo c
     assert.deepEqual(accionGol.map((w) => [w.jugador_id, w.segundo, w.periodo, w.zona, w.coordenada_x, w.coordenada_y]), [['j', 29 * 60, 1, null, null, null]])
     assert.match(seccion().textContent, /El gol nuestro quedó en Acciones para marcar desde dónde fue/)
     await h.resolver()
+    await esperarQue(h, () => h.guardados.some((g) => g.tabla === 'analisis_partidos' && g.op === 'update') && /COMET importado/.test(seccion().textContent))
     const analisis = h.guardados.find((g) => g.tabla === 'analisis_partidos' && g.op === 'update')
     assert.equal(analisis.valores.comet_pdf, 'p1/comet.pdf')
     assert.equal(analisis.valores.informe.arbitra, 'Laura Ines Gomez')
