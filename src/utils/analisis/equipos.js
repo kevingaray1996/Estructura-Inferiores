@@ -37,6 +37,27 @@ export function equipoPorNombre(equipos, nombre) {
   return (equipos || []).find((e) => normalizarNombre(e.nombre) === n) || null
 }
 
+// Nombre «compacto»: sin mayúsculas, acentos, espacios ni signos («Estrella del Sur» = «ESTRELLADELSUR» = «Estrella-del-sur»).
+export const nombreCompacto = (valor) => normalizarNombre(valor).replace(/[^a-z0-9ñ]/g, '')
+
+// Buscador de scouting: el equipo que ya existe escrito de otra forma (sin mayúsculas, acentos ni espacios), o null.
+export function equipoParecido(equipos, nombre) {
+  const n = nombreCompacto(nombre)
+  if (!n) return null
+  return (equipos || []).find((e) => nombreCompacto(e.nombre) === n) || null
+}
+
+// Qué ofrecer debajo del buscador: { opciones, existente, agregar }.
+// opciones: los que coinciden (con el parecido primero si el buscador no lo encontraba); existente: el que ya está con
+// otra escritura (no se ofrece agregar otro igual); agregar: el nombre para «+ Agregar «…»» o '' si no corresponde.
+export function resultadosBuscador(equipos, texto, { excluir = null, maximo = 40 } = {}) {
+  const limpio = String(texto || '').replace(/\s+/g, ' ').trim()
+  const encontrados = buscarEquipos(equipos, limpio).filter((e) => e.id !== excluir)
+  const parecido = limpio ? equipoParecido(equipos, limpio) : null
+  const opciones = parecido && parecido.id !== excluir && !encontrados.some((e) => e.id === parecido.id) ? [parecido, ...encontrados] : encontrados
+  return { opciones: opciones.slice(0, maximo), existente: parecido, agregar: limpio && !parecido ? limpio : '' }
+}
+
 function claveDe(id, nombre, equipos) {
   if (id) return id
   const e = equipoPorNombre(equipos, nombre)

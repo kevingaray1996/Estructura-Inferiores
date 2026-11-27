@@ -1,10 +1,12 @@
 import { useId, useMemo, useState } from 'react'
-import { buscarEquipos, equiposParaElegir } from '../../utils/analisis/equipos'
+import { equiposParaElegir, resultadosBuscador } from '../../utils/analisis/equipos'
 import './playlists.css'
 
 // Elegir un equipo del listado con buscador (scouting). Los inactivos no aparecen, salvo el ya elegido.
 // textoLibre: nombre de un scouting viejo que todavía no apunta al listado (se muestra para elegir el equipo).
 // onAgregar(nombre) → Promise<{ equipo } | { error }>: solo para coordinación.
+// Si lo escrito no coincide con ninguno, dentro de los resultados aparece «+ Agregar «…»». Si coincide con uno que ya
+// existe escrito de otra forma (sin mayúsculas, acentos ni espacios), se ofrece ese y no se agrega otro igual.
 export default function SelectorEquipo({ etiqueta, equipos, valor, textoLibre = '', excluir = null, onElegir, onAgregar = null }) {
   const id = useId()
   const [abierto, setAbierto] = useState(false)
@@ -12,10 +14,11 @@ export default function SelectorEquipo({ etiqueta, equipos, valor, textoLibre = 
   const [aviso, setAviso] = useState('')
   const [agregando, setAgregando] = useState(false)
   const elegido = (equipos || []).find((e) => e.id === valor) || null
-  const opciones = useMemo(
-    () => buscarEquipos(equiposParaElegir(equipos, { elegidos: valor ? [valor] : [] }), texto).filter((e) => e.id !== excluir).slice(0, 40),
+  const { opciones, existente, agregar: nombreNuevo } = useMemo(
+    () => resultadosBuscador(equiposParaElegir(equipos, { elegidos: valor ? [valor] : [] }), texto, { excluir }),
     [equipos, texto, valor, excluir],
   )
+  const puedeAgregar = Boolean(onAgregar && nombreNuevo)
 
   function elegir(equipo) {
     onElegir(equipo)
@@ -24,9 +27,9 @@ export default function SelectorEquipo({ etiqueta, equipos, valor, textoLibre = 
   }
 
   async function agregar() {
-    if (!onAgregar) return
+    if (!puedeAgregar) return
     setAgregando(true)
-    const r = await onAgregar(texto)
+    const r = await onAgregar(nombreNuevo)
     setAgregando(false)
     if (r?.error) { setAviso(r.error); return }
     setAviso('')
@@ -49,22 +52,30 @@ export default function SelectorEquipo({ etiqueta, equipos, valor, textoLibre = 
             onChange={(e) => { setTexto(e.target.value); setAviso('') }}
             onKeyDown={(e) => {
               if (e.key === 'Escape') setAbierto(false)
-              if (e.key === 'Enter') { e.preventDefault(); if (opciones[0]) elegir(opciones[0]) }
+              if (e.key === 'Enter') { e.preventDefault(); if (opciones[0]) elegir(opciones[0]); else if (puedeAgregar) agregar() }
             }}
           />
           <ul className="se-lista" id={`${id}-lista`} aria-labelledby={`${id}-etiqueta`}>
             {opciones.map((e) => (
               <li key={e.id}>
-                <button type="button" aria-pressed={e.id === valor} onClick={() => elegir(e)}>{e.nombre}</button>
+                <button type="button" aria-pressed={e.id === valor} onClick={() => elegir(e)}>
+                  {e.nombre}{existente?.id === e.id && texto.trim() !== e.nombre ? ' (ya está en el listado)' : ''}
+                </button>
               </li>
             ))}
-            {opciones.length === 0 && <li className="se-vacio">Ningún equipo coincide.</li>}
+            {existente && existente.id === excluir && <li className="se-vacio">«{existente.nombre}» ya es el otro equipo de este partido.</li>}
+            {puedeAgregar && (
+              <li>
+                <button type="button" className="se-agregar" data-agregar="si" disabled={agregando} onClick={agregar}>
+                  {agregando ? 'Agregando…' : `+ Agregar «${nombreNuevo}»`}
+                </button>
+              </li>
+            )}
+            {opciones.length === 0 && !puedeAgregar && !existente && <li className="se-vacio">Ningún equipo coincide.</li>}
           </ul>
           <div className="se-pie">
-            {onAgregar && (
-              <button type="button" className="et-boton" disabled={agregando || !texto.trim()} onClick={agregar}>
-                {agregando ? 'Agregando…' : `+ Agregar equipo${texto.trim() ? ` «${texto.trim()}»` : ''}`}
-              </button>
+            {onAgregar && !texto.trim() && (
+              <button type="button" className="et-boton" disabled>Escribí el nombre para agregarlo</button>
             )}
             <button type="button" className="et-boton" onClick={() => setAbierto(false)}>Cerrar</button>
           </div>

@@ -22,6 +22,7 @@
 }
 .se-lista button:hover, .se-lista button[aria-pressed='true'] { background: var(--analisis-activo); }
 .se-vacio { padding: .5rem .75rem; font-size: .8125rem; color: var(--ui-compartido-secundario); }
+.se-lista .se-agregar { font-weight: 700; color: var(--ui-compartido-texto); border-top: 1px dashed var(--ui-acento); }
 .se-pie { display: flex; flex-wrap: wrap; gap: .5rem; }
 .se-aviso { margin: .5rem 0 0; font-size: .8125rem; color: var(--ui-peligro-texto); }
 .se-elegido:focus-visible, .se-lista button:focus-visible, .se-buscar:focus-visible { outline: 2px solid var(--ui-foco); outline-offset: 2px; }
