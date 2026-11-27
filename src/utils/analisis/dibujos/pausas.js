@@ -28,7 +28,9 @@ export function pasoPausas(estado, { t, reproduciendo, ahora }, pausas) {
       // La persona apretó reproducir: termina la pausa sin pedir nada.
       return { estado: { ...estado, retenida: null, previo: t }, orden: null, tiempo: t, pausa: null }
     }
-    return { estado, orden: null, tiempo: r.t, pausa: { restante: Math.max(0, (r.hastaMs - ahora) / 1000) } }
+    // transcurrido: lo que lleva la pausa (las animaciones de los dibujos siguen mientras el video está congelado).
+    const duracion = (r.hastaMs - r.desdeMs) / 1000
+    return { estado, orden: null, tiempo: r.t, pausa: { restante: Math.max(0, (r.hastaMs - ahora) / 1000), t: r.t, transcurrido: Math.max(0, (ahora - r.desdeMs) / 1000), duracion } }
   }
 
   const previo = estado.previo
@@ -44,7 +46,7 @@ export function pasoPausas(estado, { t, reproduciendo, ahora }, pausas) {
         estado: { previo: p.t, hechas: [...hechas, p.id], retenida },
         orden: { tipo: 'pausar', t: p.t },
         tiempo: p.t,
-        pausa: { restante: p.duracion },
+        pausa: { restante: p.duracion, t: p.t, transcurrido: 0, duracion: p.duracion },
       }
     }
   }

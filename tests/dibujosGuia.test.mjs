@@ -37,7 +37,9 @@ test('qué hacer ahora: cambia con la herramienta y con lo que ya se marcó', ()
 })
 
 test('guías: marcan todas las partes pedidas, avanzan, retroceden y se saltan', () => {
-  assert.deepEqual(GUIA_EDITOR.map((p) => p.objetivo), ['herramientas', 'video', 'propiedades', 'pasos', 'linea', 'vista-previa', 'pegar'])
+  assert.deepEqual(GUIA_EDITOR.map((p) => p.objetivo), ['herramientas', 'herramientas', 'herramientas', 'acciones', 'video', 'propiedades', 'pasos', 'linea', 'vista-previa', 'propiedades', 'pegar'])
+  assert.deepEqual(GUIA_EDITOR.map((p) => p.titulo).filter((t) => /zonas|Reflector|Acciones|Mi estilo/.test(t)),
+    ['Flechas y zonas que se mueven', 'Reflector, línea defensiva y opciones de pase', 'Acciones en este cuadro', 'Mi estilo'])
   assert.ok(GUIA_SEGUIMIENTO.some((p) => p.objetivo === 'salto') && GUIA_SEGUIMIENTO.some((p) => p.objetivo === 'listo'))
   for (const p of [...GUIA_EDITOR, ...GUIA_SEGUIMIENTO]) assert.ok(p.titulo && p.texto.length > 20)
   assert.equal(moverGuia(0, 'siguiente', 7), 1)

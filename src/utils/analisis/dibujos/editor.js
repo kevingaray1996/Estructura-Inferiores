@@ -29,10 +29,21 @@ export function objetoEnPunto(elementos, p, aspecto = ASPECTO_VIDEO) {
     if (el.posicion) d = Math.hypot(p.x - el.posicion.x, (p.y - el.posicion.y) / aspecto) - (o.tipo === 'foco' ? 0.06 : 0.035)
     else if (o.tipo === 'enlace' && el.a && el.b) d = distSegmento(p, el.a, el.b, aspecto)
     else if (o.tipo === 'zona') {
-      const [a, b] = o.puntos
+      const [a, b] = el.puntos || o.puntos
       const dentro = p.x >= Math.min(a.x, b.x) && p.x <= Math.max(a.x, b.x) && p.y >= Math.min(a.y, b.y) && p.y <= Math.max(a.y, b.y)
       d = dentro ? 0 : Infinity
-    } else if (o.tipo === 'poligono') d = dentroPoligono(p, o.puntos) ? 0 : Infinity
+    } else if (o.tipo === 'poligono' || o.tipo === 'zona_lineas') d = dentroPoligono(p, el.puntos || o.puntos) ? 0 : Infinity
+    else if (o.tipo === 'foco_zona' && el.forma) {
+      const f = el.forma
+      const dentro = o.forma === 'rectangulo' ? Math.abs(p.x - f.x) <= f.rx && Math.abs(p.y - f.y) <= f.ry : ((p.x - f.x) / f.rx) ** 2 + ((p.y - f.y) / f.ry) ** 2 <= 1
+      d = dentro ? 0 : Infinity
+    } else if (o.tipo === 'opciones_pase' && el.pasadora) {
+      d = distSegmento(p, el.pasadora, el.receptora, aspecto)
+      for (const op of el.opciones || []) d = Math.min(d, distSegmento(p, el.pasadora, op.posicion, aspecto))
+    } else if (o.tipo === 'linea_defensiva' && el.linea) {
+      const pts = el.linea.puntos.map((x) => x.video)
+      for (let i = 1; i < pts.length; i++) d = Math.min(d, distSegmento(p, pts[i - 1], pts[i], aspecto))
+    }
     else if (o.tipo === 'texto') d = Math.hypot(p.x - o.puntos[0].x, (p.y - o.puntos[0].y) / aspecto) - 0.04
     else if (o.puntos?.length >= 2) {
       for (let i = 1; i < o.puntos.length; i++) d = Math.min(d, distSegmento(p, o.puntos[i - 1], o.puntos[i], aspecto))
@@ -42,21 +53,26 @@ export function objetoEnPunto(elementos, p, aspecto = ASPECTO_VIDEO) {
   return null
 }
 
-// Herramientas y su tecla.
+// Herramientas y su tecla. grupo: la barra pone un separador entre grupos.
 export const HERRAMIENTAS = Object.freeze([
-  { id: 'seleccionar', tecla: 'V', texto: 'Elegir y mover', icono: '➚' },
-  { id: 'pase_bajo', tecla: 'B', texto: 'Pase por bajo', icono: '→' },
-  { id: 'pase_alto', tecla: 'A', texto: 'Pase por alto', icono: '⤻' },
-  { id: 'movimiento', tecla: 'M', texto: 'Movimiento (punteada)', icono: '⇢' },
-  { id: 'linea', tecla: 'L', texto: 'Línea', icono: '／' },
-  { id: 'zona', tecla: 'R', texto: 'Zona rectangular', icono: '▭' },
-  { id: 'poligono', tecla: 'G', texto: 'Zona libre (polígono)', icono: '⬠' },
-  { id: 'texto', tecla: 'T', texto: 'Texto', icono: 'T' },
-  { id: 'anillo', tecla: 'O', texto: 'Anillo bajo los pies', icono: '◯' },
-  { id: 'foco', tecla: 'F', texto: 'Foco', icono: '◉' },
-  { id: 'nombre', tecla: 'N', texto: 'Nombre y dorsal', icono: '#' },
-  { id: 'enlace', tecla: 'E', texto: 'Línea entre dos jugadoras', icono: '⟷' },
-  { id: 'zoom', tecla: 'C', texto: 'Zoom de cámara', icono: '⌕' },
+  { id: 'seleccionar', tecla: 'V', texto: 'Elegir y mover', icono: '➚', grupo: 'elegir' },
+  { id: 'pase_bajo', tecla: 'B', texto: 'Pase por bajo', icono: '→', grupo: 'trazos' },
+  { id: 'pase_alto', tecla: 'A', texto: 'Pase por alto', icono: '⤻', grupo: 'trazos' },
+  { id: 'movimiento', tecla: 'M', texto: 'Movimiento (punteada)', icono: '⇢', grupo: 'trazos' },
+  { id: 'linea', tecla: 'L', texto: 'Línea', icono: '／', grupo: 'trazos' },
+  { id: 'texto', tecla: 'T', texto: 'Texto', icono: 'T', grupo: 'trazos' },
+  { id: 'zona', tecla: 'R', texto: 'Zona rectangular', icono: '▭', grupo: 'zonas' },
+  { id: 'poligono', tecla: 'G', texto: 'Zona libre (polígono)', icono: '⬠', grupo: 'zonas' },
+  { id: 'zona_lineas', tecla: 'W', texto: 'Zona entre líneas', icono: '▤', grupo: 'zonas' },
+  { id: 'foco_zona', tecla: 'Z', texto: 'Foco en una zona', icono: '◌', grupo: 'zonas' },
+  { id: 'anillo', tecla: 'O', texto: 'Anillo bajo los pies', icono: '◯', grupo: 'jugadoras' },
+  { id: 'foco', tecla: 'F', texto: 'Foco', icono: '◉', grupo: 'jugadoras' },
+  { id: 'reflector', tecla: 'H', texto: 'Reflector (haz de luz)', icono: '⏚', grupo: 'jugadoras' },
+  { id: 'nombre', tecla: 'N', texto: 'Nombre y dorsal', icono: '#', grupo: 'jugadoras' },
+  { id: 'enlace', tecla: 'E', texto: 'Línea entre dos jugadoras', icono: '⟷', grupo: 'jugadoras' },
+  { id: 'linea_defensiva', tecla: 'D', texto: 'Línea defensiva', icono: '┅', grupo: 'jugadoras' },
+  { id: 'opciones_pase', tecla: 'I', texto: 'Opciones de pase', icono: '⑂', grupo: 'jugadoras' },
+  { id: 'zoom', tecla: 'C', texto: 'Zoom de cámara', icono: '⌕', grupo: 'camara' },
 ])
 
 // Orden de una tecla en el editor, o null. No actúa mientras se escribe en un campo (salvo Escape).
@@ -84,6 +100,8 @@ export function ordenTeclaEditor(e) {
   const letra = k.length === 1 ? k.toUpperCase() : ''
   if (letra === 'P') return 'pausa'
   if (letra === 'S') return 'paso'
+  if (letra === 'J') return 'lento'
+  if (letra === 'X') return 'explicar'
   const h = HERRAMIENTAS.find((x) => x.tecla === letra)
   return h ? `herramienta:${h.id}` : null
 }

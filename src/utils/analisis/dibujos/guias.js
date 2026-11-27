@@ -19,12 +19,22 @@ export const DESCRIPCIONES = Object.freeze({
   zoom: 'acerca la imagen hacia un punto o una jugadora y después vuelve al plano general. Para destacar un detalle.',
   pausa: 'congela el video en este cuadro unos segundos (3 si no lo cambiás) y después sigue solo. Para explicar una situación.',
   paso: 'texto abajo del video desde este momento. Para contar la jugada por partes.',
+  // Dibujos nivel profesional (docs/analisis-dibujos-pro.md).
+  reflector: 'cono de luz que baja desde arriba del video hasta los pies de la jugadora y la sigue; el resto de la imagen se oscurece apenas. Para destacar a la protagonista como en la tele.',
+  foco_zona: 'oscurece todo menos un círculo, una elipse o un rectángulo que marcás; puede quedarse quieto o moverse. Para mostrar un espacio, por ejemplo el que queda libre a la espalda de la defensa.',
+  opciones_pase: 'tocás a la que tenía la pelota, a la que recibió el pase que salió mal y después a las compañeras que estaban mejor ubicadas; quedan numeradas en verde. Para explicar un pase incorrecto.',
+  zona_lineas: 'elegís a las jugadoras de una línea y de otra (por ejemplo, volantes y defensoras) y la zona se dibuja sola entre las dos, estirándose y achicándose con ellas. Para mostrar la distancia entre líneas.',
+  linea_defensiva: 'une a las defensoras que ya seguiste y, con la cancha calibrada, pinta a cada una en amarillo (en línea), naranja (adelantada) o rojo (atrás). Para ver si la línea está bien parada y quién cubre a quién.',
+  lento: 'el video va en cámara lenta (0,5x o 0,25x) desde este cuadro durante 2 segundos; el tramo se ajusta en la línea de tiempo. Para que se vea bien una acción rápida.',
+  explicar: 'en este cuadro pone una pausa de 3 segundos, un foco sobre la jugadora o el punto que toques y un subtítulo listo para escribir. Para explicar una situación en un solo paso.',
 })
 
-// Las dos acciones rápidas de la barra (no son herramientas: actúan en el cuadro actual).
+// Las acciones rápidas de la barra (no son herramientas: actúan en el cuadro actual).
 export const ACCIONES_RAPIDAS = Object.freeze([
   { id: 'pausa', tecla: 'P', texto: 'Pausa', icono: '⏸' },
   { id: 'paso', tecla: 'S', texto: 'Paso con subtítulo', icono: '≡' },
+  { id: 'lento', tecla: 'J', texto: 'Cámara lenta', icono: '½' },
+  { id: 'explicar', tecla: 'X', texto: 'Pausa explicativa', icono: '⏸✎' },
 ])
 
 // Nombre corto de cada herramienta para la ayuda.
@@ -32,6 +42,8 @@ const NOMBRES = Object.freeze({
   seleccionar: 'Elegir y mover', pase_bajo: 'Pase por bajo', pase_alto: 'Pase por alto', movimiento: 'Movimiento', linea: 'Línea',
   zona: 'Zona rectangular', poligono: 'Zona libre', texto: 'Texto', anillo: 'Anillo', foco: 'Foco', nombre: 'Nombre y dorsal',
   enlace: 'Línea entre dos jugadoras', zoom: 'Zoom de cámara', pausa: 'Pausa', paso: 'Paso con subtítulo',
+  reflector: 'Reflector', foco_zona: 'Foco en una zona', opciones_pase: 'Opciones de pase', zona_lineas: 'Zona entre líneas',
+  linea_defensiva: 'Línea defensiva', lento: 'Cámara lenta', explicar: 'Pausa explicativa',
 })
 
 // { nombre, tecla, descripcion, texto } — texto: «Pase por alto (tecla A): flecha curva con sombra en el piso. …»
@@ -51,8 +63,12 @@ export const TEXTO_SEGUIMIENTO = 'Tocá a la jugadora. Cada toque guarda su posi
 const reloj = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, '0').replace('.', ',')}`
 
 // fueraDeTiempo: { desde, hasta } del dibujo elegido cuando no se ve en el momento actual (se muestra punteado).
-export function instruccion({ herramienta, borrador = null, enlacePendiente = null, vistaPrevia = false, fueraDeTiempo = null }) {
+// v3: opciones ({ paso: 'pasadora' | 'receptora' | 'opciones', n, pasadora?, receptora? } con los nombres de la
+// plantilla), grupo ({ paso: 'A' | 'B', n } para la zona entre líneas y la línea defensiva) y explicando (la pausa
+// explicativa espera un toque).
+export function instruccion({ herramienta, borrador = null, enlacePendiente = null, vistaPrevia = false, fueraDeTiempo = null, opciones = null, grupo = null, explicando = false }) {
   if (vistaPrevia) return 'Vista previa: así lo ve el cuerpo técnico. Espacio o Esc para volver a editar.'
+  if (explicando) return 'Pausa explicativa: tocá a la jugadora (si ya está seguida, el foco la sigue) o el punto que querés mostrar. Esc para cancelar.'
   if (fueraDeTiempo && !borrador) {
     return `El dibujo elegido no se ve en este momento (aparece de ${reloj(fueraDeTiempo.desde)} a ${reloj(fueraDeTiempo.hasta)}). Lo ves punteado solo para encontrarlo.`
   }
@@ -72,7 +88,18 @@ export function instruccion({ herramienta, borrador = null, enlacePendiente = nu
     case 'texto': return 'Hacé clic donde va el texto y escribilo ahí mismo. Enter para terminar, Esc para cancelar.'
     case 'enlace': return enlacePendiente ? 'Ahora tocá la otra jugadora.' : 'Tocá una jugadora seguida (con anillo, foco o nombre).'
     case 'zoom': return 'Hacé clic hacia donde querés acercar la cámara.'
-    case 'anillo': case 'foco': case 'nombre': return TEXTO_SEGUIMIENTO
+    case 'anillo': case 'foco': case 'nombre': case 'reflector': return TEXTO_SEGUIMIENTO
+    case 'foco_zona': return borrador?.esperando ? 'Ahora hacé clic en la esquina opuesta.' : 'Hacé clic en el centro del foco (queda un círculo) o arrastrá de una esquina a la otra (queda una elipse).'
+    case 'opciones_pase': {
+      const paso = opciones?.paso || 'pasadora'
+      if (paso === 'pasadora') return `1) Tocá a ${opciones?.pasadora ? `${opciones.pasadora}, ` : ''}la jugadora que tenía la pelota.`
+      if (paso === 'receptora') return `2) Ahora tocá a ${opciones?.receptora ? `${opciones.receptora}, ` : ''}la que recibió el pase que salió mal.`
+      return `3) Tocá a las compañeras que eran mejores opciones (van ${opciones?.n || 0}). Enter o «Listo» para terminar.`
+    }
+    case 'zona_lineas': return grupo?.paso === 'B'
+      ? `Ahora tocá a las jugadoras de la otra línea (por ejemplo, las defensoras). Van ${grupo.n || 0}. Enter para terminar.`
+      : `Tocá a las jugadoras de la primera línea (por ejemplo, las volantes); tienen que estar seguidas. Van ${grupo?.n || 0}. Enter para pasar a la otra línea.`
+    case 'linea_defensiva': return `Tocá a las defensoras (o volantes) que ya seguiste con anillo, foco o nombre. Van ${grupo?.n || 0}. Enter para terminar.`
     default: return ''
   }
 }
@@ -81,11 +108,15 @@ export function instruccion({ herramienta, borrador = null, enlacePendiente = nu
 // objetivo: el elemento que se marca con un recuadro (atributo data-guia). Si no está en pantalla, el texto va al centro.
 export const GUIA_EDITOR = Object.freeze([
   { objetivo: 'herramientas', titulo: 'Herramientas', texto: 'Acá elegís qué dibujar: pases, movimientos, zonas, textos y herramientas que siguen a una jugadora. Pasá el mouse por cada una para ver qué hace. Cada una tiene su tecla.' },
+  { objetivo: 'herramientas', titulo: 'Flechas y zonas que se mueven', texto: 'Los pases y movimientos crecen del origen al destino (en Propiedades elegís la velocidad y la pelotita). Las zonas pueden moverse con puntos clave, llevar un texto adentro y mostrar sus metros. La «Zona entre líneas» se arma sola con las jugadoras que elijas, y el «Foco en una zona» oscurece todo menos el espacio que marcás.' },
+  { objetivo: 'herramientas', titulo: 'Reflector, línea defensiva y opciones de pase', texto: 'El Reflector sigue a una jugadora con un haz de luz. La Línea defensiva une a las defensoras que ya seguiste y, con la cancha calibrada, dice quién está adelantada o atrás. Opciones de pase muestra el pase que salió mal en rojo y las mejores opciones en verde, numeradas.' },
+  { objetivo: 'acciones', titulo: 'Acciones en este cuadro', texto: 'Pausa (P), Paso con subtítulo (S), Cámara lenta (J) y Pausa explicativa (X) actúan en el cuadro donde estás. La pausa explicativa hace todo junto: pausa, foco y subtítulo para escribir.' },
   { objetivo: 'video', titulo: 'El video del clip', texto: 'Dibujás directo sobre la imagen. Con ← → avanzás o retrocedés de a 0,1 s (cuadro a cuadro) y con Espacio reproducís. Arriba del video siempre dice qué hacer con la herramienta elegida.' },
   { objetivo: 'propiedades', titulo: 'Propiedades', texto: 'Cuando elegís un dibujo, acá cambiás su color, su grosor y cuándo aparece y desaparece dentro del clip. Para borrar un dibujo, elegilo y apretá Supr.' },
   { objetivo: 'pasos', titulo: 'Pasos con subtítulo', texto: 'Partí la jugada en pasos: cada paso es un texto que se ve abajo del video durante un tramo. Se agregan con la tecla S o con el botón de esta sección.' },
   { objetivo: 'linea', titulo: 'Línea de tiempo del clip', texto: 'Una fila por dibujo: la barra muestra cuándo se ve (arrastrá sus bordes para cambiarlo). Los rombos son las pausas y los puntos clave de las jugadoras seguidas.' },
-  { objetivo: 'vista-previa', titulo: 'Vista previa', texto: 'Reproduce el clip con los dibujos, las pausas y los subtítulos, tal cual lo va a ver el cuerpo técnico.' },
+  { objetivo: 'vista-previa', titulo: 'Vista previa', texto: 'Reproduce el clip con los dibujos, las pausas, la cámara lenta y los subtítulos, tal cual lo va a ver el cuerpo técnico.' },
+  { objetivo: 'propiedades', titulo: 'Mi estilo', texto: 'Cuando un dibujo te quedó como te gusta, tocá «Guardar como mi estilo» en Propiedades: los próximos de esa herramienta salen con ese color, grosor y efectos. Queda guardado en tu usuario.' },
   { objetivo: 'pegar', titulo: 'Pegar en la línea de tiempo', texto: 'Guarda los dibujos y vuelve a Análisis. El clip queda con el ícono ✎ y se ve con sus dibujos en la línea de tiempo y en las playlists. Esta guía se vuelve a ver con el botón «?».' },
 ])
 

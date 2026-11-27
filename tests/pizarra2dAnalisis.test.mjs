@@ -120,8 +120,9 @@ test('formato: lo guardado en la versión 1 se lee igual y sigue siendo versión
   assert.equal(r.dibujo.objetos[0].jugadora, undefined)
   // Volver a normalizar da lo mismo (no se agregan campos nuevos).
   assert.deepEqual(normalizarDibujo(r.dibujo).dibujo, r.dibujo)
-  assert.equal(VERSION_DIBUJO, 2)
-  assert.equal(normalizarDibujo({ version: 3 }).ok, false)
+  // La app entiende hasta la versión 3 (dibujos nivel profesional); una más nueva no se dibuja.
+  assert.equal(VERSION_DIBUJO, 3)
+  assert.equal(normalizarDibujo({ version: 4 }).ok, false)
 })
 
 test('formato v2: cancha, calibraciones, fichas, jugadora en anillo, ajustes y «no mostrar en la 2D»', () => {

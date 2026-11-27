@@ -5,17 +5,32 @@
 import { recortar01 } from './coordenadas.js'
 import { MAXIMO_CALIBRACIONES, MAXIMO_PUNTOS, REFS, medidasCancha } from './calibracion.js'
 
-// La versión más nueva que esta app entiende.
-export const VERSION_DIBUJO = 2
+// La versión más nueva que esta app entiende. La 3 (docs/analisis-dibujos-pro.md) suma reflector, foco en una zona,
+// opciones de pase, zonas que se mueven, zona entre líneas, línea defensiva, flechas que crecen, hueco del anillo y
+// tramos de cámara lenta. Un dibujo que no usa nada de eso se sigue guardando como 1 o 2.
+export const VERSION_DIBUJO = 3
 export const LIMITES = Object.freeze({
   objetos: 200, claves: 600, pausas: 50, subtitulos: 50, puntos: 60, texto: 140, bytes: 200 * 1024,
+  lentos: 20, clavesZona: 60, opciones: 5, linea: 11,
 })
 export const COLORES_DIBUJO = Object.freeze(['amarillo', 'blanco', 'rojo', 'azul'])
 export const GROSORES = Object.freeze([1, 2, 3])
 export const TIPOS_FIJOS = Object.freeze(['pase_bajo', 'pase_alto', 'movimiento', 'linea', 'zona', 'poligono', 'texto'])
-export const TIPOS_SEGUIMIENTO = Object.freeze(['anillo', 'foco', 'nombre'])
+// reflector (v3): haz de luz que sigue a la jugadora.
+export const TIPOS_SEGUIMIENTO = Object.freeze(['anillo', 'foco', 'nombre', 'reflector'])
+// Tipos de la versión 3 que no siguen a una jugadora por sí solos.
+export const TIPOS_V3 = Object.freeze(['reflector', 'foco_zona', 'opciones_pase', 'zona_lineas', 'linea_defensiva'])
 // ficha (v2): jugadora marcada en un solo cuadro; se ve quieta en la pizarra 2D, no sobre el video.
-export const TIPOS = Object.freeze([...TIPOS_FIJOS, ...TIPOS_SEGUIMIENTO, 'enlace', 'zoom', 'ficha'])
+export const TIPOS = Object.freeze([...TIPOS_FIJOS, ...TIPOS_SEGUIMIENTO, 'enlace', 'zoom', 'ficha', 'foco_zona', 'opciones_pase', 'zona_lineas', 'linea_defensiva'])
+export const FLECHAS_QUE_CRECEN = Object.freeze(['pase_bajo', 'pase_alto', 'movimiento'])
+export const MODOS_CRECER = Object.freeze(['rapida', 'normal', 'lenta', 'real'])
+export const FORMAS_FOCO = Object.freeze(['circulo', 'elipse', 'rectangulo'])
+export const VELOCIDADES_LENTAS = Object.freeze([0.5, 0.25])
+export const ESTADOS_LINEA = Object.freeze(['en_linea', 'adelantada', 'atras'])
+export const HUECO = Object.freeze({ auto: 0.28, minimo: 0.1, maximo: 0.6 })
+export const UMBRAL = Object.freeze({ defecto: 2, minimo: 0.5, maximo: 6 })
+export const LUZ = Object.freeze({ intensidad: 0.6, ancho: 1 })
+const ZONAS = ['zona', 'poligono', 'zona_lineas']
 export const MAXIMO_AJUSTES = 200
 export const PAUSA_POR_DEFECTO = 3
 export const PAUSA_MINIMA = 0.5
@@ -44,7 +59,7 @@ export function dibujoVacio(clip = null) {
 }
 
 export function estaVacio(dibujo) {
-  return !dibujo || (!dibujo.objetos?.length && !dibujo.pausas?.length && !dibujo.subtitulos?.length && !dibujo.calibraciones?.length)
+  return !dibujo || (!dibujo.objetos?.length && !dibujo.pausas?.length && !dibujo.subtitulos?.length && !dibujo.calibraciones?.length && !dibujo.lentos?.length)
 }
 
 // Id corto que no esté usado (o1, o2, … / p1 … / s1 …).
@@ -112,6 +127,109 @@ function normalizarCalibraciones(lista) {
     .map((c) => { const id = c.id && !ids.has(c.id) ? c.id : nuevoId('c', ids); ids.add(id); return { ...c, id } })
 }
 
+// ---------- Versión 3 ----------
+const entre = (v, min, max, base) => Math.min(max, Math.max(min, numero(v, base)))
+const tres = (v) => Math.round(v * 1000) / 1000
+
+// Flecha que crece: { modo, pelota, salida?, llegada? } o null (aparece entera, como antes).
+function normalizarCrecer(c, desde) {
+  if (!c || typeof c !== 'object' || !MODOS_CRECER.includes(c.modo)) return null
+  const r = { modo: c.modo, pelota: Boolean(c.pelota) }
+  if (c.modo === 'real') {
+    const salida = tiempo(c.salida ?? desde)
+    const llegada = numero(c.llegada, salida + 0.8) > salida + 0.05 ? tiempo(c.llegada) : tres(salida + 0.8)
+    r.salida = salida
+    r.llegada = llegada
+  }
+  return r
+}
+
+// Hueco del anillo: undefined (automático), false (sin hueco) o un número entre HUECO.minimo y HUECO.maximo.
+function normalizarHueco(h) {
+  if (h === false) return false
+  if (typeof h !== 'number' || !Number.isFinite(h)) return undefined
+  return Math.round(Math.min(HUECO.maximo, Math.max(HUECO.minimo, h)) * 100) / 100
+}
+
+// Formas de una zona en distintos momentos: [{ t, puntos }] con la misma cantidad de puntos que la base.
+function normalizarClavesZona(lista, cantidad) {
+  const salida = []
+  for (const c of (Array.isArray(lista) ? lista : [])) {
+    if (!c || !Number.isFinite(Number(c.t)) || !Array.isArray(c.puntos) || c.puntos.length !== cantidad) continue
+    const clave = { t: tiempo(c.t), puntos: c.puntos.map(punto) }
+    const i = salida.findIndex((x) => Math.abs(x.t - clave.t) < 0.001)
+    if (i >= 0) salida[i] = clave
+    else salida.push(clave)
+  }
+  return salida.sort((a, b) => a.t - b.t).slice(0, LIMITES.clavesZona)
+}
+
+// Texto, efectos y metros de una zona (v3).
+function extrasZona(o, base) {
+  const texto = cadena(o.texto, 60)
+  if (texto) base.texto = texto
+  const e = o.efectos
+  if (e && typeof e === 'object' && (e.despliegue || e.rayado || e.pulso)) {
+    base.efectos = { despliegue: Boolean(e.despliegue), rayado: Boolean(e.rayado), pulso: Boolean(e.pulso) }
+  }
+  if (o.medidas === true) base.medidas = true
+}
+
+function normalizarLuz(l) {
+  return {
+    color: COLORES_DIBUJO.includes(l?.color) ? l.color : 'blanco',
+    intensidad: Math.round(entre(l?.intensidad, 0.2, 1, LUZ.intensidad) * 100) / 100,
+    ancho: Math.round(entre(l?.ancho, 0.5, 2, LUZ.ancho) * 100) / 100,
+  }
+}
+
+function normalizarClavesFoco(lista) {
+  const salida = []
+  for (const c of (Array.isArray(lista) ? lista : [])) {
+    if (!c || !Number.isFinite(Number(c.t))) continue
+    const clave = { t: tiempo(c.t), ...punto(c), rx: Math.round(entre(c.rx, 0.01, 0.5, 0.06) * 10000) / 10000, ry: Math.round(entre(c.ry, 0.01, 0.5, 0.1) * 10000) / 10000 }
+    const i = salida.findIndex((x) => Math.abs(x.t - clave.t) < 0.001)
+    if (i >= 0) salida[i] = clave
+    else salida.push(clave)
+  }
+  return salida.sort((a, b) => a.t - b.t).slice(0, LIMITES.clavesZona)
+}
+
+// Participante de «Opciones de pase»: { punto, seguir, jugadora? }.
+function normalizarParticipante(p) {
+  if (!p || typeof p !== 'object' || !p.punto || typeof p.punto !== 'object') return null
+  const r = { punto: punto(p.punto), seguir: idValido(p.seguir) || null }
+  const j = p.jugadora ? normalizarJugadora(p.jugadora) : null
+  if (j) r.jugadora = j
+  return r
+}
+
+const listaIds = (v, max) => [...new Set((Array.isArray(v) ? v : []).map(idValido).filter(Boolean))].slice(0, max)
+
+// Tramos de cámara lenta: { id, desde, hasta, velocidad }, ordenados y sin superponerse.
+function normalizarLentos(lista) {
+  const ids = new Set()
+  const salida = []
+  const crudos = (Array.isArray(lista) ? lista : [])
+    .map((l) => ({ id: idValido(l?.id), desde: tiempo(l?.desde), hasta: tiempo(l?.hasta), velocidad: VELOCIDADES_LENTAS.includes(Number(l?.velocidad)) ? Number(l.velocidad) : 0.5 }))
+    .filter((l) => l.hasta - l.desde >= 0.2)
+    .sort((a, b) => a.desde - b.desde)
+  for (const l of crudos) {
+    if (salida.length >= LIMITES.lentos) break
+    if (salida.length && l.desde < salida[salida.length - 1].hasta) continue
+    const id = l.id && !ids.has(l.id) ? l.id : nuevoId('l', ids)
+    ids.add(id)
+    salida.push({ ...l, id })
+  }
+  return salida
+}
+
+// ¿Usa algo de la versión 3? (si no, se guarda como 2 o 1)
+export function usaVersion3(d) {
+  return Boolean(d?.lentos?.length || (d?.objetos || []).some((o) => TIPOS_V3.includes(o.tipo) || o.crecer || o.hueco !== undefined
+    || (ZONAS.includes(o.tipo) && (o.claves?.length || o.texto || o.efectos || o.medidas))))
+}
+
 // ¿Usa algo de la versión 2? (si no, se guarda como 1)
 export function usaVersion2(d) {
   return Boolean(d?.cancha || d?.calibraciones?.length || (d?.objetos || []).some((o) => o.tipo === 'ficha' || o.ajustes2d?.length || o.en2d === false
@@ -139,6 +257,48 @@ function normalizarObjeto(o) {
       base.texto = cadena(o.texto, LIMITES.texto)
       if (!base.texto) return null
     }
+    if (FLECHAS_QUE_CRECEN.includes(o.tipo)) { const c = normalizarCrecer(o.crecer, desde); if (c) base.crecer = c } // v3
+    if (o.tipo === 'zona' || o.tipo === 'poligono') { // v3
+      const claves = normalizarClavesZona(o.claves, puntos.length)
+      if (claves.length) base.claves = claves
+      extrasZona(o, base)
+    }
+    return base
+  }
+  if (o.tipo === 'foco_zona') {
+    const claves = normalizarClavesFoco(o.claves)
+    if (!claves.length) return null
+    base.forma = FORMAS_FOCO.includes(o.forma) ? o.forma : 'circulo'
+    base.claves = claves
+    if (o.animado === true) base.animado = true
+    return base
+  }
+  if (o.tipo === 'opciones_pase') {
+    const pasadora = normalizarParticipante(o.pasadora), receptora = normalizarParticipante(o.receptora)
+    if (!pasadora || !receptora) return null
+    base.pasadora = pasadora
+    base.receptora = receptora
+    base.opciones = (Array.isArray(o.opciones) ? o.opciones : []).map(normalizarParticipante).filter(Boolean).slice(0, LIMITES.opciones)
+    base.secuencia = o.secuencia !== false
+    const h = normalizarHueco(o.hueco)
+    if (h !== undefined) base.hueco = h
+    return base
+  }
+  if (o.tipo === 'zona_lineas') {
+    base.lineaA = listaIds(o.lineaA, LIMITES.linea)
+    base.lineaB = listaIds(o.lineaB, LIMITES.linea).filter((id) => !base.lineaA.includes(id))
+    extrasZona(o, base)
+    return base
+  }
+  if (o.tipo === 'linea_defensiva') {
+    base.jugadoras = listaIds(o.jugadoras, LIMITES.linea)
+    base.rol = o.rol === 'volantes' ? 'volantes' : 'defensa'
+    base.arco = o.arco === 'derecha' ? 'derecha' : 'izquierda'
+    base.umbral = Math.round(entre(o.umbral, UMBRAL.minimo, UMBRAL.maximo, UMBRAL.defecto) * 10) / 10
+    base.estados = Object.fromEntries(Object.entries(o.estados && typeof o.estados === 'object' ? o.estados : {})
+      .filter(([id, v]) => base.jugadoras.includes(id) && ESTADOS_LINEA.includes(v) && v !== 'en_linea'))
+    base.cubiertas = Object.fromEntries(Object.entries(o.cubiertas && typeof o.cubiertas === 'object' ? o.cubiertas : {})
+      .filter(([id, v]) => base.jugadoras.includes(id) && v === true))
     return base
   }
   if (esSeguimiento(o.tipo)) {
@@ -154,6 +314,8 @@ function normalizarObjeto(o) {
     if (o.en2d === false) base.en2d = false // v2
     const ajustes = normalizarAjustes(o.ajustes2d)
     if (ajustes.length) base.ajustes2d = ajustes // v2
+    if (o.tipo === 'anillo') { const h = normalizarHueco(o.hueco); if (h !== undefined) base.hueco = h } // v3
+    if (o.tipo === 'reflector') base.luz = normalizarLuz(o.luz) // v3
     return base
   }
   if (o.tipo === 'ficha') {
@@ -195,8 +357,8 @@ export function normalizarDibujo(datos) {
   }
   // Enlaces y zooms que apuntan a objetos de seguimiento que no están.
   const seguidos = new Set(objetos.filter((o) => esSeguimiento(o.tipo)).map((o) => o.id))
-  const limpios = objetos.filter((o) => o.tipo !== 'enlace' || (seguidos.has(o.a) && seguidos.has(o.b) && o.a !== o.b))
-    .map((o) => (o.tipo === 'zoom' && o.seguir && !seguidos.has(o.seguir) ? { ...o, seguir: null } : o))
+  const limpios = limpiarReferencias(objetos.filter((o) => o.tipo !== 'enlace' || (seguidos.has(o.a) && seguidos.has(o.b) && o.a !== o.b))
+    .map((o) => (o.tipo === 'zoom' && o.seguir && !seguidos.has(o.seguir) ? { ...o, seguir: null } : o)), seguidos)
 
   const idsPausa = new Set()
   const pausas = (Array.isArray(datos.pausas) ? datos.pausas : [])
@@ -221,8 +383,33 @@ export function normalizarDibujo(datos) {
   const calibraciones = normalizarCalibraciones(datos.calibraciones)
   if (calibraciones.length || (datos.cancha && typeof datos.cancha === 'object')) dibujo.cancha = medidasCancha(datos.cancha)
   if (calibraciones.length) dibujo.calibraciones = calibraciones
-  if (usaVersion2(dibujo)) dibujo.version = 2
+  const lentos = normalizarLentos(datos.lentos) // v3
+  if (lentos.length) dibujo.lentos = lentos
+  if (usaVersion3(dibujo)) dibujo.version = 3
+  else if (usaVersion2(dibujo)) dibujo.version = 2
   return { ok: true, dibujo, aviso: '' }
+}
+
+// v3: las zonas entre líneas, las líneas defensivas y las opciones de pase apuntan a jugadoras seguidas. Si una ya no
+// está, sale de la lista (la opción queda quieta donde se marcó). Si la lista queda corta, el dibujo no se puede armar.
+export function limpiarReferencias(objetos, seguidos = new Set(objetos.filter((o) => esSeguimiento(o.tipo)).map((o) => o.id))) {
+  const salida = []
+  for (const o of objetos) {
+    if (o.tipo === 'zona_lineas') {
+      const lineaA = o.lineaA.filter((id) => seguidos.has(id)), lineaB = o.lineaB.filter((id) => seguidos.has(id))
+      if (!lineaA.length || !lineaB.length || lineaA.length + lineaB.length < 3) continue
+      salida.push({ ...o, lineaA, lineaB })
+    } else if (o.tipo === 'linea_defensiva') {
+      const jugadoras = o.jugadoras.filter((id) => seguidos.has(id))
+      if (jugadoras.length < 2) continue
+      const quedan = (m) => Object.fromEntries(Object.entries(m || {}).filter(([id]) => jugadoras.includes(id)))
+      salida.push({ ...o, jugadoras, estados: quedan(o.estados), cubiertas: quedan(o.cubiertas) })
+    } else if (o.tipo === 'opciones_pase') {
+      const sin = (p) => (p.seguir && !seguidos.has(p.seguir) ? { ...p, seguir: null } : p)
+      salida.push({ ...o, pasadora: sin(o.pasadora), receptora: sin(o.receptora), opciones: o.opciones.map(sin) })
+    } else salida.push(o)
+  }
+  return salida
 }
 
 // Bytes del JSON (lo que controla la base: máximo 200 KB).
