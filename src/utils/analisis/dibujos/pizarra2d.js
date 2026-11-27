@@ -4,13 +4,16 @@ import { PALETA, SUPERFICIES, validarPizarra } from '../../pizarra.js'
 import { aCancha, distanciaMetros, medidasCancha, textoMetros } from './calibracion.js'
 import { esSeguimiento } from './formato.js'
 import { posicionEn } from './interpolacion.js'
-import { subtituloEn, visibleEn } from './escena.js'
+import { esquinas, subtituloEn, visibleEn } from './escena.js'
+import { centroide, formaEn } from './zonas.js'
+import { estadosEnMetros, coberturaEnMetros, NOMBRE_ESTADO } from './lineaDefensiva.js'
 
 const [LARGO_PIZARRA, ANCHO_PIZARRA] = SUPERFICIES.completa
 const FONDO_AREA = 16.5
 const MITAD_AREA = 20.16
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-export const COLOR_HEX = Object.freeze({ amarillo: PALETA.local, blanco: '#FFFFFF', rojo: '#EF4444', azul: '#2563EB' })
+// verde y naranja: semáforo de las opciones de pase y de la línea defensiva (los mismos que --dib-verde y --dib-naranja).
+export const COLOR_HEX = Object.freeze({ amarillo: PALETA.local, blanco: '#FFFFFF', rojo: '#EF4444', azul: '#2563EB', verde: '#3ECF6E', naranja: '#F08A24' })
 export const MAXIMO_PASOS = 60
 const redondear = (v) => Math.round(v * 100) / 100
 const limitar = (v, min, max) => Math.max(min, Math.min(max, v))
@@ -64,7 +67,7 @@ export function equipoDe(obj) {
   return ['rojo', 'azul'].includes(obj?.color) ? 'rival' : 'nuestra'
 }
 
-const PREFERENCIA = { nombre: 0, ficha: 1, anillo: 2, foco: 3 }
+const PREFERENCIA = { nombre: 0, ficha: 1, anillo: 2, reflector: 3, foco: 4 }
 // Jugadoras que van a la 2D: las seguidas (salvo las marcadas «no mostrar») y las fichas de un cuadro. Si dos objetos
 // siguen a la misma jugadora nuestra, queda uno (primero «Nombre y dorsal»).
 export function jugadoras2d(dibujo) {
@@ -83,7 +86,7 @@ export function jugadoras2d(dibujo) {
 
 // Ficha que lleva el foco en t: la del foco, o la que quedó de esa misma jugadora (si se juntaron dos objetos).
 function fichaConFoco(dibujo, t, presentes) {
-  const foco = (dibujo?.objetos || []).find((o) => o.tipo === 'foco' && visibleEn(o, t))
+  const foco = (dibujo?.objetos || []).find((o) => (o.tipo === 'foco' || o.tipo === 'reflector') && visibleEn(o, t))
   if (!foco) return null
   if (presentes.has(foco.id)) return foco.id
   const misma = foco.jugadora?.id && (dibujo.objetos || []).find((o) => o.jugadora?.id === foco.jugadora.id && presentes.has(o.id))
@@ -175,28 +178,124 @@ export function elementosFijos(dibujo) {
         }),
         pose: origen, desde: obj.desde, hasta: obj.hasta,
       })
-    } else if (obj.tipo === 'zona' || obj.tipo === 'poligono') {
-      let puntos = obj.puntos
-      if (obj.tipo === 'zona') {
-        const [p, q] = obj.puntos
-        puntos = [p, { x: q.x, y: p.y }, q, { x: p.x, y: q.y }]
-      } else if (puntos.length > 16) {
-        puntos = Array.from({ length: 16 }, (_, i) => obj.puntos[Math.floor(i * obj.puntos.length / 16)])
+    } else if ((obj.tipo === 'zona' || obj.tipo === 'poligono') && !obj.claves?.length) {
+      // Las zonas que se mueven con puntos clave se arman en cada instante (vista2dEn).
+      const zona = sombraEnPizarra(obj.id, ladosZona(obj, obj.puntos).map(enPizarra), color, grosor)
+      if (!zona) continue
+      salida.push({ ...zona, desde: obj.desde, hasta: obj.hasta })
+      if (obj.texto) salida.push({ elemento: elementoBase(`${obj.id}-t`, 'texto', { color: PALETA.trazo, tamano: 2.6, texto: obj.texto.slice(0, 60) }), pose: zona.pose, desde: obj.desde, hasta: obj.hasta })
+    } else if (obj.tipo === 'opciones_pase') {
+      // El pase que se hizo (rojo) y las opciones (verde, numeradas), en el lugar del momento en que aparece.
+      const porId = new Map((dibujo.objetos || []).map((o) => [o.id, o]))
+      const lugar = (p) => {
+        const seguido = p.seguir ? porId.get(p.seguir) : null
+        const v = (seguido?.pista && posicionEn(seguido.pista.claves, obj.desde)) || p.punto
+        return enPizarra(v)
       }
-      const enCancha = puntos.map(enPizarra)
-      if (enCancha.some((p) => !p)) continue
-      const centro = pose({ x: enCancha.reduce((s, p) => s + p.x, 0) / enCancha.length, y: enCancha.reduce((s, p) => s + p.y, 0) / enCancha.length })
-      salida.push({
-        elemento: elementoBase(obj.id, 'sombra', {
-          color, grosor,
-          puntos: enCancha.map((p) => ({ x: redondear(limitar(limitar(p.x, 0, 100) - centro.x, -100, 100)), y: redondear(limitar(limitar(p.y, 0, 100) - centro.y, -100, 100)) })),
-        }),
-        pose: centro, desde: obj.desde, hasta: obj.hasta,
+      const a = lugar(obj.pasadora), r = lugar(obj.receptora)
+      if (!a || !r) continue
+      const origen = pose(a)
+      const hacia = (b) => ({ dx: redondear(limitar(limitar(b.x, 0, 100) - origen.x, -80, 80)), dy: redondear(limitar(limitar(b.y, 0, 100) - origen.y, -80, 80)) })
+      salida.push({ elemento: elementoBase(obj.id, 'pase', { color: COLOR_HEX.rojo, grosor, ...hacia(r) }), pose: origen, desde: obj.desde, hasta: obj.hasta })
+      obj.opciones.forEach((op, i) => {
+        const b = lugar(op)
+        if (!b) return
+        salida.push({ elemento: elementoBase(`${obj.id}-o${i + 1}`, 'punteada', { color: COLOR_HEX.verde, grosor, ...hacia(b) }), pose: origen, desde: obj.desde, hasta: obj.hasta })
+        salida.push({ elemento: elementoBase(`${obj.id}-n${i + 1}`, 'texto', { color: COLOR_HEX.verde, tamano: 2.8, texto: String(i + 1) }), pose: pose({ x: b.x, y: b.y - 3.5 }), desde: obj.desde, hasta: obj.hasta })
       })
     } else if (obj.tipo === 'texto') {
       const p = enPizarra(obj.puntos[0])
       if (!p) continue
       salida.push({ elemento: elementoBase(obj.id, 'texto', { color, texto: obj.texto.slice(0, 200) }), pose: pose(p), desde: obj.desde, hasta: obj.hasta })
+    }
+  }
+  return salida
+}
+
+// Esquinas de una zona (la rectangular tiene dos puntos opuestos; la libre, hasta 16 para la Pizarra).
+function ladosZona(obj, puntos) {
+  if (obj.tipo === 'zona') return esquinas(puntos)
+  if (puntos.length > 16) return Array.from({ length: 16 }, (_, i) => puntos[Math.floor(i * puntos.length / 16)])
+  return puntos
+}
+
+// Polígono de la Pizarra («sombra») con su centro como pose. puntos: en % de la Pizarra (o null si alguno no se pudo pasar).
+function sombraEnPizarra(id, enCancha, color, grosor) {
+  if (enCancha.length < 3 || enCancha.some((p) => !p)) return null
+  const centro = pose({ x: enCancha.reduce((s, p) => s + p.x, 0) / enCancha.length, y: enCancha.reduce((s, p) => s + p.y, 0) / enCancha.length })
+  return {
+    elemento: elementoBase(id, 'sombra', {
+      color, grosor,
+      puntos: enCancha.map((p) => ({ x: redondear(limitar(limitar(p.x, 0, 100) - centro.x, -100, 100)), y: redondear(limitar(limitar(p.y, 0, 100) - centro.y, -100, 100)) })),
+    }),
+    pose: centro,
+  }
+}
+
+// Dibujos de la versión 3 que cambian en cada instante: zonas con puntos clave, zona entre líneas, línea defensiva y
+// metros de las zonas. Devuelve [{ elemento, pose }] (todos visibles en t).
+function dinamicos2d(dibujo, t) {
+  const cancha = medidasCancha(dibujo?.cancha)
+  const porId = new Map((dibujo?.objetos || []).map((o) => [o.id, o]))
+  const enPizarraT = (p) => { const m = aCancha(dibujo, t, p); return m ? aPizarra(m, cancha) : null }
+  const ficha = (id) => { const o = porId.get(id); const m = o && posicionCancha(dibujo, o, t); return m ? { id, m, p: aPizarra(m, cancha) } : null }
+  const salida = []
+  const texto = (id, p, valor, color, tamano = 2.4) => salida.push({ elemento: elementoBase(id, 'texto', { color, tamano, texto: valor.slice(0, 80) }), pose: pose(p) })
+  for (const obj of dibujo?.objetos || []) {
+    if (!visibleEn(obj, t)) continue
+    const color = COLOR_HEX[obj.color] || PALETA.trazo
+    const grosor = [0.3, 0.4, 0.55][(obj.grosor || 2) - 1] || 0.4
+    if ((obj.tipo === 'zona' || obj.tipo === 'poligono') && (obj.claves?.length || obj.medidas)) {
+      const puntos = ladosZona(obj, formaEn(obj, t))
+      const enCancha = puntos.map(enPizarraT)
+      if (obj.claves?.length) {
+        const zona = sombraEnPizarra(obj.id, enCancha, color, grosor)
+        if (!zona) continue
+        salida.push(zona)
+        if (obj.texto) texto(`${obj.id}-t`, zona.pose, obj.texto, PALETA.trazo, 2.6)
+      }
+      if (obj.medidas) {
+        const m = puntos.map((p) => aCancha(dibujo, t, p))
+        const c = centroide(enCancha.filter(Boolean))
+        if (c && m.every(Boolean)) {
+          const xs = m.map((p) => p.x), ys = m.map((p) => p.y)
+          texto(`${obj.id}-m`, { x: c.x, y: c.y + 3.5 }, `${textoMetros(Math.max(...ys) - Math.min(...ys))} × ${textoMetros(Math.max(...xs) - Math.min(...xs))}`, color)
+        }
+      }
+    } else if (obj.tipo === 'zona_lineas') {
+      const a = obj.lineaA.map(ficha).filter(Boolean).sort((x, y) => x.p.y - y.p.y)
+      const b = obj.lineaB.map(ficha).filter(Boolean).sort((x, y) => y.p.y - x.p.y)
+      if (!a.length || !b.length) continue
+      const zona = sombraEnPizarra(obj.id, [...a, ...b].map((f) => f.p), color, grosor)
+      if (!zona) continue
+      salida.push(zona)
+      if (obj.texto) texto(`${obj.id}-t`, zona.pose, obj.texto, PALETA.trazo, 2.6)
+      if (obj.medidas) {
+        const prom = (l) => l.reduce((s, f) => s + f.m.x, 0) / l.length
+        texto(`${obj.id}-m`, { x: zona.pose.x, y: zona.pose.y + 3.5 }, `Entre líneas ${textoMetros(Math.abs(prom(a) - prom(b)))}`, color)
+      }
+    } else if (obj.tipo === 'linea_defensiva') {
+      // La línea une las fichas a lo ancho de la cancha; los estados y la cobertura, en metros (o a mano sin calibrar).
+      const fichas = obj.jugadoras.map(ficha).filter(Boolean).sort((x, y) => x.m.y - y.m.y)
+      if (fichas.length < 2) continue
+      const r = estadosEnMetros(fichas.map((f) => ({ id: f.id, metros: f.m })), { arco: obj.arco, umbral: obj.umbral ?? 2 })
+      const estado = Object.fromEntries(r.filas.map((f) => [f.id, f]))
+      for (let i = 1; i < fichas.length; i++) {
+        const p = pose(fichas[i - 1].p), q = fichas[i].p
+        salida.push({ elemento: elementoBase(`${obj.id}-s${i}`, 'punteada', { color, grosor, dx: redondear(limitar(q.x - p.x, -80, 80)), dy: redondear(limitar(q.y - p.y, -80, 80)) }), pose: p })
+      }
+      for (const f of fichas) {
+        const e = estado[f.id]
+        if (e.estado === 'en_linea') continue
+        texto(`${obj.id}-e-${f.id}`, { x: f.p.x, y: f.p.y - 4 }, e.estado === 'atras' ? NOMBRE_ESTADO.atras : `+${textoMetros(e.d)}`, e.estado === 'atras' ? COLOR_HEX.rojo : COLOR_HEX.naranja)
+        if (e.estado !== 'adelantada') continue
+        const filas = fichas.map((x) => ({ id: x.id, metros: x.m, estado: estado[x.id].estado }))
+        const c = coberturaEnMetros({ id: f.id, metros: f.m }, filas.filter((x) => x.id !== f.id), r)
+        const vecina = c && fichas.find((x) => x.id === c.vecina)
+        if (!vecina) continue
+        const tri = sombraEnPizarra(`${obj.id}-c-${f.id}`, [vecina.p, aPizarra(c.hueco, cancha), aPizarra(c.atras, cancha)], c.cubierto ? COLOR_HEX.verde : COLOR_HEX.rojo, 0.3)
+        if (tri) salida.push(tri)
+      }
     }
   }
   return salida
@@ -222,6 +321,12 @@ export function vista2dEn(dibujo, t, { rival = null, fichas: modo = 'dorsal', fi
     elementos.push(f.elemento)
     poses[f.elemento.id] = f.pose
     opacidades[f.elemento.id] = t >= f.desde && t <= f.hasta ? 1 : 0
+  }
+  // v3: lo que cambia en cada instante (zonas que se mueven, entre líneas, línea defensiva, metros).
+  for (const f of dinamicos2d(dibujo, t)) {
+    elementos.push(f.elemento)
+    poses[f.elemento.id] = f.pose
+    opacidades[f.elemento.id] = 1
   }
   // Línea entre dos jugadoras: con la distancia en metros en el medio.
   const porId = new Map((dibujo?.objetos || []).map((o) => [o.id, o]))

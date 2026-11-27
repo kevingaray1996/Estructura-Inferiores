@@ -15,11 +15,12 @@ export function lentoEn(lentos, t) {
 export function crearControlLento() {
   let dentro = null // id del tramo en el que está
   let previa = null // velocidad que había al entrar
-  let pedida = null // { v, ms } último pedido (YouTube tarda en aplicarlo)
+  let pedida = null // { v, antes, ms } último pedido (YouTube tarda en aplicarlo)
   const pedir = (v, velocidad, ahora) => {
     if (velocidad === v) { pedida = null; return null }
-    if (pedida && pedida.v === v && ahora - pedida.ms < 600) return null
-    pedida = { v, ms: ahora }
+    // Mientras YouTube aplica el pedido no se repite; si otro cambió la velocidad en el medio, se pide de nuevo.
+    if (pedida && pedida.v === v && pedida.antes === velocidad && ahora - pedida.ms < 600) return null
+    pedida = { v, antes: velocidad, ms: ahora }
     return v
   }
   return {

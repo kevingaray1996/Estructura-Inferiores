@@ -41,6 +41,9 @@
   --dib-sombra: rgba(0, 0, 0, 0.45);
   --dib-velo: rgba(0, 0, 0, 0.6);
   --dib-subtitulo-fondo: rgba(11, 11, 10, 0.82);
+  /* Semáforo de los dibujos nivel profesional: opciones de pase y cobertura (verde), adelantada (naranja). */
+  --dib-verde: #3ecf6e;
+  --dib-naranja: #f08a24;
 
   /* Tipografía y movimiento */
   --fuente-titulo: 'Barlow Condensed', 'Arial Narrow', Impact, sans-serif;

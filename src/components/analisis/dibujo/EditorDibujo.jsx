@@ -3,13 +3,20 @@ import { cargarYouTubeAPI } from '../../../utils/analisis/youtubeApi'
 import { aRelativo, cuadroVideo, distancia, simplificarTrazo } from '../../../utils/analisis/dibujos/coordenadas'
 import { escenaEn, transformZoom } from '../../../utils/analisis/dibujos/escena'
 import { HERRAMIENTAS, moverTiempo, objetoEnPunto, ordenTeclaEditor, tiempoPreciso } from '../../../utils/analisis/dibujos/editor'
-import { COLORES_DIBUJO, PAUSA_MAXIMA, PAUSA_MINIMA, ZOOM_MAXIMO, ZOOM_MINIMO, dibujoVacio, esSeguimiento, excedeTamano, normalizarDibujo, nuevoId } from '../../../utils/analisis/dibujos/formato'
+import {
+  COLORES_DIBUJO, FLECHAS_QUE_CRECEN, HUECO, PAUSA_MAXIMA, PAUSA_MINIMA, UMBRAL, VELOCIDADES_LENTAS, ZOOM_MAXIMO, ZOOM_MINIMO, dibujoVacio, esSeguimiento,
+  excedeTamano, normalizarDibujo, nuevoId,
+} from '../../../utils/analisis/dibujos/formato'
 import { aplicar, crearHistorial, deshacer, puedeDeshacer, puedeRehacer, reemplazar, rehacer } from '../../../utils/analisis/dibujos/historial'
 import { quitarClave, claveEn } from '../../../utils/analisis/dibujos/interpolacion'
 import {
-  NOMBRE_TIPO, actualizarEnLista, actualizarObjeto, agregarObjeto, agregarPausa, agregarSubtitulo, borrarDeLista, borrarObjeto,
-  crearObjeto, duplicarObjeto, fichaASeguimiento, marcarPosicion, moverObjeto,
+  NOMBRE_TIPO, actualizarEnLista, actualizarObjeto, agarresDe, agregarObjeto, agregarOpcion, agregarPausa, agregarSubtitulo, borrarDeLista, borrarObjeto,
+  crearObjeto, duplicarObjeto, fichaASeguimiento, marcarPosicion, moverAgarre, moverEn, pausaExplicativa,
 } from '../../../utils/analisis/dibujos/operaciones'
+import { agregarLento, crearControlLento, textoVelocidad } from '../../../utils/analisis/dibujos/lentos'
+import { aplicarEstilo, conEstilo, estiloDeObjeto } from '../../../utils/analisis/dibujos/estilo'
+import { animarZona, focoZonaEn, ryCirculo } from '../../../utils/analisis/dibujos/zonas'
+import { NOMBRE_ESTADO, arcoProbable } from '../../../utils/analisis/dibujos/lineaDefensiva'
 import { crearEstadoPausas, pasoPausas } from '../../../utils/analisis/dibujos/pausas'
 import { crearRelojSuave } from '../../../utils/analisis/dibujos/reloj'
 import {
@@ -34,11 +41,20 @@ const GUIAS = {
   calibracion: { pasos: GUIA_CALIBRACION, clave: CLAVE_GUIA_CALIBRACION, nombre: 'Guía: calibrar la cancha' },
 }
 
-const DOS_PUNTOS = ['pase_bajo', 'pase_alto', 'linea', 'zona']
+const DOS_PUNTOS = ['pase_bajo', 'pase_alto', 'linea', 'zona', 'foco_zona']
 const NOMBRE_COLOR = { amarillo: 'Amarillo', blanco: 'Blanco', rojo: 'Rojo', azul: 'Azul' }
 const NOMBRE_GROSOR = { 1: 'Fino', 2: 'Medio', 3: 'Grueso' }
-// Herramientas que abren la guía de seguimiento la primera vez (las que siguen a una jugadora y la que las une).
-const ABREN_GUIA_SEGUIMIENTO = ['anillo', 'foco', 'nombre', 'enlace']
+// Herramientas que abren la guía de seguimiento la primera vez (las que siguen a una jugadora y las que las usan).
+const ABREN_GUIA_SEGUIMIENTO = ['anillo', 'foco', 'nombre', 'reflector', 'enlace', 'zona_lineas', 'linea_defensiva']
+// Herramientas que se arman tocando jugadoras ya seguidas (en grupo).
+const EN_GRUPO = ['zona_lineas', 'linea_defensiva']
+const NOMBRE_MODO = { entera: 'Entera', rapida: 'Rápida', normal: 'Normal', lenta: 'Lenta', real: 'Como el pase real' }
+const ASPECTO = 16 / 9
+const ETIQUETA_ACCION = {
+  pausa: 'Agregar pausa en este cuadro (tecla P)', paso: 'Agregar paso con subtítulo desde este cuadro (tecla S)',
+  lento: 'Cámara lenta desde este cuadro (tecla J)', explicar: 'Pausa explicativa en este cuadro (tecla X)',
+}
+const nombreJugadora = (j) => (j ? [j.dorsal ? `#${j.dorsal}` : '', j.nombre || (j.rival ? 'Rival' : '')].filter(Boolean).join(' ') : '')
 const MANTENER_MS = 450
 const AVISO_FICHA = 'La ficha queda quieta. Para que siga a la jugadora, tocala y elegí «Seguir a esta jugadora».'
 
@@ -53,7 +69,13 @@ function leer(player) {
 // onGuardar(dibujo) → Promise<{ error? }>. onCerrar().
 // Etapa 5: rival (equipo de Equipos, para la camiseta en la 2D), canchaPartido ({ largo, ancho } de otro clip del partido),
 // biblioteca ({ cargarCarpetas, guardar }) para «Guardar en Biblioteca de jugadas».
-export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoInicial = '', jugadoras = [], rival = null, canchaPartido = null, biblioteca = null, onGuardar, onCerrar }) {
+// Dibujos nivel profesional (docs/analisis-dibujos-pro.md): miEstilo ({ tipo: estilo }) y onGuardarEstilo(estilo) →
+// Promise<{ soloNavegador? }> para «Mi estilo»; plantilla ({ tipo: 'opciones_pase', pasadora: { jugadora }, receptora })
+// para ofrecer «Opciones de pase» al abrir un «Pase incorrecto».
+export default function EditorDibujo({
+  clip, dibujoInicial = null, aviso: avisoInicial = '', jugadoras = [], rival = null, canchaPartido = null, biblioteca = null, onGuardar, onCerrar,
+  miEstilo = null, onGuardarEstilo = null, plantilla = null,
+}) {
   const rango = useMemo(() => ({ inicio: Number(clip.inicio), fin: Number(clip.fin) }), [clip.inicio, clip.fin])
   const [hist, setHist] = useState(() => crearHistorial({ ...(dibujoInicial || dibujoVacio(rango)), clip: rango }))
   const dibujo = hist.presente
@@ -86,6 +108,13 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
   const [agregandoFicha, setAgregandoFicha] = useState(false)
   const [fichas2d, setFichas2d] = useState(() => (leerPreferencia(CLAVE_FICHAS_2D) === 'foto' ? 'foto' : 'dorsal'))
   const [ventana, setVentana] = useState(null) // 'biblioteca' | { tipo: 'exportar', doc, fotos }
+  // Dibujos nivel profesional: herramientas de varios toques (opciones de pase; zona entre líneas y línea defensiva, en
+  // grupo), pausa explicativa esperando el toque, lo que lleva la pausa en la Vista previa y la plantilla del pase.
+  const [flujo, setFlujo] = useState(null)
+  const [explicando, setExplicando] = useState(false)
+  const [animPausa, setAnimPausa] = useState(null)
+  const [ofrecerPlantilla, setOfrecerPlantilla] = useState(plantilla?.tipo === 'opciones_pase')
+  const lentoRef = useRef(null)
   const escribiendoRef = useRef(null)
   useLayoutEffect(() => { escribiendoRef.current = escribiendo })
   const pistaTimerRef = useRef(null)
@@ -104,7 +133,8 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
   const objElegido = elegido?.tipo === 'objeto' ? dibujo.objetos.find((o) => o.id === elegido.id) || null : null
   // Jugadora que se está siguiendo (si se deshizo su primer toque, ya no está y el próximo toque la crea de nuevo).
   const objSeguido = seguir?.id ? dibujo.objetos.find((o) => o.id === seguir.id && o.tipo === seguir.tipo) || null : null
-  const escena = useMemo(() => escenaEn(dibujo, tiempo, { elegidoId: vistaPrevia ? null : objElegido?.id, animar: vistaPrevia }), [dibujo, tiempo, vistaPrevia, objElegido?.id])
+  const escena = useMemo(() => escenaEn(dibujo, tiempo, { elegidoId: vistaPrevia ? null : objElegido?.id, animar: vistaPrevia, pausa: vistaPrevia ? animPausa : null }),
+    [dibujo, tiempo, vistaPrevia, objElegido?.id, animPausa])
 
   const cambiar = useCallback((fn) => setHist((h) => aplicar(h, fn(h.presente))), [])
   const dibujoRef = useRef(dibujo)
@@ -154,6 +184,8 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
   useEffect(() => {
     if (!listo) return undefined
     const reloj = crearRelojSuave()
+    const lento = crearControlLento()
+    lentoRef.current = { lento, player: () => playerRef.current }
     let pausas = crearEstadoPausas()
     let reinicio = vistaRef.current.reinicio
     let cuadroId = 0
@@ -170,6 +202,9 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
         else { setTiempo(forzado.t); return }
       }
       let t = reloj.muestra(l.t, { reproduciendo: l.reproduciendo, velocidad: l.velocidad, ahora })
+      // Cámara lenta (v3): solo en la Vista previa; al salir del tramo vuelve la velocidad que había.
+      const velocidad = lento.paso({ t, reproduciendo: l.reproduciendo, velocidad: l.velocidad, ahora }, vistaRef.current.activa ? dibujoRef.current.lentos : [])
+      if (velocidad !== null) { try { player.setPlaybackRate?.(velocidad) } catch { /* nada */ } }
       if (vistaRef.current.activa) {
         if (reinicio !== vistaRef.current.reinicio) { pausas = crearEstadoPausas(); reinicio = vistaRef.current.reinicio }
         const r = pasoPausas(pausas, { t, reproduciendo: l.reproduciendo, ahora }, dibujoRef.current.pausas)
@@ -180,6 +215,9 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
         } catch { /* nada */ }
         t = r.tiempo
         setPausaRestante(r.pausa ? Math.ceil(r.pausa.restante) : null)
+        // Las animaciones siguen durante la pausa (unas 30 veces por segundo).
+        const anim = r.pausa ? { t: r.pausa.t, transcurrido: Math.round(r.pausa.transcurrido * 30) / 30 } : null
+        setAnimPausa((v) => (v?.transcurrido === anim?.transcurrido && v?.t === anim?.t ? v : anim))
       }
       if (t >= rango.fin && l.reproduciendo) {
         try { player.pauseVideo(); player.seekTo(rango.fin, true) } catch { /* nada */ }
@@ -217,8 +255,11 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
     if (!player) return
     if (vistaRef.current.activa) {
       vistaRef.current.activa = false
-      setVistaPrevia(false); setPausaRestante(null)
+      setVistaPrevia(false); setPausaRestante(null); setAnimPausa(null)
       try { player.pauseVideo() } catch { /* nada */ }
+      // Si estaba en un tramo lento, vuelve la velocidad que había.
+      const v = lentoRef.current?.lento.salir()
+      if (v !== null && v !== undefined) { try { player.setPlaybackRate?.(v) } catch { /* nada */ } }
       return
     }
     setBorrador(null); setEnlacePendiente(null)
@@ -228,22 +269,43 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
   }, [rango])
 
   // ---------- Acciones ----------
+  // Cada dibujo nuevo arranca con «Mi estilo» de su herramienta (si hay), o con el último color y grosor usados.
   const crear = useCallback((tipo, extra = {}) => {
     const d = dibujoRef.current
-    const obj = { ...crearObjeto(tipo, { t: tiempo, clip: rango, color: estilo.color, grosor: estilo.grosor, usados: d.objetos.map((o) => o.id), ...extra }), ...(extra.campos || {}) }
+    const propio = miEstilo?.[tipo]
+    const base = crearObjeto(tipo, { t: tiempo, clip: rango, color: propio?.color || estilo.color, grosor: propio?.grosor || estilo.grosor, usados: d.objetos.map((o) => o.id), ...extra })
+    const obj = { ...aplicarEstilo(base, miEstilo), ...(extra.campos || {}) }
     const nuevo = agregarObjeto(d, obj)
     dibujoRef.current = nuevo
     setHist((h) => aplicar(h, nuevo))
     setElegido({ tipo: 'objeto', id: obj.id })
     return obj.id
-  }, [tiempo, rango, estilo])
+  }, [tiempo, rango, estilo, miEstilo])
+
+  // Reemplaza un objeto entero (cuando hay que sacar campos, por ejemplo las claves de una zona).
+  const reemplazarObjeto = useCallback((id, fn) => cambiar((d) => ({ ...d, objetos: d.objetos.map((o) => (o.id === id ? fn(o) : o)) })), [cambiar])
 
   const borrarElegido = useCallback(() => {
     if (!elegido) return
     if (elegido.tipo === 'objeto') cambiar((d) => borrarObjeto(d, elegido.id))
+    else if (elegido.tipo === 'lento') cambiar((d) => (d.lentos ? borrarDeLista(d, 'lentos', elegido.id) : d))
     else cambiar((d) => borrarDeLista(d, elegido.tipo === 'pausa' ? 'pausas' : 'subtitulos', elegido.id))
     setElegido(null)
   }, [elegido, cambiar])
+
+  // Cámara lenta desde este cuadro (tecla J): 2 s a 0,5x; se ajusta en la línea de tiempo y en Propiedades.
+  const nuevoLento = useCallback(() => {
+    const r = agregarLento(dibujoRef.current, tiempo, { clip: rango })
+    if (r.id) { dibujoRef.current = r.dibujo; setHist((h) => aplicar(h, r.dibujo)); setElegido({ tipo: 'lento', id: r.id }) }
+    else setMensaje({ tipo: 'aviso', texto: 'Acá ya hay un tramo en cámara lenta (o queda muy poco clip). Mové el cursor a otro momento.' })
+  }, [tiempo, rango])
+
+  // Pausa explicativa (tecla X): espera un toque sobre la jugadora o el punto.
+  const iniciarExplicacion = useCallback(() => {
+    setHerramienta('seleccionar'); setSeguir(null); setFlujo(null); setBorrador(null); setEnlacePendiente(null)
+    setExplicando(true)
+    setMensaje(null)
+  }, [])
 
   const duplicar = useCallback(() => {
     if (elegido?.tipo !== 'objeto') return
@@ -307,11 +369,55 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
 
   // Elegir una herramienta. Las que siguen a una jugadora entran en «Modo seguimiento» (si ya hay una elegida del
   // mismo tipo, se sigue marcando esa). La primera vez se abre la guía de seguimiento.
-  const elegirHerramienta = useCallback((id) => {
-    setHerramienta(id); setBorrador(null); setEnlacePendiente(null); setPista(null)
+  const elegirHerramienta = useCallback((id, inicioFlujo = null) => {
+    setHerramienta(id); setBorrador(null); setEnlacePendiente(null); setPista(null); setExplicando(false)
     setSeguir(esSeguimiento(id) ? { tipo: id, id: objElegido?.tipo === id ? objElegido.id : null, marcas: [] } : null)
+    // Herramientas de varios toques: opciones de pase (pasadora, receptora, opciones) y en grupo (zona entre líneas,
+    // línea defensiva).
+    if (id === 'opciones_pase') setFlujo(inicioFlujo || { tipo: 'opciones', paso: 'pasadora' })
+    else if (EN_GRUPO.includes(id)) setFlujo({ tipo: 'grupo', herramienta: id, paso: 'A', A: [], B: [] })
+    else setFlujo(null)
     if (ABREN_GUIA_SEGUIMIENTO.includes(id) && !leerPreferencia(CLAVE_GUIA_SEGUIMIENTO)) setGuia('seguimiento')
   }, [objElegido])
+
+  // Enter (o «Listo») en una herramienta de varios toques. Devuelve true si había algo que terminar.
+  const avanzarFlujo = useCallback(() => {
+    const f = flujo
+    if (f?.tipo === 'grupo') {
+      if (f.herramienta === 'zona_lineas' && f.paso === 'A') {
+        if (!f.A.length) { setMensaje({ tipo: 'aviso', texto: 'Tocá al menos una jugadora de la primera línea.' }); return true }
+        setFlujo({ ...f, paso: 'B' }); setMensaje(null); return true
+      }
+      const d = dibujoRef.current
+      if (f.herramienta === 'zona_lineas') {
+        if (!f.B.length || f.A.length + f.B.length < 3) { setMensaje({ tipo: 'aviso', texto: 'Hacen falta al menos tres jugadoras entre las dos líneas (y una en cada una).' }); return true }
+        elegirHerramienta('seleccionar')
+        crear('zona_lineas', { campos: { lineaA: f.A, lineaB: f.B } })
+        return true
+      }
+      if (f.A.length < 2) { setMensaje({ tipo: 'aviso', texto: 'Para la línea hacen falta al menos dos jugadoras.' }); return true }
+      // El arco que defienden se elige solo (el más cercano al promedio) y se cambia en Propiedades.
+      const pos = f.A.map((id) => escena.elementos.find((e) => e.obj.id === id)?.posicion).filter(Boolean)
+      const metros = pos.map((p) => aCancha(d, tiempo, p))
+      const arco = arcoProbable({ metros: metros.every(Boolean) ? metros : null, video: pos, largo: medidasCancha(d.cancha).largo })
+      elegirHerramienta('seleccionar')
+      crear('linea_defensiva', { campos: { jugadoras: f.A, arco } })
+      return true
+    }
+    if (f?.tipo === 'opciones' && f.paso === 'opciones') {
+      const id = f.id
+      elegirHerramienta('seleccionar')
+      setElegido({ tipo: 'objeto', id })
+      return true
+    }
+    return false
+  }, [flujo, escena, tiempo, crear, elegirHerramienta])
+
+  // «Empezar con Opciones de pase» (plantilla del pase incorrecto): con los nombres que ya tiene la acción.
+  const empezarPlantilla = useCallback(() => {
+    setOfrecerPlantilla(false)
+    elegirHerramienta('opciones_pase', { tipo: 'opciones', paso: 'pasadora', plantilla })
+  }, [elegirHerramienta, plantilla])
 
   // Deshacer: en modo seguimiento también vuelve el video al momento del toque que se borró.
   const deshacerAccion = useCallback(() => {
@@ -462,6 +568,10 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
       if (seguir && (orden === 'cerrarPoligono' || orden === 'escape') && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
         return orden === 'cerrarPoligono' ? terminarSeguimiento() : elegirHerramienta('seleccionar')
       }
+      if (orden === 'cerrarPoligono' && avanzarFlujo()) return
+      if (orden === 'escape' && (flujo || explicando)) { setExplicando(false); elegirHerramienta('seleccionar'); return }
+      if (orden === 'lento') return nuevoLento()
+      if (orden === 'explicar') return iniciarExplicacion()
       if (orden === 'rehacer') { setHist(rehacer); return }
       if (orden === 'duplicar') return duplicar()
       if (orden === 'borrar') return borrarElegido()
@@ -488,7 +598,7 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
     window.addEventListener('keydown', tecla)
     return () => window.removeEventListener('keydown', tecla)
   }, [duplicar, borrarElegido, alternarVistaPrevia, reproducir, irA, rango, nuevaPausa, nuevoPaso, cerrarPoligono, borrador, enlacePendiente, herramienta, tiempo,
-    deshacerAccion, seguir, terminarSeguimiento, elegirHerramienta, calibrando, agregandoFicha])
+    deshacerAccion, seguir, terminarSeguimiento, elegirHerramienta, calibrando, agregandoFicha, avanzarFlujo, flujo, explicando, nuevoLento, iniciarExplicacion])
 
   // Foco en la ventana al abrir; el resto de la app queda detrás.
   useEffect(() => {
@@ -528,11 +638,67 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
       setMensaje({ tipo: 'aviso', texto: AVISO_FICHA })
       return
     }
+    // Seguidas visibles en este cuadro (para tocar a una jugadora en las herramientas que las usan).
+    const seguidaEn = (q) => objetoEnPunto(escena.elementos.filter((x) => esSeguimiento(x.obj.tipo) && !x.fuera), q)
+    if (explicando) {
+      // Pausa explicativa: pausa, foco (sobre la seguida que se tocó o en ese punto) y subtítulo listo para escribir.
+      const el = seguidaEn(p)
+      const r = pausaExplicativa(dibujoRef.current, tiempo, { punto: p, seguida: el?.obj || null, clip: rango })
+      dibujoRef.current = r.dibujo
+      setHist((h) => aplicar(h, r.dibujo))
+      setExplicando(false)
+      setElegido({ tipo: 'subtitulo', id: r.subtitulo })
+      requestAnimationFrame(() => textoRef.current?.select())
+      setMensaje({ tipo: 'aviso', texto: `Listo: pausa de 3 s, foco${el ? ' sobre la jugadora' : ' en ese punto'} y subtítulo. Escribí la explicación en Propiedades.` })
+      return
+    }
     if (herramienta === 'seleccionar') {
+      // Primero los agarres del dibujo elegido: estirar una esquina o mover una punta.
+      if (objElegido && !esSeguimiento(objElegido.tipo)) {
+        const i = agarresDe(objElegido, tiempo).findIndex((q) => Math.hypot(q.x - p.x, (q.y - p.y) / ASPECTO) < 0.012)
+        if (i >= 0) { arrastreRef.current = { modo: 'agarre', id: objElegido.id, indice: i, ultimo: p, empezado: false }; return }
+      }
       const el = objetoEnPunto(escena.elementos, p)
       if (!el) { setElegido(null); return }
       setElegido({ tipo: 'objeto', id: el.obj.id })
       arrastreRef.current = { modo: esSeguimiento(el.obj.tipo) ? 'clave' : 'mover', id: el.obj.id, ultimo: p, empezado: false }
+      return
+    }
+    if (herramienta === 'opciones_pase') {
+      const f = flujo?.tipo === 'opciones' ? flujo : { tipo: 'opciones', paso: 'pasadora' }
+      const el = seguidaEn(p)
+      // Si se toca a una jugadora seguida, la sigue; si no, queda en el punto tocado.
+      const participante = (jugadora) => {
+        const r = { punto: el?.posicion || p, seguir: el?.obj.id || null }
+        const j = jugadora || el?.obj.jugadora
+        if (j) r.jugadora = j
+        return r
+      }
+      if (f.paso === 'pasadora') { setFlujo({ ...f, paso: 'receptora', pasadora: participante(f.plantilla?.pasadora?.jugadora) }); return }
+      if (f.paso === 'receptora') {
+        const id = crear('opciones_pase', { campos: { pasadora: f.pasadora, receptora: participante(f.plantilla?.receptora?.jugadora) } })
+        setFlujo({ ...f, paso: 'opciones', id, n: 0 })
+        return
+      }
+      const obj = dibujoRef.current.objetos.find((o) => o.id === f.id)
+      if (!obj) { setFlujo({ tipo: 'opciones', paso: 'pasadora' }); return }
+      if (obj.opciones.length >= 5) { setMensaje({ tipo: 'aviso', texto: 'Hasta 5 opciones. Tocá «Listo» (o Enter) para terminar.' }); return }
+      const nuevo = agregarOpcion(dibujoRef.current, f.id, participante(null))
+      dibujoRef.current = nuevo
+      setHist((h) => aplicar(h, nuevo))
+      setFlujo({ ...f, n: obj.opciones.length + 1 })
+      return
+    }
+    if (EN_GRUPO.includes(herramienta)) {
+      // Zona entre líneas y línea defensiva: se tocan jugadoras ya seguidas (tocarla otra vez la saca).
+      const el = seguidaEn(p)
+      if (!el) { setMensaje({ tipo: 'aviso', texto: 'Tocá una jugadora que ya esté seguida (con anillo, foco, reflector o nombre). Si todavía no la seguiste, hacelo primero con una de esas herramientas.' }); return }
+      const f = flujo?.tipo === 'grupo' && flujo.herramienta === herramienta ? flujo : { tipo: 'grupo', herramienta, paso: 'A', A: [], B: [] }
+      const id = el.obj.id
+      const otra = f.paso === 'A' ? f.B : f.A
+      if (otra.includes(id)) { setMensaje({ tipo: 'aviso', texto: 'Esa jugadora ya está en la otra línea.' }); return }
+      const lista = f[f.paso]
+      setFlujo({ ...f, [f.paso]: lista.includes(id) ? lista.filter((x) => x !== id) : [...lista, id].slice(0, 11) })
       return
     }
     if (DOS_PUNTOS.includes(herramienta)) {
@@ -604,8 +770,15 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
     if (a.modo === 'mover') {
       const dx = p.x - a.ultimo.x, dy = p.y - a.ultimo.y
       if (!a.empezado && Math.hypot(dx, dy) < 0.004) return
-      setHist((h) => (a.empezado ? reemplazar : aplicar)(h, moverObjeto(h.presente, a.id, dx, dy)))
+      // Las zonas y focos que se mueven con puntos clave guardan la forma en este cuadro.
+      setHist((h) => (a.empezado ? reemplazar : aplicar)(h, moverEn(h.presente, a.id, tiempo, dx, dy)))
       arrastreRef.current = { ...a, ultimo: p, empezado: true }
+      return
+    }
+    if (a.modo === 'agarre') {
+      if (!a.empezado && distancia(p, a.ultimo) < 0.003) return
+      setHist((h) => (a.empezado ? reemplazar : aplicar)(h, moverAgarre(h.presente, a.id, tiempo, a.indice, p)))
+      arrastreRef.current = { ...a, empezado: true }
       return
     }
     if (a.modo === 'clave') {
@@ -627,8 +800,9 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
     if (!a || !borrador) return
     if (a.modo === 'trazar') {
       const [p, q] = borrador.puntos
-      // Si no arrastró, queda esperando el segundo clic.
+      // Si no arrastró, queda esperando el segundo clic (el foco en una zona, con un clic, queda redondo).
       if (distancia(p, q) > 0.012) { crear(borrador.tipo, { puntos: [p, q] }); setBorrador(null) }
+      else if (borrador.tipo === 'foco_zona') { crear('foco_zona', { puntos: [p] }); setBorrador(null) }
       else setBorrador({ ...borrador, esperando: true })
     } else if (a.modo === 'trazo') {
       const puntos = simplificarTrazo(borrador.puntos)
@@ -638,8 +812,13 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
   }
 
   // Borrador visible (todavía no es parte del dibujo).
-  const elBorrador = borrador && (borrador.puntos.length >= 2 || borrador.tipo === 'poligono')
-    ? { obj: { ...borrador, id: null, color: estilo.color, grosor: estilo.grosor, puntos: borrador.puntos }, escala: 1 } : null
+  const elBorrador = borrador?.tipo === 'foco_zona' && borrador.puntos.length >= 2 && distancia(borrador.puntos[0], borrador.puntos[1]) > 0.012
+    ? (() => {
+      const [a, b] = borrador.puntos
+      return { obj: { id: null, tipo: 'foco_zona', forma: 'elipse', color: 'blanco', grosor: estilo.grosor }, forma: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, rx: Math.abs(b.x - a.x) / 2, ry: Math.abs(b.y - a.y) / 2 }, encendido: 1 }
+    })()
+    : borrador && borrador.tipo !== 'foco_zona' && (borrador.puntos.length >= 2 || borrador.tipo === 'poligono')
+      ? { obj: { ...borrador, id: null, color: estilo.color, grosor: estilo.grosor, puntos: borrador.puntos }, escala: 1 } : null
   const zoomVista = vistaPrevia ? transformZoom(escena.zoom) : transformZoom(null)
   const zoomElegido = objElegido?.tipo === 'zoom' ? objElegido : null
 
@@ -657,10 +836,24 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
       : agregandoFicha ? `Tocá en el video a la jugadora (a la altura de los pies). ${AVISO_FICHA}`
         : 'Pizarra 2D: arrastrá una ficha para corregir su lugar solo en la 2D (el video no cambia). Tocá una ficha para elegir quién es.')
     : instruccion({
-      herramienta, borrador, enlacePendiente, vistaPrevia,
+      herramienta, borrador, enlacePendiente, vistaPrevia, explicando,
       fueraDeTiempo: objElegido && !['zoom', 'ficha'].includes(objElegido.tipo) && (tiempo < objElegido.desde || tiempo > objElegido.hasta) ? objElegido : null,
+      opciones: flujo?.tipo === 'opciones'
+        ? { paso: flujo.paso, n: flujo.n || 0, pasadora: nombreJugadora(flujo.plantilla?.pasadora?.jugadora), receptora: nombreJugadora(flujo.plantilla?.receptora?.jugadora) }
+        : null,
+      grupo: flujo?.tipo === 'grupo' ? { paso: flujo.paso, n: flujo[flujo.paso].length } : null,
     })
   const calibrado = estaCalibrado(dibujo)
+  // Herramientas de varios toques: botón «Listo» (o «Siguiente línea») al lado de la instrucción.
+  const botonFlujo = flujo?.tipo === 'grupo'
+    ? (flujo.herramienta === 'zona_lineas' && flujo.paso === 'A' ? 'Siguiente línea (Enter)' : 'Listo (Enter)')
+    : flujo?.tipo === 'opciones' && flujo.paso === 'opciones' ? 'Listo (Enter)' : null
+  // Jugadoras ya elegidas en el grupo (se marcan en el video).
+  const marcadasGrupo = flujo?.tipo === 'grupo'
+    ? [...flujo.A.map((id) => ({ id, linea: 'A' })), ...flujo.B.map((id) => ({ id, linea: 'B' }))]
+      .map((m) => ({ ...m, p: escena.elementos.find((e) => e.obj.id === m.id)?.posicion })).filter((m) => m.p)
+    : []
+  if (flujo?.tipo === 'opciones' && flujo.pasadora && flujo.paso === 'receptora') marcadasGrupo.push({ id: 'pasadora', linea: 'A', p: flujo.pasadora.punto })
 
   return (
     <div ref={raizRef} className="dib-editor" role="dialog" aria-modal="true" aria-label={`Dibujar: ${clip.titulo}`} tabIndex={-1}>
@@ -681,7 +874,7 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
       <nav className="dib-herramientas" aria-label="Herramientas" data-guia="herramientas">
         {HERRAMIENTAS.map((h, i) => (
           <div key={h.id} style={{ display: 'contents' }}>
-            {(i === 1 || i === 8) && <span className="dib-separador" aria-hidden="true" />}
+            {i > 0 && HERRAMIENTAS[i - 1].grupo !== h.grupo && <span className="dib-separador" aria-hidden="true" />}
             <button type="button" className="dib-herramienta" aria-pressed={herramienta === h.id} disabled={vistaPrevia || modo === '2d'} data-herramienta={h.id}
               aria-label={`${h.texto} (tecla ${h.tecla})`} aria-keyshortcuts={h.tecla} {...eventosPista(h.id)}
               onClick={() => elegirHerramienta(h.id)}>
@@ -690,13 +883,16 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
           </div>
         ))}
         <span className="dib-separador" aria-hidden="true" />
-        {ACCIONES_RAPIDAS.map((h) => (
-          <button key={h.id} type="button" className="dib-herramienta" disabled={vistaPrevia || modo === '2d'} data-herramienta={h.id}
-            aria-label={h.id === 'pausa' ? 'Agregar pausa en este cuadro (tecla P)' : 'Agregar paso con subtítulo desde este cuadro (tecla S)'}
-            aria-keyshortcuts={h.tecla} {...eventosPista(h.id)} onClick={h.id === 'pausa' ? nuevaPausa : nuevoPaso}>
-            <span aria-hidden="true">{h.icono}</span><kbd aria-hidden="true">{h.tecla}</kbd>
-          </button>
-        ))}
+        <div className="dib-acciones" data-guia="acciones">
+          {ACCIONES_RAPIDAS.map((h) => (
+            <button key={h.id} type="button" className="dib-herramienta" disabled={vistaPrevia || modo === '2d'} data-herramienta={h.id}
+              aria-label={ETIQUETA_ACCION[h.id]} aria-pressed={h.id === 'explicar' ? explicando : undefined}
+              aria-keyshortcuts={h.tecla} {...eventosPista(h.id)}
+              onClick={{ pausa: nuevaPausa, paso: nuevoPaso, lento: nuevoLento, explicar: iniciarExplicacion }[h.id]}>
+              <span aria-hidden="true">{h.icono}</span><kbd aria-hidden="true">{h.tecla}</kbd>
+            </button>
+          ))}
+        </div>
       </nav>
 
       <main className="dib-centro">
@@ -715,7 +911,19 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
             <button type="button" className="dib-boton dib-principal" data-guia="listo" onClick={terminarSeguimiento}>Listo (Enter)</button>
           </div>
         ) : (
-          <p className="dib-instruccion" aria-live="polite">{textoInstruccion}</p>
+          <div className="dib-instruccion-fila">
+            <p className="dib-instruccion" aria-live="polite">{textoInstruccion}</p>
+            {botonFlujo && !vistaPrevia && <button type="button" className="dib-boton dib-principal" onClick={avanzarFlujo}>{botonFlujo}</button>}
+            {(flujo || explicando) && !vistaPrevia && <button type="button" className="dib-boton" onClick={() => elegirHerramienta('seleccionar')}>Cancelar (Esc)</button>}
+            {ofrecerPlantilla && !vistaPrevia && (
+              <div className="dib-plantilla" role="status">
+                <p><strong>Es un pase incorrecto.</strong> ¿Empezás con «Opciones de pase»? Vas a tocar a {nombreJugadora(plantilla?.pasadora?.jugadora) || 'la que tenía la pelota'},
+                  a {nombreJugadora(plantilla?.receptora?.jugadora) || 'la que recibió'} y después a las compañeras que estaban mejor.</p>
+                <button type="button" className="dib-boton dib-principal" onClick={empezarPlantilla}>Empezar con Opciones de pase</button>
+                <button type="button" className="dib-boton" onClick={() => setOfrecerPlantilla(false)}>Ahora no</button>
+              </div>
+            )}
+          </div>
         )}
         <div className="dib-escenario">
           <div className={modo === '2d' ? 'dib-dos' : 'dib-dos dib-uno'}>
@@ -723,7 +931,18 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
           <div ref={videoRef} className="dib-video" data-guia="video" style={{ width: 'min(100cqw, calc(100cqh * 16 / 9))' }}>
             <div className="dib-zoom" style={zoomVista}>
               <div ref={zonaRef} className="dib-zoom dib-sin-interfaz" />
-              <CapaDibujos escena={escena} ancho={ancho} alto={alto} cuadro={cuadro} elegidoId={vistaPrevia ? null : objElegido?.id} borrador={elBorrador} />
+              <CapaDibujos escena={escena} ancho={ancho} alto={alto} cuadro={cuadro} elegidoId={vistaPrevia ? null : objElegido?.id} borrador={elBorrador} tiempo={tiempo} />
+              {/* Jugadoras ya elegidas en una herramienta de grupo (o la pasadora): marcadas para no perderlas. */}
+              {marcadasGrupo.length > 0 && !vistaPrevia && ancho > 0 && (
+                <svg className="dib-rastro-guia" width={ancho} height={alto} aria-hidden="true">
+                  <g transform={`translate(${cuadro.izquierda} ${cuadro.arriba})`}>
+                    {marcadasGrupo.map((m) => (
+                      <circle key={`${m.linea}-${m.id}`} data-marcada={m.linea} cx={m.p.x * cuadro.ancho} cy={m.p.y * cuadro.alto} r={14}
+                        style={{ fill: 'none', stroke: m.linea === 'A' ? 'var(--dib-amarillo)' : 'var(--dib-blanco)', strokeWidth: 3, strokeDasharray: '5 4' }} />
+                    ))}
+                  </g>
+                </svg>
+              )}
               {zoomElegido && !vistaPrevia && (
                 <span aria-hidden="true" style={{
                   position: 'absolute', left: cuadro.izquierda + zoomElegido.objetivo.x * cuadro.ancho - 14, top: cuadro.arriba + zoomElegido.objetivo.y * cuadro.alto - 14,
@@ -744,6 +963,7 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
             </div>
             {escena.subtitulo && <p className="dib-subtitulo" style={{ bottom: `${cuadro.arriba + 12}px` }}>{escena.subtitulo}</p>}
             {pausaRestante !== null && <p className="dib-pausa" role="status">⏸ {pausaRestante}</p>}
+            {vistaPrevia && escena.lento && pausaRestante === null && <p className="dib-lento" role="status">Cámara lenta {textoVelocidad(escena.lento)}</p>}
             <div ref={lienzoRef} className="dib-lienzo" data-herramienta={herramienta} data-vista-previa={vistaPrevia ? 'si' : undefined}
               onPointerDown={abajo} onPointerMove={mover} onPointerUp={arriba} onPointerCancel={() => { arrastreRef.current = null; setBorrador(null) }}
               onDoubleClick={() => { if (herramienta === 'poligono') cerrarPoligono() }} />
@@ -824,6 +1044,23 @@ export default function EditorDibujo({ clip, dibujoInicial = null, aviso: avisoI
             onQuitarAjustes={() => objElegido && cambiar((d) => quitarAjustes(d, objElegido.id))}
             onSeguirFicha={seguirFicha}
             onDuplicar={duplicar} onBorrar={borrarElegido} onIr={irA}
+            calibrado={calibrado} elemento={objElegido ? escena.elementos.find((e) => e.obj.id === objElegido.id) || null : null}
+            onReemplazar={(fn) => objElegido && reemplazarObjeto(objElegido.id, fn)}
+            onAgregarOpcion={() => objElegido && elegirHerramienta('opciones_pase', { tipo: 'opciones', paso: 'opciones', id: objElegido.id, n: objElegido.opciones.length })}
+            onSubtitulo={(desde, hasta, texto) => {
+              const r = agregarSubtitulo(dibujoRef.current, desde, hasta, texto)
+              dibujoRef.current = r.dibujo; setHist((h) => aplicar(h, r.dibujo)); setElegido({ tipo: 'subtitulo', id: r.id })
+              requestAnimationFrame(() => textoRef.current?.select())
+            }}
+            miEstilo={miEstilo}
+            onGuardarEstilo={onGuardarEstilo ? async (entrada) => {
+              if (!objElegido) return
+              const r = await onGuardarEstilo(conEstilo(miEstilo, objElegido.tipo, entrada))
+              const nombre = NOMBRE_TIPO[objElegido.tipo]
+              setMensaje({ tipo: 'aviso', texto: entrada
+                ? (r?.soloNavegador ? `«${nombre}»: estilo guardado solo en este navegador (no se pudo guardar en tu usuario; revisá la conexión).` : `«${nombre}»: estilo guardado en tu usuario. Los próximos salen así.`)
+                : `«${nombre}» vuelve al estilo de siempre.` })
+            } : null}
           />
         </div>
         <section className="dib-campo" aria-label="Pasos" data-guia="pasos">
@@ -882,7 +1119,29 @@ function CampoTiempo({ etiqueta, valor, onCambiar, tiempo, rango }) {
   )
 }
 
-function Propiedades({ elegido, obj, dibujo, tiempo, rango, jugadoras, textoRef, onObjeto, onLista, onQuitarClave, onQuitarAjustes, onSeguirFicha, onDuplicar, onBorrar, onIr }) {
+function Propiedades({
+  elegido, obj, dibujo, tiempo, rango, jugadoras, textoRef, onObjeto, onLista, onQuitarClave, onQuitarAjustes, onSeguirFicha, onDuplicar, onBorrar, onIr,
+  calibrado = false, elemento = null, onReemplazar, onAgregarOpcion, onSubtitulo, miEstilo = null, onGuardarEstilo = null,
+}) {
+  if (elegido?.tipo === 'lento') {
+    const l = (dibujo.lentos || []).find((x) => x.id === elegido.id)
+    if (!l) return <h3>Elegí un dibujo</h3>
+    return (
+      <section className="dib-campo" aria-label="Cámara lenta">
+        <h3>Cámara lenta</h3>
+        <div className="dib-campo">
+          <span>Velocidad</span>
+          <div className="dib-segmento" role="group" aria-label="Velocidad de la cámara lenta">
+            {VELOCIDADES_LENTAS.map((v) => <button key={v} type="button" aria-pressed={l.velocidad === v} onClick={() => onLista('lentos', l.id, { velocidad: v })}>{textoVelocidad(v)}</button>)}
+          </div>
+        </div>
+        <CampoTiempo etiqueta="Empieza" valor={l.desde} tiempo={tiempo} rango={rango} onCambiar={(t) => onLista('lentos', l.id, { desde: Math.min(t, l.hasta - 0.2) })} />
+        <CampoTiempo etiqueta="Termina" valor={l.hasta} tiempo={tiempo} rango={rango} onCambiar={(t) => onLista('lentos', l.id, { hasta: Math.max(t, l.desde + 0.2) })} />
+        <p className="dib-ayuda">Este tramo se ve más lento en la Vista previa, en el video de Análisis y en las playlists.</p>
+        <button type="button" className="dib-boton" onClick={onBorrar}>Borrar tramo</button>
+      </section>
+    )
+  }
   if (elegido?.tipo === 'pausa') {
     const p = dibujo.pausas.find((x) => x.id === elegido.id)
     if (!p) return <h3>Elegí un dibujo</h3>
@@ -931,8 +1190,8 @@ function Propiedades({ elegido, obj, dibujo, tiempo, rango, jugadoras, textoRef,
   const clave = obj.pista ? claveEn(obj.pista.claves, tiempo) : null
   return (
     <section className="dib-campo" aria-label="Propiedades del dibujo">
-      <h3>{NOMBRE_TIPO[obj.tipo]}</h3>
-      {obj.tipo !== 'zoom' && (
+      <h3>{obj.tipo === 'linea_defensiva' && obj.rol === 'volantes' ? 'Línea de volantes' : NOMBRE_TIPO[obj.tipo]}</h3>
+      {!['zoom', 'reflector', 'opciones_pase'].includes(obj.tipo) && (
         <div className="dib-campo">
           <span>Color</span>
           <div className="dib-colores" role="group" aria-label="Color">
@@ -943,7 +1202,7 @@ function Propiedades({ elegido, obj, dibujo, tiempo, rango, jugadoras, textoRef,
           </div>
         </div>
       )}
-      {!['zoom', 'foco'].includes(obj.tipo) && (
+      {!['zoom', 'foco', 'reflector'].includes(obj.tipo) && (
         <div className="dib-campo">
           <span>Grosor</span>
           <div className="dib-segmento" role="group" aria-label="Grosor">
@@ -958,7 +1217,9 @@ function Propiedades({ elegido, obj, dibujo, tiempo, rango, jugadoras, textoRef,
         </label>
       )}
       {obj.tipo === 'nombre' && <ElegirJugadora jugadora={obj.jugadora} jugadoras={jugadoras} onCambiar={(jugadora) => onObjeto({ jugadora })} />}
-      {(obj.tipo === 'anillo' || obj.tipo === 'foco' || obj.tipo === 'ficha') && <>
+      <PropiedadesPro obj={obj} dibujo={dibujo} tiempo={tiempo} rango={rango} calibrado={calibrado} elemento={elemento}
+        onObjeto={onObjeto} onReemplazar={onReemplazar} onAgregarOpcion={onAgregarOpcion} onSubtitulo={onSubtitulo} />
+      {(obj.tipo === 'anillo' || obj.tipo === 'foco' || obj.tipo === 'reflector' || obj.tipo === 'ficha') && <>
         <ElegirJugadora titulo="¿Quién es? (para la pizarra 2D)" jugadora={obj.jugadora} jugadoras={jugadoras} onCambiar={(jugadora) => onObjeto({ jugadora })} />
         {obj.tipo !== 'ficha' && (
           <label className="dib-check">
@@ -1008,12 +1269,193 @@ function Propiedades({ elegido, obj, dibujo, tiempo, rango, jugadoras, textoRef,
       </>}
       <CampoTiempo etiqueta="Aparece" valor={obj.desde} tiempo={tiempo} rango={rango} onCambiar={(t) => onObjeto({ desde: Math.min(t, obj.hasta - 0.1) })} />
       <CampoTiempo etiqueta="Desaparece" valor={obj.hasta} tiempo={tiempo} rango={rango} onCambiar={(t) => onObjeto({ hasta: Math.max(t, obj.desde + 0.1) })} />
+      {onGuardarEstilo && !['ficha', 'zoom'].includes(obj.tipo) && (
+        <div className="dib-fila" data-guia="estilo">
+          <button type="button" className="dib-boton" title="Los próximos dibujos de esta herramienta salen con este color, grosor y efectos"
+            onClick={() => onGuardarEstilo(estiloDeObjeto(obj))}>Guardar como mi estilo</button>
+          {miEstilo?.[obj.tipo] && <button type="button" className="dib-boton" onClick={() => onGuardarEstilo(null)}>Volver al estilo de siempre</button>}
+        </div>
+      )}
       <div className="dib-fila">
-        {obj.tipo !== 'enlace' && <button type="button" className="dib-boton" onClick={onDuplicar}>Duplicar (Ctrl+D)</button>}
+        {!['enlace', 'zona_lineas', 'linea_defensiva'].includes(obj.tipo) && <button type="button" className="dib-boton" onClick={onDuplicar}>Duplicar (Ctrl+D)</button>}
         <button type="button" className="dib-boton" onClick={onBorrar}>Borrar (Supr)</button>
       </div>
     </section>
   )
+}
+
+// Propiedades de lo nuevo (docs/analisis-dibujos-pro.md): crecimiento de las flechas, hueco del anillo, luz del
+// reflector, foco en una zona, zonas que se mueven (texto, efectos, metros), opciones de pase y línea defensiva.
+function PropiedadesPro({ obj, dibujo, tiempo, rango, calibrado, elemento, onObjeto, onReemplazar, onAgregarOpcion, onSubtitulo }) {
+  const porId = new Map(dibujo.objetos.map((o) => [o.id, o]))
+  const nombreDe = (id) => { const o = porId.get(id); return o ? `${NOMBRE_TIPO[o.tipo]}${o.jugadora?.dorsal ? ` #${o.jugadora.dorsal}` : ''}` : id }
+  const check = (texto, valor, onCambiar, extra = {}) => (
+    <label className="dib-check"><input type="checkbox" checked={Boolean(valor)} onChange={(e) => onCambiar(e.target.checked)} {...extra} />{texto}</label>
+  )
+  const zona = ['zona', 'poligono', 'zona_lineas'].includes(obj.tipo)
+  return <>
+    {FLECHAS_QUE_CRECEN.includes(obj.tipo) && (
+      <div className="dib-campo" data-propiedad="crecer">
+        <span>Cómo aparece</span>
+        <select aria-label="Cómo aparece la flecha" value={obj.crecer?.modo || 'entera'} onChange={(e) => {
+          const modo = e.target.value
+          if (modo === 'entera') return onObjeto({ crecer: undefined })
+          const c = { modo, pelota: Boolean(obj.crecer?.pelota) }
+          if (modo === 'real') { c.salida = obj.crecer?.salida ?? obj.desde; c.llegada = obj.crecer?.llegada ?? Math.min(rango.fin, obj.desde + 0.8) }
+          onObjeto({ crecer: c })
+        }}>
+          {Object.entries(NOMBRE_MODO).map(([k, v]) => <option key={k} value={k}>{k === 'entera' ? 'Entera (sin crecer)' : `Crece: ${v.toLowerCase()}`}</option>)}
+        </select>
+        {obj.crecer?.modo === 'real' && <>
+          <CampoTiempo etiqueta="Sale la pelota" valor={obj.crecer.salida} tiempo={tiempo} rango={rango} onCambiar={(t) => onObjeto({ crecer: { ...obj.crecer, salida: Math.min(t, obj.crecer.llegada - 0.1) } })} />
+          <CampoTiempo etiqueta="Llega la pelota" valor={obj.crecer.llegada} tiempo={tiempo} rango={rango} onCambiar={(t) => onObjeto({ crecer: { ...obj.crecer, llegada: Math.max(t, obj.crecer.salida + 0.1) } })} />
+          <p className="dib-ayuda">Mové el video al momento en que sale la pelota y tocá «Ahora»; lo mismo cuando llega.</p>
+        </>}
+        {obj.crecer && check('Pelotita que recorre la flecha', obj.crecer.pelota, (v) => onObjeto({ crecer: { ...obj.crecer, pelota: v } }))}
+      </div>
+    )}
+    {(obj.tipo === 'anillo' || obj.tipo === 'opciones_pase') && (
+      <div className="dib-campo" data-propiedad="hueco">
+        {check(obj.tipo === 'anillo' ? 'Detrás de las piernas (hueco atrás)' : 'Anillos detrás de las piernas', obj.hueco !== false, (v) => onObjeto({ hueco: v ? undefined : false }))}
+        {obj.hueco !== false && <>
+          <label className="dib-campo"><span>Ancho del hueco: {typeof obj.hueco === 'number' ? `${Math.round(obj.hueco * 100)} %` : 'automático'}</span>
+            <input type="range" min={HUECO.minimo} max={HUECO.maximo} step={0.02} value={typeof obj.hueco === 'number' ? obj.hueco : HUECO.auto}
+              onChange={(e) => onObjeto({ hueco: Number(e.target.value) })} />
+          </label>
+          {typeof obj.hueco === 'number' && <button type="button" className="dib-boton" onClick={() => onObjeto({ hueco: undefined })}>Automático</button>}
+        </>}
+      </div>
+    )}
+    {obj.tipo === 'reflector' && (() => {
+      const luz = obj.luz || { color: 'blanco', intensidad: 0.6, ancho: 1 }
+      return (
+        <div className="dib-campo" data-propiedad="luz">
+          <span>Color de la luz</span>
+          <div className="dib-colores" role="group" aria-label="Color de la luz">
+            {COLORES_DIBUJO.map((c) => (
+              <button key={c} type="button" className="dib-color" aria-pressed={luz.color === c} aria-label={NOMBRE_COLOR[c]} title={NOMBRE_COLOR[c]}
+                style={{ background: COLOR[c] }} onClick={() => onObjeto({ color: c, luz: { ...luz, color: c } })} />
+            ))}
+          </div>
+          <label className="dib-campo"><span>Intensidad: {Math.round(luz.intensidad * 100)} %</span>
+            <input type="range" min={0.2} max={1} step={0.05} value={luz.intensidad} onChange={(e) => onObjeto({ luz: { ...luz, intensidad: Number(e.target.value) } })} />
+          </label>
+          <label className="dib-campo"><span>Ancho del haz: {luz.ancho.toFixed(1).replace('.', ',')}x</span>
+            <input type="range" min={0.5} max={2} step={0.1} value={luz.ancho} onChange={(e) => onObjeto({ luz: { ...luz, ancho: Number(e.target.value) } })} />
+          </label>
+        </div>
+      )
+    })()}
+    {obj.tipo === 'foco_zona' && (
+      <div className="dib-campo" data-propiedad="foco-zona">
+        <span>Forma</span>
+        <div className="dib-segmento" role="group" aria-label="Forma del foco">
+          {[['circulo', 'Círculo'], ['elipse', 'Elipse'], ['rectangulo', 'Rectángulo']].map(([f, texto]) => (
+            <button key={f} type="button" aria-pressed={obj.forma === f}
+              onClick={() => onObjeto((o) => ({ forma: f, claves: f === 'circulo' ? o.claves.map((c) => ({ ...c, ry: ryCirculo(c.rx) })) : o.claves }))}>{texto}</button>
+          ))}
+        </div>
+        {check('Se mueve con puntos clave', obj.animado || obj.claves.length > 1, (v) => onReemplazar((o) => {
+          if (v) return { ...o, animado: true }
+          const c = focoZonaEn(o, tiempo)
+          const { animado, ...resto } = o
+          void animado
+          return { ...resto, claves: [{ ...c, t: o.claves[0].t }] }
+        }))}
+        <p className="dib-ayuda">{obj.animado || obj.claves.length > 1
+          ? `${obj.claves.length} posiciones guardadas. Andá a otro cuadro y arrastrá el foco (o su borde) para que se mueva hasta ahí.`
+          : 'Queda quieto. Arrastralo para moverlo y tirá del punto de la esquina para agrandarlo.'}</p>
+      </div>
+    )}
+    {zona && (
+      <div className="dib-campo" data-propiedad="zona">
+        {obj.tipo !== 'zona_lineas' && <>
+          {check('Se mueve con puntos clave', obj.claves?.length, (v) => onReemplazar((o) => animarZona(o, v, tiempo)))}
+          {obj.claves?.length > 0 && <p className="dib-ayuda">{obj.claves.length} {obj.claves.length === 1 ? 'forma guardada' : 'formas guardadas'}. Andá a otro cuadro y arrastrá la zona o sus esquinas: entre medio se acomoda sola.</p>}
+        </>}
+        {obj.tipo === 'zona_lineas' && (
+          <p className="dib-ayuda">Primera línea: {obj.lineaA.map(nombreDe).join(', ')}. Otra línea: {obj.lineaB.map(nombreDe).join(', ')}. La zona se arma sola con ellas.</p>
+        )}
+        <label className="dib-campo"><span>Texto adentro (opcional)</span>
+          <input type="text" maxLength={60} placeholder="Por ejemplo: Distancia entre líneas" defaultValue={obj.texto || ''} key={`${obj.id}-t-${obj.texto || ''}`}
+            onBlur={(e) => { const v = e.target.value.trim(); if (v !== (obj.texto || '')) onObjeto({ texto: v || undefined }) }} />
+        </label>
+        <fieldset className="dib-campo" style={{ border: 0, margin: 0, padding: 0 }}>
+          <span>Efectos</span>
+          {[['despliegue', 'Aparece desplegándose'], ['rayado', 'Rayado'], ['pulso', 'Pulso suave']].map(([k, texto]) => (
+            <div key={k}>{check(texto, obj.efectos?.[k], (v) => onObjeto({ efectos: { despliegue: false, rayado: false, pulso: false, ...obj.efectos, [k]: v } }))}</div>
+          ))}
+        </fieldset>
+        {check('Mostrar ancho y profundidad en metros', obj.medidas, (v) => onObjeto({ medidas: v || undefined }), { disabled: !calibrado && !obj.medidas })}
+        {!calibrado && <p className="dib-ayuda">Los metros aparecen cuando la cancha está calibrada (Pizarra 2D → Calibrar cancha).</p>}
+      </div>
+    )}
+    {obj.tipo === 'opciones_pase' && (
+      <div className="dib-campo" data-propiedad="opciones">
+        <p className="dib-ayuda">Pase que se hizo: {nombreJugadora(obj.pasadora?.jugadora) || 'pasadora'} → {nombreJugadora(obj.receptora?.jugadora) || 'receptora'} (en rojo).</p>
+        <ol className="dib-lista-opciones">
+          {obj.opciones.map((op, i) => (
+            <li key={i}>
+              <span>Opción {i + 1}{op.jugadora ? `: ${nombreJugadora(op.jugadora)}` : op.seguir ? `: ${nombreDe(op.seguir)}` : ''}</span>
+              <button type="button" className="dib-boton" onClick={() => onObjeto({ opciones: obj.opciones.filter((_, k) => k !== i) })}>Quitar</button>
+            </li>
+          ))}
+        </ol>
+        <button type="button" className="dib-boton" disabled={obj.opciones.length >= 5} onClick={onAgregarOpcion}>+ Agregar opción</button>
+        {check('De a una: primero el pase y después cada opción', obj.secuencia, (v) => onObjeto({ secuencia: v }))}
+        <p className="dib-ayuda">Poné una Pausa (P) en el cuadro donde aparece para que se vea con el video quieto.</p>
+        <button type="button" className="dib-boton" onClick={() => onSubtitulo(obj.desde, obj.hasta, 'Tenía una opción mejor')}>+ Subtítulo para explicarlo</button>
+      </div>
+    )}
+    {obj.tipo === 'linea_defensiva' && (
+      <div className="dib-campo" data-propiedad="linea">
+        <div className="dib-segmento" role="group" aria-label="Qué línea es">
+          <button type="button" aria-pressed={obj.rol !== 'volantes'} onClick={() => onObjeto({ rol: 'defensa' })}>Defensa</button>
+          <button type="button" aria-pressed={obj.rol === 'volantes'} onClick={() => onObjeto({ rol: 'volantes' })}>Volantes</button>
+        </div>
+        <span>Defienden el arco de la</span>
+        <div className="dib-segmento" role="group" aria-label="Qué arco defienden">
+          <button type="button" aria-pressed={obj.arco !== 'derecha'} onClick={() => onObjeto({ arco: 'izquierda' })}>Izquierda</button>
+          <button type="button" aria-pressed={obj.arco === 'derecha'} onClick={() => onObjeto({ arco: 'derecha' })}>Derecha</button>
+        </div>
+        {calibrado ? <>
+          <label className="dib-campo"><span>Adelantada a partir de: {String(obj.umbral ?? 2).replace('.', ',')} m</span>
+            <input type="range" min={UMBRAL.minimo} max={UMBRAL.maximo} step={0.5} value={obj.umbral ?? 2} onChange={(e) => onObjeto({ umbral: Number(e.target.value) })} />
+          </label>
+          <ul className="dib-lista-opciones" aria-label="Cómo está cada una en este cuadro">
+            {(elemento?.linea?.puntos || []).map((x) => (
+              <li key={x.id} data-estado={x.estado}><span>{nombreDe(x.id)}</span><strong>{NOMBRE_ESTADO[x.estado]}{Number.isFinite(x.d) && x.estado !== 'en_linea' ? ` (${x.d > 0 ? '+' : ''}${x.d.toFixed(1).replace('.', ',')} m)` : ''}</strong></li>
+            ))}
+          </ul>
+          <p className="dib-ayuda">Con la cancha calibrada la app calcula en metros quién está en línea, adelantada o atrás, y si alguien cubre el espacio que deja una adelantada.</p>
+        </> : <>
+          <p className="dib-ayuda">La cancha no está calibrada: marcá a mano cómo está cada una.</p>
+          <ul className="dib-lista-opciones">
+            {obj.jugadoras.map((id) => {
+              const estado = obj.estados?.[id] || 'en_linea'
+              return (
+                <li key={id}>
+                  <span>{nombreDe(id)}</span>
+                  <select aria-label={`Estado de ${nombreDe(id)}`} value={estado} onChange={(e) => {
+                    const estados = { ...obj.estados }
+                    if (e.target.value === 'en_linea') delete estados[id]; else estados[id] = e.target.value
+                    onObjeto({ estados })
+                  }}>
+                    {Object.entries(NOMBRE_ESTADO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                  {estado === 'adelantada' && check('Alguien cubre el espacio', obj.cubiertas?.[id], (v) => {
+                    const cubiertas = { ...obj.cubiertas }
+                    if (v) cubiertas[id] = true; else delete cubiertas[id]
+                    onObjeto({ cubiertas })
+                  })}
+                </li>
+              )
+            })}
+          </ul>
+        </>}
+      </div>
+    )}
+  </>
 }
 
 function ElegirJugadora({ jugadora, jugadoras, onCambiar, titulo = 'Jugadora' }) {
@@ -1138,6 +1580,23 @@ function LineaClip({ dibujo, rango, tiempo, elegido, deshabilitada, onElegir, on
           ))}
         </>)}
       </div>
+      {dibujo.lentos?.length > 0 && (
+        <div className="dib-linea-fila" data-grupo="lentos">
+          <span className="dib-linea-etiqueta">Cámara lenta</span>
+          {pista('Cámara lenta', <>
+            {dibujo.lentos.map((l) => (
+              <button key={l.id} type="button" className="dib-sub dib-lento-barra" data-elegido={es('lento', l.id) ? 'si' : undefined}
+                style={{ left: pos(l.desde), width: `calc(${pos(l.hasta)} - ${pos(l.desde)})`, minHeight: 0 }}
+                aria-label={`Cámara lenta ${textoVelocidad(l.velocidad)} de ${tiempoPreciso(l.desde)} a ${tiempoPreciso(l.hasta)}`}
+                onClick={(e) => { e.stopPropagation(); onElegir({ tipo: 'lento', id: l.id }, l.desde) }}>
+                {textoVelocidad(l.velocidad)}
+                <span className="dib-borde" data-lado="inicio" onPointerDown={(e) => empezar(e, (d, t) => actualizarEnLista(d, 'lentos', l.id, { desde: Math.min(t, l.hasta - 0.2) }))} />
+                <span className="dib-borde" data-lado="fin" onPointerDown={(e) => empezar(e, (d, t) => actualizarEnLista(d, 'lentos', l.id, { hasta: Math.max(t, l.desde + 0.2) }))} />
+              </button>
+            ))}
+          </>)}
+        </div>
+      )}
       {dibujo.objetos.filter((o) => o.tipo !== 'ficha').map((o) => filaObjeto(o))}
       {fichas.length > 0 && <>
         {/* Las fichas quietas («solo 2D») van juntas en una fila que se despliega. */}

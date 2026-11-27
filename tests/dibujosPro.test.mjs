@@ -403,3 +403,39 @@ test('herramientas nuevas: teclas sin choques, ayuda y qué hacer ahora', () => 
   assert.match(instruccion({ herramienta: 'linea_defensiva', grupo: { n: 1 } }), /Van 1/)
   assert.match(instruccion({ herramienta: 'seleccionar', explicando: true }), /^Pausa explicativa/)
 })
+
+// ---------- Pizarra 2D ----------
+test('pizarra 2D: línea defensiva con estados y cobertura, zona entre líneas, opciones de pase y metros', async () => {
+  const { aJugadaPizarra, elementosFijos, jugadoras2d, vista2dEn } = await import('../src/utils/analisis/dibujos/pizarra2d.js')
+  const defensoras = [seguida('d1', { x: 30, y: 12 }), seguida('d2', { x: 30, y: 26 }), seguida('d3', { x: 34, y: 38 }), seguida('d4', { x: 30, y: 52 })]
+  const volantes = [seguida('v1', { x: 45, y: 20 }), seguida('v2', { x: 45, y: 44 })]
+  const ref = { ...seguida('r', { x: 40, y: 30 }), tipo: 'reflector', luz: { color: 'blanco', intensidad: 0.6, ancho: 1 } }
+  const objetos = [
+    ...defensoras, ...volantes, ref,
+    { id: 'ld', tipo: 'linea_defensiva', desde: 10, hasta: 20, color: 'amarillo', grosor: 2, jugadoras: ['d1', 'd2', 'd3', 'd4'], arco: 'izquierda', umbral: 2 },
+    { id: 'zl', tipo: 'zona_lineas', desde: 10, hasta: 20, color: 'blanco', grosor: 2, lineaA: ['v1', 'v2'], lineaB: ['d1', 'd4'], medidas: true, texto: 'Entre líneas' },
+    { id: 'op', tipo: 'opciones_pase', desde: 10, hasta: 14, color: 'rojo', grosor: 2, pasadora: { punto: enVideo({ x: 40, y: 30 }), seguir: 'r' }, receptora: { punto: enVideo({ x: 60, y: 10 }) }, opciones: [{ punto: enVideo({ x: 50, y: 50 }) }] },
+  ]
+  const d = normalizarDibujo({ cancha: CANCHA, calibraciones: [CALIBRACION], objetos }).dibujo
+  // El reflector también es una ficha (y lleva el foco de la 2D).
+  assert.ok(jugadoras2d(d).some((o) => o.id === 'r'))
+  const v = vista2dEn(d, 11)
+  assert.equal(v.foco?.id, 'r')
+  const ids = v.doc.elementos.map((e) => e.id)
+  // Línea: tres tramos (cuatro defensoras), el estado de la adelantada y su triángulo de cobertura (rojo: no llega).
+  assert.deepEqual(ids.filter((i) => /^ld-s/.test(i)), ['ld-s1', 'ld-s2', 'ld-s3'])
+  const estado = v.doc.elementos.find((e) => e.id === 'ld-e-d3')
+  assert.equal(estado.texto, '+4,0 m')
+  assert.equal(v.doc.elementos.find((e) => e.id === 'ld-c-d3').color, '#EF4444')
+  // Zona entre líneas con su texto y metros entre las dos líneas (45 − 30 = 15 m).
+  assert.equal(v.doc.elementos.find((e) => e.id === 'zl').tipo, 'sombra')
+  assert.equal(v.doc.elementos.find((e) => e.id === 'zl-t').texto, 'Entre líneas')
+  assert.equal(v.doc.elementos.find((e) => e.id === 'zl-m').texto, 'Entre líneas 15 m')
+  // Opciones de pase: pase rojo, opción verde punteada con su número.
+  const fijos = elementosFijos(d)
+  assert.deepEqual(fijos.filter((f) => f.elemento.id.startsWith('op')).map((f) => [f.elemento.id, f.elemento.tipo, f.elemento.color]),
+    [['op', 'pase', '#EF4444'], ['op-o1', 'punteada', '#3ECF6E'], ['op-n1', 'texto', '#3ECF6E']])
+  // La jugada exportada a la Pizarra sigue siendo válida.
+  const doc = aJugadaPizarra(d, { titulo: 'Línea' })
+  assert.ok(doc.elementos.some((e) => e.id === 'op-o1'))
+})
